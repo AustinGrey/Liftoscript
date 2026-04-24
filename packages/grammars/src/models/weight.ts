@@ -1,6 +1,16 @@
-import { CollectionUtils_sort, CollectionUtils_compressArray } from "../utils/collection";
+import {
+  CollectionUtils_sort,
+  CollectionUtils_compressArray,
+} from "../utils/collection";
 
-import { IWeight, IUnit, ISettings, IPlate, IPercentage, IExerciseType } from "../types";
+import {
+  IWeight,
+  IUnit,
+  ISettings,
+  IPlate,
+  IPercentage,
+  IExerciseType,
+} from "../types";
 import {
   n,
   MathUtils_roundTo005,
@@ -13,7 +23,11 @@ import {
   Equipment_getEquipmentDataForExerciseType,
   Equipment_smallestPlate,
 } from "./equipment";
-import { Exercise_get, Exercise_onerm, Exercise_defaultRounding } from "./exercise";
+import {
+  Exercise_get,
+  Exercise_onerm,
+  Exercise_defaultRounding,
+} from "./exercise";
 
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
@@ -31,7 +45,9 @@ export function Weight_display(
 }
 
 export function Weight_rpePct(reps: number, rpe: number): IPercentage {
-  return Weight_buildPct(MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100));
+  return Weight_buildPct(
+    MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100),
+  );
 }
 
 export function Weight_evaluateWeight(
@@ -46,7 +62,10 @@ export function Weight_evaluateWeight(
     const onerm = Exercise_onerm(exercise, settings);
     return Weight_multiply(onerm, weight.value / 100);
   } else {
-    const unit = Equipment_getUnitOrDefaultForExerciseType(settings, exerciseType);
+    const unit = Equipment_getUnitOrDefaultForExerciseType(
+      settings,
+      exerciseType,
+    );
     return Weight_build(0, unit);
   }
 }
@@ -83,7 +102,9 @@ export function Weight_print(weight: IWeight | IPercentage | number): string {
   }
 }
 
-export function Weight_printNull(weight: IWeight | IPercentage | number | undefined): string {
+export function Weight_printNull(
+  weight: IWeight | IPercentage | number | undefined,
+): string {
   if (weight == null) {
     return "";
   } else if (typeof weight === "number") {
@@ -93,7 +114,9 @@ export function Weight_printNull(weight: IWeight | IPercentage | number | undefi
   }
 }
 
-export function Weight_parsePct(str?: string): IPercentage | IWeight | undefined {
+export function Weight_parsePct(
+  str?: string,
+): IPercentage | IWeight | undefined {
   if (str == null) {
     return undefined;
   }
@@ -108,13 +131,18 @@ export function Weight_parsePct(str?: string): IPercentage | IWeight | undefined
 export function Weight_parse(str: string): IWeight | undefined {
   const match = str.match(/^([-+]?[0-9.]+)\s*(kg|lb)$/);
   if (match) {
-    return Weight_build(MathUtils_roundFloat(parseFloat(match[1]), 2), match[2] as IUnit);
+    return Weight_build(
+      MathUtils_roundFloat(parseFloat(match[1]), 2),
+      match[2] as IUnit,
+    );
   } else {
     return undefined;
   }
 }
 
-export function Weight_printOrNumber(weight: IWeight | IPercentage | number): string {
+export function Weight_printOrNumber(
+  weight: IWeight | IPercentage | number,
+): string {
   return typeof weight === "number" ? `${weight}` : Weight_print(weight);
 }
 
@@ -122,7 +150,10 @@ export function Weight_buildPct(value: number): IPercentage {
   return { value, unit: "%" };
 }
 
-export function Weight_buildAny(value: number, unit: IUnit | "%"): IWeight | IPercentage {
+export function Weight_buildAny(
+  value: number,
+  unit: IUnit | "%",
+): IWeight | IPercentage {
   if (unit === "%") {
     return Weight_buildPct(value);
   } else {
@@ -136,7 +167,10 @@ export function Weight_build(value: number, unit: IUnit): IWeight {
   if (prebuiltWeight != null) {
     return prebuiltWeight;
   } else {
-    const v = { value: typeof value === "string" ? parseFloat(value) : value, unit };
+    const v = {
+      value: typeof value === "string" ? parseFloat(value) : value,
+      unit,
+    };
     prebuiltWeights[`${value}_${unit}`] = v;
     return v;
   }
@@ -146,14 +180,18 @@ export function Weight_clone(value: IWeight): IWeight {
   return Weight_build(value.value, value.unit);
 }
 
-export function Weight_isOrPct(object: unknown): object is IWeight | IPercentage {
+export function Weight_isOrPct(
+  object: unknown,
+): object is IWeight | IPercentage {
   const objWeight = object as IWeight | IPercentage;
   return (
     objWeight &&
     typeof objWeight === "object" &&
     "unit" in objWeight &&
     "value" in objWeight &&
-    (objWeight.unit === "kg" || objWeight.unit === "lb" || objWeight.unit === "%")
+    (objWeight.unit === "kg" ||
+      objWeight.unit === "lb" ||
+      objWeight.unit === "%")
   );
 }
 
@@ -188,7 +226,8 @@ export function Weight_round(
   if (exerciseType == null) {
     return Weight_roundTo005(weight);
   }
-  return Weight_calculatePlates(weight, settings, unit, exerciseType).totalWeight;
+  return Weight_calculatePlates(weight, settings, unit, exerciseType)
+    .totalWeight;
 }
 
 export function Weight_increment(
@@ -196,7 +235,10 @@ export function Weight_increment(
   settings: ISettings,
   exerciseType?: IExerciseType,
 ): IWeight {
-  const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+  const equipmentData = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
   if (equipmentData) {
     const unit = equipmentData.unit ?? weight.unit;
     const roundWeight = Weight_round(weight, settings, unit, exerciseType);
@@ -219,13 +261,23 @@ export function Weight_increment(
         attempt += 1;
       } while (
         attempt < 20 &&
-        Weight_eq(Weight_round(newWeight, settings, unit, exerciseType), roundWeight)
+        Weight_eq(
+          Weight_round(newWeight, settings, unit, exerciseType),
+          roundWeight,
+        )
       );
       return newWeight;
     }
   } else {
-    const roundWeight = Weight_round(weight, settings, weight.unit, exerciseType);
-    const rounding = exerciseType ? Exercise_defaultRounding(exerciseType, settings) : 1;
+    const roundWeight = Weight_round(
+      weight,
+      settings,
+      weight.unit,
+      exerciseType,
+    );
+    const rounding = exerciseType
+      ? Exercise_defaultRounding(exerciseType, settings)
+      : 1;
     return Weight_build(roundWeight.value + rounding, roundWeight.unit);
   }
 }
@@ -258,19 +310,32 @@ export function Weight_decrement(
       return Weight_build(newWeight.value, newWeight.unit);
     }
   } else {
-    const roundWeight = Weight_round(weight, settings, weight.unit, exerciseType);
-    const rounding = exerciseType ? Exercise_defaultRounding(exerciseType, settings) : 1;
+    const roundWeight = Weight_round(
+      weight,
+      settings,
+      weight.unit,
+      exerciseType,
+    );
+    const rounding = exerciseType
+      ? Exercise_defaultRounding(exerciseType, settings)
+      : 1;
     return Weight_build(roundWeight.value - rounding, roundWeight.unit);
   }
 }
 
-export function Weight_getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeight {
+export function Weight_getOneRepMax(
+  weight: IWeight,
+  reps: number,
+  rpe?: number,
+): IWeight {
   if (reps === 0) {
     return Weight_build(0, weight.unit);
   } else if (reps === 1) {
     return weight;
   } else {
-    return Weight_roundTo005(Weight_divide(weight, Weight_rpeMultiplier(reps, rpe ?? 10)));
+    return Weight_roundTo005(
+      Weight_divide(weight, Weight_rpeMultiplier(reps, rpe ?? 10)),
+    );
   }
 }
 
@@ -280,11 +345,17 @@ export function Weight_getNRepMax(oneRepMax: IWeight, reps: number): IWeight {
   } else if (reps === 1) {
     return oneRepMax;
   } else {
-    return Weight_roundTo005(Weight_multiply(oneRepMax, Weight_rpeMultiplier(reps, 10)));
+    return Weight_roundTo005(
+      Weight_multiply(oneRepMax, Weight_rpeMultiplier(reps, 10)),
+    );
   }
 }
 
-export function Weight_getTrainingMax(weight: IWeight, reps: number, settings: ISettings): IWeight {
+export function Weight_getTrainingMax(
+  weight: IWeight,
+  reps: number,
+  settings: ISettings,
+): IWeight {
   return Weight_round(
     Weight_multiply(Weight_getOneRepMax(weight, reps), 0.9),
     settings,
@@ -305,7 +376,10 @@ export function Weight_formatOneSide(
   platesArr: IPlate[],
   exerciseType: IExerciseType,
 ): string {
-  const equipmentSettings = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+  const equipmentSettings = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
   const plates: IPlate[] = JSON.parse(JSON.stringify(platesArr));
   plates.sort((a, b) => Weight_compareReverse(a.weight, b.weight));
   const arr: number[] = [];
@@ -337,10 +411,16 @@ export function Weight_calculatePlates(
   units: IUnit,
   exerciseType: IExerciseType,
 ): { plates: IPlate[]; platesWeight: IWeight; totalWeight: IWeight } {
-  const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+  const equipmentData = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
   if (equipmentData == null) {
     const rounding = Exercise_defaultRounding(exerciseType, settings);
-    allWeight = Weight_build(MathUtils_round(allWeight.value, rounding), allWeight.unit);
+    allWeight = Weight_build(
+      MathUtils_round(allWeight.value, rounding),
+      allWeight.unit,
+    );
     return { plates: [], platesWeight: allWeight, totalWeight: allWeight };
   }
 
@@ -348,16 +428,26 @@ export function Weight_calculatePlates(
   const inverted = allWeight.value < 0;
   if (equipmentData.isFixed) {
     const fixed = CollectionUtils_sort(
-      equipmentData.fixed.filter((w) => w.unit === (equipmentData.unit ?? units)),
+      equipmentData.fixed.filter(
+        (w) => w.unit === (equipmentData.unit ?? units),
+      ),
       (a, b) => b.value - a.value,
     );
     const weight =
-      fixed.find((w) => Weight_lte(w, absAllWeight)) || fixed[fixed.length - 1] || absAllWeight;
+      fixed.find((w) => Weight_lte(w, absAllWeight)) ||
+      fixed[fixed.length - 1] ||
+      absAllWeight;
     let roundedWeight = Weight_roundTo005(weight);
     roundedWeight = inverted ? Weight_invert(roundedWeight) : roundedWeight;
-    return { plates: [], platesWeight: roundedWeight, totalWeight: roundedWeight };
+    return {
+      plates: [],
+      platesWeight: roundedWeight,
+      totalWeight: roundedWeight,
+    };
   }
-  const availablePlatesArr = equipmentData.plates.filter((p) => p.weight.unit === units);
+  const availablePlatesArr = equipmentData.plates.filter(
+    (p) => p.weight.unit === units,
+  );
   const barWeight =
     equipmentData.useBodyweightForBar && settings.currentBodyweight
       ? settings.currentBodyweight
@@ -365,7 +455,9 @@ export function Weight_calculatePlates(
   const multiplier = equipmentData.multiplier || 1;
   const isAssisting = equipmentData.isAssisting || false;
   const weight = Weight_roundTo000005(Weight_subtract(absAllWeight, barWeight));
-  const availablePlates: IPlate[] = JSON.parse(JSON.stringify(availablePlatesArr));
+  const availablePlates: IPlate[] = JSON.parse(
+    JSON.stringify(availablePlatesArr),
+  );
   availablePlates.sort((a, b) => Weight_compareReverse(a.weight, b.weight));
   const plates: IPlate[] = calculatePlatesInternalFast(
     weight,
@@ -376,12 +468,16 @@ export function Weight_calculatePlates(
   const total = plates.reduce(
     (memo, plate) => {
       const weightToAdd = Weight_multiply(plate.weight, plate.num);
-      return isAssisting ? Weight_subtract(memo, weightToAdd) : Weight_add(memo, weightToAdd);
+      return isAssisting
+        ? Weight_subtract(memo, weightToAdd)
+        : Weight_add(memo, weightToAdd);
     },
     Weight_build(0, allWeight.unit),
   );
   const totalWeight = Weight_roundTo000005(
-    inverted ? Weight_invert(Weight_add(total, barWeight)) : Weight_add(total, barWeight),
+    inverted
+      ? Weight_invert(Weight_add(total, barWeight))
+      : Weight_add(total, barWeight),
   );
   const thePlatesWeight = inverted ? Weight_invert(total) : total;
   return { plates, platesWeight: thePlatesWeight, totalWeight };
@@ -406,7 +502,11 @@ function calculatePlatesInternalFast(
     return [];
   }
 
-  const plateTypes: { weight: IWeight; unitWeight: number; maxUnits: number }[] = [];
+  const plateTypes: {
+    weight: IWeight;
+    unitWeight: number;
+    maxUnits: number;
+  }[] = [];
   for (const p of availablePlates) {
     if (p.num >= multiplier) {
       plateTypes.push({
@@ -432,7 +532,9 @@ function calculatePlatesInternalFast(
   }
   const precision = Math.pow(10, Math.min(maxDecimals, 6));
   const intTarget = Math.round(targetValue * precision);
-  const intWeights = plateTypes.map((p) => Math.round(p.unitWeight * precision));
+  const intWeights = plateTypes.map((p) =>
+    Math.round(p.unitWeight * precision),
+  );
 
   // Max contribution from plates at index i and beyond (for pruning)
   const maxFrom = new Array(plateTypes.length + 1).fill(0);
@@ -464,7 +566,10 @@ function calculatePlatesInternalFast(
 
     iterations += 1;
     const w = intWeights[index];
-    const maxCount = Math.min(plateTypes[index].maxUnits, w > 0 ? Math.floor(remaining / w) : 0);
+    const maxCount = Math.min(
+      plateTypes[index].maxUnits,
+      w > 0 ? Math.floor(remaining / w) : 0,
+    );
 
     for (let count = maxCount; count >= 0; count--) {
       const newRemaining = remaining - count * w;
@@ -494,15 +599,24 @@ export function Weight_add(weight: IWeight, value: IWeight | number): IWeight {
   return Weight_operation(weight, value, (a, b) => a + b);
 }
 
-export function Weight_subtract(weight: IWeight, value: IWeight | number): IWeight {
+export function Weight_subtract(
+  weight: IWeight,
+  value: IWeight | number,
+): IWeight {
   return Weight_operation(weight, value, (a, b) => a - b);
 }
 
-export function Weight_multiply(weight: IWeight, value: IWeight | number): IWeight {
+export function Weight_multiply(
+  weight: IWeight,
+  value: IWeight | number,
+): IWeight {
   return Weight_operation(weight, value, (a, b) => a * b);
 }
 
-export function Weight_divide(weight: IWeight, value: IWeight | number): IWeight {
+export function Weight_divide(
+  weight: IWeight,
+  value: IWeight | number,
+): IWeight {
   return Weight_operation(weight, value, (a, b) => a / b);
 }
 
@@ -570,7 +684,12 @@ export function Weight_roundConvertTo(
   unit: IUnit,
   exerciseType?: IExerciseType,
 ): IWeight {
-  return Weight_round(Weight_convertTo(weight, unit), settings, unit, exerciseType);
+  return Weight_round(
+    Weight_convertTo(weight, unit),
+    settings,
+    unit,
+    exerciseType,
+  );
 }
 
 export function Weight_type(
@@ -586,7 +705,10 @@ export function Weight_type(
 }
 
 export function Weight_convertTo(weight: IWeight, unit: IUnit): IWeight;
-export function Weight_convertTo(weight: IPercentage, unit: "%" | IUnit): IPercentage;
+export function Weight_convertTo(
+  weight: IPercentage,
+  unit: "%" | IUnit,
+): IPercentage;
 export function Weight_convertTo(weight: number, unit: IUnit): number;
 export function Weight_convertTo(
   weight: IWeight | number | IPercentage,
@@ -652,9 +774,13 @@ export function Weight_applyOp(
   } else if (opr === "-=") {
     return Weight_op(onerm, oldValue, value, (a, b) => a - b);
   } else if (opr === "*=") {
-    return Weight_op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a * b));
+    return Weight_op(onerm, oldValue, value, (a, b) =>
+      MathUtils_roundTo005(a * b),
+    );
   } else {
-    return Weight_op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a / b));
+    return Weight_op(onerm, oldValue, value, (a, b) =>
+      MathUtils_roundTo005(a / b),
+    );
   }
 }
 
@@ -723,7 +849,10 @@ export function Weight_operation(
   } else if (typeof weight !== "number" && typeof value === "number") {
     return Weight_build(o(weight.value, value), weight.unit);
   } else if (typeof weight !== "number" && typeof value !== "number") {
-    return Weight_build(o(weight.value, Weight_convertTo(value, weight.unit).value), weight.unit);
+    return Weight_build(
+      o(weight.value, Weight_convertTo(value, weight.unit).value),
+      weight.unit,
+    );
   } else {
     throw new Error("Weight.operation should never work with numbers only");
   }
