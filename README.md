@@ -1,4 +1,29 @@
-# Liftoscript
-An extraction of the workout planning/scripting language from [Liftosaur](https://github.com/astashov/liftosaur) so that it can be iterated on quicker.
+# Vite+ Monorepo Starter
 
-This work is licensed under the APGL 3 since that is the same license as Liftosaur, and work will be taken from there.
+A starter for creating a Vite+ monorepo.
+
+## Development
+
+- Check everything is ready:
+
+```bash
+vp run ready
+```
+
+- Run the tests:
+
+```bash
+vp run -r test
+```
+
+- Build the monorepo:
+
+```bash
+vp run -r build
+```
+
+- Run the development server:
+
+```bash
+vp run dev
+```
