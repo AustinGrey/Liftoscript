@@ -260,6 +260,17 @@ export function ObjectUtils_findMaxValue<
   }, 0);
 }
 
+export function ObjectUtils_clone<T>(obj: T): T {
+  if (obj == null) {
+    return obj;
+  }
+  if (typeof window !== "undefined" && window.structuredClone) {
+    return window.structuredClone(obj);
+  } else {
+    return JSON.parse(JSON.stringify(obj));
+  }
+}
+
 export function ObjectUtils_fromArray<K extends string, V>(
   arr: Array<[K, V]>,
 ): Record<K, V> {
