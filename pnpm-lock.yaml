@@ -9,9 +9,15 @@ catalogs:
     '@lezer/generator':
       specifier: ^1.8.0
       version: 1.8.0
+    prettier:
+      specifier: ^3.8.3
+      version: 3.8.3
     vite-plus:
       specifier: latest
       version: 0.1.19
+    zod:
+      specifier: ^4.3.6
+      version: 4.3.6
 
 overrides:
   vite: npm:@voidzero-dev/vite-plus-core@latest
@@ -42,6 +48,9 @@ importers:
       '@lezer/generator':
         specifier: 'catalog:'
         version: 1.8.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -52,6 +61,9 @@ importers:
       bumpp:
         specifier: ^11.0.1
         version: 11.0.1
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.3
       typescript:
         specifier: ^6.0.2
         version: 6.0.3
@@ -863,6 +875,11 @@ packages:
     resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
     engines: {node: ^10 || ^12 || >=14}
 
+  prettier@3.8.3:
+    resolution: {integrity: sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   quansync@1.0.0:
     resolution: {integrity: sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA==}
 
@@ -987,6 +1004,9 @@ packages:
     resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
     engines: {node: '>= 14.6'}
     hasBin: true
+
+  zod@4.3.6:
+    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
 snapshots:
 
@@ -1547,6 +1567,8 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  prettier@3.8.3: {}
+
   quansync@1.0.0: {}
 
   rolldown@1.0.0-rc.17:
@@ -1725,3 +1747,5 @@ snapshots:
   ws@8.20.0: {}
 
   yaml@2.8.3: {}
+
+  zod@4.3.6: {}

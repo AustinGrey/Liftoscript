@@ -6,10 +6,12 @@ packages:
 catalog:
   '@lezer/generator': ^1.8.0
   "@types/node": ^24
+  prettier: ^3.8.3
   typescript: ^5
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vite-plus: latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
+  zod: ^4.3.6
 
 catalogMode: prefer
 overrides:
