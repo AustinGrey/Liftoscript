@@ -1,28 +1,27 @@
 // import util from "util";
 import { type SyntaxNode } from "@lezer/common";
-import {
-  IScriptBindings,
-  IScriptFnContext,
-  IScriptFunctions,
-} from "./models/progress";
-import {
-  Weight_gt,
-  Weight_lt,
-  Weight_gte,
-  Weight_lte,
-  Weight_eq,
-  Weight_build,
-  Weight_print,
-  Weight_smartConvert,
-  Weight_is,
-  Weight_isPct,
-  Weight_buildAny,
-  Weight_applyOp,
-  Weight_convertToWeight,
-  Weight_buildPct,
-  Weight_op,
-} from "./models/weight";
-import { IProgramState, IWeight, IUnit, IPercentage } from "./types";
+// import {
+//   IScriptBindings,
+//   IScriptFnContext,
+//   IScriptFunctions,
+// } from "./models/progress";
+// import {
+//   Weight_gt,
+//   Weight_lt,
+//   Weight_gte,
+//   Weight_lte,
+//   Weight_eq,
+//   Weight_build,
+//   Weight_print,
+//   Weight_smartConvert,
+//   Weight_is,
+//   Weight_isPct,
+//   Weight_buildAny,
+//   Weight_applyOp,
+//   Weight_convertToWeight,
+//   Weight_buildPct,
+//   Weight_op,
+// } from "./models/weight";
 import { CollectionUtils_compact } from "@/utils/collection";
 import {
   MathUtils_applyOp,
@@ -30,8 +29,35 @@ import {
   MathUtils_clamp,
   MathUtils_roundFloat,
 } from "@/utils/math";
-import { IProgramMode } from "./models/program";
 import { parser as LiftoscriptParser } from "@/parsers/logic";
+import { z as t } from "zod";
+
+export const units = ["kg", "lb"] as const;
+
+export const TUnit = t.enum(units);
+export type IUnit = t.infer<typeof TUnit>;
+
+export const percentageUnits = ["%"] as const;
+
+export const TPercentageUnit = t.enum(percentageUnits);
+export type IPercentageUnit = t.infer<typeof TPercentageUnit>;
+
+export const TPercentage = t.object({
+  value: t.number(),
+  unit: TPercentageUnit,
+});
+export type IPercentage = t.infer<typeof TPercentage>;
+export const TWeight = t.object({
+  value: t.number(),
+  unit: TUnit,
+});
+export type IWeight = t.infer<typeof TWeight>;
+export const TProgramState = t.record(
+  t.string(),
+  t.union([t.number(), TWeight, TPercentage]),
+);
+export type IProgramState = t.infer<typeof TProgramState>;
+export type IProgramMode = "planner" | "update";
 
 export enum NodeName {
   LineComment = "LineComment",
