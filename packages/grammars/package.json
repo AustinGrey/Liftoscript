@@ -36,5 +36,8 @@
     "bumpp": "^11.0.1",
     "typescript": "^6.0.2",
     "vite-plus": "^0.1.14"
+  },
+  "dependencies": {
+    "@lezer/generator": "catalog:"
   }
 }
