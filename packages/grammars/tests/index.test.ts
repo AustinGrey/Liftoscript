@@ -1,19 +1,27 @@
 import { expect, it } from "vite-plus/test";
 import { parser } from "@/parsers/logic";
-import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
+import {
+  type IProgramState,
+  LiftoscriptEvaluator,
+} from "@/evaluators/logic-evaluator";
+import { type LogicResult, run } from "@/evaluators/logic.ts";
 
-function evalLogic(logic: string) {
-  const parsed = parser.parse(logic);
-  const rawResult = new LiftoscriptEvaluator(script, { foo: 4 }).evaluate(
-    parsed.topNode,
+function evalLogic(logic: string, state: IProgramState) {
+  return new LiftoscriptEvaluator(logic, state).evaluate(
+    parser.parse(logic).topNode,
   );
 }
 
-it("ternary", () => {
-  const script = `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`;
-  const parsed = parser.parse(script);
-  const rawResult = new LiftoscriptEvaluator(script, { foo: 4 }).evaluate(
-    parsed.topNode,
-  );
-  console.log(rawResult);
-});
+it.each<[string, IProgramState, LogicResult]>([
+  [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 8 }, 5],
+  [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 4 }, 4],
+  [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 2 }, 6],
+])(
+  "$script resolves to $expected when state is $state for both old and new",
+  (logic, state, expected) => {
+    const old = evalLogic(logic, state);
+    const result = run(logic);
+    expect(old).toEqual(expected);
+    expect(result).toEqual(expected);
+  },
+);
