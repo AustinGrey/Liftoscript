@@ -4,14 +4,14 @@ import {
   Exercise_getIsUnilateral,
   Exercise_getWarmupSets,
   Exercise_toKey,
-} from "./exercise";
+} from "./exercise.ts";
 import {
   Reps_findNextEntryAndSet,
   Reps_isEmptyOrFinished,
   Reps_isCompleted,
   Reps_isEmpty,
   Reps_isFinished,
-} from "./set";
+} from "./set.ts";
 import {
   Weight_build,
   Weight_eq,
@@ -33,11 +33,11 @@ import {
   Weight_rpePct,
   Weight_evaluateWeight,
   Weight_op,
-} from "./weight";
+} from "./weight.ts";
 import {
   DateUtils_fromYYYYMMDD,
   DateUtils_fromYYYYMMDDStr,
-} from "../utils/date";
+} from "../utils/date.ts";
 import { lf, lb, LensBuilder } from "lens-shmens";
 import {
   ObjectUtils_isEqual,
@@ -46,7 +46,7 @@ import {
   ObjectUtils_clone,
 } from "../utils/object";
 import { IDispatch } from "../ducks/types";
-import { ScriptRunner } from "../parser";
+import { ScriptRunner } from "@/parser.ts";
 
 import {
   emptyProgramId,
