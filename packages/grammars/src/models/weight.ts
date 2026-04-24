@@ -1,7 +1,13 @@
 import { CollectionUtils_sort, CollectionUtils_compressArray } from "../utils/collection";
 
 import { IWeight, IUnit, ISettings, IPlate, IPercentage, IExerciseType } from "../types";
-import { n, MathUtils_roundTo005, MathUtils_round, MathUtils_roundFloat, MathUtils_roundTo000005 } from "../utils/math";
+import {
+  n,
+  MathUtils_roundTo005,
+  MathUtils_round,
+  MathUtils_roundFloat,
+  MathUtils_roundTo000005,
+} from "../utils/math";
 import {
   Equipment_getUnitOrDefaultForExerciseType,
   Equipment_getEquipmentDataForExerciseType,
@@ -11,7 +17,10 @@ import { Exercise_get, Exercise_onerm, Exercise_defaultRounding } from "./exerci
 
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
-export function Weight_display(weight: IWeight | IPercentage | number, withUnit: boolean = true): string {
+export function Weight_display(
+  weight: IWeight | IPercentage | number,
+  withUnit: boolean = true,
+): string {
   if (typeof weight === "number") {
     return `${weight}`;
   } else if (Weight_isPct(weight)) {
@@ -28,7 +37,7 @@ export function Weight_rpePct(reps: number, rpe: number): IPercentage {
 export function Weight_evaluateWeight(
   weight: IWeight | IPercentage,
   exerciseType: IExerciseType,
-  settings: ISettings
+  settings: ISettings,
 ): IWeight {
   if (Weight_is(weight)) {
     return weight;
@@ -88,7 +97,7 @@ export function Weight_parsePct(str?: string): IPercentage | IWeight | undefined
   if (str == null) {
     return undefined;
   }
-  const match = str.match(/^([\-+]?[0-9.]+)%$/);
+  const match = str.match(/^([-+]?[0-9.]+)%$/);
   if (match) {
     return Weight_buildPct(MathUtils_roundFloat(parseFloat(match[1]), 2));
   } else {
@@ -97,7 +106,7 @@ export function Weight_parsePct(str?: string): IPercentage | IWeight | undefined
 }
 
 export function Weight_parse(str: string): IWeight | undefined {
-  const match = str.match(/^([\-+]?[0-9.]+)\s*(kg|lb)$/);
+  const match = str.match(/^([-+]?[0-9.]+)\s*(kg|lb)$/);
   if (match) {
     return Weight_build(MathUtils_roundFloat(parseFloat(match[1]), 2), match[2] as IUnit);
   } else {
@@ -162,18 +171,31 @@ export function Weight_is(object: unknown): object is IWeight {
 export function Weight_isPct(object: unknown): object is IPercentage {
   const objWeight = object as IPercentage;
   return (
-    objWeight && typeof objWeight === "object" && "unit" in objWeight && "value" in objWeight && objWeight.unit === "%"
+    objWeight &&
+    typeof objWeight === "object" &&
+    "unit" in objWeight &&
+    "value" in objWeight &&
+    objWeight.unit === "%"
   );
 }
 
-export function Weight_round(weight: IWeight, settings: ISettings, unit: IUnit, exerciseType?: IExerciseType): IWeight {
+export function Weight_round(
+  weight: IWeight,
+  settings: ISettings,
+  unit: IUnit,
+  exerciseType?: IExerciseType,
+): IWeight {
   if (exerciseType == null) {
     return Weight_roundTo005(weight);
   }
   return Weight_calculatePlates(weight, settings, unit, exerciseType).totalWeight;
 }
 
-export function Weight_increment(weight: IWeight, settings: ISettings, exerciseType?: IExerciseType): IWeight {
+export function Weight_increment(
+  weight: IWeight,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IWeight {
   const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
   if (equipmentData) {
     const unit = equipmentData.unit ?? weight.unit;
@@ -181,18 +203,24 @@ export function Weight_increment(weight: IWeight, settings: ISettings, exerciseT
     if (equipmentData.isFixed) {
       const items = CollectionUtils_sort(
         equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => Weight_compare(a, b)
+        (a, b) => Weight_compare(a, b),
       );
       const item = items.find((i) => Weight_gt(i, roundWeight));
       return item ?? items[items.length - 1] ?? roundWeight;
     } else {
-      const smallestPlate = Weight_multiply(Equipment_smallestPlate(equipmentData, unit), equipmentData.multiplier);
+      const smallestPlate = Weight_multiply(
+        Equipment_smallestPlate(equipmentData, unit),
+        equipmentData.multiplier,
+      );
       let newWeight = roundWeight;
       let attempt = 0;
       do {
         newWeight = Weight_add(newWeight, smallestPlate);
         attempt += 1;
-      } while (attempt < 20 && Weight_eq(Weight_round(newWeight, settings, unit, exerciseType), roundWeight));
+      } while (
+        attempt < 20 &&
+        Weight_eq(Weight_round(newWeight, settings, unit, exerciseType), roundWeight)
+      );
       return newWeight;
     }
   } else {
@@ -202,20 +230,29 @@ export function Weight_increment(weight: IWeight, settings: ISettings, exerciseT
   }
 }
 
-export function Weight_decrement(weight: IWeight, settings: ISettings, exerciseType?: IExerciseType): IWeight {
-  const equipmentData = exerciseType ? Equipment_getEquipmentDataForExerciseType(settings, exerciseType) : undefined;
+export function Weight_decrement(
+  weight: IWeight,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IWeight {
+  const equipmentData = exerciseType
+    ? Equipment_getEquipmentDataForExerciseType(settings, exerciseType)
+    : undefined;
   if (equipmentData) {
     const unit = equipmentData.unit ?? weight.unit;
     const roundWeight = Weight_round(weight, settings, unit, exerciseType);
     if (equipmentData.isFixed) {
       const items = CollectionUtils_sort(
         equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => Weight_compareReverse(a, b)
+        (a, b) => Weight_compareReverse(a, b),
       );
       const item = items.find((i) => Weight_lt(i, roundWeight));
       return item ?? items[items.length - 1] ?? roundWeight;
     } else {
-      const smallestPlate = Weight_multiply(Equipment_smallestPlate(equipmentData, unit), equipmentData.multiplier);
+      const smallestPlate = Weight_multiply(
+        Equipment_smallestPlate(equipmentData, unit),
+        equipmentData.multiplier,
+      );
       const subtracted = Weight_subtract(roundWeight, smallestPlate);
       const newWeight = Weight_round(subtracted, settings, unit, exerciseType);
       return Weight_build(newWeight.value, newWeight.unit);
@@ -248,18 +285,26 @@ export function Weight_getNRepMax(oneRepMax: IWeight, reps: number): IWeight {
 }
 
 export function Weight_getTrainingMax(weight: IWeight, reps: number, settings: ISettings): IWeight {
-  return Weight_round(Weight_multiply(Weight_getOneRepMax(weight, reps), 0.9), settings, weight.unit);
+  return Weight_round(
+    Weight_multiply(Weight_getOneRepMax(weight, reps), 0.9),
+    settings,
+    weight.unit,
+  );
 }
 
 export function Weight_platesWeight(plates: IPlate[]): IWeight {
   const unit = plates[0]?.weight.unit || "lb";
   return plates.reduce(
     (memo, plate) => Weight_add(memo, Weight_multiply(plate.weight, plate.num)),
-    Weight_build(0, unit)
+    Weight_build(0, unit),
   );
 }
 
-export function Weight_formatOneSide(settings: ISettings, platesArr: IPlate[], exerciseType: IExerciseType): string {
+export function Weight_formatOneSide(
+  settings: ISettings,
+  platesArr: IPlate[],
+  exerciseType: IExerciseType,
+): string {
   const equipmentSettings = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
   const plates: IPlate[] = JSON.parse(JSON.stringify(platesArr));
   plates.sort((a, b) => Weight_compareReverse(a.weight, b.weight));
@@ -290,7 +335,7 @@ export function Weight_calculatePlates(
   allWeight: IWeight,
   settings: ISettings,
   units: IUnit,
-  exerciseType: IExerciseType
+  exerciseType: IExerciseType,
 ): { plates: IPlate[]; platesWeight: IWeight; totalWeight: IWeight } {
   const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
   if (equipmentData == null) {
@@ -304,9 +349,10 @@ export function Weight_calculatePlates(
   if (equipmentData.isFixed) {
     const fixed = CollectionUtils_sort(
       equipmentData.fixed.filter((w) => w.unit === (equipmentData.unit ?? units)),
-      (a, b) => b.value - a.value
+      (a, b) => b.value - a.value,
     );
-    const weight = fixed.find((w) => Weight_lte(w, absAllWeight)) || fixed[fixed.length - 1] || absAllWeight;
+    const weight =
+      fixed.find((w) => Weight_lte(w, absAllWeight)) || fixed[fixed.length - 1] || absAllWeight;
     let roundedWeight = Weight_roundTo005(weight);
     roundedWeight = inverted ? Weight_invert(roundedWeight) : roundedWeight;
     return { plates: [], platesWeight: roundedWeight, totalWeight: roundedWeight };
@@ -321,16 +367,21 @@ export function Weight_calculatePlates(
   const weight = Weight_roundTo000005(Weight_subtract(absAllWeight, barWeight));
   const availablePlates: IPlate[] = JSON.parse(JSON.stringify(availablePlatesArr));
   availablePlates.sort((a, b) => Weight_compareReverse(a.weight, b.weight));
-  const plates: IPlate[] = calculatePlatesInternalFast(weight, availablePlates, multiplier, isAssisting);
+  const plates: IPlate[] = calculatePlatesInternalFast(
+    weight,
+    availablePlates,
+    multiplier,
+    isAssisting,
+  );
   const total = plates.reduce(
     (memo, plate) => {
       const weightToAdd = Weight_multiply(plate.weight, plate.num);
       return isAssisting ? Weight_subtract(memo, weightToAdd) : Weight_add(memo, weightToAdd);
     },
-    Weight_build(0, allWeight.unit)
+    Weight_build(0, allWeight.unit),
   );
   const totalWeight = Weight_roundTo000005(
-    inverted ? Weight_invert(Weight_add(total, barWeight)) : Weight_add(total, barWeight)
+    inverted ? Weight_invert(Weight_add(total, barWeight)) : Weight_add(total, barWeight),
   );
   const thePlatesWeight = inverted ? Weight_invert(total) : total;
   return { plates, platesWeight: thePlatesWeight, totalWeight };
@@ -348,7 +399,7 @@ function calculatePlatesInternalFast(
   weight: IWeight,
   availablePlates: IPlate[],
   multiplier: number,
-  isAssisting: boolean
+  isAssisting: boolean,
 ): IPlate[] {
   const targetValue = isAssisting ? -weight.value : weight.value;
   if (targetValue <= 0) {
@@ -455,25 +506,37 @@ export function Weight_divide(weight: IWeight, value: IWeight | number): IWeight
   return Weight_operation(weight, value, (a, b) => a / b);
 }
 
-export function Weight_gt(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+export function Weight_gt(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a > b);
 }
 
-export function Weight_lt(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+export function Weight_lt(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a < b);
 }
 
-export function Weight_gte(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+export function Weight_gte(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a >= b);
 }
 
-export function Weight_lte(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+export function Weight_lte(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a <= b);
 }
 
 export function Weight_eqNull(
   weight: IWeight | number | IPercentage | undefined,
-  value: IWeight | number | IPercentage | undefined
+  value: IWeight | number | IPercentage | undefined,
 ): boolean {
   if (weight == null && value == null) {
     return true;
@@ -486,7 +549,10 @@ export function Weight_eqNull(
   }
 }
 
-export function Weight_eq(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+export function Weight_eq(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a === b);
 }
 
@@ -502,12 +568,14 @@ export function Weight_roundConvertTo(
   weight: IWeight,
   settings: ISettings,
   unit: IUnit,
-  exerciseType?: IExerciseType
+  exerciseType?: IExerciseType,
 ): IWeight {
   return Weight_round(Weight_convertTo(weight, unit), settings, unit, exerciseType);
 }
 
-export function Weight_type(value: number | IWeight | IPercentage): "weight" | "percentage" | "number" {
+export function Weight_type(
+  value: number | IWeight | IPercentage,
+): "weight" | "percentage" | "number" {
   if (typeof value === "number") {
     return "number";
   } else if (Weight_isPct(value)) {
@@ -522,7 +590,7 @@ export function Weight_convertTo(weight: IPercentage, unit: "%" | IUnit): IPerce
 export function Weight_convertTo(weight: number, unit: IUnit): number;
 export function Weight_convertTo(
   weight: IWeight | number | IPercentage,
-  unit: IUnit | "%"
+  unit: IUnit | "%",
 ): IWeight | number | IPercentage {
   if (typeof weight === "number") {
     return weight;
@@ -550,7 +618,7 @@ export function Weight_compareReverse(a: IWeight, b: IWeight): number {
 function comparison(
   weight: IWeight | number | IPercentage,
   value: IWeight | number | IPercentage,
-  o: (a: number, b: number) => boolean
+  o: (a: number, b: number) => boolean,
 ): boolean {
   if (typeof weight === "number" && typeof value === "number") {
     return o(weight, value);
@@ -575,7 +643,7 @@ export function Weight_applyOp(
   onerm: IWeight | undefined,
   oldValue: IWeight | number | IPercentage,
   value: IWeight | number | IPercentage,
-  opr: "+=" | "-=" | "*=" | "/=" | "="
+  opr: "+=" | "-=" | "*=" | "/=" | "=",
 ): IWeight | number | IPercentage {
   if (opr === "=") {
     return value;
@@ -594,7 +662,7 @@ export function Weight_op(
   onerm: IWeight | undefined,
   a: IWeight | number | IPercentage,
   b: IWeight | number | IPercentage,
-  o: (x: number, y: number) => number
+  o: (x: number, y: number) => number,
 ): IWeight | number | IPercentage {
   if (typeof a === "number" && typeof b === "number") {
     return o(a, b);
@@ -613,7 +681,9 @@ export function Weight_op(
     return Weight_buildPct(o(a.value, b.value));
   }
   if (Weight_isPct(a) && Weight_is(b)) {
-    const aWeight = onerm ? Weight_multiply(onerm, a.value / 100) : MathUtils_roundFloat(a.value / 100, 4);
+    const aWeight = onerm
+      ? Weight_multiply(onerm, a.value / 100)
+      : MathUtils_roundFloat(a.value / 100, 4);
     return Weight_operation(aWeight, b, o);
   }
 
@@ -621,7 +691,9 @@ export function Weight_op(
     return Weight_operation(a, b, o);
   }
   if (Weight_is(a) && Weight_isPct(b)) {
-    const bWeight = onerm ? Weight_multiply(onerm, b.value / 100) : MathUtils_roundFloat(b.value / 100, 4);
+    const bWeight = onerm
+      ? Weight_multiply(onerm, b.value / 100)
+      : MathUtils_roundFloat(b.value / 100, 4);
     return Weight_operation(a, bWeight, o);
   }
   if (Weight_is(a) && Weight_is(b)) {
@@ -634,17 +706,17 @@ export function Weight_op(
 export function Weight_operation(
   weight: IWeight,
   value: IWeight | number,
-  o: (a: number, b: number) => number
+  o: (a: number, b: number) => number,
 ): IWeight;
 export function Weight_operation(
   weight: IWeight | number,
   value: IWeight,
-  o: (a: number, b: number) => number
+  o: (a: number, b: number) => number,
 ): IWeight;
 export function Weight_operation(
   weight: IWeight | number,
   value: IWeight | number,
-  o: (a: number, b: number) => number
+  o: (a: number, b: number) => number,
 ): IWeight {
   if (typeof weight === "number" && typeof value !== "number") {
     return Weight_build(o(weight, value.value), value.unit);
@@ -657,11 +729,18 @@ export function Weight_operation(
   }
 }
 
-export function Weight_convertToWeight(onerm: IWeight, value: IWeight | number | IPercentage, unit: IUnit): IWeight {
+export function Weight_convertToWeight(
+  onerm: IWeight,
+  value: IWeight | number | IPercentage,
+  unit: IUnit,
+): IWeight {
   if (typeof value === "number") {
     return Weight_build(value, unit);
   } else if (Weight_isPct(value)) {
-    return Weight_convertTo(Weight_multiply(onerm, MathUtils_roundFloat(value.value / 100, 4)), unit);
+    return Weight_convertTo(
+      Weight_multiply(onerm, MathUtils_roundFloat(value.value / 100, 4)),
+      unit,
+    );
   } else {
     return value;
   }
@@ -672,7 +751,7 @@ export function Weight_calculateRepMax(
   knownRpe: number,
   knownWeight: number,
   targetReps: number,
-  targetRpe: number
+  targetRpe: number,
 ): number {
   const knownRpeMultiplier = Weight_rpeMultiplier(knownReps, knownRpe);
   const onerm = knownWeight / knownRpeMultiplier;

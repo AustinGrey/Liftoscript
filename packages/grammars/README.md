@@ -11,5 +11,5 @@ The grammars for various parts of liftoscript. Different grammars are for differ
 # Regenerate the grammars
 
 - Run `vpx @lezer/generator ./src/grammar-definitions/logic.grammar -o ./src/parsers/logic.ts --typeScript --names` and
-`vpx @lezer/generator ./src/grammar-definitions/workout-plan.grammar -o ./src/parsers/workout-plan.ts --typeScript --names`
+  `vpx @lezer/generator ./src/grammar-definitions/workout-plan.grammar -o ./src/parsers/workout-plan.ts --typeScript --names`
   - For some reason this doesn't seem to work when done from the package.json action defined.
