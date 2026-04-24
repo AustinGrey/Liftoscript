@@ -50,15 +50,6 @@ export type IEquipment = t.infer<typeof TEquipment>;
 export const TExerciseId = t.string();
 export type IExerciseId = t.infer<typeof TExerciseId>;
 
-export const TExerciseType = t
-  .object({
-    id: TExerciseId,
-    equipment: TEquipment.optional(),
-  })
-  .strict();
-
-export type IExerciseType = t.infer<typeof TExerciseType>;
-
 export const units = ["kg", "lb"] as const;
 
 export const TUnit = t.enum(units);
@@ -385,6 +376,171 @@ export const TProgramState = t.record(
 );
 export type IProgramState = t.infer<typeof TProgramState>;
 export type IProgramMode = "planner" | "update";
+
+export const TSet = t
+  .object({
+    vtype: t.literal("set"),
+    index: t.number(),
+    id: t.string(),
+
+    reps: t.number().optional(),
+    originalWeight: t.union([TWeight, TPercentage]).optional(),
+    weight: TWeight.optional(),
+    minReps: t.number().optional(),
+    rpe: t.number().optional(),
+    logRpe: t.boolean().optional(),
+    timestamp: t.number().optional(),
+    isAmrap: t.boolean().optional(),
+    label: t.string().optional(),
+    timer: t.number().optional(),
+    askWeight: t.boolean().optional(),
+    isCompleted: t.boolean().optional(),
+    isUnilateral: t.boolean().optional(),
+    completedRepsLeft: t.number().optional(),
+    completedReps: t.number().optional(),
+    completedWeight: TWeight.optional(),
+    completedRpe: t.number().optional(),
+    programSetIndex: t.number().optional(),
+  })
+  .strict();
+
+export type ISet = t.infer<typeof TSet>;
+
+export const availableBodyParts = [
+  "Back",
+  "Calves",
+  "Chest",
+  "Forearms",
+  "Hips",
+  "Shoulders",
+  "Thighs",
+  "Upper Arms",
+  "Waist",
+];
+
+export const TBodyPart = t.enum(availableBodyParts);
+export type IBodyPart = t.infer<typeof TBodyPart>;
+
+export const availableMuscles = [
+  "Adductor Brevis",
+  "Adductor Longus",
+  "Adductor Magnus",
+  "Biceps Brachii",
+  "Brachialis",
+  "Brachioradialis",
+  "Deltoid Anterior",
+  "Deltoid Lateral",
+  "Deltoid Posterior",
+  "Erector Spinae",
+  "Gastrocnemius",
+  "Gluteus Maximus",
+  "Gluteus Medius",
+  "Hamstrings",
+  "Iliopsoas",
+  "Infraspinatus",
+  "Latissimus Dorsi",
+  "Levator Scapulae",
+  "Obliques",
+  "Pectineous",
+  "Pectoralis Major Clavicular Head",
+  "Pectoralis Major Sternal Head",
+  "Quadriceps",
+  "Rectus Abdominis",
+  "Sartorius",
+  "Serratus Anterior",
+  "Soleus",
+  "Splenius",
+  "Sternocleidomastoid",
+  "Tensor Fasciae Latae",
+  "Teres Major",
+  "Teres Minor",
+  "Tibialis Anterior",
+  "Trapezius Lower Fibers",
+  "Trapezius Middle Fibers",
+  "Trapezius Upper Fibers",
+  "Triceps Brachii",
+  "Wrist Extensors",
+  "Wrist Flexors",
+] as const;
+
+export const TMuscle = t.enum(availableMuscles);
+export type IMuscle = t.infer<typeof TMuscle>;
+
+export const TMetaExercises = t
+  .object({
+    bodyParts: t.array(TBodyPart),
+    targetMuscles: t.array(TMuscle),
+    synergistMuscles: t.array(TMuscle),
+
+    sortedEquipment: t.array(TEquipment).optional(),
+  })
+  .strict();
+export type IMetaExercises = t.infer<typeof TMetaExercises>;
+
+export const TExerciseType = t
+  .object({
+    id: TExerciseId,
+    equipment: TEquipment.optional(),
+  })
+  .strict();
+export type IExerciseType = t.infer<typeof TExerciseType>;
+
+export const exerciseKinds = [
+  "core",
+  "pull",
+  "push",
+  "legs",
+  "upper",
+  "lower",
+] as const;
+
+export const TExerciseKind = t.enum(exerciseKinds);
+export type IExerciseKind = t.infer<typeof TExerciseKind>;
+
+export const TCustomExercise = t
+  .object({
+    vtype: t.literal("custom_exercise"),
+    id: TExerciseId,
+    name: t.string(),
+    isDeleted: t.boolean(),
+    meta: TMetaExercises,
+
+    defaultEquipment: TEquipment.optional(),
+    types: t.array(TExerciseKind).optional(),
+    clonedFrom: TExerciseType.optional(),
+    reuseImageFrom: TExerciseType.optional(),
+    largeImageUrl: t.string().optional(),
+    smallImageUrl: t.string().optional(),
+  })
+  .strict();
+
+export type ICustomExercise = t.infer<typeof TCustomExercise>;
+export type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
+
+export const equipments = [
+  "barbell",
+  "cable",
+  "dumbbell",
+  "smith",
+  "band",
+  "kettlebell",
+  "bodyweight",
+  "leverageMachine",
+  "medicineball",
+  "ezbar",
+  "trapbar",
+] as const;
+
+export const TBuiltinEquipment = t.enum(equipments);
+export type IBuiltinEquipment = t.infer<typeof TBuiltinEquipment>;
+
+const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
+
+export const TBarKey = t.enum(barKeys);
+export type IBarKey = t.infer<typeof TBarKey>;
+
+export const TBars = t.record(TBarKey, TWeight);
+export type IBars = t.infer<typeof TBars>;
 
 export interface IScriptBindings {
   day: number;
@@ -6838,14 +6994,6 @@ export function equipmentName(
   }
 }
 
-export type IExerciseKind =
-  | "core"
-  | "pull"
-  | "push"
-  | "legs"
-  | "upper"
-  | "lower";
-
 export type IExercise = {
   id: IExerciseId;
   name: string;
@@ -8138,3 +8286,7 @@ export function Exercise_filterCustomExercisesByType(
     });
   });
 }
+
+//#region Stubs
+
+//#endregion
