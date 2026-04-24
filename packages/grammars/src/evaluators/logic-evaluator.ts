@@ -306,64 +306,6 @@ export const TStatsEnabled = t
 
 export type IStatsEnabled = Readonly<t.infer<typeof TStatsEnabled>>;
 
-export const TSettings = t
-  .object({
-    timers: TSettingsTimers,
-    gyms: t.array(TGym),
-    deletedGyms: t.array(t.string()),
-    graphs: TGraphs,
-    graphOptions: t.record(t.string(), TGraphOptions),
-    graphsSettings: t
-      .object({
-        isSameXAxis: t.boolean().optional(),
-        isWithBodyweight: t.boolean().optional(),
-        isWithOneRm: t.boolean().optional(),
-        isWithProgramLines: t.boolean().optional(),
-        defaultType: TGraphExerciseSelectedType.optional(),
-        defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
-      })
-      .optional(),
-    exerciseStatsSettings: t
-      .object({
-        ascendingSort: t.boolean().optional(),
-        hideWithoutWorkoutNotes: t.boolean().optional(),
-        hideWithoutExerciseNotes: t.boolean().optional(),
-      })
-      .optional(),
-    exercises: t.record(t.string(), TCustomExercise),
-    statsEnabled: TStatsEnabled,
-    units: TUnit,
-    lengthUnits: TLengthUnit,
-    volume: t.number(),
-    exerciseData: t.record(t.string(), TExerciseDataValue),
-    planner: TPlannerSettings,
-    workoutSettings: TWorkoutSettings,
-    muscleGroups: TMuscleGroupsSettings,
-
-    appleHealthSyncWorkout: t.boolean().optional(),
-    appleHealthSyncMeasurements: t.boolean().optional(),
-    appleHealthAnchor: t.string().optional(),
-    googleHealthSyncWorkout: t.boolean().optional(),
-    googleHealthSyncMeasurements: t.boolean().optional(),
-    googleHealthAnchor: t.string().optional(),
-    healthConfirmation: t.boolean().optional(),
-    ignoreDoNotDisturb: t.boolean().optional(),
-    currentGymId: t.string().optional(),
-    isPublicProfile: t.boolean().optional(),
-    nickname: t.string().optional(),
-    alwaysOnDisplay: t.boolean().optional(),
-    vibration: t.boolean().optional(),
-    startWeekFromMonday: t.boolean().optional(),
-    textSize: t.number().optional(),
-    starredExercises: t.record(TExerciseId, t.boolean()).optional(),
-    theme: t.enum(["dark", "light"]).optional(),
-    currentBodyweight: TWeight.optional(),
-    affiliateEnabled: t.boolean().optional(),
-  })
-  .strict();
-
-export type ISettings = t.infer<typeof TSettings>;
-
 export const TPlate = t.object({
   weight: TWeight,
   num: t.number(),
@@ -541,6 +483,93 @@ export type IBarKey = t.infer<typeof TBarKey>;
 
 export const TBars = t.record(TBarKey, TWeight);
 export type IBars = t.infer<typeof TBars>;
+
+export const screenMuscles = [
+  "shoulders",
+  "triceps",
+  "back",
+  "abs",
+  "glutes",
+  "hamstrings",
+  "quadriceps",
+  "chest",
+  "biceps",
+  "calves",
+  "forearms",
+] as const;
+
+export const TScreenMuscle = t.union([t.enum(screenMuscles), t.string()]);
+export type IScreenMuscle = t.infer<typeof TScreenMuscle>;
+
+export const TProgramExerciseWarmupSet = t
+  .object({
+    reps: t.number(),
+    value: t.union([TWeight, t.number()]),
+    threshold: TWeight,
+  })
+  .strict();
+
+export type IProgramExerciseWarmupSet = Readonly<
+  t.infer<typeof TProgramExerciseWarmupSet>
+>;
+
+export const TSettings = t
+  .object({
+    timers: TSettingsTimers,
+    gyms: t.array(TGym),
+    deletedGyms: t.array(t.string()),
+    graphs: TGraphs,
+    graphOptions: t.record(t.string(), TGraphOptions),
+    graphsSettings: t
+      .object({
+        isSameXAxis: t.boolean().optional(),
+        isWithBodyweight: t.boolean().optional(),
+        isWithOneRm: t.boolean().optional(),
+        isWithProgramLines: t.boolean().optional(),
+        defaultType: TGraphExerciseSelectedType.optional(),
+        defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
+      })
+      .optional(),
+    exerciseStatsSettings: t
+      .object({
+        ascendingSort: t.boolean().optional(),
+        hideWithoutWorkoutNotes: t.boolean().optional(),
+        hideWithoutExerciseNotes: t.boolean().optional(),
+      })
+      .optional(),
+    exercises: t.record(t.string(), TCustomExercise),
+    statsEnabled: TStatsEnabled,
+    units: TUnit,
+    lengthUnits: TLengthUnit,
+    volume: t.number(),
+    exerciseData: t.record(t.string(), TExerciseDataValue),
+    planner: TPlannerSettings,
+    workoutSettings: TWorkoutSettings,
+    muscleGroups: TMuscleGroupsSettings,
+
+    appleHealthSyncWorkout: t.boolean().optional(),
+    appleHealthSyncMeasurements: t.boolean().optional(),
+    appleHealthAnchor: t.string().optional(),
+    googleHealthSyncWorkout: t.boolean().optional(),
+    googleHealthSyncMeasurements: t.boolean().optional(),
+    googleHealthAnchor: t.string().optional(),
+    healthConfirmation: t.boolean().optional(),
+    ignoreDoNotDisturb: t.boolean().optional(),
+    currentGymId: t.string().optional(),
+    isPublicProfile: t.boolean().optional(),
+    nickname: t.string().optional(),
+    alwaysOnDisplay: t.boolean().optional(),
+    vibration: t.boolean().optional(),
+    startWeekFromMonday: t.boolean().optional(),
+    textSize: t.number().optional(),
+    starredExercises: t.record(TExerciseId, t.boolean()).optional(),
+    theme: t.enum(["dark", "light"]).optional(),
+    currentBodyweight: TWeight.optional(),
+    affiliateEnabled: t.boolean().optional(),
+  })
+  .strict();
+
+export type ISettings = t.infer<typeof TSettings>;
 
 export interface IScriptBindings {
   day: number;
