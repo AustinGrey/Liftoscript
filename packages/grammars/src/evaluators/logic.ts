@@ -14,30 +14,39 @@ export type LogicResult = LogicResultSingular | LogicResultSingular[];
  * @param logic The script to run
  */
 export function run(logic: string): LogicResult {
-  return evaluate(parser.parse(logic).topNode);
+  return evaluate(parser.parse(logic).topNode, logic);
 }
 
 /**
  * A new simplified evaluator that gets the result of a logic script
  * @param expr The logic script to evaluate
+ * @param originalSource The original source of the script, required to get the actual text for a node
  */
-function evaluate(expr: SyntaxNode): LogicResult {
+function evaluate(expr: SyntaxNode, originalSource: string): LogicResult {
   switch (expr.type.name) {
     case NodeName.Program:
     case NodeName.BlockExpression:
     case NodeName.ParenthesisExpression: {
       let result: LogicResult = 0;
       // @TODO Why evaluate all children if only the last child's evaluate is returned?
-      for (const child of getChildren(expr, { atLeast: 1 })) {
-        if (!child.type.isSkipped) {
-          result = evaluate(child);
-        }
+      for (const child of queryChildren(expr, { atLeast: 1 })) {
+        result = evaluate(child, originalSource);
       }
       return result;
     }
+    case NodeName.NumberExpression: {
+      const numberNode = getChild(expr, {
+        ofType: NodeName.Number,
+      });
+      const value = parseFloat(getText(numberNode, originalSource));
+      // @TODO Why would this node be called "plus" when the obvious use case for it is to specify a minus?
+      // @TODO Why would the leading sign not be considered part of the number literal? We could simplify the grammar parsing if we just make the sign part of the literal
+      const plusNode = queryChild(expr, { ofType: NodeName.Plus });
+      const sign = getText(plusNode, originalSource);
+      return sign === "-" ? -value : value;
+    }
 
     case NodeName.BinaryExpression:
-    case NodeName.NumberExpression:
     case NodeName.Percentage:
     case NodeName.Ternary:
     case NodeName.ForExpression:
@@ -59,36 +68,90 @@ function evaluate(expr: SyntaxNode): LogicResult {
 }
 
 /**
- * @yields all children of a syntax node, regardless of their type
+ * Options when querying for children of a syntax node
+ */
+type QueryOptions = Partial<{
+  /**
+   * If provided, throws an error if the node has fewer than this many children of the given type
+   */
+  atLeast?: number;
+  /**
+   * If provided, skips all children not of this type
+   */
+  ofType: NodeName;
+  /**
+   * If true, includes skipped nodes in the result. Otherwise they are skipped.
+   * Defaults to false.
+   */
+  includeSkipped?: boolean;
+}>;
+
+/**
+ * @yields all children of a syntax node, optionally restricting by type, and potentially returning nothing
  * @param node The node to get the children of
  * @param options
  * @param options.atLeast - If provided, throws an error if the node has fewer than this many children
+ * @param options.ofType - If provided, only yields children of this type, and atLeast ensures that there are at least that number of children of this type
  */
-function* getChildren(
+function* queryChildren(
   node: SyntaxNode,
-  {
-    atLeast,
-  }: Partial<{
-    atLeast?: number;
-  }> = {},
+  { atLeast, ofType, includeSkipped }: QueryOptions = {},
 ): Generator<SyntaxNode> {
   const cur = node.cursor();
   let count = 0;
   if (!cur.firstChild()) {
     if (atLeast !== undefined && atLeast !== 0) {
       throw new SyntaxError(
-        `Expected at least${atLeast} children, but got ${count}`,
+        `Expected at least${atLeast} children${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
       );
     }
     return;
   }
   do {
+    if (ofType && cur.node.type.name !== ofType) {
+      continue;
+    }
+    if (cur.node.type.isSkipped && !includeSkipped) {
+      continue;
+    }
     yield cur.node;
     count++;
   } while (cur.nextSibling());
   if (atLeast !== undefined && count < atLeast) {
     throw new SyntaxError(
-      `Expected at least ${atLeast} children, but got ${count}`,
+      `Expected at least ${atLeast} children${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
     );
   }
+}
+
+/**
+ * Gets child, or throws an error if there are no children
+ * @param node The node to get the first matching child of
+ * @param options Additional options to pass along to queryChildren
+ */
+function getChild(node: SyntaxNode, options: QueryOptions = {}): SyntaxNode {
+  const [result] = queryChildren(node, { ...options, atLeast: 1 });
+  return result;
+}
+
+/**
+ * Gets child, or returns undefined if there are no children
+ * @param node The node to get the first matching child of
+ * @param options Additional options to pass along to queryChildren
+ */
+function queryChild(
+  node: SyntaxNode,
+  options: QueryOptions = {},
+): SyntaxNode | undefined {
+  const [result] = queryChildren(node, options);
+  return result;
+}
+
+function getText<TNode extends SyntaxNode | undefined>(
+  node: TNode,
+  originalSource: string,
+): TNode extends undefined ? undefined : string {
+  return (
+    node === undefined ? undefined : originalSource.slice(node.from, node.to)
+  ) as TNode extends undefined ? undefined : string;
 }
