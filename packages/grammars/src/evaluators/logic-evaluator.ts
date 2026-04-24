@@ -1,25 +1,10 @@
 import { type SyntaxNode } from "@lezer/common";
-// import {
-//   Weight_gt,
-//   Weight_lt,
-//   Weight_gte,
-//   Weight_lte,
-//   Weight_eq,
-//   Weight_build,
-//   Weight_print,
-//   Weight_smartConvert,
-//   Weight_is,
-//   Weight_isPct,
-//   Weight_buildAny,
-//   Weight_applyOp,
-//   Weight_convertToWeight,
-//   Weight_buildPct,
-//   Weight_op,
-// } from "./models/weight";
 import {
   CollectionUtils_compact,
   CollectionUtils_sort,
   CollectionUtils_compressArray,
+  CollectionUtils_concatBy,
+  CollectionUtils_flat,
 } from "@/utils/collection";
 import {
   MathUtils_applyOp,
@@ -32,6 +17,32 @@ import {
 } from "@/utils/math";
 import { parser as LiftoscriptParser } from "@/parsers/logic";
 import { z as t } from "zod";
+import {
+  ObjectUtils_keys,
+  ObjectUtils_values,
+  ObjectUtils_filter,
+} from "@/utils/object";
+import {
+  Muscle_getScreenMusclesFromMuscle,
+  Muscle_getMusclesFromScreenMuscle,
+  Muscle_getAvailableMuscleGroups,
+  Muscle_getMuscleGroupName,
+} from "./muscle";
+import {
+  StringUtils_fuzzySearch,
+  StringUtils_dashcase,
+  StringUtils_uncamelCase,
+  StringUtils_camelCase,
+  StringUtils_undashcase,
+  StringUtils_capitalize,
+} from "@/utils/string";
+import { UidFactory_generateUid } from "@/utils/generator";
+import { ExerciseImageUtils_exists } from "./exerciseImage";
+import { IDispatch } from "../ducks/types";
+import { Program_changeExerciseName } from "./program";
+import { EditProgram_updateProgram } from "./editProgram";
+import { lb } from "lens-shmens";
+import { updateSettings } from "./state";
 
 export const TEquipment = t.string();
 export type IEquipment = t.infer<typeof TEquipment>;
@@ -2799,3 +2810,5331 @@ export function Weight_rpeMultiplier(reps: number, rpe: number): number {
 }
 
 export const Weight_zero: IWeight = { value: 0, unit: "lb" } as const;
+
+// --- end weight
+
+export function Equipment_build(name: string): IEquipmentData {
+  return {
+    vtype: "equipment_data",
+    name,
+    multiplier: 1,
+    bar: {
+      lb: Weight_build(0, "lb"),
+      kg: Weight_build(0, "kg"),
+    },
+    plates: [
+      { weight: Weight_build(10, "lb"), num: 4 },
+      { weight: Weight_build(5, "kg"), num: 4 },
+    ],
+    fixed: [],
+    isFixed: false,
+  };
+}
+
+export function Equipment_getEquipmentOfGym(
+  settings: ISettings,
+  key?: string,
+): IAllEquipment {
+  const firstEquipment = settings.gyms[0].equipment;
+  if (key != null) {
+    return settings.gyms.find((g) => g.id === key)?.equipment ?? firstEquipment;
+  } else {
+    return firstEquipment;
+  }
+}
+
+export function Equipment_getGymByIdOrCurrent(
+  settings: ISettings,
+  gymId?: string,
+): IGym {
+  return (
+    settings.gyms.find((g) => g.id === (gymId ?? settings.currentGymId)) ??
+    settings.gyms[0]
+  );
+}
+
+export function Equipment_getCurrentGym(settings: ISettings): IGym {
+  return (
+    settings.gyms.find((g) => g.id === settings.currentGymId) ??
+    settings.gyms[0]
+  );
+}
+
+export function Equipment_getEquipmentIdForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+  gymId?: string,
+): string | undefined {
+  if (exerciseType == null) {
+    return undefined;
+  }
+
+  const key = Exercise_toKey(exerciseType);
+  if (
+    !(
+      settings.exerciseData[key] &&
+      ("equipment" in settings.exerciseData[key] ||
+        "rounding" in settings.exerciseData[key])
+    )
+  ) {
+    return exerciseType.equipment;
+  }
+  const exerciseData = settings.exerciseData[key];
+  const exerciseEquipment = exerciseData?.equipment;
+  if (exerciseEquipment == null) {
+    return undefined;
+  }
+
+  const currentGym = Equipment_getGymByIdOrCurrent(settings, gymId);
+  return exerciseEquipment[currentGym.id];
+}
+
+export function Equipment_getEquipmentNameForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): string | undefined {
+  const equipment = Equipment_getEquipmentIdForExerciseType(
+    settings,
+    exerciseType,
+  );
+  if (equipment == null) {
+    return undefined;
+  }
+  const currentGym = Equipment_getCurrentGym(settings);
+  const gymEquipment = currentGym.equipment[equipment];
+  if (gymEquipment == null || gymEquipment.isDeleted) {
+    return undefined;
+  }
+  const name = gymEquipment.name;
+  return name || equipmentName(equipment);
+}
+
+export function Equipment_getEquipmentDataForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IEquipmentData | undefined {
+  const equipment = Equipment_getEquipmentIdForExerciseType(
+    settings,
+    exerciseType,
+  );
+  const currentGym = Equipment_getCurrentGym(settings);
+  return equipment ? currentGym.equipment[equipment] : undefined;
+}
+
+export function Equipment_getUnitOrDefaultForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IUnit {
+  const equipment = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
+  return equipment?.unit ?? settings.units;
+}
+
+export function Equipment_getUnitForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IUnit | undefined {
+  const equipment = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
+  const equipmentUnit = equipment?.unit;
+  return equipmentUnit == null || equipmentUnit === settings.units
+    ? undefined
+    : equipmentUnit;
+}
+
+export function Equipment_getEquipmentData(
+  settings: ISettings,
+  key: string,
+): IEquipmentData | undefined {
+  return Equipment_currentEquipment(settings)?.[key];
+}
+
+export function Equipment_currentEquipment(settings: ISettings): IAllEquipment {
+  const currentGym =
+    settings.gyms.find((g) => g.id === settings.currentGymId) ??
+    settings.gyms[0];
+  return currentGym?.equipment;
+}
+
+export function Equipment_smallestPlate(
+  equipmentData: IEquipmentData,
+  unit: IUnit,
+): IWeight {
+  return (
+    CollectionUtils_sort(
+      equipmentData.plates.filter((p) => p.weight.unit === unit),
+      (a, b) => Weight_compare(a.weight, b.weight),
+    )[0]?.weight || Weight_build(1, unit)
+  );
+}
+
+export function Equipment_mergeEquipment(
+  oldEquipment: { [key in IEquipment]?: IEquipmentData },
+  newEquipment: { [key in IEquipment]?: IEquipmentData },
+): { [key in IEquipment]?: IEquipmentData } {
+  const newKeys = Array.from(
+    new Set([
+      ...ObjectUtils_keys(newEquipment),
+      ...ObjectUtils_keys(oldEquipment),
+    ]),
+  );
+  return newKeys.reduce<{ [key in IEquipment]?: IEquipmentData }>(
+    (acc, name) => {
+      const newEquipmentData = newEquipment[name];
+      const oldEquipmentData = oldEquipment[name];
+      if (newEquipmentData != null && oldEquipmentData == null) {
+        acc[name] = newEquipmentData;
+      } else if (newEquipmentData == null && oldEquipmentData != null) {
+        acc[name] = oldEquipmentData;
+      } else if (newEquipmentData != null && oldEquipmentData != null) {
+        acc[name] = {
+          ...oldEquipmentData,
+          bar: newEquipmentData.bar,
+          isFixed: newEquipmentData.isFixed,
+          plates: CollectionUtils_concatBy(
+            oldEquipmentData.plates,
+            newEquipmentData.plates,
+            (el) => `${el.weight.value}${el.weight.unit}`,
+          ),
+          multiplier: newEquipmentData.multiplier,
+          fixed: CollectionUtils_concatBy(
+            oldEquipmentData.fixed,
+            newEquipmentData.fixed,
+            (el) => `${el.value}${el.unit}`,
+          ),
+        };
+      }
+      return acc;
+    },
+    {},
+  );
+}
+
+export function Equipment_isBuiltIn(key: string): boolean {
+  return (equipments as unknown as string[]).indexOf(key) !== -1;
+}
+
+export function Equipment_customEquipment(
+  equipmentSettings?: IAllEquipment,
+): IAllEquipment {
+  return ObjectUtils_filter(
+    equipmentSettings || {},
+    (key) => !Equipment_isBuiltIn(key),
+  );
+}
+
+export function Equipment_equipmentKeyByName(
+  name: string,
+  equipmentSettings?: IAllEquipment,
+): string | undefined {
+  const builtInEquipmentKey = equipments.find(
+    (eq) => eq === name.toLowerCase(),
+  );
+  if (builtInEquipmentKey) {
+    return builtInEquipmentKey;
+  }
+
+  const builtInEquipmentName = equipments.find(
+    (eq) => equipmentName(eq).toLowerCase() === name.toLowerCase(),
+  );
+  if (builtInEquipmentName) {
+    return builtInEquipmentName;
+  }
+
+  const customEquipmentKey = ObjectUtils_keys(equipmentSettings || {}).find(
+    (eq) => {
+      return equipmentName(eq).toLowerCase() === name.toLowerCase();
+    },
+  );
+  return customEquipmentKey;
+}
+
+// -- end equipment
+
+export const allExercisesList: Record<IExerciseId, IExercise> = {
+  abWheel: {
+    id: "abWheel",
+    name: "Ab Wheel",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  arnoldPress: {
+    id: "arnoldPress",
+    name: "Arnold Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  aroundTheWorld: {
+    id: "aroundTheWorld",
+    name: "Around The World",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["core"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  backExtension: {
+    id: "backExtension",
+    name: "Back Extension",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "core"],
+    startingWeightLb: { value: 50, unit: "lb" },
+    startingWeightKg: { value: 22.5, unit: "kg" },
+  },
+  ballSlams: {
+    id: "ballSlams",
+    name: "Ball Slams",
+    defaultEquipment: "medicineball",
+    types: ["core", "upper"],
+    startingWeightLb: { value: 10, unit: "lb" },
+    startingWeightKg: { value: 4.5, unit: "kg" },
+  },
+  battleRopes: {
+    id: "battleRopes",
+    name: "Battle Ropes",
+    defaultEquipment: "bodyweight",
+    types: ["upper", "core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  behindTheNeckPress: {
+    id: "behindTheNeckPress",
+    name: "Behind The Neck Press",
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  benchDip: {
+    id: "benchDip",
+    name: "Bench Dip",
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  benchPress: {
+    id: "benchPress",
+    name: "Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  benchPressCloseGrip: {
+    id: "benchPressCloseGrip",
+    name: "Bench Press Close Grip",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  benchPressWideGrip: {
+    id: "benchPressWideGrip",
+    name: "Bench Press Wide Grip",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  bentOverOneArmRow: {
+    id: "bentOverOneArmRow",
+    name: "Bent Over One Arm Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  bentOverRow: {
+    id: "bentOverRow",
+    name: "Bent Over Row",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  bicepCurl: {
+    id: "bicepCurl",
+    name: "Bicep Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  bicycleCrunch: {
+    id: "bicycleCrunch",
+    name: "Bicycle Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  boxJump: {
+    id: "boxJump",
+    name: "Box Jump",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  boxSquat: {
+    id: "boxSquat",
+    name: "Box Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 155, unit: "lb" },
+    startingWeightKg: { value: 70, unit: "kg" },
+  },
+  bulgarianSplitSquat: {
+    id: "bulgarianSplitSquat",
+    name: "Bulgarian Split Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  burpee: {
+    id: "burpee",
+    name: "Burpee",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "lower", "core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  cableCrossover: {
+    id: "cableCrossover",
+    name: "Cable Crossover",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  cableCrunch: {
+    id: "cableCrunch",
+    name: "Cable Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["core"],
+    startingWeightLb: { value: 50, unit: "lb" },
+    startingWeightKg: { value: 22.5, unit: "kg" },
+  },
+  cableKickback: {
+    id: "cableKickback",
+    name: "Cable Kickback",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  cablePullThrough: {
+    id: "cablePullThrough",
+    name: "Cable Pull Through",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["lower", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  cableTwist: {
+    id: "cableTwist",
+    name: "Cable Twist",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["core"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  calfPressOnLegPress: {
+    id: "calfPressOnLegPress",
+    name: "Calf Press on Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 150, unit: "lb" },
+    startingWeightKg: { value: 67.5, unit: "kg" },
+  },
+  calfPressOnSeatedLegPress: {
+    id: "calfPressOnSeatedLegPress",
+    name: "Calf Press on Seated Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 120, unit: "lb" },
+    startingWeightKg: { value: 53.75, unit: "kg" },
+  },
+  chestDip: {
+    id: "chestDip",
+    name: "Chest Dip",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  chestFly: {
+    id: "chestFly",
+    name: "Chest Fly",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  chestPress: {
+    id: "chestPress",
+    name: "Chest Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  chestSupportedRow: {
+    id: "chestSupportedRow",
+    name: "Chest-Supported Row",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  chinUp: {
+    id: "chinUp",
+    name: "Chin Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  clean: {
+    id: "clean",
+    name: "Clean",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  cleanandJerk: {
+    id: "cleanandJerk",
+    name: "Clean and Jerk",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  concentrationCurl: {
+    id: "concentrationCurl",
+    name: "Concentration Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  crossBodyCrunch: {
+    id: "crossBodyCrunch",
+    name: "Cross Body Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  crunch: {
+    id: "crunch",
+    name: "Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  cycling: {
+    id: "cycling",
+    name: "Cycling",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  deadlift: {
+    id: "deadlift",
+    name: "Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "pull"],
+    startingWeightLb: { value: 185, unit: "lb" },
+    startingWeightKg: { value: 82.5, unit: "kg" },
+  },
+  deadliftHighPull: {
+    id: "deadliftHighPull",
+    name: "Deadlift High Pull",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  declineBenchPress: {
+    id: "declineBenchPress",
+    name: "Decline Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 125, unit: "lb" },
+    startingWeightKg: { value: 55, unit: "kg" },
+  },
+  declineCrunch: {
+    id: "declineCrunch",
+    name: "Decline Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  deficitDeadlift: {
+    id: "deficitDeadlift",
+    name: "Deficit Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "pull"],
+    startingWeightLb: { value: 165, unit: "lb" },
+    startingWeightKg: { value: 75, unit: "kg" },
+  },
+  ellipticalMachine: {
+    id: "ellipticalMachine",
+    name: "Elliptical Machine",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  facePull: {
+    id: "facePull",
+    name: "Face Pull",
+    defaultWarmup: 10,
+    defaultEquipment: "band",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  flatKneeRaise: {
+    id: "flatKneeRaise",
+    name: "Flat Knee Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  flatLegRaise: {
+    id: "flatLegRaise",
+    name: "Flat Leg Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  frontRaise: {
+    id: "frontRaise",
+    name: "Front Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  frontSquat: {
+    id: "frontSquat",
+    name: "Front Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  gobletSquat: {
+    id: "gobletSquat",
+    name: "Goblet Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  goodMorning: {
+    id: "goodMorning",
+    name: "Good Morning",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  gluteBridge: {
+    id: "gluteBridge",
+    name: "Glute Bridge",
+    defaultWarmup: 45,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  gluteBridgeMarch: {
+    id: "gluteBridgeMarch",
+    name: "Glute Bridge March",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  gluteKickback: {
+    id: "gluteKickback",
+    name: "Glute Kickback",
+    defaultWarmup: 45,
+    defaultEquipment: "cable",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  hackSquat: {
+    id: "hackSquat",
+    name: "Hack Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  hammerCurl: {
+    id: "hammerCurl",
+    name: "Hammer Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  handstandPushUp: {
+    id: "handstandPushUp",
+    name: "Handstand Push Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  hangClean: {
+    id: "hangClean",
+    name: "Hang Clean",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  hangSnatch: {
+    id: "hangSnatch",
+    name: "Hang Snatch",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  hangingLegRaise: {
+    id: "hangingLegRaise",
+    name: "Hanging Leg Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  highKneeSkips: {
+    id: "highKneeSkips",
+    name: "High Knee Skips",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  highRow: {
+    id: "highRow",
+    name: "High Row",
+    defaultWarmup: 45,
+    defaultEquipment: "leverageMachine",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  hipAbductor: {
+    id: "hipAbductor",
+    name: "Hip Abductor",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  hipAdductor: {
+    id: "hipAdductor",
+    name: "Hip Adductor",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  hipThrust: {
+    id: "hipThrust",
+    name: "Hip Thrust",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  inclineBenchPress: {
+    id: "inclineBenchPress",
+    name: "Incline Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  inclineBenchPressWideGrip: {
+    id: "inclineBenchPressWideGrip",
+    name: "Incline Bench Press Wide Grip",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 110, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  inclineChestFly: {
+    id: "inclineChestFly",
+    name: "Incline Chest Fly",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  inclineChestPress: {
+    id: "inclineChestPress",
+    name: "Incline Chest Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  inclineCurl: {
+    id: "inclineCurl",
+    name: "Incline Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  inclineRow: {
+    id: "inclineRow",
+    name: "Incline Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  invertedRow: {
+    id: "invertedRow",
+    name: "Inverted Row",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  isoLateralChestPress: {
+    id: "isoLateralChestPress",
+    name: "Iso-Lateral Chest Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  isoLateralRow: {
+    id: "isoLateralRow",
+    name: "Iso-Lateral Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  jackknifeSitUp: {
+    id: "jackknifeSitUp",
+    name: "Jackknife Sit Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  jumpRope: {
+    id: "jumpRope",
+    name: "Jump Rope",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  jumpSquat: {
+    id: "jumpSquat",
+    name: "Jump Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  jumpingJack: {
+    id: "jumpingJack",
+    name: "Jumping Jack",
+    defaultWarmup: 10,
+    defaultEquipment: undefined,
+    types: ["upper", "lower"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kettlebellSwing: {
+    id: "kettlebellSwing",
+    name: "Kettlebell Swing",
+    defaultWarmup: 10,
+    defaultEquipment: "kettlebell",
+    types: ["upper", "lower", "core"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 16, unit: "kg" },
+  },
+  kettlebellTurkishGetUp: {
+    id: "kettlebellTurkishGetUp",
+    name: "Kettlebell Turkish Get Up",
+    defaultWarmup: 10,
+    defaultEquipment: "kettlebell",
+    types: ["upper", "lower", "core"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 8, unit: "kg" },
+  },
+  kippingPullUp: {
+    id: "kippingPullUp",
+    name: "Kipping Pull Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kneeRaise: {
+    id: "kneeRaise",
+    name: "Knee Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kneelingPulldown: {
+    id: "kneelingPulldown",
+    name: "Kneeling Pulldown",
+    defaultWarmup: 10,
+    defaultEquipment: "band",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kneestoElbows: {
+    id: "kneestoElbows",
+    name: "Knees to Elbows",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  latPulldown: {
+    id: "latPulldown",
+    name: "Lat Pulldown",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  lateralBoxJump: {
+    id: "lateralBoxJump",
+    name: "Lateral Box Jump",
+    defaultWarmup: 10,
+    defaultEquipment: undefined,
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  lateralRaise: {
+    id: "lateralRaise",
+    name: "Lateral Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  legsUpBenchPress: {
+    id: "legsUpBenchPress",
+    name: "Legs Up Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  legCurl: {
+    id: "legCurl",
+    name: "Leg Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  legExtension: {
+    id: "legExtension",
+    name: "Leg Extension",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  legPress: {
+    id: "legPress",
+    name: "Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 250, unit: "lb" },
+    startingWeightKg: { value: 112.5, unit: "kg" },
+  },
+  lunge: {
+    id: "lunge",
+    name: "Lunge",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  lyingBicepCurl: {
+    id: "lyingBicepCurl",
+    name: "Lying Bicep Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  lyingLegCurl: {
+    id: "lyingLegCurl",
+    name: "Lying Leg Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  mountainClimber: {
+    id: "mountainClimber",
+    name: "Mountain Climber",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core", "lower"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  muscleUp: {
+    id: "muscleUp",
+    name: "Muscle Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  obliqueCrunch: {
+    id: "obliqueCrunch",
+    name: "Oblique Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  overheadPress: {
+    id: "overheadPress",
+    name: "Overhead Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  overheadSquat: {
+    id: "overheadSquat",
+    name: "Overhead Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 55, unit: "lb" },
+    startingWeightKg: { value: 25, unit: "kg" },
+  },
+  pecDeck: {
+    id: "pecDeck",
+    name: "Pec Deck",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 50, unit: "lb" },
+    startingWeightKg: { value: 22.5, unit: "kg" },
+  },
+  pendlayRow: {
+    id: "pendlayRow",
+    name: "Pendlay Row",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  pistolSquat: {
+    id: "pistolSquat",
+    name: "Pistol Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  plank: {
+    id: "plank",
+    name: "Plank",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  powerClean: {
+    id: "powerClean",
+    name: "Power Clean",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  powerSnatch: {
+    id: "powerSnatch",
+    name: "Power Snatch",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  preacherCurl: {
+    id: "preacherCurl",
+    name: "Preacher Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  pressUnder: {
+    id: "pressUnder",
+    name: "Press Under",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  pullUp: {
+    id: "pullUp",
+    name: "Pull Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  pullover: {
+    id: "pullover",
+    name: "Pullover",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  pushPress: {
+    id: "pushPress",
+    name: "Push Press",
+    defaultWarmup: 45,
+    defaultEquipment: "kettlebell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 16, unit: "kg" },
+  },
+  pushUp: {
+    id: "pushUp",
+    name: "Push Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  reverseCrunch: {
+    id: "reverseCrunch",
+    name: "Reverse Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  reverseCurl: {
+    id: "reverseCurl",
+    name: "Reverse Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  reverseFly: {
+    id: "reverseFly",
+    name: "Reverse Fly",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  reverseGripConcentrationCurl: {
+    id: "reverseGripConcentrationCurl",
+    name: "Reverse Grip Concentration Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  reversePlank: {
+    id: "reversePlank",
+    name: "Reverse Plank",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  reverseLatPulldown: {
+    id: "reverseLatPulldown",
+    name: "Reverse Lat Pulldown",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  reverseLunge: {
+    id: "reverseLunge",
+    name: "Reverse Lunge",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  reverseWristCurl: {
+    id: "reverseWristCurl",
+    name: "Reverse Wrist Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  romanianDeadlift: {
+    id: "romanianDeadlift",
+    name: "Romanian Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 40, unit: "lb" },
+    startingWeightKg: { value: 17.5, unit: "kg" },
+  },
+  reverseHyperextension: {
+    id: "reverseHyperextension",
+    name: "Reverse Hyperextension",
+    defaultWarmup: 45,
+    defaultEquipment: "band",
+    types: ["core", "lower"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  rowing: {
+    id: "rowing",
+    name: "Rowing",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  russianTwist: {
+    id: "russianTwist",
+    name: "Russian Twist",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  safetySquatBarSquat: {
+    id: "safetySquatBarSquat",
+    name: "Safety Squat Bar Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 145, unit: "lb" },
+    startingWeightKg: { value: 65, unit: "kg" },
+  },
+  seatedCalfRaise: {
+    id: "seatedCalfRaise",
+    name: "Seated Calf Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 90, unit: "lb" },
+    startingWeightKg: { value: 40, unit: "kg" },
+  },
+  seatedFrontRaise: {
+    id: "seatedFrontRaise",
+    name: "Seated Front Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  seatedLegCurl: {
+    id: "seatedLegCurl",
+    name: "Seated Leg Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  seatedLegPress: {
+    id: "seatedLegPress",
+    name: "Seated Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 200, unit: "lb" },
+    startingWeightKg: { value: 90, unit: "kg" },
+  },
+  seatedOverheadPress: {
+    id: "seatedOverheadPress",
+    name: "Seated Overhead Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  seatedPalmsUpWristCurl: {
+    id: "seatedPalmsUpWristCurl",
+    name: "Seated Palms Up Wrist Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  seatedRow: {
+    id: "seatedRow",
+    name: "Seated Row",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  seatedWideGripRow: {
+    id: "seatedWideGripRow",
+    name: "Seated Wide Grip Row",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  shoulderPress: {
+    id: "shoulderPress",
+    name: "Shoulder Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  shoulderPressParallelGrip: {
+    id: "shoulderPressParallelGrip",
+    name: "Shoulder Press Parallel Grip",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  shrug: {
+    id: "shrug",
+    name: "Shrug",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 45, unit: "lb" },
+    startingWeightKg: { value: 20, unit: "kg" },
+  },
+  sideBend: {
+    id: "sideBend",
+    name: "Side Bend",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["core"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  sideCrunch: {
+    id: "sideCrunch",
+    name: "Side Crunch",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sideHipAbductor: {
+    id: "sideHipAbductor",
+    name: "Side Hip Abductor",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sideLyingClam: {
+    id: "sideLyingClam",
+    name: "Side Lying Clam",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sidePlank: {
+    id: "sidePlank",
+    name: "Side Plank",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegBridge: {
+    id: "singleLegBridge",
+    name: "Single Leg Bridge",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegCalfRaise: {
+    id: "singleLegCalfRaise",
+    name: "Single Leg Calf Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  singleLegDeadlift: {
+    id: "singleLegDeadlift",
+    name: "Single Leg Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  singleLegGluteBridgeBench: {
+    id: "singleLegGluteBridgeBench",
+    name: "Single Leg Glute Bridge On Bench",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegGluteBridgeStraight: {
+    id: "singleLegGluteBridgeStraight",
+    name: "Single Leg Glute Bridge Straight Leg",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegGluteBridgeBentKnee: {
+    id: "singleLegGluteBridgeBentKnee",
+    name: "Single Leg Glute Bridge Bent Knee",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegHipThrust: {
+    id: "singleLegHipThrust",
+    name: "Single Leg Hip Thrust",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sissySquat: {
+    id: "sissySquat",
+    name: "Sissy Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sitUp: {
+    id: "sitUp",
+    name: "Sit Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  skullcrusher: {
+    id: "skullcrusher",
+    name: "Skullcrusher",
+    defaultWarmup: 10,
+    defaultEquipment: "ezbar",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 45, unit: "lb" },
+    startingWeightKg: { value: 20, unit: "kg" },
+  },
+  slingShotBenchPress: {
+    id: "slingShotBenchPress",
+    name: "Sling Shot Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 140, unit: "lb" },
+    startingWeightKg: { value: 62.5, unit: "kg" },
+  },
+  snatch: {
+    id: "snatch",
+    name: "Snatch",
+    defaultWarmup: 45,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  snatchPull: {
+    id: "snatchPull",
+    name: "Snatch Pull",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  splitSquat: {
+    id: "splitSquat",
+    name: "Split Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  splitJerk: {
+    id: "splitJerk",
+    name: "Split Jerk",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  squat: {
+    id: "squat",
+    name: "Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  squatRow: {
+    id: "squatRow",
+    name: "Squat Row",
+    defaultWarmup: 10,
+    defaultEquipment: "band",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  standingCalfRaise: {
+    id: "standingCalfRaise",
+    name: "Standing Calf Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  standingRow: {
+    id: "standingRow",
+    name: "Standing Row",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  standingRowCloseGrip: {
+    id: "standingRowCloseGrip",
+    name: "Standing Row Close Grip",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  standingRowRearDeltWithRope: {
+    id: "standingRowRearDeltWithRope",
+    name: "Standing Row Rear Delt With Rope",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  standingRowRearHorizontalDeltWithRope: {
+    id: "standingRowRearHorizontalDeltWithRope",
+    name: "Standing Row Rear Delt, Horizontal, With Rope",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  standingRowVBar: {
+    id: "standingRowVBar",
+    name: "Standing Row V-Bar",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  stepUp: {
+    id: "stepUp",
+    name: "Step up",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  stiffLegDeadlift: {
+    id: "stiffLegDeadlift",
+    name: "Stiff Leg Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  straightLegDeadlift: {
+    id: "straightLegDeadlift",
+    name: "Straight Leg Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 110, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  sumoDeadlift: {
+    id: "sumoDeadlift",
+    name: "Sumo Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 175, unit: "lb" },
+    startingWeightKg: { value: 77.5, unit: "kg" },
+  },
+  sumoDeadliftHighPull: {
+    id: "sumoDeadliftHighPull",
+    name: "Sumo Deadlift High Pull",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  superman: {
+    id: "superman",
+    name: "Superman",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  tBarRow: {
+    id: "tBarRow",
+    name: "T Bar Row",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 90, unit: "lb" },
+    startingWeightKg: { value: 40, unit: "kg" },
+  },
+  thruster: {
+    id: "thruster",
+    name: "Thruster",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  toesToBar: {
+    id: "toesToBar",
+    name: "Toes To Bar",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  torsoRotation: {
+    id: "torsoRotation",
+    name: "Torso Rotation",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  trapBarDeadlift: {
+    id: "trapBarDeadlift",
+    name: "Trap Bar Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "trapbar",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 185, unit: "lb" },
+    startingWeightKg: { value: 82.5, unit: "kg" },
+  },
+  tricepsDip: {
+    id: "tricepsDip",
+    name: "Triceps Dip",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  tricepsExtension: {
+    id: "tricepsExtension",
+    name: "Triceps Extension",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  tricepsPushdown: {
+    id: "tricepsPushdown",
+    name: "Triceps Pushdown",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 40, unit: "lb" },
+    startingWeightKg: { value: 17.5, unit: "kg" },
+  },
+  uprightRow: {
+    id: "uprightRow",
+    name: "Upright Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  vUp: {
+    id: "vUp",
+    name: "V Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  widePullUp: {
+    id: "widePullUp",
+    name: "Wide Pull Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  wristCurl: {
+    id: "wristCurl",
+    name: "Wrist Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  wristRoller: {
+    id: "wristRoller",
+    name: "Wrist Roller",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  zercherSquat: {
+    id: "zercherSquat",
+    name: "Zercher Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 105, unit: "lb" },
+    startingWeightKg: { value: 47.5, unit: "kg" },
+  },
+};
+
+const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
+  Partial<Record<string, IExerciseId>>
+>((acc, key) => {
+  acc[allExercisesList[key].name.toLowerCase()] = allExercisesList[key].id;
+  return acc;
+}, {});
+
+export const metadata: Record<IExerciseId, IMetaExercises> = {
+  abWheel: {
+    targetMuscles: ["Iliopsoas"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Deltoid Posterior",
+      "Latissimus Dorsi",
+      "Pectineous",
+      "Pectoralis Major Sternal Head",
+      "Sartorius",
+      "Serratus Anterior",
+      "Tensor Fasciae Latae",
+      "Teres Major",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["bodyweight"],
+  },
+  arnoldPress: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["dumbbell", "kettlebell"],
+  },
+  aroundTheWorld: {
+    targetMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+    ],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+      "Latissimus Dorsi",
+      "Serratus Anterior",
+    ],
+    bodyParts: ["Chest", "Shoulders"],
+    sortedEquipment: ["dumbbell"],
+  },
+  backExtension: {
+    targetMuscles: ["Erector Spinae"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Hamstrings"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight", "leverageMachine"],
+  },
+  ballSlams: {
+    targetMuscles: [
+      "Infraspinatus",
+      "Latissimus Dorsi",
+      "Teres Major",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Rectus Abdominis",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["medicineball"],
+  },
+  battleRopes: {
+    targetMuscles: ["Deltoid Posterior"],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Lateral",
+      "Infraspinatus",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["bodyweight"],
+  },
+  behindTheNeckPress: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell"],
+  },
+  benchDip: {
+    targetMuscles: ["Triceps Brachii"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Latissimus Dorsi",
+      "Levator Scapulae",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+      "Serratus Anterior",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["bodyweight"],
+  },
+  benchPress: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: [
+      "barbell",
+      "cable",
+      "dumbbell",
+      "smith",
+      "band",
+      "kettlebell",
+    ],
+  },
+  benchPressCloseGrip: {
+    targetMuscles: ["Triceps Brachii"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+    ],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["barbell", "ezbar", "smith"],
+  },
+  benchPressWideGrip: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["barbell", "smith"],
+  },
+  bentOverOneArmRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Infraspinatus",
+      "Teres Major",
+      "Teres Minor",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Pectoralis Major Sternal Head",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["dumbbell"],
+  },
+  bentOverRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: [
+      "barbell",
+      "cable",
+      "dumbbell",
+      "band",
+      "leverageMachine",
+      "smith",
+    ],
+  },
+  bicepCurl: {
+    targetMuscles: ["Biceps Brachii"],
+    synergistMuscles: ["Brachialis", "Brachioradialis"],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: [
+      "barbell",
+      "dumbbell",
+      "band",
+      "leverageMachine",
+      "cable",
+      "ezbar",
+    ],
+  },
+  bicycleCrunch: {
+    targetMuscles: ["Obliques", "Rectus Abdominis"],
+    synergistMuscles: ["Gluteus Maximus", "Iliopsoas", "Quadriceps"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  boxJump: {
+    targetMuscles: ["Quadriceps", "Gluteus Maximus", "Gastrocnemius", "Soleus"],
+    synergistMuscles: [
+      "Hamstrings",
+      "Adductor Magnus",
+      "Erector Spinae",
+      "Rectus Abdominis",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  boxSquat: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "dumbbell"],
+  },
+  bulgarianSplitSquat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Hips", "Thighs"],
+    sortedEquipment: ["dumbbell"],
+  },
+  burpee: {
+    targetMuscles: [
+      "Quadriceps",
+      "Gluteus Maximus",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+      "Triceps Brachii",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+      "Rectus Abdominis",
+    ],
+    synergistMuscles: [
+      "Hamstrings",
+      "Biceps Brachii",
+      "Brachialis",
+      "Latissimus Dorsi",
+      "Obliques",
+      "Erector Spinae",
+      "Obliques",
+      "Soleus",
+      "Gastrocnemius",
+      "Tibialis Anterior",
+    ],
+    bodyParts: ["Chest", "Shoulders", "Upper Arms", "Waist", "Thighs"],
+    sortedEquipment: ["bodyweight"],
+  },
+  cableCrossover: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Latissimus Dorsi",
+      "Levator Scapulae",
+      "Pectoralis Major Clavicular Head",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["cable"],
+  },
+  cableCrunch: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: ["Obliques"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["cable"],
+  },
+  cableKickback: {
+    targetMuscles: ["Triceps Brachii"],
+    synergistMuscles: [],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["cable"],
+  },
+  cablePullThrough: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Hamstrings"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["cable"],
+  },
+  cableTwist: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Adductor Magnus",
+      "Erector Spinae",
+      "Gluteus Medius",
+      "Iliopsoas",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: [
+      "barbell",
+      "bodyweight",
+      "cable",
+      "leverageMachine",
+      "band",
+    ],
+  },
+  calfPressOnLegPress: {
+    targetMuscles: ["Gastrocnemius"],
+    synergistMuscles: ["Soleus"],
+    bodyParts: ["Calves"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  calfPressOnSeatedLegPress: {
+    targetMuscles: ["Gastrocnemius"],
+    synergistMuscles: ["Soleus"],
+    bodyParts: ["Calves"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  chestDip: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Latissimus Dorsi",
+      "Levator Scapulae",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Teres Major",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["bodyweight"],
+  },
+  chestFly: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["barbell", "cable", "dumbbell", "leverageMachine"],
+  },
+  chestPress: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["leverageMachine", "band"],
+  },
+  chestSupportedRow: {
+    targetMuscles: ["Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Latissimus Dorsi",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["barbell", "dumbbell"],
+  },
+  chinUp: {
+    targetMuscles: ["Latissimus Dorsi"],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Levator Scapulae",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["leverageMachine", "bodyweight"],
+  },
+  clean: {
+    targetMuscles: [
+      "Gluteus Maximus",
+      "Hamstrings",
+      "Quadriceps",
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+    ],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Gastrocnemius",
+      "Soleus",
+      "Erector Spinae",
+      "Biceps Brachii",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+      "Wrist Flexors",
+    ],
+    bodyParts: ["Hips", "Thighs", "Back", "Shoulders"],
+    sortedEquipment: ["barbell"],
+  },
+  cleanandJerk: {
+    targetMuscles: [
+      "Gluteus Maximus",
+      "Hamstrings",
+      "Quadriceps",
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+    ],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Gastrocnemius",
+      "Soleus",
+      "Erector Spinae",
+      "Biceps Brachii",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+      "Wrist Flexors",
+    ],
+    bodyParts: ["Hips", "Thighs", "Back", "Shoulders"],
+    sortedEquipment: ["barbell"],
+  },
+  concentrationCurl: {
+    targetMuscles: ["Brachialis"],
+    synergistMuscles: ["Biceps Brachii", "Brachioradialis"],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["barbell", "dumbbell", "band", "cable"],
+  },
+  crossBodyCrunch: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: ["Iliopsoas", "Rectus Abdominis"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  crunch: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: ["Obliques"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["cable", "bodyweight", "leverageMachine"],
+  },
+  cycling: {
+    targetMuscles: [
+      "Quadriceps",
+      "Hamstrings",
+      "Gluteus Maximus",
+      "Gastrocnemius",
+      "Soleus",
+      "Tibialis Anterior",
+    ],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Adductor Longus",
+      "Adductor Brevis",
+      "Iliopsoas",
+      "Erector Spinae",
+      "Rectus Abdominis",
+      "Obliques",
+    ],
+    bodyParts: ["Hips", "Thighs", "Calves", "Shins", "Back", "Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  deadlift: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Hamstrings", "Quadriceps", "Soleus"],
+    bodyParts: ["Hips"],
+    sortedEquipment: [
+      "barbell",
+      "cable",
+      "dumbbell",
+      "leverageMachine",
+      "smith",
+      "band",
+      "kettlebell",
+      "bodyweight",
+    ],
+  },
+  deadliftHighPull: {
+    targetMuscles: ["Deltoid Lateral", "Gluteus Maximus", "Quadriceps"],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Anterior",
+      "Gastrocnemius",
+      "Infraspinatus",
+      "Soleus",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell"],
+  },
+  declineBenchPress: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["dumbbell", "smith"],
+  },
+  declineCrunch: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: ["Obliques"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  deficitDeadlift: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Erector Spinae",
+      "Hamstrings",
+      "Quadriceps",
+      "Soleus",
+    ],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell", "trapbar"],
+  },
+  ellipticalMachine: {
+    targetMuscles: [],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+      "Gluteus Maximus",
+      "Hamstrings",
+      "Latissimus Dorsi",
+      "Levator Scapulae",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+      "Quadriceps",
+      "Serratus Anterior",
+    ],
+    bodyParts: ["Hips", "Thighs", "Back", "Shoulders"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  facePull: {
+    targetMuscles: ["Deltoid Posterior"],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Lateral",
+      "Infraspinatus",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["band"],
+  },
+  flatKneeRaise: {
+    targetMuscles: ["Iliopsoas"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Pectineous",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  flatLegRaise: {
+    targetMuscles: ["Iliopsoas"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Pectineous",
+      "Quadriceps",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Hips", "Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  frontRaise: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell", "cable", "dumbbell", "bodyweight", "band"],
+  },
+  gluteBridge: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Quadriceps"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["band", "barbell", "dumbbell"],
+  },
+  gluteBridgeMarch: {
+    targetMuscles: ["Gluteus Maximus", "Rectus Abdominis"],
+    synergistMuscles: ["Hamstrings", "Quadriceps", "Sartorius"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  gluteKickback: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus"],
+    bodyParts: ["Glute"],
+    sortedEquipment: ["leverageMachine", "bodyweight", "cable", "band"],
+  },
+  frontSquat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell", "kettlebell", "dumbbell", "cable", "smith"],
+  },
+  gobletSquat: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["kettlebell", "dumbbell"],
+  },
+  goodMorning: {
+    targetMuscles: ["Hamstrings"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "smith", "leverageMachine"],
+  },
+  hackSquat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell", "smith"],
+  },
+  hammerCurl: {
+    targetMuscles: ["Brachioradialis"],
+    synergistMuscles: ["Biceps Brachii", "Brachialis"],
+    bodyParts: ["Forearms"],
+    sortedEquipment: ["cable", "dumbbell", "band"],
+  },
+  handstandPushUp: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["bodyweight"],
+  },
+  hangClean: {
+    targetMuscles: ["Biceps Brachii", "Brachialis", "Brachioradialis"],
+    synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head"],
+    bodyParts: ["Forearms"],
+    sortedEquipment: ["kettlebell"],
+  },
+  hangSnatch: {
+    targetMuscles: [
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Trapezius Upper Fibers",
+      "Quadriceps",
+      "Gluteus Maximus",
+    ],
+    synergistMuscles: [
+      "Hamstrings",
+      "Erector Spinae",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+      "Latissimus Dorsi",
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Gastrocnemius",
+      "Soleus",
+      "Obliques",
+      "Rectus Abdominis",
+    ],
+    bodyParts: ["Thighs", "Back", "Shoulders"],
+    sortedEquipment: ["barbell"],
+  },
+  hangingLegRaise: {
+    targetMuscles: ["Iliopsoas"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Pectineous",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight", "cable"],
+  },
+  highKneeSkips: {
+    targetMuscles: ["Quadriceps", "Hamstrings", "Gluteus Maximus"],
+    synergistMuscles: [
+      "Iliopsoas",
+      "Gastrocnemius",
+      "Soleus",
+      "Tibialis Anterior",
+      "Rectus Abdominis",
+      "Obliques",
+      "Adductor Magnus",
+      "Adductor Brevis",
+      "Adductor Longus",
+    ],
+    bodyParts: ["Thighs", "Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  highRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Erector Spinae",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  hipAbductor: {
+    targetMuscles: ["Gluteus Maximus", "Gluteus Medius"],
+    synergistMuscles: ["Tensor Fasciae Latae"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["leverageMachine", "bodyweight", "cable", "band"],
+  },
+  hipAdductor: {
+    targetMuscles: ["Adductor Brevis", "Adductor Longus", "Adductor Magnus"],
+    synergistMuscles: ["Pectineous"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["leverageMachine", "cable", "band", "bodyweight"],
+  },
+  hipThrust: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Quadriceps"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell", "leverageMachine", "band", "bodyweight"],
+  },
+  inclineBenchPress: {
+    targetMuscles: ["Pectoralis Major Clavicular Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Sternal Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["barbell", "cable", "dumbbell", "smith"],
+  },
+  inclineBenchPressWideGrip: {
+    targetMuscles: ["Pectoralis Major Clavicular Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Sternal Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["barbell"],
+  },
+  inclineChestFly: {
+    targetMuscles: ["Pectoralis Major Clavicular Head"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Deltoid Anterior",
+      "Pectoralis Major Sternal Head",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["cable", "dumbbell"],
+  },
+  inclineChestPress: {
+    targetMuscles: ["Pectoralis Major Clavicular Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Sternal Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["leverageMachine", "band", "dumbbell"],
+  },
+  inclineCurl: {
+    targetMuscles: ["Biceps Brachii"],
+    synergistMuscles: ["Brachialis", "Brachioradialis"],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["dumbbell"],
+  },
+  inclineRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["barbell", "dumbbell"],
+  },
+  invertedRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Infraspinatus",
+      "Teres Major",
+      "Teres Minor",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Pectoralis Major Sternal Head",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["bodyweight"],
+  },
+  isoLateralChestPress: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["dumbbell"],
+  },
+  isoLateralRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["dumbbell"],
+  },
+  jackknifeSitUp: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: [
+      "Iliopsoas",
+      "Obliques",
+      "Quadriceps",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  jumpRope: {
+    targetMuscles: ["Soleus", "Gastrocnemius", "Quadriceps", "Hamstrings"],
+    synergistMuscles: [
+      "Gluteus Maximus",
+      "Rectus Abdominis",
+      "Obliques",
+      "Tibialis Anterior",
+    ],
+    bodyParts: ["Thighs", "Calves"],
+    sortedEquipment: ["bodyweight"],
+  },
+  jumpSquat: {
+    targetMuscles: ["Gluteus Maximus", "Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gastrocnemius", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "bodyweight"],
+  },
+  jumpingJack: {
+    targetMuscles: [
+      "Gluteus Maximus",
+      "Quadriceps",
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Adductor Magnus",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+    ],
+    synergistMuscles: [
+      "Gastrocnemius",
+      "Soleus",
+      "Hamstrings",
+      "Rectus Abdominis",
+      "Obliques",
+      "Trapezius Upper Fibers",
+      "Serratus Anterior",
+    ],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["bodyweight"],
+  },
+  kettlebellSwing: {
+    targetMuscles: ["Deltoid Anterior", "Gluteus Maximus"],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Hamstrings",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Soleus",
+    ],
+    bodyParts: ["Hips", "Shoulders"],
+    sortedEquipment: ["dumbbell", "kettlebell"],
+  },
+  kettlebellTurkishGetUp: {
+    targetMuscles: [
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+      "Quadriceps",
+      "Gluteus Maximus",
+    ],
+    synergistMuscles: [
+      "Obliques",
+      "Rectus Abdominis",
+      "Latissimus Dorsi",
+      "Hamstrings",
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Adductor Magnus",
+      "Triceps Brachii",
+      "Erector Spinae",
+      "Serratus Anterior",
+    ],
+    bodyParts: ["Hips", "Shoulders"],
+    sortedEquipment: ["kettlebell"],
+  },
+  kippingPullUp: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Brachialis",
+      "Biceps Brachii",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Deltoid Posterior",
+      "Brachioradialis",
+      "Pectoralis Major Sternal Head",
+      "Rectus Abdominis",
+      "Obliques",
+      "Iliopsoas",
+      "Tensor Fasciae Latae",
+      "Adductor Longus",
+      "Adductor Brevis",
+      "Erector Spinae",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["bodyweight"],
+  },
+  kneeRaise: {
+    targetMuscles: ["Iliopsoas"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Pectineous",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  kneelingPulldown: {
+    targetMuscles: ["Latissimus Dorsi"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Levator Scapulae",
+      "Pectoralis Major Sternal Head",
+      "Serratus Anterior",
+      "Teres Major",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["band"],
+  },
+  kneestoElbows: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Iliopsoas",
+      "Obliques",
+      "Pectineous",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  latPulldown: {
+    targetMuscles: ["Latissimus Dorsi"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Levator Scapulae",
+      "Teres Major",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["cable"],
+  },
+  lateralBoxJump: {
+    targetMuscles: ["Gluteus Maximus", "Quadriceps", "Hamstrings"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Adductor Magnus",
+      "Gluteus Medius",
+      "Tensor Fasciae Latae",
+      "Rectus Abdominis",
+      "Obliques",
+      "Deltoid Anterior",
+      "Deltoid Posterior",
+      "Deltoid Lateral",
+    ],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["bodyweight"],
+  },
+  lateralRaise: {
+    targetMuscles: ["Deltoid Lateral"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: [
+      "cable",
+      "dumbbell",
+      "leverageMachine",
+      "band",
+      "kettlebell",
+    ],
+  },
+  legsUpBenchPress: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["barbell"],
+  },
+  legCurl: {
+    targetMuscles: ["Hamstrings"],
+    synergistMuscles: ["Gastrocnemius", "Sartorius"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  legExtension: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: [],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["leverageMachine", "band"],
+  },
+  legPress: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["smith", "leverageMachine"],
+  },
+  lunge: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "dumbbell", "bodyweight", "cable"],
+  },
+  lyingBicepCurl: {
+    targetMuscles: ["Biceps Brachii"],
+    synergistMuscles: ["Brachialis", "Brachioradialis"],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: [
+      "barbell",
+      "dumbbell",
+      "band",
+      "leverageMachine",
+      "cable",
+      "ezbar",
+    ],
+  },
+  lyingLegCurl: {
+    targetMuscles: ["Hamstrings"],
+    synergistMuscles: ["Gastrocnemius", "Sartorius"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["leverageMachine", "band"],
+  },
+  mountainClimber: {
+    targetMuscles: ["Iliopsoas"],
+    synergistMuscles: [
+      "Adductor Brevis",
+      "Adductor Longus",
+      "Pectineous",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  muscleUp: {
+    targetMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Latissimus Dorsi",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    synergistMuscles: [],
+    bodyParts: ["Back"],
+    sortedEquipment: ["bodyweight"],
+  },
+  obliqueCrunch: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: ["Rectus Abdominis"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  overheadPress: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell", "dumbbell", "ezbar"],
+  },
+  overheadSquat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "dumbbell"],
+  },
+  pecDeck: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: ["Pectoralis Major Clavicular Head", "Serratus Anterior"],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  pendlayRow: {
+    targetMuscles: [
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Latissimus Dorsi",
+      "Teres Major",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Pectoralis Major Sternal Head",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["barbell"],
+  },
+  pistolSquat: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["kettlebell", "leverageMachine", "bodyweight"],
+  },
+  plank: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: [],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  powerClean: {
+    targetMuscles: ["Quadriceps", "Gluteus Maximus", "Deltoid Anterior"],
+    synergistMuscles: [
+      "Hamstrings",
+      "Gastrocnemius",
+      "Soleus",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Trapezius Upper Fibers",
+      "Latissimus Dorsi",
+      "Erector Spinae",
+      "Biceps Brachii",
+      "Wrist Flexors",
+      "Rectus Abdominis",
+      "Obliques",
+    ],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell"],
+  },
+  powerSnatch: {
+    targetMuscles: [
+      "Quadriceps",
+      "Gluteus Maximus",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+    ],
+    synergistMuscles: [
+      "Hamstrings",
+      "Gastrocnemius",
+      "Soleus",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Trapezius Upper Fibers",
+      "Latissimus Dorsi",
+      "Erector Spinae",
+      "Biceps Brachii",
+      "Wrist Flexors",
+      "Rectus Abdominis",
+      "Obliques",
+    ],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell"],
+  },
+  preacherCurl: {
+    targetMuscles: ["Brachialis"],
+    synergistMuscles: ["Biceps Brachii", "Brachioradialis"],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["barbell", "dumbbell", "ezbar", "leverageMachine"],
+  },
+  pressUnder: {
+    targetMuscles: [
+      "Quadriceps",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+    ],
+    synergistMuscles: [
+      "Gluteus Maximus",
+      "Hamstrings",
+      "Erector Spinae",
+      "Rectus Abdominis",
+      "Obliques",
+      "Triceps Brachii",
+      "Biceps Brachii",
+    ],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell"],
+  },
+  pullUp: {
+    targetMuscles: ["Latissimus Dorsi"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Levator Scapulae",
+      "Teres Major",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["leverageMachine", "bodyweight", "band"],
+  },
+  pullover: {
+    targetMuscles: ["Latissimus Dorsi"],
+    synergistMuscles: [
+      "Deltoid Posterior",
+      "Levator Scapulae",
+      "Pectoralis Major Sternal Head",
+      "Serratus Anterior",
+      "Teres Major",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["barbell", "dumbbell"],
+  },
+  pushPress: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["bodyweight", "kettlebell"],
+  },
+  pushUp: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["bodyweight", "band"],
+  },
+  reverseCrunch: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: ["Iliopsoas", "Obliques"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight", "cable"],
+  },
+  reverseCurl: {
+    targetMuscles: ["Brachioradialis"],
+    synergistMuscles: ["Biceps Brachii", "Brachialis"],
+    bodyParts: ["Forearms"],
+    sortedEquipment: ["barbell", "cable", "dumbbell", "band"],
+  },
+  reverseFly: {
+    targetMuscles: ["Deltoid Posterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Infraspinatus",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["dumbbell", "leverageMachine", "band"],
+  },
+  reverseGripConcentrationCurl: {
+    targetMuscles: ["Brachialis", "Brachioradialis"],
+    synergistMuscles: ["Biceps Brachii", "Wrist Flexors"],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["dumbbell"],
+  },
+  reverseLatPulldown: {
+    targetMuscles: ["Latissimus Dorsi"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Levator Scapulae",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["cable"],
+  },
+  reverseLunge: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Soleus", "Gluteus Maximus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "dumbbell", "bodyweight", "cable"],
+  },
+  reverseWristCurl: {
+    targetMuscles: ["Wrist Extensors"],
+    synergistMuscles: [],
+    bodyParts: ["Forearms"],
+    sortedEquipment: ["barbell"],
+  },
+  reversePlank: {
+    targetMuscles: ["Gluteus Maximus", "Rectus Abdominis", "Erector Spinae"],
+    synergistMuscles: [
+      "Hamstrings",
+      "Quadriceps",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+      "Triceps Brachii",
+      "Latissimus Dorsi",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  romanianDeadlift: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Erector Spinae", "Hamstrings"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell", "dumbbell"],
+  },
+  reverseHyperextension: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Hamstrings"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["band", "leverageMachine"],
+  },
+  rowing: {
+    targetMuscles: ["Quadriceps", "Latissimus Dorsi", "Erector Spinae"],
+    synergistMuscles: [
+      "Hamstrings",
+      "Gluteus Maximus",
+      "Biceps Brachii",
+      "Deltoid Anterior",
+      "Deltoid Lateral",
+      "Deltoid Posterior",
+      "Wrist Flexors",
+      "Rectus Abdominis",
+      "Obliques",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["cable"],
+  },
+  russianTwist: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: ["Erector Spinae", "Iliopsoas"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight", "dumbbell", "cable"],
+  },
+  safetySquatBarSquat: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell"],
+  },
+  seatedCalfRaise: {
+    targetMuscles: ["Soleus"],
+    synergistMuscles: ["Gastrocnemius"],
+    bodyParts: ["Calves"],
+    sortedEquipment: ["barbell", "dumbbell", "leverageMachine"],
+  },
+  seatedFrontRaise: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell", "dumbbell"],
+  },
+  seatedLegCurl: {
+    targetMuscles: ["Hamstrings"],
+    synergistMuscles: ["Gastrocnemius", "Sartorius"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  seatedLegPress: {
+    targetMuscles: ["Gluteus Maximus", "Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Soleus"],
+    bodyParts: ["Hips", "Thighs"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  seatedOverheadPress: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell"],
+  },
+  seatedPalmsUpWristCurl: {
+    targetMuscles: ["Wrist Flexors"],
+    synergistMuscles: [],
+    bodyParts: ["Forearms"],
+    sortedEquipment: ["dumbbell"],
+  },
+  seatedRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Erector Spinae",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["cable", "band", "leverageMachine"],
+  },
+  seatedWideGripRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Erector Spinae",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["cable"],
+  },
+  shoulderPress: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["cable", "dumbbell", "leverageMachine", "band", "smith"],
+  },
+  shoulderPressParallelGrip: {
+    targetMuscles: ["Deltoid Anterior"],
+    synergistMuscles: [
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["dumbbell"],
+  },
+  shrug: {
+    targetMuscles: ["Trapezius Upper Fibers"],
+    synergistMuscles: ["Levator Scapulae", "Trapezius Middle Fibers"],
+    bodyParts: ["Back"],
+    sortedEquipment: [
+      "barbell",
+      "cable",
+      "dumbbell",
+      "leverageMachine",
+      "band",
+      "smith",
+    ],
+  },
+  sideBend: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: ["Erector Spinae", "Iliopsoas"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["cable", "dumbbell", "band"],
+  },
+  sideCrunch: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: ["Rectus Abdominis"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight", "band", "cable"],
+  },
+  sideHipAbductor: {
+    targetMuscles: ["Gluteus Medius", "Tensor Fasciae Latae"],
+    synergistMuscles: [],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight", "barbell", "leverageMachine"],
+  },
+  sideLyingClam: {
+    targetMuscles: ["Gluteus Medius"],
+    synergistMuscles: ["Tensor Fasciae Latae"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  sidePlank: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: [],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  singleLegBridge: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Hamstrings"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  singleLegCalfRaise: {
+    targetMuscles: ["Gastrocnemius"],
+    synergistMuscles: ["Soleus"],
+    bodyParts: ["Calves"],
+    sortedEquipment: [
+      "barbell",
+      "dumbbell",
+      "leverageMachine",
+      "bodyweight",
+      "cable",
+    ],
+  },
+  singleLegDeadlift: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Hamstrings"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["dumbbell", "bodyweight"],
+  },
+  singleLegGluteBridgeBench: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: [],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  singleLegGluteBridgeStraight: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: [],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  singleLegGluteBridgeBentKnee: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: [],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["bodyweight"],
+  },
+  singleLegHipThrust: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Quadriceps"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell", "bodyweight", "leverageMachine"],
+  },
+  sissySquat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["bodyweight"],
+  },
+  sitUp: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: [
+      "Iliopsoas",
+      "Obliques",
+      "Quadriceps",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight", "kettlebell"],
+  },
+  slingShotBenchPress: {
+    targetMuscles: ["Pectoralis Major Sternal Head"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Pectoralis Major Clavicular Head",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Chest"],
+    sortedEquipment: ["barbell"],
+  },
+  skullcrusher: {
+    targetMuscles: ["Triceps Brachii"],
+    synergistMuscles: [],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["barbell", "cable", "dumbbell", "ezbar"],
+  },
+  snatch: {
+    targetMuscles: [
+      "Deltoid Anterior",
+      "Erector Spinae",
+      "Gluteus Maximus",
+      "Quadriceps",
+    ],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Deltoid Lateral",
+      "Gastrocnemius",
+      "Serratus Anterior",
+      "Soleus",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Hips", "Shoulders", "Thighs"],
+    sortedEquipment: ["dumbbell"],
+  },
+  snatchPull: {
+    targetMuscles: [
+      "Erector Spinae",
+      "Gluteus Maximus",
+      "Hamstrings",
+      "Quadriceps",
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Trapezius Upper Fibers",
+    ],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Deltoid Anterior",
+      "Deltoid Posterior",
+      "Deltoid Lateral",
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Triceps Brachii",
+      "Wrist Flexors",
+      "Wrist Extensors",
+    ],
+    bodyParts: ["Back", "Hips", "Thighs"],
+    sortedEquipment: ["barbell"],
+  },
+  splitSquat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Hips", "Thighs"],
+    sortedEquipment: ["dumbbell"],
+  },
+  splitJerk: {
+    targetMuscles: [
+      "Deltoid Anterior",
+      "Deltoid Posterior",
+      "Deltoid Lateral",
+      "Triceps Brachii",
+      "Quadriceps",
+      "Gluteus Maximus",
+      "Erector Spinae",
+    ],
+    synergistMuscles: [
+      "Pectoralis Major Sternal Head",
+      "Pectoralis Major Clavicular Head",
+      "Latissimus Dorsi",
+      "Hamstrings",
+      "Obliques",
+      "Rectus Abdominis",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+      "Trapezius Upper Fibers",
+      "Adductor Magnus",
+      "Tensor Fasciae Latae",
+      "Wrist Extensors",
+      "Wrist Flexors",
+    ],
+    bodyParts: ["Hips", "Shoulders", "Thighs"],
+    sortedEquipment: ["barbell"],
+  },
+  squat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: [
+      "barbell",
+      "dumbbell",
+      "bodyweight",
+      "smith",
+      "leverageMachine",
+    ],
+  },
+  squatRow: {
+    targetMuscles: [
+      "Gluteus Maximus",
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Infraspinatus",
+      "Teres Major",
+      "Teres Minor",
+      "Adductor Magnus",
+      "Deltoid Posterior",
+      "Pectoralis Major Sternal Head",
+      "Quadriceps",
+      "Soleus",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["band"],
+  },
+  standingCalfRaise: {
+    targetMuscles: ["Gastrocnemius"],
+    synergistMuscles: ["Soleus"],
+    bodyParts: ["Calves"],
+    sortedEquipment: [
+      "barbell",
+      "dumbbell",
+      "leverageMachine",
+      "bodyweight",
+      "cable",
+    ],
+  },
+  standingRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["cable"],
+  },
+  standingRowCloseGrip: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Upper Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Infraspinatus",
+      "Teres Major",
+      "Teres Minor",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["cable"],
+  },
+  standingRowRearDeltWithRope: {
+    targetMuscles: ["Deltoid Posterior"],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Lateral",
+      "Infraspinatus",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["cable"],
+  },
+  standingRowRearHorizontalDeltWithRope: {
+    targetMuscles: ["Deltoid Posterior"],
+    synergistMuscles: [
+      "Infraspinatus",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["cable"],
+  },
+  standingRowVBar: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Infraspinatus",
+      "Teres Major",
+      "Teres Minor",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Pectoralis Major Sternal Head",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["cable"],
+  },
+  stepUp: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "dumbbell", "bodyweight", "band"],
+  },
+  stiffLegDeadlift: {
+    targetMuscles: ["Erector Spinae"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Hamstrings"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell", "dumbbell", "band"],
+  },
+  straightLegDeadlift: {
+    targetMuscles: ["Hamstrings"],
+    synergistMuscles: ["Adductor Magnus", "Erector Spinae", "Gluteus Maximus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["barbell", "dumbbell", "band", "kettlebell"],
+  },
+  sumoDeadlift: {
+    targetMuscles: ["Erector Spinae"],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Gluteus Maximus",
+      "Quadriceps",
+      "Soleus",
+    ],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell"],
+  },
+  sumoDeadliftHighPull: {
+    targetMuscles: ["Deltoid Lateral", "Gluteus Maximus", "Quadriceps"],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Anterior",
+      "Gastrocnemius",
+      "Infraspinatus",
+      "Soleus",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell"],
+  },
+  superman: {
+    targetMuscles: ["Erector Spinae"],
+    synergistMuscles: ["Gluteus Maximus", "Hamstrings"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight", "dumbbell"],
+  },
+  tBarRow: {
+    targetMuscles: [
+      "Latissimus Dorsi",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Pectoralis Major Sternal Head",
+      "Teres Major",
+      "Teres Minor",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["leverageMachine"],
+  },
+  thruster: {
+    targetMuscles: ["Deltoid Anterior", "Gluteus Maximus", "Quadriceps"],
+    synergistMuscles: [
+      "Adductor Magnus",
+      "Deltoid Lateral",
+      "Pectoralis Major Clavicular Head",
+      "Serratus Anterior",
+      "Soleus",
+      "Triceps Brachii",
+    ],
+    bodyParts: ["Shoulders", "Thighs"],
+    sortedEquipment: ["barbell"],
+  },
+  toesToBar: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: [
+      "Iliopsoas",
+      "Obliques",
+      "Quadriceps",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight"],
+  },
+  torsoRotation: {
+    targetMuscles: ["Obliques"],
+    synergistMuscles: ["Erector Spinae"],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["cable"],
+  },
+  trapBarDeadlift: {
+    targetMuscles: ["Gluteus Maximus"],
+    synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+    bodyParts: ["Thighs"],
+    sortedEquipment: ["trapbar"],
+  },
+  tricepsDip: {
+    targetMuscles: ["Triceps Brachii"],
+    synergistMuscles: [
+      "Deltoid Anterior",
+      "Latissimus Dorsi",
+      "Levator Scapulae",
+      "Pectoralis Major Clavicular Head",
+      "Pectoralis Major Sternal Head",
+    ],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["bodyweight", "leverageMachine"],
+  },
+  tricepsExtension: {
+    targetMuscles: ["Triceps Brachii"],
+    synergistMuscles: [],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["barbell", "cable", "band", "dumbbell"],
+  },
+  tricepsPushdown: {
+    targetMuscles: ["Triceps Brachii"],
+    synergistMuscles: [],
+    bodyParts: ["Upper Arms"],
+    sortedEquipment: ["cable"],
+  },
+  uprightRow: {
+    targetMuscles: ["Deltoid Lateral"],
+    synergistMuscles: [
+      "Biceps Brachii",
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Anterior",
+      "Infraspinatus",
+      "Serratus Anterior",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Shoulders"],
+    sortedEquipment: ["barbell", "cable", "dumbbell", "band"],
+  },
+  vUp: {
+    targetMuscles: ["Rectus Abdominis"],
+    synergistMuscles: [
+      "Iliopsoas",
+      "Obliques",
+      "Pectineous",
+      "Quadriceps",
+      "Sartorius",
+      "Tensor Fasciae Latae",
+    ],
+    bodyParts: ["Waist"],
+    sortedEquipment: ["bodyweight", "band", "dumbbell"],
+  },
+  widePullUp: {
+    targetMuscles: ["Latissimus Dorsi"],
+    synergistMuscles: [
+      "Brachialis",
+      "Brachioradialis",
+      "Deltoid Posterior",
+      "Infraspinatus",
+      "Levator Scapulae",
+      "Serratus Anterior",
+      "Teres Major",
+      "Teres Minor",
+      "Trapezius Lower Fibers",
+      "Trapezius Middle Fibers",
+    ],
+    bodyParts: ["Back"],
+    sortedEquipment: ["bodyweight"],
+  },
+  wristCurl: {
+    targetMuscles: ["Wrist Flexors"],
+    synergistMuscles: [],
+    bodyParts: ["Forearms"],
+    sortedEquipment: ["barbell"],
+  },
+  wristRoller: {
+    targetMuscles: ["Wrist Extensors", "Wrist Flexors"],
+    synergistMuscles: [],
+    bodyParts: ["Forearms"],
+    sortedEquipment: ["bodyweight"],
+  },
+  zercherSquat: {
+    targetMuscles: ["Quadriceps"],
+    synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+    bodyParts: ["Hips"],
+    sortedEquipment: ["barbell"],
+  },
+};
+
+export function equipmentToBarKey(equipment?: IEquipment): IBarKey | undefined {
+  switch (equipment) {
+    case "barbell":
+      return "barbell";
+    case "dumbbell":
+      return "dumbbell";
+    case "ezbar":
+      return "ezbar";
+    default:
+      return undefined;
+  }
+}
+
+export function equipmentName(
+  equipment: IEquipment | undefined,
+  equipmentSettings?: IAllEquipment,
+): string {
+  const equipmentData =
+    equipment && equipmentSettings ? equipmentSettings[equipment] : undefined;
+  if (equipmentData?.name) {
+    return equipmentData.name.trim();
+  }
+  switch (equipment) {
+    case "barbell":
+      return "Barbell";
+    case "cable":
+      return "Cable";
+    case "dumbbell":
+      return "Dumbbell";
+    case "smith":
+      return "Smith Machine";
+    case "band":
+      return "Band";
+    case "kettlebell":
+      return "Kettlebell";
+    case "bodyweight":
+      return "Bodyweight";
+    case "leverageMachine":
+      return "Leverage Machine";
+    case "medicineball":
+      return "Medicine Ball";
+    case "ezbar":
+      return "EZ Bar";
+    case "trapbar":
+      return "Trap Bar";
+    default:
+      return "";
+  }
+}
+
+export type IExerciseKind =
+  | "core"
+  | "pull"
+  | "push"
+  | "legs"
+  | "upper"
+  | "lower";
+
+export type IExercise = {
+  id: IExerciseId;
+  name: string;
+  defaultWarmup?: number;
+  equipment?: IEquipment;
+  defaultEquipment?: IEquipment;
+  types: IExerciseKind[];
+  onerm?: number;
+  startingWeightLb: IWeight;
+  startingWeightKg: IWeight;
+};
+
+export function warmupValues(
+  units: IUnit,
+): Partial<Record<number, IProgramExerciseWarmupSet[]>> {
+  return {
+    10: [
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(60, "lb") : Weight_build(30, "kg"),
+        value: 0.3,
+      },
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(30, "lb") : Weight_build(15, "kg"),
+        value: 0.5,
+      },
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(10, "lb") : Weight_build(5, "kg"),
+        value: 0.8,
+      },
+    ],
+    45: [
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(120, "lb") : Weight_build(60, "kg"),
+        value: 0.3,
+      },
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(90, "lb") : Weight_build(45, "kg"),
+        value: 0.5,
+      },
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(45, "lb") : Weight_build(20, "kg"),
+        value: 0.8,
+      },
+    ],
+    95: [
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(150, "lb") : Weight_build(70, "kg"),
+        value: 0.3,
+      },
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(125, "lb") : Weight_build(60, "kg"),
+        value: 0.5,
+      },
+      {
+        reps: 5,
+        threshold:
+          units === "lb" ? Weight_build(95, "lb") : Weight_build(40, "kg"),
+        value: 0.8,
+      },
+    ],
+  };
+}
+
+function warmup45(
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): ISet[] {
+  return warmup(warmupValues(settings.units)[45] || [])(
+    weight,
+    settings,
+    exerciseType,
+  );
+}
+
+function warmup95(
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): ISet[] {
+  return warmup(warmupValues(settings.units)[95] || [])(
+    weight,
+    settings,
+    exerciseType,
+  );
+}
+
+function warmup10(
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): ISet[] {
+  return warmup(warmupValues(settings.units)[10] || [])(
+    weight,
+    settings,
+    exerciseType,
+  );
+}
+
+function warmup(
+  programExerciseWarmupSets: IProgramExerciseWarmupSet[],
+  shouldSkipThreshold: boolean = false,
+): (
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+) => ISet[] {
+  return (
+    weight: IWeight | undefined,
+    settings: ISettings,
+    exerciseType?: IExerciseType,
+  ): ISet[] => {
+    let index = 0;
+    return programExerciseWarmupSets.reduce<ISet[]>(
+      (memo, programExerciseWarmupSet) => {
+        if (
+          shouldSkipThreshold ||
+          (weight != null &&
+            Weight_gt(weight, programExerciseWarmupSet.threshold))
+        ) {
+          const value = programExerciseWarmupSet.value;
+          const unit = Equipment_getUnitOrDefaultForExerciseType(
+            settings,
+            exerciseType,
+          );
+          if (typeof value !== "number" || weight != null) {
+            const warmupWeight =
+              typeof value === "number"
+                ? Weight_multiply(weight!, value)
+                : value;
+            const roundedWeight = Weight_roundConvertTo(
+              warmupWeight,
+              settings,
+              unit,
+              exerciseType,
+            );
+            memo.push({
+              vtype: "set",
+              index,
+              id: UidFactory_generateUid(6),
+              reps: programExerciseWarmupSet.reps,
+              isUnilateral: exerciseType
+                ? Exercise_getIsUnilateral(exerciseType, settings)
+                : false,
+              weight: roundedWeight,
+              originalWeight: warmupWeight,
+              isCompleted: false,
+            });
+            index += 1;
+          }
+        }
+        return memo;
+      },
+      [],
+    );
+  };
+}
+
+function warmupEmpty(weight: IWeight | undefined): ISet[] {
+  return [];
+}
+
+function maybeGetExercise(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  const custom = customExercises[id];
+  return custom != null
+    ? {
+        ...custom,
+        defaultWarmup: 45,
+        types: custom.types || [],
+        startingWeightKg: Weight_build(0, "kg"),
+        startingWeightLb: Weight_build(0, "lb"),
+      }
+    : allExercisesList[id];
+}
+
+function getExercise(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise {
+  const exercise = maybeGetExercise(id, customExercises);
+  return exercise != null ? exercise : allExercisesList.squat;
+}
+
+export function Exercise_getMetadata(id: IExerciseId): IMetaExercises {
+  return metadata[id] || {};
+}
+
+export function Exercise_exists(
+  name: string,
+  customExercises: IAllCustomExercises,
+): boolean {
+  let exercise = ObjectUtils_keys(allExercisesList).filter(
+    (k) => allExercisesList[k].name === name,
+  )[0];
+  if (exercise == null) {
+    exercise = ObjectUtils_keys(customExercises).filter(
+      (k) =>
+        !customExercises[k]!.isDeleted && customExercises[k]!.name === name,
+    )[0];
+  }
+  return !!exercise;
+}
+
+export function Exercise_isCustom(
+  id: string,
+  customExercises: IAllCustomExercises,
+): boolean {
+  return customExercises[id] != null;
+}
+
+export function Exercise_fullName(
+  exercise: IExercise,
+  settings: ISettings,
+  label?: string,
+): string {
+  let str: string;
+  if (exercise.equipment && exercise.defaultEquipment !== exercise.equipment) {
+    const allEquipment = Equipment_currentEquipment(settings);
+    const equipment = equipmentName(exercise.equipment, allEquipment);
+    str = `${exercise.name}, ${equipment}`;
+  } else {
+    str = exercise.name;
+  }
+  if (label) {
+    str = `${label}: ${str}`;
+  }
+  return str;
+}
+
+export function Exercise_reverseName(
+  exercise: IExercise,
+  settings?: ISettings,
+): string {
+  if (exercise.equipment) {
+    const allEquipment = settings ? Equipment_currentEquipment(settings) : {};
+    const equipment = equipmentName(exercise.equipment, allEquipment);
+    return `${equipment} ${exercise.name}`;
+  } else {
+    return exercise.name;
+  }
+}
+
+export function Exercise_nameWithEquipment(
+  exercise: IExercise,
+  settings?: ISettings,
+): string {
+  if (exercise.equipment) {
+    const allEquipment = settings ? Equipment_currentEquipment(settings) : {};
+    const equipment = equipmentName(exercise.equipment, allEquipment);
+    return `${exercise.name}, ${equipment}`;
+  } else {
+    return exercise.name;
+  }
+}
+
+export function Exercise_searchNames(
+  query: string,
+  customExercises: IAllCustomExercises,
+): string[] {
+  const allExercises = Exercise_allExpanded({});
+  const exerciseNames = allExercises
+    .filter((e) =>
+      StringUtils_fuzzySearch(
+        query.toLowerCase(),
+        `${e.name}${e.equipment ? `, ${equipmentName(e.equipment)}` : ""}`.toLowerCase(),
+      ),
+    )
+    .map(
+      (e) => `${e.name}${e.equipment ? `, ${equipmentName(e.equipment)}` : ""}`,
+    );
+  const customExerciseNames = ObjectUtils_values(customExercises)
+    .filter((ce) =>
+      ce
+        ? StringUtils_fuzzySearch(query.toLowerCase(), ce.name.toLowerCase())
+        : false,
+    )
+    .map((e) => e!.name);
+  const names = [...exerciseNames, ...customExerciseNames];
+  names.sort();
+  return names;
+}
+
+export function Exercise_findById(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  return maybeGetExercise(id, customExercises);
+}
+
+export function Exercise_findIdByName(
+  name: string,
+  customExercises: IAllCustomExercises,
+): IExerciseId | undefined {
+  const lowercaseName = name.toLowerCase();
+  return (
+    nameToIdMapping[lowercaseName] ||
+    ObjectUtils_values(customExercises).find((ce) => {
+      const thisLowercaseName = ce?.name?.toLowerCase() || "";
+      return (
+        thisLowercaseName === lowercaseName ||
+        thisLowercaseName.replace(/\s*,\s*/g, ",") ===
+          lowercaseName.replace(/\s*,\s*/g, ",")
+      );
+    })?.id
+  );
+}
+
+export function Exercise_get(
+  type: IExerciseType,
+  customExercises: IAllCustomExercises,
+): IExercise {
+  const exercise = getExercise(type.id, customExercises);
+  return { ...exercise, equipment: type.equipment };
+}
+
+export function Exercise_getNotes(
+  type: IExerciseType,
+  settings: ISettings,
+): string | undefined {
+  return settings.exerciseData[Exercise_toKey(type)]?.notes;
+}
+
+export function Exercise_onerm(
+  type: IExerciseType,
+  settings: ISettings,
+): IWeight {
+  const rm = settings.exerciseData[Exercise_toKey(type)]?.rm1;
+  if (rm) {
+    return Weight_convertTo(rm, settings.units);
+  }
+  const exercise = Exercise_get(type, settings.exercises);
+  return settings.units === "kg"
+    ? exercise.startingWeightKg
+    : exercise.startingWeightLb;
+}
+
+export function Exercise_defaultRounding(
+  type: IExerciseType,
+  settings: ISettings,
+): number {
+  const units = Equipment_getUnitOrDefaultForExerciseType(settings, type);
+  return Math.max(
+    0.1,
+    settings.exerciseData[Exercise_toKey(type)]?.rounding ??
+      (units === "kg" ? 2.5 : 5),
+  );
+}
+
+export function Exercise_find(
+  type: IExerciseType,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  const exercise = maybeGetExercise(type.id, customExercises);
+  return exercise ? { ...exercise, equipment: type.equipment } : undefined;
+}
+
+export function Exercise_getById(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise {
+  const exercise = getExercise(id, customExercises);
+  return { ...exercise, equipment: exercise.defaultEquipment };
+}
+
+export function Exercise_findByNameEquipment(
+  customExercises: IAllCustomExercises,
+  name: string,
+  equipment?: string,
+): IExercise | undefined {
+  const exerciseId = Exercise_findIdByName(name, customExercises);
+  const exercise = exerciseId
+    ? Exercise_findById(exerciseId, customExercises)
+    : undefined;
+  if (exercise == null) {
+    return undefined;
+  }
+  return { ...exercise, equipment };
+}
+
+export function Exercise_findByNameAndEquipment(
+  nameAndEquipment: string,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  const parts = nameAndEquipment.split(",").map((p) => p.trim());
+  let name: string | undefined;
+  let equipment: IEquipment | undefined | null;
+  if (parts.length > 1) {
+    const foundEquipment = equipments.filter(
+      (e) =>
+        equipmentName(e).toLowerCase() ===
+        parts[parts.length - 1].toLowerCase(),
+    )[0];
+    if (foundEquipment != null) {
+      equipment = foundEquipment;
+      name = parts.slice(0, parts.length - 1).join(", ");
+    } else {
+      equipment = null;
+    }
+  }
+  if (name == null) {
+    name = nameAndEquipment;
+  }
+  let exerciseId = Exercise_findIdByName(name, {});
+  if (exerciseId != null && equipment !== null) {
+    const exercise = Exercise_findById(exerciseId, {});
+    if (exercise != null) {
+      return { ...exercise, equipment: equipment || exercise.defaultEquipment };
+    }
+  } else {
+    exerciseId = Exercise_findIdByName(nameAndEquipment, customExercises);
+    if (exerciseId != null) {
+      const exercise = Exercise_findById(exerciseId, customExercises);
+      if (exercise != null) {
+        return { ...exercise };
+      }
+    }
+  }
+  return undefined;
+}
+
+export function Exercise_getIsUnilateral(
+  exerciseType: IExerciseType,
+  settings: ISettings,
+): boolean {
+  const key = Exercise_toKey(exerciseType);
+  const exerciseData = settings.exerciseData[key];
+  if (exerciseData?.isUnilateral !== undefined) {
+    return exerciseData.isUnilateral;
+  }
+
+  switch (exerciseType.id) {
+    case "bulgarianSplitSquat":
+    case "concentrationCurl":
+    case "reverseGripConcentrationCurl":
+    case "bentOverOneArmRow":
+    case "cableKickback":
+    case "cableTwist":
+    case "russianTwist":
+    case "lunge":
+    case "reverseLunge":
+    case "splitSquat":
+    case "stepUp":
+    case "pistolSquat":
+    case "singleLegBridge":
+    case "singleLegDeadlift":
+    case "sideBend":
+    case "sideCrunch":
+    case "sideHipAbductor":
+    case "sideLyingClam":
+    case "sidePlank":
+    case "singleLegBridge":
+    case "singleLegCalfRaise":
+    case "singleLegDeadlift":
+    case "singleLegGluteBridgeBench":
+    case "singleLegGluteBridgeStraight":
+    case "singleLegGluteBridgeBentKnee":
+    case "singleLegHipThrust":
+      return true;
+    case "bicepCurl":
+    case "wristCurl":
+    case "reverseWristCurl":
+    case "seatedPalmsUpWristCurl":
+    case "hammerCurl":
+    case "preacherCurl":
+    case "reverseCurl":
+    case "lyingBicepCurl":
+    case "inclineCurl":
+      return exerciseType.equipment === "dumbbell";
+    default:
+      return false;
+  }
+}
+
+export function Exercise_findByName(
+  name: string,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  const exerciseId = Exercise_findIdByName(name.trim(), customExercises);
+  if (exerciseId != null) {
+    const exercise = Exercise_findById(exerciseId, customExercises);
+    if (exercise != null) {
+      return { ...exercise, equipment: exercise.defaultEquipment };
+    }
+  }
+  return undefined;
+}
+
+export function Exercise_getByIds(
+  ids: IExerciseId[],
+  customExercises: IAllCustomExercises,
+): IExercise[] {
+  return ids.map((id) => {
+    const exercise = getExercise(id, customExercises);
+    return { ...exercise, equipment: exercise.defaultEquipment };
+  });
+}
+
+export function Exercise_all(
+  customExercises: IAllCustomExercises,
+): IExercise[] {
+  return ObjectUtils_keys(customExercises)
+    .map((id) => getExercise(id, customExercises))
+    .concat(
+      ObjectUtils_keys(allExercisesList).map((k) => ({
+        ...allExercisesList[k],
+        equipment: allExercisesList[k].defaultEquipment,
+      })),
+    );
+}
+
+export function Exercise_allExpanded(
+  customExercises: IAllCustomExercises,
+): IExercise[] {
+  return ObjectUtils_keys(customExercises)
+    .map((id) => getExercise(id, customExercises))
+    .concat(
+      ObjectUtils_keys(allExercisesList).flatMap((k) => {
+        return CollectionUtils_compact(
+          equipments.map((equipment) => {
+            const exerciseType = { id: k, equipment };
+            return ExerciseImageUtils_exists(exerciseType, "small")
+              ? { ...allExercisesList[k], equipment }
+              : undefined;
+          }),
+        );
+      }),
+    );
+}
+
+export function Exercise_toExternalUrl(type: IExerciseType): string {
+  return `/exercises/${Exercise_toUrlSlug(type)}`;
+}
+
+export function Exercise_toUrlSlug(type: IExerciseType): string {
+  const possibleEquipments: Record<string, IEquipment> = {
+    barbell: "barbell",
+    cable: "cable",
+    dumbbell: "dumbbell",
+    smith: "smith",
+    band: "band",
+    kettlebell: "kettlebell",
+    bodyweight: "bodyweight",
+    leverageMachine: "leverage-machine",
+    medicineball: "medicine-ball",
+    ezbar: "ez-bar",
+    trapbar: "trap-bar",
+  };
+
+  const equipment = type.equipment
+    ? possibleEquipments[type.equipment]
+    : undefined;
+  const equipmentSlug = equipment ? `${equipment}-` : "";
+  return `${equipmentSlug}${StringUtils_dashcase(StringUtils_uncamelCase(type.id))}`;
+}
+
+export function Exercise_fromUrlSlug(slug: string): IExerciseType | undefined {
+  // slug looks like leverage-machine-squat or barbell-bench-press
+  const possibleEquipments: Record<string, IEquipment> = {
+    barbell: "barbell",
+    cable: "cable",
+    dumbbell: "dumbbell",
+    smith: "smith",
+    band: "band",
+    kettlebell: "kettlebell",
+    bodyweight: "bodyweight",
+    "leverage-machine": "leverageMachine",
+    "medicine-ball": "medicineball",
+    "ez-bar": "ezbar",
+    "trap-bar": "trapbar",
+  };
+  let equipment: IEquipment | undefined = undefined;
+  const equipmentKey = ObjectUtils_keys(possibleEquipments).find((e) =>
+    slug.startsWith(e),
+  );
+  if (equipmentKey != null) {
+    equipment = possibleEquipments[equipmentKey];
+    slug = slug.slice(equipmentKey.length + 1);
+  }
+  const exerciseId = StringUtils_camelCase(StringUtils_undashcase(slug));
+  if (allExercisesList[exerciseId]) {
+    return { id: exerciseId as IExerciseId, equipment };
+  } else {
+    return undefined;
+  }
+}
+
+export function Exercise_eq(a: IExerciseType, b: IExerciseType): boolean {
+  return a.id === b.id && a.equipment === b.equipment;
+}
+
+export function Exercise_filterExercisesByNameAndType(
+  settings: ISettings,
+  filter: string,
+  filterTypes: string[],
+  isSubstitute: boolean,
+  exerciseType?: IExerciseType,
+  length?: number,
+): IExercise[] {
+  let allExercises = Exercise_allExpanded({});
+  if (filter) {
+    allExercises = Exercise_filterExercises(allExercises, filter);
+  }
+  if (filterTypes && filterTypes.length > 0) {
+    allExercises = Exercise_filterExercisesByType(
+      allExercises,
+      filterTypes,
+      settings,
+    );
+  }
+  allExercises = Exercise_sortExercises(
+    allExercises,
+    isSubstitute,
+    settings,
+    filterTypes,
+    exerciseType,
+  );
+  if (length != null) {
+    allExercises = allExercises.slice(0, length);
+  }
+  return allExercises;
+}
+
+export function Exercise_getWarmupSets(
+  exercise: IExerciseType,
+  weight: IWeight | undefined,
+  settings: ISettings,
+  programExerciseWarmupSets?: IProgramExerciseWarmupSet[],
+): ISet[] {
+  const ex = Exercise_get(exercise, settings.exercises);
+  if (programExerciseWarmupSets != null) {
+    return warmup(programExerciseWarmupSets, true)(weight, settings, exercise);
+  } else {
+    let warmupSets = warmupEmpty(weight);
+    if (ex.defaultWarmup === 10) {
+      warmupSets = warmup10(weight, settings, exercise);
+    } else if (ex.defaultWarmup === 45) {
+      warmupSets = warmup45(weight, settings, exercise);
+    } else if (ex.defaultWarmup === 95) {
+      warmupSets = warmup95(weight, settings, exercise);
+    }
+    return warmupSets;
+  }
+}
+
+export function Exercise_defaultTargetMuscles(
+  type: IExerciseType,
+  settings: ISettings,
+): IMuscle[] {
+  const customExercise = settings.exercises[type.id];
+  if (customExercise) {
+    return customExercise.meta.targetMuscles;
+  } else {
+    const meta = Exercise_getMetadata(type.id);
+    return meta?.targetMuscles != null ? meta.targetMuscles : [];
+  }
+}
+
+export function Exercise_targetMuscles(
+  type: IExerciseType,
+  settings: ISettings,
+): IMuscle[] {
+  const muscleMultipliers =
+    settings.exerciseData[Exercise_toKey(type)]?.muscleMultipliers;
+  if (muscleMultipliers) {
+    return ObjectUtils_keys(muscleMultipliers).filter(
+      (m) => muscleMultipliers[m] === 1,
+    );
+  } else {
+    return Exercise_defaultTargetMuscles(type, settings);
+  }
+}
+
+export function Exercise_defaultTargetMusclesGroups(
+  type: IExerciseType,
+  settings: ISettings,
+): IScreenMuscle[] {
+  const muscles = Exercise_defaultTargetMuscles(type, settings);
+  const allMuscleGroups = new Set<IScreenMuscle>();
+  for (const muscle of muscles) {
+    const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+    for (const muscleGroup of muscleGroups) {
+      allMuscleGroups.add(muscleGroup);
+    }
+  }
+  return Array.from(allMuscleGroups);
+}
+
+export function Exercise_targetMusclesGroups(
+  type: IExerciseType,
+  settings: ISettings,
+): IScreenMuscle[] {
+  const muscles = Exercise_targetMuscles(type, settings);
+  const allMuscleGroups = new Set<IScreenMuscle>();
+  for (const muscle of muscles) {
+    const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+    for (const muscleGroup of muscleGroups) {
+      allMuscleGroups.add(muscleGroup);
+    }
+  }
+  return Array.from(allMuscleGroups);
+}
+
+export function Exercise_defaultSynergistMuscleMultipliers(
+  type: IExerciseType,
+  settings: ISettings,
+): IMuscleMultiplier[] {
+  const customExercise = settings.exercises[type.id];
+  if (customExercise) {
+    return customExercise.meta.synergistMuscles.map((m) => ({
+      muscle: m,
+      multiplier: settings.planner.synergistMultiplier,
+    }));
+  } else {
+    const meta = Exercise_getMetadata(type.id);
+    return meta?.synergistMuscles != null
+      ? meta.synergistMuscles.map((m) => {
+          return {
+            muscle: m,
+            multiplier: settings.planner.synergistMultiplier,
+          };
+        })
+      : [];
+  }
+}
+
+export function Exercise_defaultSynergistMuscles(
+  type: IExerciseType,
+  settings: ISettings,
+): IMuscle[] {
+  return Exercise_defaultSynergistMuscleMultipliers(type, settings).map(
+    (m) => m.muscle,
+  );
+}
+
+export function Exercise_synergistMuscleMultipliers(
+  type: IExerciseType,
+  settings: ISettings,
+): IMuscleMultiplier[] {
+  const muscleMultipliers =
+    settings.exerciseData[Exercise_toKey(type)]?.muscleMultipliers;
+  if (muscleMultipliers) {
+    return ObjectUtils_keys(muscleMultipliers)
+      .filter((m) => (muscleMultipliers[m] ?? 0) < 1)
+      .map((m) => ({ muscle: m, multiplier: muscleMultipliers[m] ?? 0 }));
+  } else {
+    return Exercise_defaultSynergistMuscleMultipliers(type, settings);
+  }
+}
+
+export function Exercise_synergistMuscles(
+  type: IExerciseType,
+  settings: ISettings,
+): IMuscle[] {
+  const muscleMultipliers =
+    settings.exerciseData[Exercise_toKey(type)]?.muscleMultipliers;
+  if (muscleMultipliers) {
+    return ObjectUtils_keys(muscleMultipliers).filter(
+      (m) => (muscleMultipliers[m] ?? 0) < 1,
+    );
+  } else {
+    return Exercise_defaultSynergistMuscles(type, settings);
+  }
+}
+
+export function Exercise_defaultSynergistMusclesGroups(
+  type: IExerciseType,
+  settings: ISettings,
+): IScreenMuscle[] {
+  const muscles = Exercise_defaultSynergistMuscles(type, settings);
+  const allMuscleGroups = new Set<IScreenMuscle>();
+  for (const muscle of muscles) {
+    const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+    for (const muscleGroup of muscleGroups) {
+      allMuscleGroups.add(muscleGroup);
+    }
+  }
+  return Array.from(allMuscleGroups);
+}
+
+export function Exercise_synergistMusclesGroupMultipliers(
+  type: IExerciseType,
+  settings: ISettings,
+): Partial<Record<IScreenMuscle, number>> {
+  return Exercise_synergistMuscleMultipliers(type, settings).reduce<
+    Partial<Record<IScreenMuscle, number>>
+  >((memo, m) => {
+    for (const muscleGroup of Muscle_getScreenMusclesFromMuscle(
+      m.muscle,
+      settings,
+    )) {
+      if (memo[muscleGroup] == null || memo[muscleGroup] < m.multiplier) {
+        memo[muscleGroup] = m.multiplier;
+      }
+    }
+    return memo;
+  }, {});
+}
+
+export function Exercise_synergistMusclesGroups(
+  type: IExerciseType,
+  settings: ISettings,
+): IScreenMuscle[] {
+  const muscles = Exercise_synergistMuscles(type, settings);
+  const allMuscleGroups = new Set<IScreenMuscle>();
+  for (const muscle of muscles) {
+    const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+    for (const muscleGroup of muscleGroups) {
+      allMuscleGroups.add(muscleGroup);
+    }
+  }
+  return Array.from(allMuscleGroups);
+}
+
+export function Exercise_toKey(type: IExerciseType): string {
+  return `${type.id}${type.equipment ? `_${type.equipment}` : ""}`;
+}
+
+export function Exercise_fromKey(type: string): IExerciseType {
+  const [id, equipment] = type.split("_");
+  return { id: id as IExerciseId, equipment: equipment };
+}
+
+export function Exercise_defaultEquipment(
+  type: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IEquipment | undefined {
+  const priorities: Record<IEquipment, IEquipment[]> = {
+    barbell: ["ezbar", "trapbar", "dumbbell", "kettlebell"],
+    cable: ["band", "leverageMachine"],
+    dumbbell: ["barbell", "kettlebell", "bodyweight"],
+    smith: ["leverageMachine", "dumbbell", "barbell", "kettlebell", "cable"],
+    band: ["cable", "bodyweight", "leverageMachine", "smith"],
+    kettlebell: ["dumbbell", "barbell", "cable"],
+    bodyweight: ["cable", "dumbbell", "barbell", "band"],
+    leverageMachine: ["smith", "cable", "dumbbell", "barbell", "kettlebell"],
+    medicineball: ["bodyweight", "cable"],
+    ezbar: ["barbell", "dumbbell", "cable"],
+    trapbar: ["barbell", "dumbbell", "cable"],
+  };
+
+  const exercise = Exercise_getById(type, customExercises);
+  const bar = exercise.defaultEquipment || "bodyweight";
+  const sortedEquipment = Exercise_getMetadata(type).sortedEquipment || [];
+  let equipment: IEquipment | undefined = sortedEquipment.find(
+    (b) => b === bar,
+  );
+  equipment =
+    equipment ||
+    (priorities[bar] || []).find((eqp) => sortedEquipment.indexOf(eqp) !== -1);
+  equipment = equipment || sortedEquipment[0];
+  return equipment;
+}
+
+export function Exercise_similarRating(
+  current: IExerciseType,
+  e: IExercise,
+  settings: ISettings,
+): number {
+  const tm = Exercise_targetMuscles(current, settings);
+  const sm = Exercise_synergistMuscles(current, settings);
+  const etm = Exercise_targetMuscles(e, settings);
+  const esm = Exercise_synergistMuscles(e, settings);
+  let rating = 0;
+  if (e.id === current.id || (etm.length === 0 && esm.length === 0)) {
+    rating = -Infinity;
+  } else {
+    for (const muscle of etm) {
+      if (tm.indexOf(muscle) !== -1) {
+        rating += 60;
+      } else {
+        rating -= 30;
+      }
+      if (sm.indexOf(muscle) !== -1) {
+        rating += 20;
+      }
+    }
+    for (const muscle of tm) {
+      if (etm.indexOf(muscle) === -1) {
+        rating -= 30;
+      }
+    }
+    for (const muscle of esm) {
+      if (sm.indexOf(muscle) !== -1) {
+        rating += 30;
+      } else {
+        rating -= 15;
+      }
+      if (tm.indexOf(muscle) !== -1) {
+        rating += 10;
+      }
+    }
+    for (const muscle of sm) {
+      if (esm.indexOf(muscle) === -1) {
+        rating -= 15;
+      }
+    }
+    if (
+      e.defaultEquipment === "cable" ||
+      e.defaultEquipment === "leverageMachine"
+    ) {
+      rating -= 20;
+    }
+  }
+  return rating;
+}
+
+export function Exercise_similar(
+  type: IExerciseType,
+  settings: ISettings,
+): [IExercise, number][] {
+  const tm = Exercise_targetMuscles(type, settings);
+  const sm = Exercise_synergistMuscles(type, settings);
+  if (tm.length === 0 && sm.length === 0) {
+    return [];
+  }
+  const rated = Exercise_all(settings.exercises).map<[IExercise, number]>(
+    (e) => {
+      const rating = Exercise_similarRating(type, e, settings);
+      return [e, rating];
+    },
+  );
+  rated.sort((a, b) => b[1] - a[1]);
+  return rated.filter(([, r]) => r > 0);
+}
+
+export function Exercise_sortedByScreenMuscle(
+  muscle: IScreenMuscle,
+  settings: ISettings,
+): [IExercise, number][] {
+  const muscles = Muscle_getMusclesFromScreenMuscle(muscle, settings);
+
+  const rated = Exercise_all(settings.exercises).map<[IExercise, number]>(
+    (e) => {
+      let rating = 0;
+      const tm = Exercise_targetMuscles(e, settings);
+      const sm = Exercise_synergistMuscles(e, settings);
+      for (const m of tm) {
+        if (muscles.indexOf(m) !== -1) {
+          rating += 100;
+        }
+      }
+      for (const m of sm) {
+        if (muscles.indexOf(m) !== -1) {
+          rating += 10;
+        }
+      }
+      return [e, rating];
+    },
+  );
+  rated.sort((a, b) => b[1] - a[1]);
+  return rated.filter(([, r]) => r > 0);
+}
+
+export function Exercise_createCustomExercise(
+  name: string,
+  tMuscles: IMuscle[],
+  sMuscles: IMuscle[],
+  types: IExerciseKind[],
+  smallImageUrl?: string,
+  largeImageUrl?: string,
+): ICustomExercise {
+  const id = UidFactory_generateUid(8);
+  const newExercise: ICustomExercise = {
+    vtype: "custom_exercise",
+    id,
+    name,
+    isDeleted: false,
+    types,
+    smallImageUrl,
+    largeImageUrl,
+    meta: {
+      targetMuscles: tMuscles,
+      synergistMuscles: sMuscles,
+      bodyParts: [],
+      sortedEquipment: [],
+    },
+  };
+  return newExercise;
+}
+
+export function Exercise_editCustomExercise(
+  exercise: ICustomExercise,
+  name: string,
+  tMuscles: IMuscle[],
+  sMuscles: IMuscle[],
+  types: IExerciseKind[],
+  smallImageUrl?: string,
+  largeImageUrl?: string,
+): ICustomExercise {
+  const newExercise: ICustomExercise = {
+    ...exercise,
+    name,
+    types,
+    smallImageUrl,
+    largeImageUrl,
+    meta: {
+      ...exercise.meta,
+      targetMuscles: tMuscles,
+      synergistMuscles: sMuscles,
+    },
+  };
+  return newExercise;
+}
+
+export function Exercise_deleteCustomExercise(
+  allExercises: IAllCustomExercises,
+  exerciseId: IExerciseId,
+): IAllCustomExercises {
+  const existingExercise = allExercises[exerciseId];
+  if (existingExercise) {
+    return {
+      ...allExercises,
+      [exerciseId]: { ...existingExercise, isDeleted: true },
+    };
+  }
+  return allExercises;
+}
+
+export function Exercise_upsertCustomExercise(
+  allExercises: IAllCustomExercises,
+  exercise: ICustomExercise,
+): IAllCustomExercises {
+  exercise = { ...exercise, name: exercise.name.trim() };
+  const existingExercise = allExercises[exercise.id];
+  if (existingExercise) {
+    return {
+      ...allExercises,
+      [exercise.id]: { ...existingExercise, ...exercise, isDeleted: false },
+    };
+  } else {
+    const sameNameDeletedExercise = ObjectUtils_values(allExercises).find(
+      (e) => e?.name === exercise.name && e.isDeleted,
+    );
+    if (sameNameDeletedExercise) {
+      return {
+        ...allExercises,
+        [sameNameDeletedExercise.id]: {
+          ...sameNameDeletedExercise,
+          ...exercise,
+          id: sameNameDeletedExercise.id,
+          isDeleted: false,
+        },
+      };
+    } else {
+      return { ...allExercises, [exercise.id]: exercise };
+    }
+  }
+}
+
+export function Exercise_handleCustomExerciseChange(
+  dispatch: IDispatch,
+  action: "upsert" | "delete",
+  exercise: ICustomExercise,
+  notes: string | undefined,
+  settings: ISettings,
+  program?: IProgram,
+): void {
+  const oldExercise = settings.exercises[exercise.id];
+  const ex =
+    action === "upsert"
+      ? Exercise_upsertCustomExercise(settings.exercises, exercise)
+      : Exercise_deleteCustomExercise(settings.exercises, exercise.id);
+  updateSettings(
+    dispatch,
+    lb<ISettings>().p("exercises").record(ex),
+    "Create custom exercise",
+  );
+  updateSettings(
+    dispatch,
+    lb<ISettings>().p("exerciseData").pi(exercise.id).p("notes").record(notes),
+    "Update notes",
+  );
+  if (program && oldExercise && oldExercise.name !== exercise.name) {
+    const newProgram = Program_changeExerciseName(
+      oldExercise.name,
+      exercise.name,
+      program,
+      {
+        ...settings,
+        exercises: ex,
+      },
+    );
+    EditProgram_updateProgram(dispatch, newProgram);
+  }
+}
+
+export function Exercise_createOrUpdateCustomExercise(
+  allExercises: IAllCustomExercises,
+  name: string,
+  tMuscles: IMuscle[],
+  sMuscles: IMuscle[],
+  types: IExerciseKind[],
+  smallImageUrl?: string,
+  largeImageUrl?: string,
+  exercise?: ICustomExercise,
+): IAllCustomExercises {
+  if (exercise != null) {
+    const newExercise = Exercise_editCustomExercise(
+      exercise,
+      name,
+      tMuscles,
+      sMuscles,
+      types,
+      smallImageUrl,
+      largeImageUrl,
+    );
+    return { ...allExercises, [newExercise.id]: newExercise };
+  } else {
+    const deletedExerciseKey = ObjectUtils_keys(allExercises).find(
+      (k) => allExercises[k]?.isDeleted && allExercises[k]?.name === name,
+    );
+    const deletedExercise =
+      deletedExerciseKey != null ? allExercises[deletedExerciseKey] : undefined;
+    if (deletedExercise) {
+      return {
+        ...allExercises,
+        [deletedExercise.id]: {
+          ...deletedExercise,
+          name,
+          types,
+          smallImageUrl,
+          largeImageUrl,
+          isDeleted: false,
+          meta: {
+            targetMuscles: tMuscles,
+            bodyParts: [],
+            synergistMuscles: sMuscles,
+          },
+        },
+      };
+    } else {
+      const newExercise = Exercise_createCustomExercise(
+        name,
+        tMuscles,
+        sMuscles,
+        types,
+        smallImageUrl,
+        largeImageUrl,
+      );
+      return { ...allExercises, [newExercise.id]: newExercise };
+    }
+  }
+}
+
+export function Exercise_filterExercises<T extends { name: string }>(
+  allExercises: T[],
+  filter: string,
+): T[] {
+  return allExercises.filter((e) =>
+    StringUtils_fuzzySearch(filter.toLowerCase(), e.name.toLowerCase()),
+  );
+}
+
+export function Exercise_sortExercises(
+  allExercises: IExercise[],
+  isSubstitute: boolean,
+  settings: ISettings,
+  filterTypes?: string[],
+  currentExerciseType?: IExerciseType,
+): IExercise[] {
+  return CollectionUtils_sort(allExercises, (a, b) => {
+    const exerciseType = currentExerciseType;
+    if (isSubstitute && exerciseType) {
+      const aRating = Exercise_similarRating(exerciseType, a, settings);
+      const bRating = Exercise_similarRating(exerciseType, b, settings);
+      return bRating - aRating;
+    } else if (
+      filterTypes &&
+      Muscle_getAvailableMuscleGroups(settings)
+        .map((m) => m.toLowerCase())
+        .some(
+          (t) => filterTypes.map((ft) => ft.toLowerCase()).indexOf(t) !== -1,
+        )
+    ) {
+      const lowercaseFilterTypes = filterTypes.map((t) => t.toLowerCase());
+      const aTargetMuscleGroups = Exercise_targetMusclesGroups(a, settings);
+      const bTargetMuscleGroups = Exercise_targetMusclesGroups(b, settings);
+      if (
+        aTargetMuscleGroups.some(
+          (m) => lowercaseFilterTypes.indexOf(m) !== -1,
+        ) &&
+        bTargetMuscleGroups.every((m) => lowercaseFilterTypes.indexOf(m) === -1)
+      ) {
+        return -1;
+      } else if (
+        bTargetMuscleGroups.some(
+          (m) => lowercaseFilterTypes.indexOf(m) !== -1,
+        ) &&
+        aTargetMuscleGroups.every((m) => lowercaseFilterTypes.indexOf(m) === -1)
+      ) {
+        return 1;
+      } else {
+        return a.name.localeCompare(b.name);
+      }
+    } else {
+      return a.name.localeCompare(b.name);
+    }
+  });
+}
+
+export function Exercise_filterExercisesByType<T extends IExerciseType>(
+  allExercises: T[],
+  filterTypes: string[],
+  settings: ISettings,
+): T[] {
+  return allExercises.filter((e) => {
+    const exercise = Exercise_get(e, settings.exercises);
+    const targetMuscleGroups = Exercise_targetMusclesGroups(e, settings).map(
+      (m) => m.toLowerCase(),
+    );
+    const synergistMuscleGroups = Exercise_synergistMusclesGroups(
+      e,
+      settings,
+    ).map((m) => m.toLowerCase());
+    return filterTypes
+      .map((ft) => ft.toLowerCase())
+      .every((ft) => {
+        return (
+          targetMuscleGroups.indexOf(ft) !== -1 ||
+          synergistMuscleGroups.indexOf(ft) !== -1 ||
+          exercise.types.map((t) => t.toLowerCase()).indexOf(ft) !== -1 ||
+          equipmentName(e.equipment).toLowerCase() === ft
+        );
+      });
+  });
+}
+
+export function Exercise_filterCustomExercises(
+  customExercises: IAllCustomExercises,
+  filter: string,
+): IAllCustomExercises {
+  return ObjectUtils_filter(customExercises, (e, v) =>
+    v
+      ? StringUtils_fuzzySearch(filter.toLowerCase(), v.name.toLowerCase())
+      : true,
+  );
+}
+
+export function Exercise_filterCustomExercisesByType(
+  filterTypes: string[],
+  settings: ISettings,
+): IAllCustomExercises {
+  return ObjectUtils_filter(settings.exercises, (_id, exercise) => {
+    if (!exercise) {
+      return false;
+    }
+    const targetMuscleGroups = Array.from(
+      new Set(
+        CollectionUtils_flat(
+          exercise.meta.targetMuscles.map((m) =>
+            Muscle_getScreenMusclesFromMuscle(m, settings),
+          ),
+        ),
+      ),
+    ).map((m) => Muscle_getMuscleGroupName(m, settings));
+    const synergistMuscleGroups = Array.from(
+      new Set(
+        CollectionUtils_flat(
+          exercise.meta.synergistMuscles.map((m) =>
+            Muscle_getScreenMusclesFromMuscle(m, settings),
+          ),
+        ),
+      ),
+    ).map((m) => Muscle_getMuscleGroupName(m, settings));
+    return filterTypes.every((ft) => {
+      return (
+        targetMuscleGroups.indexOf(ft) !== -1 ||
+        synergistMuscleGroups.indexOf(ft) !== -1 ||
+        (exercise.types || []).map(StringUtils_capitalize).indexOf(ft) !== -1
+      );
+    });
+  });
+}
