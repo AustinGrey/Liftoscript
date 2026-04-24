@@ -5,6 +5,7 @@ import {
   type IWeight,
   NodeName,
 } from "@/evaluators/logic-evaluator.ts";
+
 type LogicResultSingular = number | boolean | IWeight | IPercentage | undefined;
 
 export type LogicResult = LogicResultSingular | LogicResultSingular[];
@@ -45,9 +46,13 @@ function evaluate(expr: SyntaxNode, originalSource: string): LogicResult {
       const sign = getText(plusNode, originalSource);
       return sign === "-" ? -value : value;
     }
+    case NodeName.Percentage: {
+      // @TODO the original was both rounding to 2 decimals. Rounding prior to the result is a loss of precision I don't like, but I should see if it had a purpose
+      const value = parseFloat(getText(expr, originalSource));
+      return { value: isNaN(value) ? 0 : value, unit: "%" };
+    }
 
     case NodeName.BinaryExpression:
-    case NodeName.Percentage:
     case NodeName.Ternary:
     case NodeName.ForExpression:
     case NodeName.IfExpression:
