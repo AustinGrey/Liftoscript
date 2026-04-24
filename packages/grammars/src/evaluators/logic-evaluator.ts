@@ -513,23 +513,61 @@ export type IProgramExerciseWarmupSet = Readonly<
   t.infer<typeof TProgramExerciseWarmupSet>
 >;
 
+export const TMuscleMultiplier = t
+  .object({
+    muscle: TMuscle,
+    multiplier: t.number(),
+  })
+  .strict();
+export type IMuscleMultiplier = t.infer<typeof TMuscleMultiplier>;
+
+export const TExerciseDataValue = t
+  .object({
+    rm1: TWeight.optional(),
+    rounding: t.number().optional(),
+    equipment: t
+      .record(t.string(), t.union([t.string(), t.undefined()]))
+      .optional(),
+    notes: t.string().optional(),
+    muscleMultipliers: t
+      .record(TMuscle, t.union([t.number(), t.undefined()]))
+      .optional(),
+    isUnilateral: t.boolean().optional(),
+  })
+  .strict();
+
+export type IExerciseDataValue = t.infer<typeof TExerciseDataValue>;
+export type IExerciseData = Partial<Record<string, IExerciseDataValue>>;
+
+export const TPlannerSettings = t
+  .object({
+    synergistMultiplier: t.number(),
+    strengthSetsPct: t.number(),
+    hypertrophySetsPct: t.number(),
+    weeklyRangeSets: t.record(TScreenMuscle, t.tuple([t.number(), t.number()])),
+    weeklyFrequency: t.record(TScreenMuscle, t.number()),
+  })
+  .strict();
+
+export type IPlannerSettings = t.infer<typeof TPlannerSettings>;
+
 export const TSettings = t
   .object({
     timers: TSettingsTimers,
     gyms: t.array(TGym),
     deletedGyms: t.array(t.string()),
-    graphs: TGraphs,
-    graphOptions: t.record(t.string(), TGraphOptions),
-    graphsSettings: t
-      .object({
-        isSameXAxis: t.boolean().optional(),
-        isWithBodyweight: t.boolean().optional(),
-        isWithOneRm: t.boolean().optional(),
-        isWithProgramLines: t.boolean().optional(),
-        defaultType: TGraphExerciseSelectedType.optional(),
-        defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
-      })
-      .optional(),
+    // graphs: TGraphs,
+    // graphOptions: t.record(t.string(), TGraphOptions),
+    // graphsSettings: t
+    //   .object({
+    //     isSameXAxis: t.boolean().optional(),
+    //     isWithBodyweight: t.boolean().optional(),
+    //     isWithOneRm: t.boolean().optional(),
+    //     isWithProgramLines: t.boolean().optional(),
+    //     defaultType: TGraphExerciseSelectedType.optional(),
+    //     defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
+    //   })
+    //   .optional(),
     exerciseStatsSettings: t
       .object({
         ascendingSort: t.boolean().optional(),
@@ -544,8 +582,8 @@ export const TSettings = t
     volume: t.number(),
     exerciseData: t.record(t.string(), TExerciseDataValue),
     planner: TPlannerSettings,
-    workoutSettings: TWorkoutSettings,
-    muscleGroups: TMuscleGroupsSettings,
+    // workoutSettings: TWorkoutSettings,
+    // muscleGroups: TMuscleGroupsSettings,
 
     appleHealthSyncWorkout: t.boolean().optional(),
     appleHealthSyncMeasurements: t.boolean().optional(),
@@ -570,6 +608,194 @@ export const TSettings = t
   .strict();
 
 export type ISettings = t.infer<typeof TSettings>;
+
+export const TProgramWeek = t
+  .object({
+    id: t.string(),
+    name: t.string(),
+    days: t.array(
+      t
+        .object({
+          id: t.string(),
+        })
+        .strict(),
+    ),
+    description: t.string().optional(),
+  })
+  .strict();
+
+export type IProgramWeek = Readonly<t.infer<typeof TProgramWeek>>;
+
+export const TProgramDay = t
+  .object({
+    id: t.string(),
+    name: t.string(),
+    exercises: t.array(
+      t
+        .object({
+          id: t.string(),
+        })
+        .strict(),
+    ),
+    description: t.string().optional(),
+  })
+  .strict();
+
+export type IProgramDay = Readonly<t.infer<typeof TProgramDay>>;
+
+const tags = [
+  "first-starter",
+  "beginner",
+  "barbell",
+  "dumbbell",
+  "intermediate",
+  "woman",
+  "ppl",
+  "hypertrophy",
+] as const;
+
+export const TProgramTag = t.enum(tags);
+export type IProgramTag = Readonly<t.infer<typeof TProgramTag>>;
+
+export const TPlannerProgramDay = t
+  .object({
+    name: t.string(),
+    exerciseText: t.string(),
+    id: t.string().optional(),
+    description: t.string().optional(),
+  })
+  .strict();
+export type IPlannerProgramDay = t.infer<typeof TPlannerProgramDay>;
+
+export const TPlannerProgramWeek = t
+  .object({
+    name: t.string(),
+    days: t.array(TPlannerProgramDay),
+    id: t.string().optional(),
+    description: t.string().optional(),
+  })
+  .strict();
+export type IPlannerProgramWeek = Readonly<t.infer<typeof TPlannerProgramWeek>>;
+
+export const TPlannerProgram = t
+  .object({
+    vtype: t.literal("planner"),
+    name: t.string(),
+    weeks: t.array(TPlannerProgramWeek),
+  })
+  .strict();
+export type IPlannerProgram = Readonly<t.infer<typeof TPlannerProgram>>;
+
+export const TProgramExerciseReuseLogic = t
+  .object({
+    selected: t.union([t.string(), t.undefined()]),
+    states: t.record(t.string(), TProgramState),
+  })
+  .strict();
+export type IProgramExerciseReuseLogic = Readonly<
+  t.infer<typeof TProgramExerciseReuseLogic>
+>;
+
+export const TProgramSet = t
+  .object({
+    repsExpr: t.string(),
+    weightExpr: t.string(),
+
+    isAmrap: t.boolean().optional(),
+    rpeExpr: t.string().optional(),
+    minRepsExpr: t.string().optional(),
+    logRpe: t.boolean().optional(),
+    askWeight: t.boolean().optional(),
+    label: t.string().optional(),
+    timerExpr: t.string().optional(),
+  })
+  .strict();
+
+export type IProgramSet = t.infer<typeof TProgramSet>;
+
+export const TProgramExerciseVariation = t
+  .object({
+    sets: t.array(TProgramSet),
+    quickAddSets: t.boolean().optional(),
+  })
+  .strict();
+export type IProgramExerciseVariation = Readonly<
+  t.infer<typeof TProgramExerciseVariation>
+>;
+
+export const TProgramStateMetadataValue = t
+  .object({
+    userPrompted: t.boolean().optional(),
+  })
+  .strict();
+export type IProgramStateMetadataValue = t.infer<
+  typeof TProgramStateMetadataValue
+>;
+
+export const TProgramStateMetadata = t.record(
+  t.string(),
+  TProgramStateMetadataValue,
+);
+export type IProgramStateMetadata = t.infer<typeof TProgramStateMetadata>;
+
+export const TProgramExercise = t
+  .object({
+    exerciseType: TExerciseType,
+    id: t.string(),
+    name: t.string(),
+    variations: t.array(TProgramExerciseVariation),
+    state: TProgramState,
+    variationExpr: t.string(),
+    finishDayExpr: t.string(),
+    descriptions: t.array(t.string()),
+
+    tags: t.array(t.number()).optional(),
+    updateDayExpr: t.string().optional(),
+    diffPaths: t.array(t.string()).optional(),
+    description: t.string().optional(),
+    descriptionExpr: t.string().optional(),
+    quickAddSets: t.boolean().optional(),
+    enableRepRanges: t.boolean().optional(),
+    enableRpe: t.boolean().optional(),
+    stateMetadata: TProgramStateMetadata.optional(),
+    timerExpr: t.string().optional(),
+    reuseLogic: TProgramExerciseReuseLogic.optional(),
+    warmupSets: t.array(TProgramExerciseWarmupSet).optional(),
+    reuseFinishDayScript: t.string().optional(),
+    reuseUpdateDayScript: t.string().optional(),
+  })
+  .strict();
+
+export type IProgramExercise = t.infer<typeof TProgramExercise>;
+
+export const TProgram = t
+  .object({
+    vtype: t.literal("program"),
+    exercises: t.array(TProgramExercise),
+    id: t.string(),
+    name: t.string(),
+    description: t.string(),
+    url: t.string(),
+    author: t.string(),
+    nextDay: t.number(),
+    days: t.array(TProgramDay),
+    weeks: t.array(TProgramWeek),
+    isMultiweek: t.boolean(),
+    tags: t.array(TProgramTag),
+
+    deletedDays: t.array(t.string()).optional(),
+    deletedWeeks: t.array(t.string()).optional(),
+    deletedExercises: t.array(t.string()).optional(),
+    clonedAt: t.number().optional(),
+    shortDescription: t.string().optional(),
+    planner: TPlannerProgram.optional(),
+    updatedAt: t.number().optional(),
+    authorid: t.union([t.string(), t.null()]).optional(),
+    source: t.union([t.string(), t.null()]).optional(),
+  })
+  .strict();
+
+export type IProgram = t.infer<typeof TProgram>;
 
 export interface IScriptBindings {
   day: number;
