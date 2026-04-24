@@ -24,6 +24,7 @@
     "access": "public"
   },
   "scripts": {
+    "generateGrammarHandlers": "lezer-generator ./src/grammar-sources/*.grammar -o ./src/grammars/* --typeScript --names",
     "build": "vp pack",
     "dev": "vp pack --watch",
     "test": "vp test",
