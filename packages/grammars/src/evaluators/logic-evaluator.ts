@@ -35,12 +35,12 @@ import {
 } from "@/utils/string";
 import { SetUtils_areEqual } from "@/utils/setUtils";
 import { UidFactory_generateUid } from "@/utils/generator";
-import { ExerciseImageUtils_exists } from "./exerciseImage";
-import { IDispatch } from "../ducks/types";
-import { Program_changeExerciseName } from "./program";
-import { EditProgram_updateProgram } from "./editProgram";
-import { lb } from "lens-shmens";
-import { updateSettings } from "./state";
+// import { ExerciseImageUtils_exists } from "./exerciseImage";
+// import { IDispatch } from "../ducks/types";
+// import { Program_changeExerciseName } from "./program";
+// import { EditProgram_updateProgram } from "./editProgram";
+// import { lb } from "lens-shmens";
+// import { updateSettings } from "./state";
 
 export const TEquipment = t.string();
 export type IEquipment = t.infer<typeof TEquipment>;
@@ -549,6 +549,24 @@ export const TPlannerSettings = t
 
 export type IPlannerSettings = t.infer<typeof TPlannerSettings>;
 
+export const TMuscleGroupsSettings = t
+  .object({
+    vtype: t.literal("muscle_groups_settings"),
+    data: t.record(
+      t.string(),
+      t
+        .object({
+          name: t.string().optional(),
+          isHidden: t.boolean().optional(),
+          muscles: t.array(TMuscle).optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+export type IMuscleGroupsSettings = t.infer<typeof TMuscleGroupsSettings>;
+
 export const TSettings = t
   .object({
     timers: TSettingsTimers,
@@ -581,7 +599,7 @@ export const TSettings = t
     exerciseData: t.record(t.string(), TExerciseDataValue),
     planner: TPlannerSettings,
     // workoutSettings: TWorkoutSettings,
-    // muscleGroups: TMuscleGroupsSettings,
+    muscleGroups: TMuscleGroupsSettings,
 
     appleHealthSyncWorkout: t.boolean().optional(),
     appleHealthSyncMeasurements: t.boolean().optional(),
