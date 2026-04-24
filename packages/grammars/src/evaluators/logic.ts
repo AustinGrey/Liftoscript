@@ -24,10 +24,11 @@ export function run(logic: string): LogicResult {
 function evaluate(expr: SyntaxNode): LogicResult {
   switch (expr.type.name) {
     case NodeName.Program:
-    case NodeName.BlockExpression: {
+    case NodeName.BlockExpression:
+    case NodeName.ParenthesisExpression: {
       let result: LogicResult = 0;
       // @TODO Why evaluate all children if only the last child's evaluate is returned?
-      for (const child of getChildren(expr)) {
+      for (const child of getChildren(expr, { atLeast: 1 })) {
         if (!child.type.isSkipped) {
           result = evaluate(child);
         }
@@ -37,8 +38,10 @@ function evaluate(expr: SyntaxNode): LogicResult {
 
     case NodeName.BinaryExpression:
     case NodeName.NumberExpression:
+    case NodeName.Percentage:
+    case NodeName.Ternary:
+    case NodeName.ForExpression:
     case NodeName.IfExpression:
-    case NodeName.ParenthesisExpression:
     case NodeName.StateVariableIndex:
     case NodeName.AssignmentExpression:
     case NodeName.IncAssignmentExpression:
@@ -49,6 +52,7 @@ function evaluate(expr: SyntaxNode): LogicResult {
     case NodeName.StateVariable:
     case NodeName.Variable:
     case NodeName.ForInExpression:
+      throw new Error(`Unsupported node type ${expr.type.name}`);
     default:
       throw new Error(`Unknown node type ${expr.type.name}`);
   }
@@ -57,13 +61,34 @@ function evaluate(expr: SyntaxNode): LogicResult {
 /**
  * @yields all children of a syntax node, regardless of their type
  * @param node The node to get the children of
+ * @param options
+ * @param options.atLeast - If provided, throws an error if the node has fewer than this many children
  */
-function* getChildren(node: SyntaxNode): Generator<SyntaxNode> {
+function* getChildren(
+  node: SyntaxNode,
+  {
+    atLeast,
+  }: Partial<{
+    atLeast?: number;
+  }> = {},
+): Generator<SyntaxNode> {
   const cur = node.cursor();
+  let count = 0;
   if (!cur.firstChild()) {
+    if (atLeast !== undefined && atLeast !== 0) {
+      throw new SyntaxError(
+        `Expected at least${atLeast} children, but got ${count}`,
+      );
+    }
     return;
   }
   do {
     yield cur.node;
+    count++;
   } while (cur.nextSibling());
+  if (atLeast !== undefined && count < atLeast) {
+    throw new SyntaxError(
+      `Expected at least ${atLeast} children, but got ${count}`,
+    );
+  }
 }
