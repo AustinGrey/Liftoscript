@@ -1,10 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import {
-  CollectionUtils_compact,
-  CollectionUtils_remove,
-} from "./collection.ts";
-import type { INonNullObject } from "./types.ts";
+import { CollectionUtils_compact, CollectionUtils_remove } from "./collection";
+import type { INonNullObject } from "./types";
 
 export function ObjectUtils_keys<T extends {}>(obj: T): Array<keyof T> {
   return Object.keys(obj) as Array<keyof T>;
@@ -261,17 +258,6 @@ export function ObjectUtils_findMaxValue<
     }
     return memo;
   }, 0);
-}
-
-export function ObjectUtils_clone<T>(obj: T): T {
-  if (obj == null) {
-    return obj;
-  }
-  if (typeof window !== "undefined" && window.structuredClone) {
-    return window.structuredClone(obj);
-  } else {
-    return JSON.parse(JSON.stringify(obj));
-  }
 }
 
 export function ObjectUtils_fromArray<K extends string, V>(
