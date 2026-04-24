@@ -2,6 +2,10 @@
   "compilerOptions": {
     "target": "esnext",
     "lib": ["es2023"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "moduleDetection": "force",
     "module": "nodenext",
     "moduleResolution": "nodenext",
