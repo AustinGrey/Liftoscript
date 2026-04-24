@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "esnext",
     "lib": ["es2023"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
