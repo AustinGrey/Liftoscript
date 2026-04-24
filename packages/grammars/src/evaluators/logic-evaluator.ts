@@ -1,10 +1,4 @@
-// import util from "util";
 import { type SyntaxNode } from "@lezer/common";
-// import {
-//   IScriptBindings,
-//   IScriptFnContext,
-//   IScriptFunctions,
-// } from "./models/progress";
 // import {
 //   Weight_gt,
 //   Weight_lt,
@@ -32,6 +26,21 @@ import {
 import { parser as LiftoscriptParser } from "@/parsers/logic";
 import { z as t } from "zod";
 
+export const TEquipment = t.string();
+export type IEquipment = t.infer<typeof TEquipment>;
+
+export const TExerciseId = t.string();
+export type IExerciseId = t.infer<typeof TExerciseId>;
+
+export const TExerciseType = t
+  .object({
+    id: TExerciseId,
+    equipment: TEquipment.optional(),
+  })
+  .strict();
+
+export type IExerciseType = t.infer<typeof TExerciseType>;
+
 export const units = ["kg", "lb"] as const;
 
 export const TUnit = t.enum(units);
@@ -58,6 +67,123 @@ export const TProgramState = t.record(
 );
 export type IProgramState = t.infer<typeof TProgramState>;
 export type IProgramMode = "planner" | "update";
+
+export interface IScriptBindings {
+  day: number;
+  week: number;
+  dayInWeek: number;
+  originalWeights: (IWeight | IPercentage)[];
+  weights: (IWeight | undefined)[];
+  completedWeights: (IWeight | undefined)[];
+  rm1: IWeight;
+  reps: (number | undefined)[];
+  minReps: (number | undefined)[];
+  amraps: (number | undefined)[];
+  askweights: (number | undefined)[];
+  logrpes: (number | undefined)[];
+  timers: (number | undefined)[];
+  RPE: (number | undefined)[];
+  completedRPE: (number | undefined)[];
+  completedReps: (number | undefined)[];
+  completedRepsLeft: (number | undefined)[];
+  isCompleted: (0 | 1)[];
+  w: (IWeight | undefined)[];
+  r: (number | undefined)[];
+  mr: (number | undefined)[];
+  cr: (number | undefined)[];
+  cw: (IWeight | undefined)[];
+  ns: number;
+  programNumberOfSets: number;
+  numberOfSets: number;
+  completedNumberOfSets: number;
+  setVariationIndex: number;
+  bodyweight: IWeight;
+  descriptionIndex: number;
+  setIndex: number;
+}
+
+export interface IScriptFnContext {
+  prints: (number | IWeight | IPercentage)[][];
+  unit: IUnit;
+  exerciseType?: IExerciseType;
+}
+
+export interface IScriptFunctions {
+  roundWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
+  roundConvertWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
+  calculateTrainingMax: (
+    weight: IWeight,
+    reps: number,
+    context: IScriptFnContext,
+  ) => IWeight;
+  calculate1RM: (
+    weight: IWeight,
+    reps: number,
+    context: IScriptFnContext,
+  ) => IWeight;
+  rpeMultiplier: (
+    reps: number,
+    rpe: number,
+    context: IScriptFnContext,
+  ) => number;
+  floor(num: number): number;
+  floor(num: IWeight): IWeight;
+  ceil(num: number): number;
+  ceil(num: IWeight): IWeight;
+  round(num: number): number;
+  round(num: IWeight): IWeight;
+  sum(
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
+  ): number | IWeight | IPercentage;
+  min(
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
+  ): number | IWeight | IPercentage;
+  max(
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
+  ): number | IWeight | IPercentage;
+  zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
+  print(...args: unknown[]): (typeof args)[0];
+  increment(val: IWeight, context: IScriptFnContext): IWeight;
+  increment(val: IPercentage, context: IScriptFnContext): IPercentage;
+  increment(val: number, context: IScriptFnContext): number;
+  decrement(val: IWeight, context: IScriptFnContext): IWeight;
+  decrement(val: IPercentage, context: IScriptFnContext): IPercentage;
+  decrement(val: number, context: IScriptFnContext): number;
+  sets(
+    from: number,
+    to: number,
+    minReps: number,
+    reps: number,
+    isAmrap: number,
+    weight: IWeight | IPercentage | number,
+    timer: number,
+    rpe: number,
+    logRpe: number,
+    context: IScriptFnContext,
+    bindings: IScriptBindings,
+  ): number;
+}
 
 export enum NodeName {
   LineComment = "LineComment",
