@@ -68,6 +68,306 @@ export const TWeight = t.object({
   unit: TUnit,
 });
 export type IWeight = t.infer<typeof TWeight>;
+
+export const TSettingsTimers = t
+  .object({
+    warmup: t.union([t.number(), t.undefined(), t.null()]),
+    workout: t.union([t.number(), t.undefined(), t.null()]),
+    reminder: t.number().optional(),
+    superset: t.number().optional(),
+  })
+  .strict();
+
+export type ISettingsTimers = t.infer<typeof TSettingsTimers>;
+
+export const TEquipmentData = t
+  .object({
+    vtype: t.literal("equipment_data"),
+    bar: t
+      .object({
+        lb: TWeight,
+        kg: TWeight,
+      })
+      .strict(),
+    multiplier: t.number(),
+    plates: t.array(
+      t
+        .object({
+          weight: TWeight,
+          num: t.number(),
+        })
+        .strict(),
+    ),
+    fixed: t.array(TWeight),
+    isFixed: t.boolean(),
+
+    unit: TUnit.optional(),
+    name: t.string().optional(),
+    similarTo: t.string().optional(),
+    isDeleted: t.boolean().optional(),
+    useBodyweightForBar: t.boolean().optional(),
+    isAssisting: t.boolean().optional(),
+    notes: t.string().optional(),
+  })
+  .strict();
+
+export type IEquipmentData = t.infer<typeof TEquipmentData>;
+export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
+
+export const TGym = t
+  .object({
+    vtype: t.literal("gym"),
+    id: t.string(),
+    name: t.string(),
+    equipment: t.record(TEquipment, TEquipmentData),
+  })
+  .strict();
+
+export type IGym = t.infer<typeof TGym>;
+
+export const lengthUnits = ["in", "cm"] as const;
+
+export const TLengthUnit = t.enum(lengthUnits);
+export type ILengthUnit = t.infer<typeof TLengthUnit>;
+
+export const TLength = t.object({
+  value: t.number(),
+  unit: TLengthUnit,
+});
+export type ILength = t.infer<typeof TLength>;
+
+export const TStatsWeightValue = t
+  .object({
+    vtype: t.literal("stat"),
+    value: TWeight,
+    timestamp: t.number(),
+    updatedAt: t.number().optional(),
+    appleUuid: t.string().optional(),
+  })
+  .strict();
+export type IStatsWeightValue = t.infer<typeof TStatsWeightValue>;
+
+export const statsWeightDef = {
+  weight: t.array(TStatsWeightValue),
+};
+export const TStatsWeight = t.object(statsWeightDef).partial().strict();
+export type IStatsWeight = t.infer<typeof TStatsWeight>;
+
+export const TStatsLengthValue = t
+  .object({
+    vtype: t.literal("stat"),
+    value: TLength,
+    timestamp: t.number(),
+    updatedAt: t.number().optional(),
+    appleUuid: t.string().optional(),
+  })
+  .strict();
+export type IStatsLengthValue = t.infer<typeof TStatsLengthValue>;
+
+export const statsLengthDef = {
+  neck: t.array(TStatsLengthValue),
+  shoulders: t.array(TStatsLengthValue),
+  bicepLeft: t.array(TStatsLengthValue),
+  bicepRight: t.array(TStatsLengthValue),
+  forearmLeft: t.array(TStatsLengthValue),
+  forearmRight: t.array(TStatsLengthValue),
+  chest: t.array(TStatsLengthValue),
+  waist: t.array(TStatsLengthValue),
+  hips: t.array(TStatsLengthValue),
+  thighLeft: t.array(TStatsLengthValue),
+  thighRight: t.array(TStatsLengthValue),
+  calfLeft: t.array(TStatsLengthValue),
+  calfRight: t.array(TStatsLengthValue),
+};
+export const TStatsLength = t.object(statsLengthDef).partial().strict();
+export type IStatsLength = t.infer<typeof TStatsLength>;
+
+export const TStatsPercentageValue = t
+  .object({
+    vtype: t.literal("stat"),
+    value: TPercentage,
+    timestamp: t.number(),
+    updatedAt: t.number().optional(),
+    appleUuid: t.string().optional(),
+  })
+  .strict();
+export type IStatsPercentageValue = t.infer<typeof TStatsPercentageValue>;
+
+export const statsPercentageDef = {
+  bodyfat: t.array(TStatsPercentageValue),
+};
+export const TStatsPercentage = t.object(statsPercentageDef).partial().strict();
+export type IStatsPercentage = t.infer<typeof TStatsPercentage>;
+
+export const TGraph = t.discriminatedUnion("type", [
+  t
+    .object({
+      vtype: t.literal("graph"),
+      type: t.literal("exercise"),
+      id: TExerciseId,
+    })
+    .strict(),
+  t
+    .object({
+      vtype: t.literal("graph"),
+      type: t.literal("statsWeight"),
+      id: t.enum(
+        Object.keys(statsWeightDef) as [
+          keyof typeof statsWeightDef & string,
+          ...(keyof typeof statsWeightDef & string)[],
+        ],
+      ),
+    })
+    .strict(),
+  t
+    .object({
+      vtype: t.literal("graph"),
+      type: t.literal("statsLength"),
+      id: t.enum(
+        Object.keys(statsLengthDef) as [
+          keyof typeof statsLengthDef & string,
+          ...(keyof typeof statsLengthDef & string)[],
+        ],
+      ),
+    })
+    .strict(),
+  t
+    .object({
+      vtype: t.literal("graph"),
+      type: t.literal("statsPercentage"),
+      id: t.enum(
+        Object.keys(statsPercentageDef) as [
+          keyof typeof statsPercentageDef & string,
+          ...(keyof typeof statsPercentageDef & string)[],
+        ],
+      ),
+    })
+    .strict(),
+  t
+    .object({
+      vtype: t.literal("graph"),
+      type: t.literal("muscleGroup"),
+      id: t.string(),
+    })
+    .strict(),
+]);
+
+export type IGraph = t.infer<typeof TGraph>;
+
+export const TGraphs = t.object({
+  vtype: t.literal("graphs"),
+  graphs: t.array(TGraph),
+});
+
+export const TStatsWeightEnabled = t
+  .object({
+    weight: t.boolean(),
+  })
+  .partial()
+  .strict();
+
+export type IStatsWeightEnabled = t.infer<typeof TStatsWeightEnabled>;
+export const TStatsLengthEnabled = t
+  .object({
+    neck: t.boolean(),
+    shoulders: t.boolean(),
+    bicepLeft: t.boolean(),
+    bicepRight: t.boolean(),
+    forearmLeft: t.boolean(),
+    forearmRight: t.boolean(),
+    chest: t.boolean(),
+    waist: t.boolean(),
+    hips: t.boolean(),
+    thighLeft: t.boolean(),
+    thighRight: t.boolean(),
+    calfLeft: t.boolean(),
+    calfRight: t.boolean(),
+  })
+  .partial()
+  .strict();
+export type IStatsLengthEnabled = t.infer<typeof TStatsLengthEnabled>;
+
+export const TStatsPercentageEnabled = t
+  .object({
+    bodyfat: t.boolean(),
+  })
+  .partial()
+  .strict();
+
+export const TStatsEnabled = t
+  .object({
+    weight: TStatsWeightEnabled,
+    length: TStatsLengthEnabled,
+    percentage: TStatsPercentageEnabled,
+  })
+  .strict();
+
+export type IStatsEnabled = Readonly<t.infer<typeof TStatsEnabled>>;
+
+export const TSettings = t
+  .object({
+    timers: TSettingsTimers,
+    gyms: t.array(TGym),
+    deletedGyms: t.array(t.string()),
+    graphs: TGraphs,
+    graphOptions: t.record(t.string(), TGraphOptions),
+    graphsSettings: t
+      .object({
+        isSameXAxis: t.boolean().optional(),
+        isWithBodyweight: t.boolean().optional(),
+        isWithOneRm: t.boolean().optional(),
+        isWithProgramLines: t.boolean().optional(),
+        defaultType: TGraphExerciseSelectedType.optional(),
+        defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
+      })
+      .optional(),
+    exerciseStatsSettings: t
+      .object({
+        ascendingSort: t.boolean().optional(),
+        hideWithoutWorkoutNotes: t.boolean().optional(),
+        hideWithoutExerciseNotes: t.boolean().optional(),
+      })
+      .optional(),
+    exercises: t.record(t.string(), TCustomExercise),
+    statsEnabled: TStatsEnabled,
+    units: TUnit,
+    lengthUnits: TLengthUnit,
+    volume: t.number(),
+    exerciseData: t.record(t.string(), TExerciseDataValue),
+    planner: TPlannerSettings,
+    workoutSettings: TWorkoutSettings,
+    muscleGroups: TMuscleGroupsSettings,
+
+    appleHealthSyncWorkout: t.boolean().optional(),
+    appleHealthSyncMeasurements: t.boolean().optional(),
+    appleHealthAnchor: t.string().optional(),
+    googleHealthSyncWorkout: t.boolean().optional(),
+    googleHealthSyncMeasurements: t.boolean().optional(),
+    googleHealthAnchor: t.string().optional(),
+    healthConfirmation: t.boolean().optional(),
+    ignoreDoNotDisturb: t.boolean().optional(),
+    currentGymId: t.string().optional(),
+    isPublicProfile: t.boolean().optional(),
+    nickname: t.string().optional(),
+    alwaysOnDisplay: t.boolean().optional(),
+    vibration: t.boolean().optional(),
+    startWeekFromMonday: t.boolean().optional(),
+    textSize: t.number().optional(),
+    starredExercises: t.record(TExerciseId, t.boolean()).optional(),
+    theme: t.enum(["dark", "light"]).optional(),
+    currentBodyweight: TWeight.optional(),
+    affiliateEnabled: t.boolean().optional(),
+  })
+  .strict();
+
+export type ISettings = t.infer<typeof TSettings>;
+
+export const TPlate = t.object({
+  weight: TWeight,
+  num: t.number(),
+});
+export type IPlate = t.infer<typeof TPlate>;
+
 export const TProgramState = t.record(
   t.string(),
   t.union([t.number(), TWeight, TPercentage]),
@@ -1622,16 +1922,16 @@ export class LiftoscriptEvaluator {
   }
 }
 
-import {
-  Equipment_getUnitOrDefaultForExerciseType,
-  Equipment_getEquipmentDataForExerciseType,
-  Equipment_smallestPlate,
-} from "./equipment";
-import {
-  Exercise_get,
-  Exercise_onerm,
-  Exercise_defaultRounding,
-} from "./exercise";
+// import {
+//   Equipment_getUnitOrDefaultForExerciseType,
+//   Equipment_getEquipmentDataForExerciseType,
+//   Equipment_smallestPlate,
+// } from "./equipment";
+// import {
+//   Exercise_get,
+//   Exercise_onerm,
+//   Exercise_defaultRounding,
+// } from "./exercise";
 
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
@@ -1652,26 +1952,6 @@ export function Weight_rpePct(reps: number, rpe: number): IPercentage {
   return Weight_buildPct(
     MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100),
   );
-}
-
-export function Weight_evaluateWeight(
-  weight: IWeight | IPercentage,
-  exerciseType: IExerciseType,
-  settings: ISettings,
-): IWeight {
-  if (Weight_is(weight)) {
-    return weight;
-  } else if (Weight_isPct(weight)) {
-    const exercise = Exercise_get(exerciseType, settings.exercises);
-    const onerm = Exercise_onerm(exercise, settings);
-    return Weight_multiply(onerm, weight.value / 100);
-  } else {
-    const unit = Equipment_getUnitOrDefaultForExerciseType(
-      settings,
-      exerciseType,
-    );
-    return Weight_build(0, unit);
-  }
 }
 
 export function Weight_smartConvert(weight: IWeight, toUnit: IUnit): IWeight {
