@@ -1,5 +1,6 @@
 import { expect, it } from "vite-plus/test";
 import type { IProgramState, IWeight } from "@/types.ts";
+import type { IScriptBindings } from "@/models/progress.ts";
 
 export function ParserTestUtils_run(
   program: string,
