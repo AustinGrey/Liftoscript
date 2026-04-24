@@ -34,9 +34,17 @@ import {
   Weight_evaluateWeight,
   Weight_op,
 } from "./weight";
-import { DateUtils_fromYYYYMMDD, DateUtils_fromYYYYMMDDStr } from "../utils/date";
+import {
+  DateUtils_fromYYYYMMDD,
+  DateUtils_fromYYYYMMDDStr,
+} from "../utils/date";
 import { lf, lb, LensBuilder } from "lens-shmens";
-import { ObjectUtils_isEqual, ObjectUtils_entriesNonnull, ObjectUtils_keys, ObjectUtils_clone } from "../utils/object";
+import {
+  ObjectUtils_isEqual,
+  ObjectUtils_entriesNonnull,
+  ObjectUtils_keys,
+  ObjectUtils_clone,
+} from "../utils/object";
 import { IDispatch } from "../ducks/types";
 import { ScriptRunner } from "../parser";
 
@@ -70,7 +78,11 @@ import {
   IProgram,
   IStorage,
 } from "../types";
-import { SendMessage_print, SendMessage_toIos, SendMessage_toAndroid } from "../utils/sendMessage";
+import {
+  SendMessage_print,
+  SendMessage_toIos,
+  SendMessage_toAndroid,
+} from "../utils/sendMessage";
 import { Subscriptions_hasSubscription } from "../utils/subscriptions";
 import { IPercentage } from "../types";
 import {
@@ -79,11 +91,17 @@ import {
   History_resumeWorkout,
   History_finishProgramDay,
 } from "./history";
-import { CollectionUtils_compact, CollectionUtils_findIndexReverse } from "../utils/collection";
+import {
+  CollectionUtils_compact,
+  CollectionUtils_findIndexReverse,
+} from "../utils/collection";
 import { ILiftoscriptEvaluatorUpdate } from "../liftoscriptEvaluator";
 import { Equipment_getUnitForExerciseType } from "./equipment";
 import { IByTag } from "../pages/planner/plannerEvaluator";
-import { IPlannerProgramExercise, IPlannerProgramExerciseWithType } from "../pages/planner/models/types";
+import {
+  IPlannerProgramExercise,
+  IPlannerProgramExerciseWithType,
+} from "../pages/planner/models/types";
 import {
   PlannerProgramExercise_getUpdateScript,
   PlannerProgramExercise_getState,
@@ -158,9 +176,21 @@ export interface IScriptUpdateContext {
 export interface IScriptFunctions {
   roundWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
   roundConvertWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
-  calculateTrainingMax: (weight: IWeight, reps: number, context: IScriptFnContext) => IWeight;
-  calculate1RM: (weight: IWeight, reps: number, context: IScriptFnContext) => IWeight;
-  rpeMultiplier: (reps: number, rpe: number, context: IScriptFnContext) => number;
+  calculateTrainingMax: (
+    weight: IWeight,
+    reps: number,
+    context: IScriptFnContext,
+  ) => IWeight;
+  calculate1RM: (
+    weight: IWeight,
+    reps: number,
+    context: IScriptFnContext,
+  ) => IWeight;
+  rpeMultiplier: (
+    reps: number,
+    rpe: number,
+    context: IScriptFnContext,
+  ) => number;
   floor(num: number): number;
   floor(num: IWeight): IWeight;
   ceil(num: number): number;
@@ -168,13 +198,34 @@ export interface IScriptFunctions {
   round(num: number): number;
   round(num: IWeight): IWeight;
   sum(
-    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
   ): number | IWeight | IPercentage;
   min(
-    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
   ): number | IWeight | IPercentage;
   max(
-    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
   ): number | IWeight | IPercentage;
   zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
   print(...args: unknown[]): (typeof args)[0];
@@ -195,7 +246,7 @@ export interface IScriptFunctions {
     rpe: number,
     logRpe: number,
     context: IScriptFnContext,
-    bindings: IScriptBindings
+    bindings: IScriptBindings,
   ): number;
 }
 
@@ -205,7 +256,9 @@ function floor(num: IWeight | number): IWeight | number {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number" ? Math.floor(num) : Weight_build(Math.floor(num.value), num.unit);
+  return typeof num === "number"
+    ? Math.floor(num)
+    : Weight_build(Math.floor(num.value), num.unit);
 }
 
 function ceil(num: number): number;
@@ -214,7 +267,9 @@ function ceil(num: IWeight | number): IWeight | number {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number" ? Math.ceil(num) : Weight_build(Math.ceil(num.value), num.unit);
+  return typeof num === "number"
+    ? Math.ceil(num)
+    : Weight_build(Math.ceil(num.value), num.unit);
 }
 
 function round(num: number): number;
@@ -223,7 +278,9 @@ function round(num: IWeight | number): IWeight | number {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number" ? Math.round(num) : Weight_build(Math.round(num.value), num.unit);
+  return typeof num === "number"
+    ? Math.round(num)
+    : Weight_build(Math.round(num.value), num.unit);
 }
 
 type IScriptArg = number | IWeight | IPercentage;
@@ -253,7 +310,10 @@ function sum(...args: unknown[]): IWeight | IPercentage | number {
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>((acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y), 0);
+  return flat.reduce<IScriptArg>(
+    (acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y),
+    0,
+  );
 }
 
 function min(...args: unknown[]): IWeight | IPercentage | number {
@@ -261,7 +321,10 @@ function min(...args: unknown[]): IWeight | IPercentage | number {
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>((acc, a) => (Weight_lt(a, acc) ? a : acc), flat[0]);
+  return flat.reduce<IScriptArg>(
+    (acc, a) => (Weight_lt(a, acc) ? a : acc),
+    flat[0],
+  );
 }
 
 function max(...args: unknown[]): IWeight | IPercentage | number {
@@ -269,14 +332,22 @@ function max(...args: unknown[]): IWeight | IPercentage | number {
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>((acc, a) => (Weight_lt(acc, a) ? a : acc), flat[0]);
+  return flat.reduce<IScriptArg>(
+    (acc, a) => (Weight_lt(acc, a) ? a : acc),
+    flat[0],
+  );
 }
 
 function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     const aVal = a[i];
     const bVal = b[i];
-    if (aVal != null && bVal != null && !Weight_eq(aVal, 0) && Weight_lt(aVal, bVal)) {
+    if (
+      aVal != null &&
+      bVal != null &&
+      !Weight_eq(aVal, 0) &&
+      Weight_lt(aVal, bVal)
+    ) {
       return false;
     }
   }
@@ -286,9 +357,11 @@ function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
 export function Progress_createEmptyScriptBindings(
   dayData: IDayData,
   settings: ISettings,
-  exercise?: IExerciseType
+  exercise?: IExerciseType,
 ): IScriptBindings {
-  const rm1 = exercise ? Exercise_onerm(exercise, settings) : Weight_build(0, "lb");
+  const rm1 = exercise
+    ? Exercise_onerm(exercise, settings)
+    : Weight_build(0, "lb");
   return {
     day: dayData.day,
     week: dayData.week ?? 1,
@@ -332,12 +405,18 @@ export function Progress_createScriptBindings(
   bodyweight: IWeight | undefined,
   setIndex?: number,
   setVariationIndex?: number,
-  descriptionIndex?: number
+  descriptionIndex?: number,
 ): IScriptBindings {
-  const bindings = Progress_createEmptyScriptBindings(dayData, settings, entry.exercise);
+  const bindings = Progress_createEmptyScriptBindings(
+    dayData,
+    settings,
+    entry.exercise,
+  );
   for (const set of entry.sets) {
     bindings.weights.push(set.weight);
-    bindings.originalWeights.push(set.originalWeight ?? Weight_build(0, settings.units));
+    bindings.originalWeights.push(
+      set.originalWeight ?? Weight_build(0, settings.units),
+    );
     bindings.reps.push(set.reps);
     bindings.minReps.push(set.minReps);
     bindings.completedReps.push(set.completedReps);
@@ -359,7 +438,9 @@ export function Progress_createScriptBindings(
   bindings.ns = entry.sets.length;
   bindings.programNumberOfSets = programNumberOfSets;
   bindings.numberOfSets = entry.sets.length;
-  bindings.completedNumberOfSets = entry.sets.filter((s) => s.isCompleted).length;
+  bindings.completedNumberOfSets = entry.sets.filter(
+    (s) => s.isCompleted,
+  ).length;
   bindings.setIndex = setIndex ?? 1;
   bindings.setVariationIndex = setVariationIndex ?? 1;
   bindings.descriptionIndex = descriptionIndex ?? 1;
@@ -367,11 +448,16 @@ export function Progress_createScriptBindings(
   return bindings;
 }
 
-export function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
+export function Progress_createScriptFunctions(
+  settings: ISettings,
+): IScriptFunctions {
   function increment(vals: number, context: IScriptFnContext): number;
   function increment(vals: IWeight, context: IScriptFnContext): IWeight;
   function increment(vals: IPercentage, context: IScriptFnContext): IPercentage;
-  function increment(vals: IWeight | IPercentage | number, context: IScriptFnContext): IWeight | IPercentage | number {
+  function increment(
+    vals: IWeight | IPercentage | number,
+    context: IScriptFnContext,
+  ): IWeight | IPercentage | number {
     if (typeof vals === "number") {
       const weight = Weight_build(vals, context.unit);
       return Weight_increment(weight, settings, context.exerciseType);
@@ -385,7 +471,10 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
   function decrement(vals: number, context: IScriptFnContext): number;
   function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
   function decrement(vals: IPercentage, context: IScriptFnContext): IPercentage;
-  function decrement(vals: IWeight | IPercentage | number, context: IScriptFnContext): IWeight | IPercentage | number {
+  function decrement(
+    vals: IWeight | IPercentage | number,
+    context: IScriptFnContext,
+  ): IWeight | IPercentage | number {
     if (typeof vals === "number") {
       const weight = Weight_build(vals, context.unit);
       return Weight_decrement(weight, settings, context.exerciseType);
@@ -401,15 +490,31 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
       if (!Weight_is(num)) {
         num = Weight_build(num, settings.units);
       }
-      const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
-      return Weight_round(num, settings, unit ?? settings.units, context?.exerciseType);
+      const unit = Equipment_getUnitForExerciseType(
+        settings,
+        context?.exerciseType,
+      );
+      return Weight_round(
+        num,
+        settings,
+        unit ?? settings.units,
+        context?.exerciseType,
+      );
     },
     roundConvertWeight: (num, context) => {
       if (!Weight_is(num)) {
         num = Weight_build(num, settings.units);
       }
-      const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
-      return Weight_roundConvertTo(num, settings, unit ?? settings.units, context?.exerciseType);
+      const unit = Equipment_getUnitForExerciseType(
+        settings,
+        context?.exerciseType,
+      );
+      return Weight_roundConvertTo(
+        num,
+        settings,
+        unit ?? settings.units,
+        context?.exerciseType,
+      );
     },
     calculateTrainingMax: (weight, reps, context) => {
       if (!Weight_is(weight)) {
@@ -424,7 +529,11 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
       return Weight_getOneRepMax(weight, reps);
     },
     rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
-      const reps = Weight_is(repsRaw) ? repsRaw.value : typeof repsRaw === "number" ? repsRaw : 1;
+      const reps = Weight_is(repsRaw)
+        ? repsRaw.value
+        : typeof repsRaw === "number"
+          ? repsRaw
+          : 1;
       const rpe =
         typeof rpeRawOrContext === "number" && context != null
           ? Weight_is(rpeRawOrContext)
@@ -463,15 +572,24 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
       rpe: number,
       logRpe: number,
       context: IScriptFnContext,
-      bindings: IScriptBindings
+      bindings: IScriptBindings,
     ): number {
       for (let i = 0; i < bindings.numberOfSets; i++) {
         if (i >= from - 1 && i < to) {
-          const weightValue = Weight_convertToWeight(bindings.rm1, weight, context.unit);
+          const weightValue = Weight_convertToWeight(
+            bindings.rm1,
+            weight,
+            context.unit,
+          );
           bindings.minReps[i] = reps !== minReps ? minReps : undefined;
           bindings.reps[i] = reps;
           bindings.originalWeights[i] = weightValue;
-          bindings.weights[i] = Weight_round(weightValue, settings, context.unit, context.exerciseType);
+          bindings.weights[i] = Weight_round(
+            weightValue,
+            settings,
+            context.unit,
+            context.exerciseType,
+          );
           bindings.RPE[i] = rpe !== 0 ? rpe : undefined;
           bindings.amraps[i] = isAmrap !== 0 ? 1 : 0;
           bindings.logrpes[i] = logRpe !== 0 ? 1 : 0;
@@ -484,7 +602,9 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
   return fns;
 }
 
-export function Progress_isCurrent(progress: IHistoryRecord | undefined): boolean {
+export function Progress_isCurrent(
+  progress: IHistoryRecord | undefined,
+): boolean {
   return progress?.id === 0;
 }
 
@@ -497,10 +617,11 @@ export function Progress_startTimer(
   settings: ISettings,
   subscription?: ISubscription,
   timer?: number,
-  isAdjusting?: boolean
+  isAdjusting?: boolean,
 ): IHistoryRecord {
   const entry = progress.entries[entryIndex];
-  const set = mode === "warmup" ? entry?.warmupSets[setIndex] : entry?.sets[setIndex];
+  const set =
+    mode === "warmup" ? entry?.warmupSets[setIndex] : entry?.sets[setIndex];
   if (!isAdjusting && (!set || !set.isCompleted)) {
     return progress;
   }
@@ -509,7 +630,9 @@ export function Progress_startTimer(
   }
   if (timer == null) {
     timer =
-      mode === "workout" && entry.superset != null && settings.timers.superset != null
+      mode === "workout" &&
+      entry.superset != null &&
+      settings.timers.superset != null
         ? settings.timers.superset
         : settings.timers[mode] || undefined;
   }
@@ -530,7 +653,11 @@ export function Progress_startTimer(
     let body = "Time to lift!";
     let subtitleHeader = "";
     let bodyHeader = "The rest is over";
-    const nextEntryAndSet = Reps_findNextEntryAndSet(progress, entryIndex, mode);
+    const nextEntryAndSet = Reps_findNextEntryAndSet(
+      progress,
+      entryIndex,
+      mode,
+    );
     if (nextEntryAndSet != null) {
       const { entry: nextEntry, set: aSet } = nextEntryAndSet;
       const exercise = Exercise_get(nextEntry.exercise, settings.exercises);
@@ -538,12 +665,22 @@ export function Progress_startTimer(
         subtitleHeader = "Next Set";
         subtitle = CollectionUtils_compact([
           exercise.name,
-          aSet.reps != null ? `${aSet.reps}${aSet.isAmrap ? "+" : ""} reps` : undefined,
+          aSet.reps != null
+            ? `${aSet.reps}${aSet.isAmrap ? "+" : ""} reps`
+            : undefined,
           aSet.weight != null ? Weight_display(aSet.weight) : undefined,
         ]).join(", ");
         if (aSet.weight != null) {
-          const { plates } = Weight_calculatePlates(aSet.weight, settings, aSet.weight.unit, nextEntry.exercise);
-          const formattedPlates = plates.length > 0 ? Weight_formatOneSide(settings, plates, exercise) : "None";
+          const { plates } = Weight_calculatePlates(
+            aSet.weight,
+            settings,
+            aSet.weight.unit,
+            nextEntry.exercise,
+          );
+          const formattedPlates =
+            plates.length > 0
+              ? Weight_formatOneSide(settings, plates, exercise)
+              : "None";
           bodyHeader = "Plates per side";
           body = formattedPlates;
         }
@@ -594,7 +731,7 @@ export function Progress_startTimer(
 
 export function Progress_getNextSupersetEntry(
   entries: IHistoryEntry[],
-  entry: IHistoryEntry
+  entry: IHistoryEntry,
 ): IHistoryEntry | undefined {
   const superset: string | undefined = entry.superset;
   if (superset == null) {
@@ -616,7 +753,7 @@ export function Progress_getNextEntry(
   progress: IHistoryRecord,
   entry: IHistoryEntry,
   mode: "workout" | "warmup",
-  shouldGoToNextEntry: boolean
+  shouldGoToNextEntry: boolean,
 ): IHistoryEntry | undefined {
   if (Progress_isFullyEmptyOrFinishedSet(progress)) {
     return undefined;
@@ -626,19 +763,29 @@ export function Progress_getNextEntry(
   let isInitial = true;
   const supersetGroups = Progress_getSupersetGroups(progress.entries);
   while (currentEntry != null) {
-    let index = progress.entries.findIndex((e) => e.id != null && e.id === currentEntry?.id);
+    let index = progress.entries.findIndex(
+      (e) => e.id != null && e.id === currentEntry?.id,
+    );
     if (index === -1) {
       index = progress.entries.findIndex((e) => e === currentEntry);
     }
     const superset: string | undefined = currentEntry.superset;
-    if (mode === "workout" && superset != null && !visitedAndFinished.has(currentEntry)) {
+    if (
+      mode === "workout" &&
+      superset != null &&
+      !visitedAndFinished.has(currentEntry)
+    ) {
       const supersetGroup: IHistoryEntry[] = supersetGroups?.[superset] ?? [];
       if (supersetGroup.length > 1) {
-        const supersetIndex = supersetGroup?.findIndex((e) => e.id === currentEntry?.id);
-        currentEntry = supersetGroup[(supersetIndex + 1) % supersetGroup.length];
+        const supersetIndex = supersetGroup?.findIndex(
+          (e) => e.id === currentEntry?.id,
+        );
+        currentEntry =
+          supersetGroup[(supersetIndex + 1) % supersetGroup.length];
       } else {
         if (shouldGoToNextEntry) {
-          currentEntry = progress.entries[(index + 1) % progress.entries.length];
+          currentEntry =
+            progress.entries[(index + 1) % progress.entries.length];
         } else {
           return currentEntry;
         }
@@ -670,11 +817,13 @@ export function Progress_getNextEntry(
 export function Progress_getNextEntryIndex(
   progress: IHistoryRecord,
   entry: IHistoryEntry,
-  mode: "workout" | "warmup"
+  mode: "workout" | "warmup",
 ): number | undefined {
   const nextEntry = Progress_getNextEntry(progress, entry, mode, false);
   if (nextEntry != null) {
-    let index = progress.entries.findIndex((e) => e.id != null && e.id === nextEntry.id);
+    let index = progress.entries.findIndex(
+      (e) => e.id != null && e.id === nextEntry.id,
+    );
     if (index === -1) {
       index = progress.entries.findIndex((e) => e === nextEntry);
     }
@@ -692,7 +841,7 @@ export function Progress_updateTimer(
   liveActivitySetIndex: number | undefined,
   skipLiveActivityUpdate: boolean,
   settings: ISettings,
-  subscription: ISubscription | undefined
+  subscription: ISubscription | undefined,
 ): IHistoryRecord {
   const timerForPush = newTimer - Math.round((Date.now() - timerSince) / 1000);
   if (timerForPush > 0) {
@@ -705,7 +854,7 @@ export function Progress_updateTimer(
       settings,
       subscription,
       newTimer,
-      true
+      true,
     );
     if (!skipLiveActivityUpdate) {
       LiveActivityManager_updateProgressLiveActivity(
@@ -716,7 +865,7 @@ export function Progress_updateTimer(
         liveActivityEntryIndex,
         liveActivitySetIndex,
         newTimer,
-        progress.timerSince || Date.now()
+        progress.timerSince || Date.now(),
       );
     }
     return newProgress;
@@ -740,7 +889,7 @@ export function Progress_updateTimer(
         liveActivityEntryIndex,
         liveActivitySetIndex,
         Math.max(0, newTimer),
-        progress.timerSince || Date.now()
+        progress.timerSince || Date.now(),
       );
     }
     return newProgress;
@@ -750,7 +899,7 @@ export function Progress_updateTimer(
 export function Progress_maybeApplySuperset(
   progress: IHistoryRecord,
   entryIndex: number,
-  mode: "workout" | "warmup"
+  mode: "workout" | "warmup",
 ): IHistoryRecord {
   if (!Progress_isCurrent(progress)) {
     return progress;
@@ -758,7 +907,10 @@ export function Progress_maybeApplySuperset(
   const entry = progress.entries[entryIndex];
   const nextEntryIndex = Progress_getNextEntryIndex(progress, entry, mode);
   if (nextEntryIndex != null) {
-    return { ...progress, ui: { ...progress.ui, currentEntryIndex: nextEntryIndex } };
+    return {
+      ...progress,
+      ui: { ...progress.ui, currentEntryIndex: nextEntryIndex },
+    };
   }
   return progress;
 }
@@ -769,7 +921,9 @@ export function Progress_stopTimer(progress: IHistoryRecord): IHistoryRecord {
   return Progress_stopTimerPure(progress);
 }
 
-export function Progress_stopTimerPure(progress: IHistoryRecord): IHistoryRecord {
+export function Progress_stopTimerPure(
+  progress: IHistoryRecord,
+): IHistoryRecord {
   return {
     ...progress,
     timerSince: undefined,
@@ -780,7 +934,10 @@ export function Progress_stopTimerPure(progress: IHistoryRecord): IHistoryRecord
   };
 }
 
-export function Progress_setTimerValue(progress: IHistoryRecord, newTimer: number): IHistoryRecord {
+export function Progress_setTimerValue(
+  progress: IHistoryRecord,
+  newTimer: number,
+): IHistoryRecord {
   if (progress.timerSince == null) {
     return progress;
   }
@@ -792,12 +949,14 @@ export function Progress_setTimerValue(progress: IHistoryRecord, newTimer: numbe
 
 export function Progress_findEntryByExercise(
   progress: IHistoryRecord,
-  exerciseType: IExerciseType
+  exerciseType: IExerciseType,
 ): IHistoryEntry | undefined {
   return progress.entries.find((entry) => entry.exercise === exerciseType);
 }
 
-export function Progress_isFullyCompletedSet(progress: IHistoryRecord): boolean {
+export function Progress_isFullyCompletedSet(
+  progress: IHistoryRecord,
+): boolean {
   return progress.entries.every((entry) => Progress_isCompletedSet(entry));
 }
 
@@ -817,8 +976,12 @@ export function Progress_isFinishedSet(entry: IHistoryEntry): boolean {
   return Reps_isFinished(entry.sets);
 }
 
-export function Progress_isFullyEmptyOrFinishedSet(progress: IHistoryRecord): boolean {
-  return progress.entries.every((entry) => Progress_isEmptyOrFinishedSet(entry));
+export function Progress_isFullyEmptyOrFinishedSet(
+  progress: IHistoryRecord,
+): boolean {
+  return progress.entries.every((entry) =>
+    Progress_isEmptyOrFinishedSet(entry),
+  );
 }
 
 export function Progress_isEmptyOrFinishedSet(entry: IHistoryEntry): boolean {
@@ -829,7 +992,10 @@ export function Progress_hasLastUnfinishedSet(entry: IHistoryEntry): boolean {
   return entry.sets.filter((s) => !s.isCompleted).length === 1;
 }
 
-export function Progress_isChanged(aProgress?: IHistoryRecord, bProgress?: IHistoryRecord): boolean {
+export function Progress_isChanged(
+  aProgress?: IHistoryRecord,
+  bProgress?: IHistoryRecord,
+): boolean {
   if (aProgress != null && bProgress == null) {
     return true;
   } else if (aProgress == null && bProgress != null) {
@@ -842,7 +1008,11 @@ export function Progress_isChanged(aProgress?: IHistoryRecord, bProgress?: IHist
   }
 }
 
-export function Progress_showUpdateDate(progress: IHistoryRecord, date: string, time: number): IHistoryRecord {
+export function Progress_showUpdateDate(
+  progress: IHistoryRecord,
+  date: string,
+  time: number,
+): IHistoryRecord {
   return {
     ...progress,
     ui: {
@@ -852,11 +1022,15 @@ export function Progress_showUpdateDate(progress: IHistoryRecord, date: string, 
   };
 }
 
-export function Progress_getColorToSupersetGroup(progress: IHistoryRecord): Partial<Record<string, IHistoryEntry[]>> {
+export function Progress_getColorToSupersetGroup(
+  progress: IHistoryRecord,
+): Partial<Record<string, IHistoryEntry[]>> {
   const groups = Progress_getSupersetGroups(progress.entries);
   const colors = ["red", "blue", "green", "purple"];
   let index = 0;
-  return ObjectUtils_entriesNonnull(groups).reduce<Partial<Record<string, IHistoryEntry[]>>>((memo, [, group]) => {
+  return ObjectUtils_entriesNonnull(groups).reduce<
+    Partial<Record<string, IHistoryEntry[]>>
+  >((memo, [, group]) => {
     const color = colors[index % colors.length];
     memo[color] = group;
     index += 1;
@@ -864,7 +1038,9 @@ export function Progress_getColorToSupersetGroup(progress: IHistoryRecord): Part
   }, {});
 }
 
-export function Progress_getSupersetGroups(entries: IHistoryEntry[]): Partial<Record<string, IHistoryEntry[]>> {
+export function Progress_getSupersetGroups(
+  entries: IHistoryEntry[],
+): Partial<Record<string, IHistoryEntry[]>> {
   const groups: Partial<Record<string, IHistoryEntry[]>> = {};
   for (const entry of entries) {
     if (entry.superset != null) {
@@ -879,9 +1055,11 @@ export function Progress_getSupersetGroups(entries: IHistoryEntry[]): Partial<Re
 
 export function Progress_stop(
   progresses: Record<number, IHistoryRecord | undefined>,
-  id: number
+  id: number,
 ): Record<number, IHistoryRecord | undefined> {
-  return ObjectUtils_keys(progresses).reduce<Record<number, IHistoryRecord | undefined>>((memo, k) => {
+  return ObjectUtils_keys(progresses).reduce<
+    Record<number, IHistoryRecord | undefined>
+  >((memo, k) => {
     const p = progresses[k];
     if (p != null && p.id !== id) {
       memo[k] = p;
@@ -890,7 +1068,11 @@ export function Progress_stop(
   }, {});
 }
 
-export function Progress_changeDate(progress: IHistoryRecord, dateStr?: string, time?: number): IHistoryRecord {
+export function Progress_changeDate(
+  progress: IHistoryRecord,
+  dateStr?: string,
+  time?: number,
+): IHistoryRecord {
   let startTime = progress.startTime;
   const startTimeDate = new Date(startTime);
   const date = dateStr != null ? DateUtils_fromYYYYMMDD(dateStr) : undefined;
@@ -901,10 +1083,11 @@ export function Progress_changeDate(progress: IHistoryRecord, dateStr?: string, 
       date.getDate(),
       startTimeDate.getHours(),
       startTimeDate.getMinutes(),
-      startTimeDate.getSeconds()
+      startTimeDate.getSeconds(),
     ).getTime();
   }
-  const endTime = time != null ? startTime + time : startTime + History_workoutTime(progress);
+  const endTime =
+    time != null ? startTime + time : startTime + History_workoutTime(progress);
   return {
     ...progress,
     ...(dateStr != null ? { date: DateUtils_fromYYYYMMDDStr(dateStr) } : {}),
@@ -918,14 +1101,18 @@ export function Progress_changeDate(progress: IHistoryRecord, dateStr?: string, 
   };
 }
 
-export function Progress_getProgressId(state: Pick<IState, "progress">): number {
+export function Progress_getProgressId(
+  state: Pick<IState, "progress">,
+): number {
   const editIds = Object.keys((state as IState).progress)
     .map(Number)
     .filter(Boolean);
   return editIds.length > 0 ? editIds[0] : 0;
 }
 
-export function Progress_lbProgress(progressId?: number): LensBuilder<IState, IHistoryRecord, {}, undefined> {
+export function Progress_lbProgress(
+  progressId?: number,
+): LensBuilder<IState, IHistoryRecord, {}, undefined> {
   if (progressId == null || progressId === 0) {
     return lb<IState>().p("storage").pi("progress").i(0);
   } else {
@@ -933,11 +1120,15 @@ export function Progress_lbProgress(progressId?: number): LensBuilder<IState, IH
   }
 }
 
-export function Progress_getCurrentProgress(state: Pick<IState, "storage">): IHistoryRecord | undefined {
+export function Progress_getCurrentProgress(
+  state: Pick<IState, "storage">,
+): IHistoryRecord | undefined {
   return state.storage.progress?.[0];
 }
 
-export function Progress_getProgress(state: Pick<IState, "progress" | "storage">): IHistoryRecord | undefined {
+export function Progress_getProgress(
+  state: Pick<IState, "progress" | "storage">,
+): IHistoryRecord | undefined {
   const progressId = Progress_getProgressId(state);
   if (progressId === 0) {
     return state.storage.progress?.[0];
@@ -946,7 +1137,10 @@ export function Progress_getProgress(state: Pick<IState, "progress" | "storage">
   }
 }
 
-export function Progress_setProgress(state: IState, progress: IHistoryRecord): IState {
+export function Progress_setProgress(
+  state: IState,
+  progress: IHistoryRecord,
+): IState {
   if (progress.id === 0) {
     return lf(state).p("storage").p("progress").set([progress]);
   } else {
@@ -961,7 +1155,7 @@ export function Progress_runUpdateScriptForEntry(
   otherStates: IByTag<IProgramState>,
   setIndex: number,
   settings: ISettings,
-  stats: IStats
+  stats: IStats,
 ): IHistoryEntry {
   if (setIndex !== -1 && !entry?.sets[setIndex]?.isCompleted) {
     return entry;
@@ -971,9 +1165,13 @@ export function Progress_runUpdateScriptForEntry(
     return entry;
   }
   const exercise = programExercise.exerciseType;
-  const state = ObjectUtils_clone(PlannerProgramExercise_getState(programExercise));
-  const setVariationIndex = PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
-  const descriptionIndex = PlannerProgramExercise_currentDescriptionIndex(programExercise);
+  const state = ObjectUtils_clone(
+    PlannerProgramExercise_getState(programExercise),
+  );
+  const setVariationIndex =
+    PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
+  const descriptionIndex =
+    PlannerProgramExercise_currentDescriptionIndex(programExercise);
   const bindings = Progress_createScriptBindings(
     dayData,
     entry,
@@ -982,10 +1180,14 @@ export function Progress_runUpdateScriptForEntry(
     Stats_getCurrentMovingAverageBodyweight(stats, settings),
     setIndex + 1,
     setVariationIndex,
-    descriptionIndex
+    descriptionIndex,
   );
   try {
-    const fnContext: IScriptFnContext = { exerciseType: exercise, unit: settings.units, prints: [] };
+    const fnContext: IScriptFnContext = {
+      exerciseType: exercise,
+      unit: settings.units,
+      prints: [],
+    };
     const runner = new ScriptRunner(
       script,
       state,
@@ -994,7 +1196,7 @@ export function Progress_runUpdateScriptForEntry(
       Progress_createScriptFunctions(settings),
       settings.units,
       fnContext,
-      "update"
+      "update",
     );
     runner.execute();
     const newEntry = Progress_applyBindings(entry, bindings, settings);
@@ -1017,7 +1219,7 @@ export function Progress_runInitialUpdateScripts(
   day: number,
   program: IEvaluatedProgram,
   settings: ISettings,
-  stats: IStats
+  stats: IStats,
 ): IHistoryRecord {
   const programDay = Program_getProgramDay(program, day);
   if (!programDay) {
@@ -1025,14 +1227,18 @@ export function Progress_runInitialUpdateScripts(
   }
   const dayExercises = Program_getProgramDayUsedExercises(programDay);
   const programExercises = programExerciseIds
-    ? CollectionUtils_compact(programExerciseIds.map((id) => dayExercises.find((e) => e.key === id)))
+    ? CollectionUtils_compact(
+        programExerciseIds.map((id) => dayExercises.find((e) => e.key === id)),
+      )
     : dayExercises;
 
   return {
     ...aProgress,
     entries: aProgress.entries.map((entry) => {
       const programExercise =
-        entry.programExerciseId != null ? programExercises.find((e) => e.key === entry.programExerciseId) : undefined;
+        entry.programExerciseId != null
+          ? programExercises.find((e) => e.key === entry.programExerciseId)
+          : undefined;
       if (!programExercise) {
         return entry;
       }
@@ -1043,7 +1249,7 @@ export function Progress_runInitialUpdateScripts(
         program.states,
         -1,
         settings,
-        stats
+        stats,
       );
     }),
   };
@@ -1057,7 +1263,7 @@ export function Progress_runUpdateScript(
   setIndex: number,
   mode: IProgressMode,
   settings: ISettings,
-  stats: IStats
+  stats: IStats,
 ): IHistoryRecord {
   if (mode === "warmup") {
     return aProgress;
@@ -1070,7 +1276,7 @@ export function Progress_runUpdateScript(
     otherStates,
     setIndex,
     settings,
-    stats
+    stats,
   );
   const progress = lf(aProgress).p("entries").i(entryIndex).set(newEntry);
   return progress;
@@ -1079,7 +1285,7 @@ export function Progress_runUpdateScript(
 export function Progress_applyBindings(
   oldEntry: IHistoryEntry,
   bindings: IScriptBindings,
-  settings: ISettings
+  settings: ISettings,
 ): IHistoryEntry {
   const keys = [
     "RPE",
@@ -1093,8 +1299,13 @@ export function Progress_applyBindings(
     "askweights",
   ] as const;
   const entry = ObjectUtils_clone(oldEntry);
-  const lastCompletedIndex = CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) + 1;
-  entry.sets = entry.sets.slice(0, Math.max(lastCompletedIndex, bindings.numberOfSets, 0));
+  const lastCompletedIndex =
+    CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) +
+    1;
+  entry.sets = entry.sets.slice(
+    0,
+    Math.max(lastCompletedIndex, bindings.numberOfSets, 0),
+  );
   for (const key of keys) {
     for (let i = 0; i < bindings[key].length; i += 1) {
       if (entry.sets[i] == null) {
@@ -1149,7 +1360,7 @@ export function Progress_completeAmrapSet(
   progress: IHistoryRecord,
   entryIndex: number,
   setIndex: number,
-  settings: ISettings
+  settings: ISettings,
 ): IHistoryRecord {
   const entry = progress.entries[entryIndex];
   const isUnilateral = Exercise_getIsUnilateral(entry.exercise, settings);
@@ -1161,8 +1372,12 @@ export function Progress_completeAmrapSet(
     .modify((progressSet) => {
       return {
         ...progressSet,
-        timestamp: !progressSet.isCompleted ? Date.now() : progressSet.timestamp,
-        completedRepsLeft: isUnilateral ? (progressSet.completedRepsLeft ?? progressSet.reps) : undefined,
+        timestamp: !progressSet.isCompleted
+          ? Date.now()
+          : progressSet.timestamp,
+        completedRepsLeft: isUnilateral
+          ? (progressSet.completedRepsLeft ?? progressSet.reps)
+          : undefined,
         completedReps: progressSet.completedReps ?? progressSet.reps,
         completedWeight: progressSet.completedWeight ?? progressSet.weight,
         isCompleted: !progressSet.isCompleted,
@@ -1175,17 +1390,24 @@ export function Progress_shouldShowAmrapModal(
   setIndex: number,
   mode: IProgressMode,
   hasUserPromptedVars: boolean,
-  settings: ISettings
+  settings: ISettings,
 ): boolean {
-  const set = mode === "warmup" ? entry.warmupSets[setIndex] : entry.sets[setIndex];
+  const set =
+    mode === "warmup" ? entry.warmupSets[setIndex] : entry.sets[setIndex];
   const shouldLogRpe = !!set?.logRpe;
-  const shouldPromptUserVars = hasUserPromptedVars && Progress_hasLastUnfinishedSet(entry);
+  const shouldPromptUserVars =
+    hasUserPromptedVars && Progress_hasLastUnfinishedSet(entry);
   const isUnilateral = Exercise_getIsUnilateral(entry.exercise, settings);
   const isAmrap =
-    (set?.completedReps == null || (isUnilateral && set?.completedRepsLeft == null)) &&
+    (set?.completedReps == null ||
+      (isUnilateral && set?.completedRepsLeft == null)) &&
     (!!set?.isAmrap || set.reps == null);
-  const shouldAskWeight = set?.completedWeight == null && (!!set?.askWeight || set.weight == null);
-  return !set.isCompleted && (shouldLogRpe || shouldPromptUserVars || isAmrap || shouldAskWeight);
+  const shouldAskWeight =
+    set?.completedWeight == null && (!!set?.askWeight || set.weight == null);
+  return (
+    !set.isCompleted &&
+    (shouldLogRpe || shouldPromptUserVars || isAmrap || shouldAskWeight)
+  );
 }
 
 export function Progress_completeSet(
@@ -1194,17 +1416,21 @@ export function Progress_completeSet(
   setIndex: number,
   mode: IProgressMode,
   hasUserPromptedVars: boolean,
-  settings: ISettings
+  settings: ISettings,
 ): IHistoryRecord {
   const entry = progress.entries[entryIndex];
-  const set = mode === "warmup" ? entry.warmupSets[setIndex] : entry.sets[setIndex];
+  const set =
+    mode === "warmup" ? entry.warmupSets[setIndex] : entry.sets[setIndex];
   const shouldLogRpe = !!set?.logRpe;
-  const shouldPromptUserVars = hasUserPromptedVars && Progress_hasLastUnfinishedSet(entry);
+  const shouldPromptUserVars =
+    hasUserPromptedVars && Progress_hasLastUnfinishedSet(entry);
   const isUnilateral = Exercise_getIsUnilateral(entry.exercise, settings);
   const isAmrap =
-    (set?.completedReps == null || (isUnilateral && set?.completedRepsLeft == null)) &&
+    (set?.completedReps == null ||
+      (isUnilateral && set?.completedRepsLeft == null)) &&
     (!!set?.isAmrap || set.reps == null);
-  const shouldAskWeight = set?.completedWeight == null && (!!set?.askWeight || set.weight == null);
+  const shouldAskWeight =
+    set?.completedWeight == null && (!!set?.askWeight || set.weight == null);
   if (mode === "warmup") {
     return lf(progress)
       .p("entries")
@@ -1214,14 +1440,26 @@ export function Progress_completeSet(
       .modify((progressSet) => {
         return {
           ...progressSet,
-          timestamp: !progressSet.isCompleted ? Date.now() : progressSet.timestamp,
-          completedRepsLeft: isUnilateral ? (progressSet.completedRepsLeft ?? progressSet.reps) : undefined,
+          timestamp: !progressSet.isCompleted
+            ? Date.now()
+            : progressSet.timestamp,
+          completedRepsLeft: isUnilateral
+            ? (progressSet.completedRepsLeft ?? progressSet.reps)
+            : undefined,
           completedReps: progressSet.completedReps ?? progressSet.reps,
           completedWeight: progressSet.completedWeight ?? progressSet.weight,
           isCompleted: !progressSet.isCompleted,
         };
       });
-  } else if (Progress_shouldShowAmrapModal(entry, setIndex, mode, hasUserPromptedVars, settings)) {
+  } else if (
+    Progress_shouldShowAmrapModal(
+      entry,
+      setIndex,
+      mode,
+      hasUserPromptedVars,
+      settings,
+    )
+  ) {
     const amrapUi: IProgressUi = {
       amrapModal: {
         entryIndex,
@@ -1247,38 +1485,77 @@ export function Progress_getIsMinRepsEnabled(sets: ISet[]): boolean {
   return sets.some((set) => set.minReps != null);
 }
 
-export function Progress_updateAmrapRepsInExercise(progress: IHistoryRecord, value?: number): IHistoryRecord {
+export function Progress_updateAmrapRepsInExercise(
+  progress: IHistoryRecord,
+  value?: number,
+): IHistoryRecord {
   if (progress.ui?.amrapModal != null) {
     const { entryIndex, setIndex } = progress.ui.amrapModal;
-    return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedReps").set(value);
+    return lf(progress)
+      .p("entries")
+      .i(entryIndex)
+      .p("sets")
+      .i(setIndex)
+      .p("completedReps")
+      .set(value);
   } else {
     return progress;
   }
 }
 
-export function Progress_updateAmrapRepsLeftInExercise(progress: IHistoryRecord, value?: number): IHistoryRecord {
+export function Progress_updateAmrapRepsLeftInExercise(
+  progress: IHistoryRecord,
+  value?: number,
+): IHistoryRecord {
   if (progress.ui?.amrapModal != null) {
     const { entryIndex, setIndex } = progress.ui.amrapModal;
-    return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedRepsLeft").set(value);
+    return lf(progress)
+      .p("entries")
+      .i(entryIndex)
+      .p("sets")
+      .i(setIndex)
+      .p("completedRepsLeft")
+      .set(value);
   } else {
     return progress;
   }
 }
 
-export function Progress_updateRpeInExercise(progress: IHistoryRecord, value?: number): IHistoryRecord {
+export function Progress_updateRpeInExercise(
+  progress: IHistoryRecord,
+  value?: number,
+): IHistoryRecord {
   if (progress.ui?.amrapModal != null) {
     const { entryIndex, setIndex } = progress.ui.amrapModal;
-    const newValue = value != null ? Math.round(Math.min(10, Math.max(0, value)) / 0.5) * 0.5 : undefined;
-    return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedRpe").set(newValue);
+    const newValue =
+      value != null
+        ? Math.round(Math.min(10, Math.max(0, value)) / 0.5) * 0.5
+        : undefined;
+    return lf(progress)
+      .p("entries")
+      .i(entryIndex)
+      .p("sets")
+      .i(setIndex)
+      .p("completedRpe")
+      .set(newValue);
   } else {
     return progress;
   }
 }
 
-export function Progress_updateWeightInExercise(progress: IHistoryRecord, value?: IWeight): IHistoryRecord {
+export function Progress_updateWeightInExercise(
+  progress: IHistoryRecord,
+  value?: IWeight,
+): IHistoryRecord {
   if (progress.ui?.amrapModal != null) {
     const { entryIndex, setIndex } = progress.ui.amrapModal;
-    return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedWeight").set(value);
+    return lf(progress)
+      .p("entries")
+      .i(entryIndex)
+      .p("sets")
+      .i(setIndex)
+      .p("completedWeight")
+      .set(value);
   } else {
     return progress;
   }
@@ -1287,7 +1564,7 @@ export function Progress_updateWeightInExercise(progress: IHistoryRecord, value?
 export function Progress_updateUserPromptedStateVars(
   progress: IHistoryRecord,
   programExerciseId: string,
-  userPromptedStateVars: IProgramState
+  userPromptedStateVars: IProgramState,
 ): IHistoryRecord {
   return {
     ...progress,
@@ -1298,24 +1575,39 @@ export function Progress_updateUserPromptedStateVars(
   };
 }
 
-export function Progress_editExerciseNotes(dispatch: IDispatch, entryIndex: number, notes: string): void {
-  updateProgress(dispatch, [lb<IHistoryRecord>().p("entries").i(entryIndex).p("notes").record(notes)], "edit-notes");
+export function Progress_editExerciseNotes(
+  dispatch: IDispatch,
+  entryIndex: number,
+  notes: string,
+): void {
+  updateProgress(
+    dispatch,
+    [lb<IHistoryRecord>().p("entries").i(entryIndex).p("notes").record(notes)],
+    "edit-notes",
+  );
 }
 
-export function Progress_addExercise(dispatch: IDispatch, exerciseType: IExerciseType, numberOfEntries: number): void {
+export function Progress_addExercise(
+  dispatch: IDispatch,
+  exerciseType: IExerciseType,
+  numberOfEntries: number,
+): void {
   updateProgress(
     dispatch,
     [
       lb<IHistoryRecord>()
         .p("entries")
         .recordModify((entries) => {
-          return [...entries, History_createCustomEntry(exerciseType, numberOfEntries)].map((e, i) => ({
+          return [
+            ...entries,
+            History_createCustomEntry(exerciseType, numberOfEntries),
+          ].map((e, i) => ({
             ...e,
             index: i,
           }));
         }),
     ],
-    "add-exercise"
+    "add-exercise",
   );
 }
 
@@ -1326,14 +1618,30 @@ export function Progress_isEligibleForInferredWeight(set: ISet): boolean {
 export function Progress_updateSetWeights(
   entry: IHistoryEntry,
   exerciseType: IExerciseType,
-  settings: ISettings
+  settings: ISettings,
 ): IHistoryEntry {
   const newSets = entry.sets.map((set) => {
-    if ((Progress_isEligibleForInferredWeight(set) || Weight_isPct(set.originalWeight)) && !set.isCompleted) {
-      const originalWeight = set.originalWeight ?? Weight_rpePct(set.reps ?? 1, set.rpe ?? 10);
-      const evaluatedWeight = Weight_evaluateWeight(originalWeight, exerciseType, settings);
-      const unit = Equipment_getUnitForExerciseType(settings, exerciseType) ?? settings.units;
-      const weight = Weight_roundConvertTo(evaluatedWeight, settings, unit, exerciseType);
+    if (
+      (Progress_isEligibleForInferredWeight(set) ||
+        Weight_isPct(set.originalWeight)) &&
+      !set.isCompleted
+    ) {
+      const originalWeight =
+        set.originalWeight ?? Weight_rpePct(set.reps ?? 1, set.rpe ?? 10);
+      const evaluatedWeight = Weight_evaluateWeight(
+        originalWeight,
+        exerciseType,
+        settings,
+      );
+      const unit =
+        Equipment_getUnitForExerciseType(settings, exerciseType) ??
+        settings.units;
+      const weight = Weight_roundConvertTo(
+        evaluatedWeight,
+        settings,
+        unit,
+        exerciseType,
+      );
       return { ...set, weight };
     }
     return set;
@@ -1342,7 +1650,11 @@ export function Progress_updateSetWeights(
 }
 
 export function Progress_doesUse1RM(entry: IHistoryEntry): boolean {
-  return entry.sets.some((set) => (set.originalWeight == null ? set.rpe != null : Weight_isPct(set.originalWeight)));
+  return entry.sets.some((set) =>
+    set.originalWeight == null
+      ? set.rpe != null
+      : Weight_isPct(set.originalWeight),
+  );
 }
 
 export function Progress_changeExercise(
@@ -1351,7 +1663,7 @@ export function Progress_changeExercise(
   progressId: number,
   exerciseType: IExerciseType,
   entryIndex: number,
-  shouldKeepProgramExerciseId: boolean
+  shouldKeepProgramExerciseId: boolean,
 ): void {
   updateState(
     dispatch,
@@ -1364,12 +1676,14 @@ export function Progress_changeExercise(
           return {
             ...entry,
             exercise: exerciseType,
-            ...(shouldKeepProgramExerciseId ? {} : { programExerciseId: undefined }),
+            ...(shouldKeepProgramExerciseId
+              ? {}
+              : { programExerciseId: undefined }),
             changed: true,
           };
         }),
     ],
-    "Change exercise"
+    "Change exercise",
   );
 }
 
@@ -1377,17 +1691,32 @@ export function Progress_changeEquipment(
   dispatch: IDispatch,
   progressId: number,
   entryIndex: number,
-  equipment: IEquipment
+  equipment: IEquipment,
 ): void {
   updateState(
     dispatch,
-    [Progress_lbProgress(progressId).p("entries").i(entryIndex).p("exercise").p("equipment").record(equipment)],
-    "Change equipment"
+    [
+      Progress_lbProgress(progressId)
+        .p("entries")
+        .i(entryIndex)
+        .p("exercise")
+        .p("equipment")
+        .record(equipment),
+    ],
+    "Change equipment",
   );
 }
 
-export function Progress_editNotes(dispatch: IDispatch, progressId: number, notes: string): void {
-  updateState(dispatch, [Progress_lbProgress(progressId).p("notes").record(notes)], "Edit workout notes");
+export function Progress_editNotes(
+  dispatch: IDispatch,
+  progressId: number,
+  notes: string,
+): void {
+  updateState(
+    dispatch,
+    [Progress_lbProgress(progressId).p("notes").record(notes)],
+    "Edit workout notes",
+  );
 }
 
 export function Progress_getDayData(progress: IHistoryRecord): IDayData {
@@ -1403,23 +1732,33 @@ export function Progress_applyProgramExercise(
   index: number,
   programExercise: IPlannerProgramExerciseWithType,
   settings: ISettings,
-  forceWarmupSets?: boolean
+  forceWarmupSets?: boolean,
 ): IHistoryEntry {
-  const variationIndex = PlannerProgramExercise_currentSetVariationIndex(programExercise);
+  const variationIndex =
+    PlannerProgramExercise_currentSetVariationIndex(programExercise);
   const sets = programExercise.evaluatedSetVariations[variationIndex].sets;
-  const programExerciseWarmupSets = PlannerProgramExercise_programWarmups(programExercise, settings);
+  const programExerciseWarmupSets = PlannerProgramExercise_programWarmups(
+    programExercise,
+    settings,
+  );
 
   if (progressEntry != null) {
     const newSetsNum = Math.max(progressEntry.sets.length, sets.length);
     const newSets: ISet[] = [];
     for (let i = 0; i < newSetsNum; i++) {
-      const progressSet: ISet | undefined = progressEntry.sets[i] as ISet | undefined;
+      const progressSet: ISet | undefined = progressEntry.sets[i] as
+        | ISet
+        | undefined;
       const programSet = sets[i];
       if (!!progressSet?.isCompleted) {
         newSets.push(progressSet);
       } else if (programSet != null) {
         const originalWeight = programSet.weight;
-        const weight = ProgramSet_getEvaluatedWeight(programSet, programExercise.exerciseType, settings);
+        const weight = ProgramSet_getEvaluatedWeight(
+          programSet,
+          programExercise.exerciseType,
+          settings,
+        );
         newSets.push({
           ...progressSet,
           id: progressSet?.id ?? UidFactory_generateUid(6),
@@ -1428,7 +1767,10 @@ export function Progress_applyProgramExercise(
           reps: programSet.maxrep,
           minReps: programSet.minrep,
           rpe: programSet.rpe,
-          isUnilateral: Exercise_getIsUnilateral(programExercise.exerciseType, settings),
+          isUnilateral: Exercise_getIsUnilateral(
+            programExercise.exerciseType,
+            settings,
+          ),
           originalWeight,
           weight,
           isAmrap: programSet.isAmrap,
@@ -1444,7 +1786,12 @@ export function Progress_applyProgramExercise(
       if (forceWarmupSets) {
         const generated =
           firstWeight != null
-            ? Exercise_getWarmupSets(programExercise.exerciseType, firstWeight, settings, programExerciseWarmupSets)
+            ? Exercise_getWarmupSets(
+                programExercise.exerciseType,
+                firstWeight,
+                settings,
+                programExerciseWarmupSets,
+              )
             : [];
         newWarmupSets = generated.map((ws, i) => ({
           ...ws,
@@ -1457,13 +1804,19 @@ export function Progress_applyProgramExercise(
 
     return {
       ...progressEntry,
-      exercise: progressEntry.changed ? progressEntry.exercise : programExercise.exerciseType,
+      exercise: progressEntry.changed
+        ? progressEntry.exercise
+        : programExercise.exerciseType,
       warmupSets: newWarmupSets,
       sets: newSets,
     };
   } else {
     const newSets = sets.map((set, i) => {
-      const weight = ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings);
+      const weight = ProgramSet_getEvaluatedWeight(
+        set,
+        programExercise.exerciseType,
+        settings,
+      );
       return {
         vtype: "set" as const,
         id: UidFactory_generateUid(6),
@@ -1471,7 +1824,10 @@ export function Progress_applyProgramExercise(
         reps: set.maxrep,
         minReps: set.minrep,
         originalWeight: set.weight,
-        isUnilateral: Exercise_getIsUnilateral(programExercise.exerciseType, settings),
+        isUnilateral: Exercise_getIsUnilateral(
+          programExercise.exerciseType,
+          settings,
+        ),
         weight,
         rpe: set.rpe,
         logRpe: set.logRpe,
@@ -1484,20 +1840,33 @@ export function Progress_applyProgramExercise(
     return {
       vtype: "history_entry",
       index,
-      id: Progress_getEntryId(programExercise.exerciseType, programExercise.label),
+      id: Progress_getEntryId(
+        programExercise.exerciseType,
+        programExercise.label,
+      ),
       exercise: programExercise.exerciseType,
       programExerciseId: programExercise.key,
       sets: newSets,
       warmupSets:
         firstWeight != null
-          ? Exercise_getWarmupSets(programExercise.exerciseType, firstWeight, settings, programExerciseWarmupSets)
+          ? Exercise_getWarmupSets(
+              programExercise.exerciseType,
+              firstWeight,
+              settings,
+              programExerciseWarmupSets,
+            )
           : [],
     };
   }
 }
 
-export function Progress_getEntryId(exerciseType: IExerciseType, label?: string): string {
-  return CollectionUtils_compact([label, Exercise_toKey(exerciseType)]).join("_");
+export function Progress_getEntryId(
+  exerciseType: IExerciseType,
+  label?: string,
+): string {
+  return CollectionUtils_compact([label, Exercise_toKey(exerciseType)]).join(
+    "_",
+  );
 }
 
 export function Progress_applyProgramDay(
@@ -1505,7 +1874,7 @@ export function Progress_applyProgramDay(
   program: IEvaluatedProgram,
   day: number,
   settings: ISettings,
-  programExerciseIds?: string[]
+  programExerciseIds?: string[],
 ): IHistoryRecord {
   const programDay = Program_getProgramDay(program, day);
   if (!programDay) {
@@ -1515,14 +1884,27 @@ export function Progress_applyProgramDay(
     if (entry.programExerciseId == null) {
       return entry;
     }
-    if (programExerciseIds != null && !programExerciseIds.includes(entry.programExerciseId)) {
+    if (
+      programExerciseIds != null &&
+      !programExerciseIds.includes(entry.programExerciseId)
+    ) {
       return entry;
     }
-    const programExercise = Program_getProgramExerciseForKeyAndDay(program, day, entry.programExerciseId);
+    const programExercise = Program_getProgramExerciseForKeyAndDay(
+      program,
+      day,
+      entry.programExerciseId,
+    );
     if (!programExercise) {
       return entry;
     }
-    return Progress_applyProgramExercise(entry, index, programExercise, settings, false);
+    return Progress_applyProgramExercise(
+      entry,
+      index,
+      programExercise,
+      settings,
+      false,
+    );
   });
 
   return { ...progress, entries: newEntries };
@@ -1533,7 +1915,7 @@ export function Progress_changeAmrapAction(
   stats: IStats,
   progress: IHistoryRecord,
   action: IChangeAMRAPAction,
-  subscription: ISubscription | undefined
+  subscription: ISubscription | undefined,
 ): IHistoryRecord {
   let newProgress = { ...progress };
   if (
@@ -1546,22 +1928,43 @@ export function Progress_changeAmrapAction(
     return { ...newProgress, ui: { ...newProgress.ui, amrapModal: undefined } };
   }
   if (action.amrapValue != null) {
-    newProgress = Progress_updateAmrapRepsInExercise(newProgress, action.amrapValue);
+    newProgress = Progress_updateAmrapRepsInExercise(
+      newProgress,
+      action.amrapValue,
+    );
   }
   if (action.amrapLeftValue != null) {
-    newProgress = Progress_updateAmrapRepsLeftInExercise(newProgress, action.amrapLeftValue);
+    newProgress = Progress_updateAmrapRepsLeftInExercise(
+      newProgress,
+      action.amrapLeftValue,
+    );
   }
   if (action.logRpe) {
     newProgress = Progress_updateRpeInExercise(newProgress, action.rpeValue);
   }
   if (action.weightValue != null) {
-    newProgress = Progress_updateWeightInExercise(newProgress, action.weightValue);
+    newProgress = Progress_updateWeightInExercise(
+      newProgress,
+      action.weightValue,
+    );
   }
   const programExerciseId = action.programExercise?.key;
-  if (ObjectUtils_keys(action.userVars || {}).length > 0 && programExerciseId != null) {
-    newProgress = Progress_updateUserPromptedStateVars(newProgress, programExerciseId, action.userVars || {});
+  if (
+    ObjectUtils_keys(action.userVars || {}).length > 0 &&
+    programExerciseId != null
+  ) {
+    newProgress = Progress_updateUserPromptedStateVars(
+      newProgress,
+      programExerciseId,
+      action.userVars || {},
+    );
   }
-  newProgress = Progress_completeAmrapSet(newProgress, action.entryIndex, action.setIndex, settings);
+  newProgress = Progress_completeAmrapSet(
+    newProgress,
+    action.entryIndex,
+    action.setIndex,
+    settings,
+  );
   if (action.programExercise) {
     newProgress = Progress_runUpdateScript(
       newProgress,
@@ -1571,13 +1974,17 @@ export function Progress_changeAmrapAction(
       action.setIndex,
       "workout",
       settings,
-      stats
+      stats,
     );
   }
   if (Progress_isFullyFinishedSet(newProgress)) {
     newProgress = Progress_stopTimer(newProgress);
   }
-  newProgress = Progress_maybeApplySuperset(newProgress, action.entryIndex, "workout");
+  newProgress = Progress_maybeApplySuperset(
+    newProgress,
+    action.entryIndex,
+    "workout",
+  );
   newProgress = Progress_startTimer(
     newProgress,
     new Date().getTime(),
@@ -1585,13 +1992,13 @@ export function Progress_changeAmrapAction(
     action.entryIndex,
     action.setIndex,
     settings,
-    subscription
+    subscription,
   );
   newProgress.intervals = History_resumeWorkout(
     newProgress,
     action.isPlayground,
     settings.timers.reminder,
-    subscription != null && Subscriptions_hasSubscription(subscription)
+    subscription != null && Subscriptions_hasSubscription(subscription),
   );
   LiveActivityManager_updateLiveActivityForNextEntry(
     newProgress,
@@ -1599,7 +2006,7 @@ export function Progress_changeAmrapAction(
     "workout",
     action.programExercise,
     settings,
-    subscription
+    subscription,
   );
   return { ...newProgress, ui: { ...newProgress.ui, amrapModal: undefined } };
 }
@@ -1609,20 +2016,27 @@ export function Progress_completeSetAction(
   stats: IStats,
   progress: IHistoryRecord,
   action: ICompleteSetAction,
-  subscription: ISubscription | undefined
+  subscription: ISubscription | undefined,
 ): IHistoryRecord {
-  const hasUserPromptedVars = action.programExercise && ProgramExercise_hasUserPromptedVars(action.programExercise);
+  const hasUserPromptedVars =
+    action.programExercise &&
+    ProgramExercise_hasUserPromptedVars(action.programExercise);
   let newProgress = Progress_completeSet(
     progress,
     action.entryIndex,
     action.setIndex,
     action.mode,
     !!hasUserPromptedVars,
-    settings
+    settings,
   );
-  const oldSet = progress.entries[action.entryIndex][action.mode === "warmup" ? "warmupSets" : "sets"][action.setIndex];
+  const oldSet =
+    progress.entries[action.entryIndex][
+      action.mode === "warmup" ? "warmupSets" : "sets"
+    ][action.setIndex];
   const newSet =
-    newProgress.entries[action.entryIndex][action.mode === "warmup" ? "warmupSets" : "sets"][action.setIndex];
+    newProgress.entries[action.entryIndex][
+      action.mode === "warmup" ? "warmupSets" : "sets"
+    ][action.setIndex];
   const didFinish = !oldSet.isCompleted && newSet.isCompleted;
   if (action.programExercise && !newProgress.ui?.amrapModal) {
     newProgress = Progress_runUpdateScript(
@@ -1633,7 +2047,7 @@ export function Progress_completeSetAction(
       action.setIndex,
       action.mode,
       settings,
-      stats
+      stats,
     );
   }
 
@@ -1641,7 +2055,11 @@ export function Progress_completeSetAction(
     newProgress = Progress_stopTimer(newProgress);
   }
   if (didFinish) {
-    newProgress = Progress_maybeApplySuperset(newProgress, action.entryIndex, action.mode);
+    newProgress = Progress_maybeApplySuperset(
+      newProgress,
+      action.entryIndex,
+      action.mode,
+    );
   }
   if (!action.isPlayground) {
     newProgress = Progress_startTimer(
@@ -1651,14 +2069,14 @@ export function Progress_completeSetAction(
       action.entryIndex,
       action.setIndex,
       settings,
-      subscription
+      subscription,
     );
   }
   newProgress.intervals = History_resumeWorkout(
     newProgress,
     action.isPlayground,
     settings.timers.reminder,
-    subscription != null && Subscriptions_hasSubscription(subscription)
+    subscription != null && Subscriptions_hasSubscription(subscription),
   );
   LiveActivityManager_updateLiveActivityForNextEntry(
     newProgress,
@@ -1666,12 +2084,15 @@ export function Progress_completeSetAction(
     action.mode,
     action.programExercise,
     settings,
-    subscription
+    subscription,
   );
   if (action.forceUpdateEntryIndex) {
     newProgress = {
       ...newProgress,
-      ui: { ...newProgress.ui, forceUpdateEntryIndex: !newProgress.ui?.forceUpdateEntryIndex },
+      ui: {
+        ...newProgress.ui,
+        forceUpdateEntryIndex: !newProgress.ui?.forceUpdateEntryIndex,
+      },
     };
   }
   if (action.isExternal) {
@@ -1692,30 +2113,58 @@ export function Progress_forceUpdateEntryIndex(dispatch: IDispatch): void {
         .p("forceUpdateEntryIndex")
         .recordModify((v) => !v),
     ],
-    "Force update entry index"
+    "Force update entry index",
   );
 }
 
-export function Progress_finishWorkout(storage: IStorage, progress: IHistoryRecord): IStorage {
+export function Progress_finishWorkout(
+  storage: IStorage,
+  progress: IHistoryRecord,
+): IStorage {
   const settings = storage.settings;
-  const programIndex = storage.programs.findIndex((p) => p.id === progress.programId)!;
-  const program = progress.programId === emptyProgramId ? Program_createEmptyProgram() : storage.programs[programIndex];
-  const evaluatedProgram = program ? Program_evaluate(program, settings) : undefined;
+  const programIndex = storage.programs.findIndex(
+    (p) => p.id === progress.programId,
+  )!;
+  const program =
+    progress.programId === emptyProgramId
+      ? Program_createEmptyProgram()
+      : storage.programs[programIndex];
+  const evaluatedProgram = program
+    ? Program_evaluate(program, settings)
+    : undefined;
   Progress_stopTimer(progress);
-  const historyRecord = History_finishProgramDay(progress, storage.settings, progress.day, evaluatedProgram);
+  const historyRecord = History_finishProgramDay(
+    progress,
+    storage.settings,
+    progress.day,
+    evaluatedProgram,
+  );
   let newHistory;
   if (!Progress_isCurrent(progress)) {
-    newHistory = storage.history.map((h) => (h.id === progress.id ? historyRecord : h));
+    newHistory = storage.history.map((h) =>
+      h.id === progress.id ? historyRecord : h,
+    );
   } else {
     newHistory = [historyRecord, ...storage.history];
   }
   const exerciseData = storage.settings.exerciseData;
   const { program: newProgram, exerciseData: newExerciseData } =
     Progress_isCurrent(progress) && program != null
-      ? Program_runAllFinishDayScripts(program, progress, storage.stats, settings)
+      ? Program_runAllFinishDayScripts(
+          program,
+          progress,
+          storage.stats,
+          settings,
+        )
       : { program, exerciseData };
-  const newPrograms = newProgram != null ? lf(storage.programs).i(programIndex).set(newProgram) : storage.programs;
-  const newSettingsExerciseData = deepmerge(storage.settings.exerciseData, newExerciseData);
+  const newPrograms =
+    newProgram != null
+      ? lf(storage.programs).i(programIndex).set(newProgram)
+      : storage.programs;
+  const newSettingsExerciseData = deepmerge(
+    storage.settings.exerciseData,
+    newExerciseData,
+  );
   return {
     ...storage,
     progress: Progress_isCurrent(progress) ? [] : storage.progress,
