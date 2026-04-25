@@ -6,6 +6,8 @@ import {
 import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
+  Weight_build,
+  Weight_buildAny,
   Weight_convertToWeight,
 } from "@/evaluators/logic-evaluator.ts";
 import { isLogicNodeOfType } from "@/parsers/guards.ts";
@@ -24,6 +26,7 @@ import {
 } from "@/models/weight.ts";
 import { CollectionUtils_compact } from "@/utils/collection.ts";
 import { is, isNumber } from "@/utils/types.ts";
+import { MathUtils_applyOp } from "@/utils/math.ts";
 
 export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   const [variableNode, expression] = queryChildren(n, { atLeast: 2 });
@@ -44,7 +47,10 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
         : evaluatedValue;
       value = value ?? 0;
       value = value === true ? 1 : value === false ? 0 : value;
-      value = Weight_convertToWeight(t.getGlobal("rm1"), value, this.unit);
+      // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
+      // I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
+      // value = Weight_convertToWeight(t.getGlobal("rm1"), value, this.unit);
+      value = Weight_convertToWeight(t.getGlobal("rm1"), value, "kg");
       t.updateGlobal("rm1", value);
       return value;
     } else if (
@@ -63,7 +69,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     ) {
       return recordVariableUpdate(variable, expression, indexExprs, "=", t);
     } else if (this.mode === "update" && variable === "numberOfSets") {
-      return this.changeNumberOfSets(expression, "=");
+      return changeNumberOfSets(expression, "=", t);
     } else if (
       this.mode === "update" &&
       (variable === "reps" ||
@@ -270,4 +276,87 @@ function normalizeTarget(
     newTarget.unshift("*");
   }
   return newTarget;
+}
+
+function changeNumberOfSets(
+  expression: SyntaxNode,
+  op: IAssignmentOp,
+  tools: EvaluateTools,
+): number | IWeight | IDynamicWeight {
+  const oldNumberOfSets = tools.getGlobal("weights").length;
+  const evaluatedValue = MathUtils_applyOp(
+    tools.getGlobal("numberOfSets"),
+    evaluateToNumber(expression, tools),
+    op,
+  );
+
+  this.bindings.weights = tools.getGlobal("weights").slice(0, evaluatedValue);
+  this.bindings.originalWeights = tools
+    .getGlobal("originalWeights")
+    .slice(0, evaluatedValue);
+  this.bindings.reps = tools.getGlobal("reps").slice(0, evaluatedValue);
+  this.bindings.minReps = tools.getGlobal("minReps").slice(0, evaluatedValue);
+  this.bindings.RPE = tools.getGlobal("RPE").slice(0, evaluatedValue);
+  this.bindings.w = tools.getGlobal("weights").slice(0, evaluatedValue);
+  this.bindings.r = tools.getGlobal("reps").slice(0, evaluatedValue);
+  this.bindings.mr = tools.getGlobal("minReps").slice(0, evaluatedValue);
+  this.bindings.timers = tools.getGlobal("timers").slice(0, evaluatedValue);
+  this.bindings.amraps = tools.getGlobal("amraps").slice(0, evaluatedValue);
+  this.bindings.logrpes = tools.getGlobal("logrpes").slice(0, evaluatedValue);
+  this.bindings.askweights = tools
+    .getGlobal("askweights")
+    .slice(0, evaluatedValue);
+  this.bindings.completedReps = tools
+    .getGlobal("completedReps")
+    .slice(0, evaluatedValue);
+  this.bindings.completedRepsLeft = tools
+    .getGlobal("completedRepsLeft")
+    .slice(0, evaluatedValue);
+  this.bindings.cr = tools.getGlobal("cr").slice(0, evaluatedValue);
+  this.bindings.cw = tools.getGlobal("cw").slice(0, evaluatedValue);
+  this.bindings.completedWeights = tools
+    .getGlobal("completedWeights")
+    .slice(0, evaluatedValue);
+  this.bindings.completedRPE = tools
+    .getGlobal("completedRPE")
+    .slice(0, evaluatedValue);
+  this.bindings.isCompleted = tools
+    .getGlobal("isCompleted")
+    .slice(0, evaluatedValue);
+
+  const ns = oldNumberOfSets - 1;
+  for (let i = 0; i < evaluatedValue; i += 1) {
+    if (i > ns) {
+      this.bindings.weights[i] = Weight_build(
+        tools.getGlobal("weights")[ns]?.value ?? 0,
+        tools.getGlobal("weights")[ns]?.unit || "lb",
+      );
+      this.bindings.originalWeights[i] = Weight_buildAny(
+        tools.getGlobal("originalWeights")[ns]?.value ?? 0,
+        tools.getGlobal("originalWeights")[ns]?.unit || "lb",
+      );
+      this.bindings.reps[i] = tools.getGlobal("reps")[ns] ?? 0;
+      this.bindings.timers[i] = tools.getGlobal("timers")[ns];
+      this.bindings.amraps[i] = tools.getGlobal("amraps")[ns];
+      this.bindings.logrpes[i] = tools.getGlobal("logrpes")[ns];
+      this.bindings.askweights[i] = tools.getGlobal("askweights")[ns];
+      this.bindings.minReps[i] = tools.getGlobal("minReps")[ns];
+      this.bindings.RPE[i] = tools.getGlobal("RPE")[ns];
+      this.bindings.w[i] = tools.getGlobal("weights")[i];
+      this.bindings.r[i] = tools.getGlobal("reps")[i];
+      this.bindings.mr[i] = tools.getGlobal("minReps")[i];
+      this.bindings.completedReps[i] = undefined;
+      this.bindings.completedRepsLeft[i] = undefined;
+      this.bindings.completedWeights[i] = undefined;
+      this.bindings.completedRPE[i] = undefined;
+      this.bindings.cr[i] = undefined;
+      this.bindings.cw[i] = undefined;
+      this.bindings.isCompleted[i] = 0;
+    }
+  }
+
+  this.bindings.numberOfSets = evaluatedValue;
+  this.bindings.ns = evaluatedValue;
+
+  return evaluatedValue;
 }
