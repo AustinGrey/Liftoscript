@@ -65,19 +65,20 @@ export function operation(
 }
 
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
+/**
+ * Creates a new weight object. Memoized so that it doesn't create a new object for the same value and unit combination.
+ * @TODO is memoization really important here? This seems insanely over engineered.
+ * @param value The value to set
+ * @param unit The unit to use for the weight
+ */
 export function build(value: number, unit: IUnit): IWeight {
   const key = `${value}_${unit}`;
-  const prebuiltWeight = prebuiltWeights[key];
-  if (prebuiltWeight != null) {
-    return prebuiltWeight;
-  } else {
-    const v = {
-      value: typeof value === "string" ? parseFloat(value) : value,
-      unit,
-    };
-    prebuiltWeights[`${value}_${unit}`] = v;
-    return v;
-  }
+  return prebuiltWeights[key] != null
+    ? prebuiltWeights[key]
+    : (prebuiltWeights[key] = {
+        value: typeof value === "string" ? parseFloat(value) : value,
+        unit,
+      });
 }
 
 export function convertTo(weight: IWeight, unit: IUnit): IWeight;
@@ -87,7 +88,7 @@ export function convertTo(
   weight: IWeight | number | IPercentage,
   unit: IUnit | "%",
 ): IWeight | number | IPercentage {
-  if (typeof weight === "number") {
+  if (isNumber(weight)) {
     return weight;
   } else if (weight.unit === "%" || unit === "%") {
     return weight;
@@ -95,6 +96,7 @@ export function convertTo(
     if (weight.unit === unit) {
       return weight;
     } else if (weight.unit === "kg" && unit === "lb") {
+      // @TODO what kind of precision is being rounded to here? It's not a particular number of decimal places or else it would be / 10 then round then * 10. Instead it's * 2 then round divide by 2
       return build(Math.round((weight.value * 2.205) / 0.5) * 0.5, unit);
     } else {
       return build(Math.round(weight.value / 2.205 / 0.5) * 0.5, unit);
