@@ -21,14 +21,14 @@ const handlers: {
   [Key in NodeNames_Logic]: LogicHandler<Key>;
 } = {
   AndOr: (n, t) => t.error("Not implemented", n),
-  AssignmentExpression: (n, t) => t.error("Not implemented", n),
+  AssignmentExpression: (await import("./node-assignment-expression")).handler,
   BinaryExpression: (await import("./node-binary-expression")).handler,
-  BlockExpression: (n, t) => t.error("Not implemented", n),
+  BlockExpression: (await import("./node-block-expression")).handler,
   BuiltinFunctionExpression: (n, t) => t.error("Not implemented", n),
   Cmp: (n, t) => t.error("Not implemented", n),
   ForExpression: (n, t) => t.error("Not implemented", n),
   ForInExpression: (n, t) => t.error("Not implemented", n),
-  IfExpression: (n, t) => t.error("Not implemented", n),
+  IfExpression: (await import("./node-if-expression")).handler,
   IncAssignment: (n, t) => t.error("Not implemented", n),
   IncAssignmentExpression: (n, t) => t.error("Not implemented", n),
   Keyword: (n, t) => t.error("Not implemented", n),
@@ -36,7 +36,8 @@ const handlers: {
   Not: (n, t) => t.error("Not implemented", n),
   Number: (n, t) => t.error("Not implemented", n),
   NumberExpression: (await import("./node-number-expression")).handler,
-  ParenthesisExpression: (n, t) => t.error("Not implemented", n),
+  ParenthesisExpression: (await import("./node-parenthesis-expression"))
+    .handler,
   Percentage: (await import("./node-percentage")).handler,
   Plus: (n, t) => t.error("Not implemented", n),
   Program: (await import("./node-program")).handler,

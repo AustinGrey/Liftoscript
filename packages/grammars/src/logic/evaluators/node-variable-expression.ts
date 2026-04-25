@@ -17,7 +17,6 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
   // Get the logic that will determine which index to pull from the variable
   // Ignore other nodes found here.
   const [firstIndexExpression, ...otherIndexExpressions] = queryChildren(n, {
-    atLeast: 1,
     ofType: NodeName.VariableIndex,
   });
   if (!firstIndexExpression) {
