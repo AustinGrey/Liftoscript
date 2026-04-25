@@ -13,7 +13,14 @@ import { isLogicNodeOfType } from "@/parsers/guards.ts";
 import { isQuantity, type Quantity } from "@/logic/types.ts";
 import { toNumberUnsafe } from "@/logic/result-handling.ts";
 import type { SyntaxNode } from "@lezer/common";
-import type { IDynamicWeight, IWeight } from "@/models/weight.ts";
+import {
+  type IDynamicWeight,
+  type IWeight,
+  TDynamicWeight,
+  TWeight,
+} from "@/models/weight.ts";
+import { CollectionUtils_compact } from "@/utils/collection.ts";
+import { is, isNumber } from "@/utils/types.ts";
 
 export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   const [variableNode, expression] = queryChildren(n, { atLeast: 2 });
@@ -163,20 +170,20 @@ function recordVariableUpdate(
       expression,
     );
   }
-  const indexValues = this.calculateIndexValues(indexes);
+  const indexValues = calculateIndexValues(indexes, tools);
   const normalizedIndexValues = this.normalizeTarget(
     indexValues,
     maxTargetLength,
   );
   let result: number | IWeight | IDynamicWeight;
   if (key === "weights") {
-    result = this.evaluateToNumberOrWeightOrPercentage(expression);
+    result = evaluateToQuantity(expression, tools);
     this.updates.push({
       type: key,
       value: { value: result, op, target: normalizedIndexValues },
     });
   } else {
-    result = this.evaluateToNumber(expression);
+    result = evaluateToNumber(expression, tools);
     this.updates.push({
       type: key,
       value: { value: result, op, target: normalizedIndexValues },
@@ -184,32 +191,65 @@ function recordVariableUpdate(
     if (key === "setVariationIndex") {
       const [week, day] = normalizedIndexValues;
       if (
-        (week === "*" || week === this.bindings.week) &&
-        (day === "*" || day === this.bindings.day)
+        (week === "*" || week === tools.getGlobal("week")) &&
+        (day === "*" || day === tools.getGlobal("day"))
       ) {
-        this.bindings.setVariationIndex = result;
+        tools.updateGlobal("setVariationIndex", result);
       }
     } else if (key === "descriptionIndex") {
       const [week, day] = normalizedIndexValues;
       if (
-        (week === "*" || week === this.bindings.week) &&
-        (day === "*" || day === this.bindings.day)
+        (week === "*" || week === tools.getGlobal("week")) &&
+        (day === "*" || day === tools.getGlobal("day"))
       ) {
-        this.bindings.descriptionIndex = result;
+        tools.updateGlobal("descriptionIndex", result);
       }
     } else if (key === "numberOfSets") {
       const [week, day, setVariationIndex] = normalizedIndexValues;
       if (
-        (week === "*" || week === this.bindings.week) &&
-        (day === "*" || day === this.bindings.day) &&
+        (week === "*" || week === tools.getGlobal("week")) &&
+        (day === "*" || day === tools.getGlobal("day")) &&
         (setVariationIndex === "*" ||
-          setVariationIndex === this.bindings.setVariationIndex)
+          setVariationIndex === tools.getGlobal("setVariationIndex"))
       ) {
-        this.bindings.numberOfSets = result;
-        this.bindings.ns = result;
+        tools.updateGlobal("numberOfSets", result);
+        tools.updateGlobal("ns", result);
       }
     }
   }
 
   return result;
+}
+
+function calculateIndexValues(
+  indexes: SyntaxNode[],
+  tools: EvaluateTools,
+): (number | "*")[] {
+  return CollectionUtils_compact(indexes).map((ie) => {
+    if (ie.type.name === NodeName.Wildcard) {
+      return "*" as const;
+    } else {
+      const v = tools.recurse(ie);
+      const v1 = Array.isArray(v) ? v[0] : v;
+      return is(TWeight, v1) ? v1.value : isNumber(v1) ? v1 : v1 ? 1 : 0;
+    }
+  });
+}
+
+function evaluateToNumber(expr: SyntaxNode, tools: EvaluateTools): number {
+  const v = tools.recurse(expr);
+  const v1 = Array.isArray(v) ? v[0] : v;
+  return is(TWeight, v1) ? v1.value : isNumber(v1) ? v1 : v1 ? 1 : 0;
+}
+
+function evaluateToQuantity(expr: SyntaxNode, tools: EvaluateTools): Quantity {
+  const v = tools.recurse(expr);
+  const v1 = Array.isArray(v) ? v[0] : v;
+  return is(TWeight, v1) || is(TDynamicWeight, v1)
+    ? v1
+    : isNumber(v1)
+      ? v1
+      : v1
+        ? 1
+        : 0;
 }
