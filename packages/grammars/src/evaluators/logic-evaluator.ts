@@ -16,7 +16,7 @@ import {
   MathUtils_roundTo000005,
 } from "@/utils/math";
 import { parser as LiftoscriptParser } from "@/parsers/logic";
-import { z as t } from "zod";
+import { z as z } from "zod";
 import {
   ObjectUtils_keys,
   ObjectUtils_values,
@@ -42,176 +42,166 @@ import { UidFactory_generateUid } from "@/utils/generator";
 // import { lb } from "lens-shmens";
 // import { updateSettings } from "./state";
 
-export const TEquipment = t.string();
-export type IEquipment = t.infer<typeof TEquipment>;
+export const TEquipment = z.string();
+export type IEquipment = z.infer<typeof TEquipment>;
 
-export const TExerciseId = t.string();
-export type IExerciseId = t.infer<typeof TExerciseId>;
+export const TExerciseId = z.string();
+export type IExerciseId = z.infer<typeof TExerciseId>;
 
 export const units = ["kg", "lb"] as const;
 
-export const TUnit = t.enum(units);
-export type IUnit = t.infer<typeof TUnit>;
+export const TUnit = z.enum(units);
+export type IUnit = z.infer<typeof TUnit>;
 
-export const percentageUnits = ["%"] as const;
-
-export const TPercentageUnit = t.enum(percentageUnits);
-export type IPercentageUnit = t.infer<typeof TPercentageUnit>;
-
-export const TPercentage = t.object({
-  value: t.number(),
-  unit: TPercentageUnit,
-});
-export type IPercentage = t.infer<typeof TPercentage>;
-export const TWeight = t.object({
-  value: t.number(),
+export const TWeight = z.object({
+  value: z.number(),
   unit: TUnit,
 });
-export type IWeight = t.infer<typeof TWeight>;
+export type IWeight = z.infer<typeof TWeight>;
 
-export const TSettingsTimers = t
+export const TSettingsTimers = z
   .object({
-    warmup: t.union([t.number(), t.undefined(), t.null()]),
-    workout: t.union([t.number(), t.undefined(), t.null()]),
-    reminder: t.number().optional(),
-    superset: t.number().optional(),
+    warmup: z.union([z.number(), z.undefined(), z.null()]),
+    workout: z.union([z.number(), z.undefined(), z.null()]),
+    reminder: z.number().optional(),
+    superset: z.number().optional(),
   })
   .strict();
 
-export type ISettingsTimers = t.infer<typeof TSettingsTimers>;
+export type ISettingsTimers = z.infer<typeof TSettingsTimers>;
 
-export const TEquipmentData = t
+export const TEquipmentData = z
   .object({
-    vtype: t.literal("equipment_data"),
-    bar: t
+    vtype: z.literal("equipment_data"),
+    bar: z
       .object({
         lb: TWeight,
         kg: TWeight,
       })
       .strict(),
-    multiplier: t.number(),
-    plates: t.array(
-      t
+    multiplier: z.number(),
+    plates: z.array(
+      z
         .object({
           weight: TWeight,
-          num: t.number(),
+          num: z.number(),
         })
         .strict(),
     ),
-    fixed: t.array(TWeight),
-    isFixed: t.boolean(),
+    fixed: z.array(TWeight),
+    isFixed: z.boolean(),
 
     unit: TUnit.optional(),
-    name: t.string().optional(),
-    similarTo: t.string().optional(),
-    isDeleted: t.boolean().optional(),
-    useBodyweightForBar: t.boolean().optional(),
-    isAssisting: t.boolean().optional(),
-    notes: t.string().optional(),
+    name: z.string().optional(),
+    similarTo: z.string().optional(),
+    isDeleted: z.boolean().optional(),
+    useBodyweightForBar: z.boolean().optional(),
+    isAssisting: z.boolean().optional(),
+    notes: z.string().optional(),
   })
   .strict();
 
-export type IEquipmentData = t.infer<typeof TEquipmentData>;
+export type IEquipmentData = z.infer<typeof TEquipmentData>;
 export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
 
-export const TGym = t
+export const TGym = z
   .object({
-    vtype: t.literal("gym"),
-    id: t.string(),
-    name: t.string(),
-    equipment: t.record(TEquipment, TEquipmentData),
+    vtype: z.literal("gym"),
+    id: z.string(),
+    name: z.string(),
+    equipment: z.record(TEquipment, TEquipmentData),
   })
   .strict();
 
-export type IGym = t.infer<typeof TGym>;
+export type IGym = z.infer<typeof TGym>;
 
 export const lengthUnits = ["in", "cm"] as const;
 
-export const TLengthUnit = t.enum(lengthUnits);
-export type ILengthUnit = t.infer<typeof TLengthUnit>;
+export const TLengthUnit = z.enum(lengthUnits);
+export type ILengthUnit = z.infer<typeof TLengthUnit>;
 
-export const TLength = t.object({
-  value: t.number(),
+export const TLength = z.object({
+  value: z.number(),
   unit: TLengthUnit,
 });
-export type ILength = t.infer<typeof TLength>;
+export type ILength = z.infer<typeof TLength>;
 
-export const TStatsWeightValue = t
+export const TStatsWeightValue = z
   .object({
-    vtype: t.literal("stat"),
+    vtype: z.literal("stat"),
     value: TWeight,
-    timestamp: t.number(),
-    updatedAt: t.number().optional(),
-    appleUuid: t.string().optional(),
+    timestamp: z.number(),
+    updatedAt: z.number().optional(),
+    appleUuid: z.string().optional(),
   })
   .strict();
-export type IStatsWeightValue = t.infer<typeof TStatsWeightValue>;
+export type IStatsWeightValue = z.infer<typeof TStatsWeightValue>;
 
 export const statsWeightDef = {
-  weight: t.array(TStatsWeightValue),
+  weight: z.array(TStatsWeightValue),
 };
-export const TStatsWeight = t.object(statsWeightDef).partial().strict();
-export type IStatsWeight = t.infer<typeof TStatsWeight>;
+export const TStatsWeight = z.object(statsWeightDef).partial().strict();
+export type IStatsWeight = z.infer<typeof TStatsWeight>;
 
-export const TStatsLengthValue = t
+export const TStatsLengthValue = z
   .object({
-    vtype: t.literal("stat"),
+    vtype: z.literal("stat"),
     value: TLength,
-    timestamp: t.number(),
-    updatedAt: t.number().optional(),
-    appleUuid: t.string().optional(),
+    timestamp: z.number(),
+    updatedAt: z.number().optional(),
+    appleUuid: z.string().optional(),
   })
   .strict();
-export type IStatsLengthValue = t.infer<typeof TStatsLengthValue>;
+export type IStatsLengthValue = z.infer<typeof TStatsLengthValue>;
 
 export const statsLengthDef = {
-  neck: t.array(TStatsLengthValue),
-  shoulders: t.array(TStatsLengthValue),
-  bicepLeft: t.array(TStatsLengthValue),
-  bicepRight: t.array(TStatsLengthValue),
-  forearmLeft: t.array(TStatsLengthValue),
-  forearmRight: t.array(TStatsLengthValue),
-  chest: t.array(TStatsLengthValue),
-  waist: t.array(TStatsLengthValue),
-  hips: t.array(TStatsLengthValue),
-  thighLeft: t.array(TStatsLengthValue),
-  thighRight: t.array(TStatsLengthValue),
-  calfLeft: t.array(TStatsLengthValue),
-  calfRight: t.array(TStatsLengthValue),
+  neck: z.array(TStatsLengthValue),
+  shoulders: z.array(TStatsLengthValue),
+  bicepLeft: z.array(TStatsLengthValue),
+  bicepRight: z.array(TStatsLengthValue),
+  forearmLeft: z.array(TStatsLengthValue),
+  forearmRight: z.array(TStatsLengthValue),
+  chest: z.array(TStatsLengthValue),
+  waist: z.array(TStatsLengthValue),
+  hips: z.array(TStatsLengthValue),
+  thighLeft: z.array(TStatsLengthValue),
+  thighRight: z.array(TStatsLengthValue),
+  calfLeft: z.array(TStatsLengthValue),
+  calfRight: z.array(TStatsLengthValue),
 };
-export const TStatsLength = t.object(statsLengthDef).partial().strict();
-export type IStatsLength = t.infer<typeof TStatsLength>;
+export const TStatsLength = z.object(statsLengthDef).partial().strict();
+export type IStatsLength = z.infer<typeof TStatsLength>;
 
-export const TStatsPercentageValue = t
+export const TStatsPercentageValue = z
   .object({
-    vtype: t.literal("stat"),
+    vtype: z.literal("stat"),
     value: TPercentage,
-    timestamp: t.number(),
-    updatedAt: t.number().optional(),
-    appleUuid: t.string().optional(),
+    timestamp: z.number(),
+    updatedAt: z.number().optional(),
+    appleUuid: z.string().optional(),
   })
   .strict();
-export type IStatsPercentageValue = t.infer<typeof TStatsPercentageValue>;
+export type IStatsPercentageValue = z.infer<typeof TStatsPercentageValue>;
 
 export const statsPercentageDef = {
-  bodyfat: t.array(TStatsPercentageValue),
+  bodyfat: z.array(TStatsPercentageValue),
 };
-export const TStatsPercentage = t.object(statsPercentageDef).partial().strict();
-export type IStatsPercentage = t.infer<typeof TStatsPercentage>;
+export const TStatsPercentage = z.object(statsPercentageDef).partial().strict();
+export type IStatsPercentage = z.infer<typeof TStatsPercentage>;
 
-export const TGraph = t.discriminatedUnion("type", [
-  t
+export const TGraph = z.discriminatedUnion("type", [
+  z
     .object({
-      vtype: t.literal("graph"),
-      type: t.literal("exercise"),
+      vtype: z.literal("graph"),
+      type: z.literal("exercise"),
       id: TExerciseId,
     })
     .strict(),
-  t
+  z
     .object({
-      vtype: t.literal("graph"),
-      type: t.literal("statsWeight"),
-      id: t.enum(
+      vtype: z.literal("graph"),
+      type: z.literal("statsWeight"),
+      id: z.enum(
         Object.keys(statsWeightDef) as [
           keyof typeof statsWeightDef & string,
           ...(keyof typeof statsWeightDef & string)[],
@@ -219,11 +209,11 @@ export const TGraph = t.discriminatedUnion("type", [
       ),
     })
     .strict(),
-  t
+  z
     .object({
-      vtype: t.literal("graph"),
-      type: t.literal("statsLength"),
-      id: t.enum(
+      vtype: z.literal("graph"),
+      type: z.literal("statsLength"),
+      id: z.enum(
         Object.keys(statsLengthDef) as [
           keyof typeof statsLengthDef & string,
           ...(keyof typeof statsLengthDef & string)[],
@@ -231,11 +221,11 @@ export const TGraph = t.discriminatedUnion("type", [
       ),
     })
     .strict(),
-  t
+  z
     .object({
-      vtype: t.literal("graph"),
-      type: t.literal("statsPercentage"),
-      id: t.enum(
+      vtype: z.literal("graph"),
+      type: z.literal("statsPercentage"),
+      id: z.enum(
         Object.keys(statsPercentageDef) as [
           keyof typeof statsPercentageDef & string,
           ...(keyof typeof statsPercentageDef & string)[],
@@ -243,58 +233,58 @@ export const TGraph = t.discriminatedUnion("type", [
       ),
     })
     .strict(),
-  t
+  z
     .object({
-      vtype: t.literal("graph"),
-      type: t.literal("muscleGroup"),
-      id: t.string(),
+      vtype: z.literal("graph"),
+      type: z.literal("muscleGroup"),
+      id: z.string(),
     })
     .strict(),
 ]);
 
-export type IGraph = t.infer<typeof TGraph>;
+export type IGraph = z.infer<typeof TGraph>;
 
-export const TGraphs = t.object({
-  vtype: t.literal("graphs"),
-  graphs: t.array(TGraph),
+export const TGraphs = z.object({
+  vtype: z.literal("graphs"),
+  graphs: z.array(TGraph),
 });
 
-export const TStatsWeightEnabled = t
+export const TStatsWeightEnabled = z
   .object({
-    weight: t.boolean(),
+    weight: z.boolean(),
   })
   .partial()
   .strict();
 
-export type IStatsWeightEnabled = t.infer<typeof TStatsWeightEnabled>;
-export const TStatsLengthEnabled = t
+export type IStatsWeightEnabled = z.infer<typeof TStatsWeightEnabled>;
+export const TStatsLengthEnabled = z
   .object({
-    neck: t.boolean(),
-    shoulders: t.boolean(),
-    bicepLeft: t.boolean(),
-    bicepRight: t.boolean(),
-    forearmLeft: t.boolean(),
-    forearmRight: t.boolean(),
-    chest: t.boolean(),
-    waist: t.boolean(),
-    hips: t.boolean(),
-    thighLeft: t.boolean(),
-    thighRight: t.boolean(),
-    calfLeft: t.boolean(),
-    calfRight: t.boolean(),
+    neck: z.boolean(),
+    shoulders: z.boolean(),
+    bicepLeft: z.boolean(),
+    bicepRight: z.boolean(),
+    forearmLeft: z.boolean(),
+    forearmRight: z.boolean(),
+    chest: z.boolean(),
+    waist: z.boolean(),
+    hips: z.boolean(),
+    thighLeft: z.boolean(),
+    thighRight: z.boolean(),
+    calfLeft: z.boolean(),
+    calfRight: z.boolean(),
   })
   .partial()
   .strict();
-export type IStatsLengthEnabled = t.infer<typeof TStatsLengthEnabled>;
+export type IStatsLengthEnabled = z.infer<typeof TStatsLengthEnabled>;
 
-export const TStatsPercentageEnabled = t
+export const TStatsPercentageEnabled = z
   .object({
-    bodyfat: t.boolean(),
+    bodyfat: z.boolean(),
   })
   .partial()
   .strict();
 
-export const TStatsEnabled = t
+export const TStatsEnabled = z
   .object({
     weight: TStatsWeightEnabled,
     length: TStatsLengthEnabled,
@@ -302,49 +292,49 @@ export const TStatsEnabled = t
   })
   .strict();
 
-export type IStatsEnabled = Readonly<t.infer<typeof TStatsEnabled>>;
+export type IStatsEnabled = Readonly<z.infer<typeof TStatsEnabled>>;
 
-export const TPlate = t.object({
+export const TPlate = z.object({
   weight: TWeight,
-  num: t.number(),
+  num: z.number(),
 });
-export type IPlate = t.infer<typeof TPlate>;
+export type IPlate = z.infer<typeof TPlate>;
 
-export const TProgramState = t.record(
-  t.string(),
-  t.union([t.number(), TWeight, TPercentage]),
+export const TProgramState = z.record(
+  z.string(),
+  z.union([z.number(), TWeight, TPercentage]),
 );
-export type IProgramState = t.infer<typeof TProgramState>;
+export type IProgramState = z.infer<typeof TProgramState>;
 export type IProgramMode = "planner" | "update";
 
-export const TSet = t
+export const TSet = z
   .object({
-    vtype: t.literal("set"),
-    index: t.number(),
-    id: t.string(),
+    vtype: z.literal("set"),
+    index: z.number(),
+    id: z.string(),
 
-    reps: t.number().optional(),
-    originalWeight: t.union([TWeight, TPercentage]).optional(),
+    reps: z.number().optional(),
+    originalWeight: z.union([TWeight, TPercentage]).optional(),
     weight: TWeight.optional(),
-    minReps: t.number().optional(),
-    rpe: t.number().optional(),
-    logRpe: t.boolean().optional(),
-    timestamp: t.number().optional(),
-    isAmrap: t.boolean().optional(),
-    label: t.string().optional(),
-    timer: t.number().optional(),
-    askWeight: t.boolean().optional(),
-    isCompleted: t.boolean().optional(),
-    isUnilateral: t.boolean().optional(),
-    completedRepsLeft: t.number().optional(),
-    completedReps: t.number().optional(),
+    minReps: z.number().optional(),
+    rpe: z.number().optional(),
+    logRpe: z.boolean().optional(),
+    timestamp: z.number().optional(),
+    isAmrap: z.boolean().optional(),
+    label: z.string().optional(),
+    timer: z.number().optional(),
+    askWeight: z.boolean().optional(),
+    isCompleted: z.boolean().optional(),
+    isUnilateral: z.boolean().optional(),
+    completedRepsLeft: z.number().optional(),
+    completedReps: z.number().optional(),
     completedWeight: TWeight.optional(),
-    completedRpe: t.number().optional(),
-    programSetIndex: t.number().optional(),
+    completedRpe: z.number().optional(),
+    programSetIndex: z.number().optional(),
   })
   .strict();
 
-export type ISet = t.infer<typeof TSet>;
+export type ISet = z.infer<typeof TSet>;
 
 export const availableBodyParts = [
   "Back",
@@ -358,8 +348,8 @@ export const availableBodyParts = [
   "Waist",
 ];
 
-export const TBodyPart = t.enum(availableBodyParts);
-export type IBodyPart = t.infer<typeof TBodyPart>;
+export const TBodyPart = z.enum(availableBodyParts);
+export type IBodyPart = z.infer<typeof TBodyPart>;
 
 export const availableMuscles = [
   "Adductor Brevis",
@@ -403,27 +393,27 @@ export const availableMuscles = [
   "Wrist Flexors",
 ] as const;
 
-export const TMuscle = t.enum(availableMuscles);
-export type IMuscle = t.infer<typeof TMuscle>;
+export const TMuscle = z.enum(availableMuscles);
+export type IMuscle = z.infer<typeof TMuscle>;
 
-export const TMetaExercises = t
+export const TMetaExercises = z
   .object({
-    bodyParts: t.array(TBodyPart),
-    targetMuscles: t.array(TMuscle),
-    synergistMuscles: t.array(TMuscle),
+    bodyParts: z.array(TBodyPart),
+    targetMuscles: z.array(TMuscle),
+    synergistMuscles: z.array(TMuscle),
 
-    sortedEquipment: t.array(TEquipment).optional(),
+    sortedEquipment: z.array(TEquipment).optional(),
   })
   .strict();
-export type IMetaExercises = t.infer<typeof TMetaExercises>;
+export type IMetaExercises = z.infer<typeof TMetaExercises>;
 
-export const TExerciseType = t
+export const TExerciseType = z
   .object({
     id: TExerciseId,
     equipment: TEquipment.optional(),
   })
   .strict();
-export type IExerciseType = t.infer<typeof TExerciseType>;
+export type IExerciseType = z.infer<typeof TExerciseType>;
 
 export const exerciseKinds = [
   "core",
@@ -434,27 +424,27 @@ export const exerciseKinds = [
   "lower",
 ] as const;
 
-export const TExerciseKind = t.enum(exerciseKinds);
-export type IExerciseKind = t.infer<typeof TExerciseKind>;
+export const TExerciseKind = z.enum(exerciseKinds);
+export type IExerciseKind = z.infer<typeof TExerciseKind>;
 
-export const TCustomExercise = t
+export const TCustomExercise = z
   .object({
-    vtype: t.literal("custom_exercise"),
+    vtype: z.literal("custom_exercise"),
     id: TExerciseId,
-    name: t.string(),
-    isDeleted: t.boolean(),
+    name: z.string(),
+    isDeleted: z.boolean(),
     meta: TMetaExercises,
 
     defaultEquipment: TEquipment.optional(),
-    types: t.array(TExerciseKind).optional(),
+    types: z.array(TExerciseKind).optional(),
     clonedFrom: TExerciseType.optional(),
     reuseImageFrom: TExerciseType.optional(),
-    largeImageUrl: t.string().optional(),
-    smallImageUrl: t.string().optional(),
+    largeImageUrl: z.string().optional(),
+    smallImageUrl: z.string().optional(),
   })
   .strict();
 
-export type ICustomExercise = t.infer<typeof TCustomExercise>;
+export type ICustomExercise = z.infer<typeof TCustomExercise>;
 export type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
 
 export const equipments = [
@@ -471,16 +461,16 @@ export const equipments = [
   "trapbar",
 ] as const;
 
-export const TBuiltinEquipment = t.enum(equipments);
-export type IBuiltinEquipment = t.infer<typeof TBuiltinEquipment>;
+export const TBuiltinEquipment = z.enum(equipments);
+export type IBuiltinEquipment = z.infer<typeof TBuiltinEquipment>;
 
 const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
 
-export const TBarKey = t.enum(barKeys);
-export type IBarKey = t.infer<typeof TBarKey>;
+export const TBarKey = z.enum(barKeys);
+export type IBarKey = z.infer<typeof TBarKey>;
 
-export const TBars = t.record(TBarKey, TWeight);
-export type IBars = t.infer<typeof TBars>;
+export const TBars = z.record(TBarKey, TWeight);
+export type IBars = z.infer<typeof TBars>;
 
 export const screenMuscles = [
   "shoulders",
@@ -496,82 +486,82 @@ export const screenMuscles = [
   "forearms",
 ] as const;
 
-export const TScreenMuscle = t.union([t.enum(screenMuscles), t.string()]);
-export type IScreenMuscle = t.infer<typeof TScreenMuscle>;
+export const TScreenMuscle = z.union([z.enum(screenMuscles), z.string()]);
+export type IScreenMuscle = z.infer<typeof TScreenMuscle>;
 
-export const TProgramExerciseWarmupSet = t
+export const TProgramExerciseWarmupSet = z
   .object({
-    reps: t.number(),
-    value: t.union([TWeight, t.number()]),
+    reps: z.number(),
+    value: z.union([TWeight, z.number()]),
     threshold: TWeight,
   })
   .strict();
 
 export type IProgramExerciseWarmupSet = Readonly<
-  t.infer<typeof TProgramExerciseWarmupSet>
+  z.infer<typeof TProgramExerciseWarmupSet>
 >;
 
-export const TMuscleMultiplier = t
+export const TMuscleMultiplier = z
   .object({
     muscle: TMuscle,
-    multiplier: t.number(),
+    multiplier: z.number(),
   })
   .strict();
-export type IMuscleMultiplier = t.infer<typeof TMuscleMultiplier>;
+export type IMuscleMultiplier = z.infer<typeof TMuscleMultiplier>;
 
-export const TExerciseDataValue = t
+export const TExerciseDataValue = z
   .object({
     rm1: TWeight.optional(),
-    rounding: t.number().optional(),
-    equipment: t
-      .record(t.string(), t.union([t.string(), t.undefined()]))
+    rounding: z.number().optional(),
+    equipment: z
+      .record(z.string(), z.union([z.string(), z.undefined()]))
       .optional(),
-    notes: t.string().optional(),
-    muscleMultipliers: t
-      .record(TMuscle, t.union([t.number(), t.undefined()]))
+    notes: z.string().optional(),
+    muscleMultipliers: z
+      .record(TMuscle, z.union([z.number(), z.undefined()]))
       .optional(),
-    isUnilateral: t.boolean().optional(),
+    isUnilateral: z.boolean().optional(),
   })
   .strict();
 
-export type IExerciseDataValue = t.infer<typeof TExerciseDataValue>;
+export type IExerciseDataValue = z.infer<typeof TExerciseDataValue>;
 export type IExerciseData = Partial<Record<string, IExerciseDataValue>>;
 
-export const TPlannerSettings = t
+export const TPlannerSettings = z
   .object({
-    synergistMultiplier: t.number(),
-    strengthSetsPct: t.number(),
-    hypertrophySetsPct: t.number(),
-    weeklyRangeSets: t.record(TScreenMuscle, t.tuple([t.number(), t.number()])),
-    weeklyFrequency: t.record(TScreenMuscle, t.number()),
+    synergistMultiplier: z.number(),
+    strengthSetsPct: z.number(),
+    hypertrophySetsPct: z.number(),
+    weeklyRangeSets: z.record(TScreenMuscle, z.tuple([z.number(), z.number()])),
+    weeklyFrequency: z.record(TScreenMuscle, z.number()),
   })
   .strict();
 
-export type IPlannerSettings = t.infer<typeof TPlannerSettings>;
+export type IPlannerSettings = z.infer<typeof TPlannerSettings>;
 
-export const TMuscleGroupsSettings = t
+export const TMuscleGroupsSettings = z
   .object({
-    vtype: t.literal("muscle_groups_settings"),
-    data: t.record(
-      t.string(),
-      t
+    vtype: z.literal("muscle_groups_settings"),
+    data: z.record(
+      z.string(),
+      z
         .object({
-          name: t.string().optional(),
-          isHidden: t.boolean().optional(),
-          muscles: t.array(TMuscle).optional(),
+          name: z.string().optional(),
+          isHidden: z.boolean().optional(),
+          muscles: z.array(TMuscle).optional(),
         })
         .strict(),
     ),
   })
   .strict();
 
-export type IMuscleGroupsSettings = t.infer<typeof TMuscleGroupsSettings>;
+export type IMuscleGroupsSettings = z.infer<typeof TMuscleGroupsSettings>;
 
-export const TSettings = t
+export const TSettings = z
   .object({
     timers: TSettingsTimers,
-    gyms: t.array(TGym),
-    deletedGyms: t.array(t.string()),
+    gyms: z.array(TGym),
+    deletedGyms: z.array(z.string()),
     // graphs: TGraphs,
     // graphOptions: t.record(t.string(), TGraphOptions),
     // graphsSettings: t
@@ -584,80 +574,80 @@ export const TSettings = t
     //     defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
     //   })
     //   .optional(),
-    exerciseStatsSettings: t
+    exerciseStatsSettings: z
       .object({
-        ascendingSort: t.boolean().optional(),
-        hideWithoutWorkoutNotes: t.boolean().optional(),
-        hideWithoutExerciseNotes: t.boolean().optional(),
+        ascendingSort: z.boolean().optional(),
+        hideWithoutWorkoutNotes: z.boolean().optional(),
+        hideWithoutExerciseNotes: z.boolean().optional(),
       })
       .optional(),
-    exercises: t.record(t.string(), TCustomExercise),
+    exercises: z.record(z.string(), TCustomExercise),
     statsEnabled: TStatsEnabled,
     units: TUnit,
     lengthUnits: TLengthUnit,
-    volume: t.number(),
-    exerciseData: t.record(t.string(), TExerciseDataValue),
+    volume: z.number(),
+    exerciseData: z.record(z.string(), TExerciseDataValue),
     planner: TPlannerSettings,
     // workoutSettings: TWorkoutSettings,
     muscleGroups: TMuscleGroupsSettings,
 
-    appleHealthSyncWorkout: t.boolean().optional(),
-    appleHealthSyncMeasurements: t.boolean().optional(),
-    appleHealthAnchor: t.string().optional(),
-    googleHealthSyncWorkout: t.boolean().optional(),
-    googleHealthSyncMeasurements: t.boolean().optional(),
-    googleHealthAnchor: t.string().optional(),
-    healthConfirmation: t.boolean().optional(),
-    ignoreDoNotDisturb: t.boolean().optional(),
-    currentGymId: t.string().optional(),
-    isPublicProfile: t.boolean().optional(),
-    nickname: t.string().optional(),
-    alwaysOnDisplay: t.boolean().optional(),
-    vibration: t.boolean().optional(),
-    startWeekFromMonday: t.boolean().optional(),
-    textSize: t.number().optional(),
-    starredExercises: t.record(TExerciseId, t.boolean()).optional(),
-    theme: t.enum(["dark", "light"]).optional(),
+    appleHealthSyncWorkout: z.boolean().optional(),
+    appleHealthSyncMeasurements: z.boolean().optional(),
+    appleHealthAnchor: z.string().optional(),
+    googleHealthSyncWorkout: z.boolean().optional(),
+    googleHealthSyncMeasurements: z.boolean().optional(),
+    googleHealthAnchor: z.string().optional(),
+    healthConfirmation: z.boolean().optional(),
+    ignoreDoNotDisturb: z.boolean().optional(),
+    currentGymId: z.string().optional(),
+    isPublicProfile: z.boolean().optional(),
+    nickname: z.string().optional(),
+    alwaysOnDisplay: z.boolean().optional(),
+    vibration: z.boolean().optional(),
+    startWeekFromMonday: z.boolean().optional(),
+    textSize: z.number().optional(),
+    starredExercises: z.record(TExerciseId, z.boolean()).optional(),
+    theme: z.enum(["dark", "light"]).optional(),
     currentBodyweight: TWeight.optional(),
-    affiliateEnabled: t.boolean().optional(),
+    affiliateEnabled: z.boolean().optional(),
   })
   .strict();
 
-export type ISettings = t.infer<typeof TSettings>;
+export type ISettings = z.infer<typeof TSettings>;
 
-export const TProgramWeek = t
+export const TProgramWeek = z
   .object({
-    id: t.string(),
-    name: t.string(),
-    days: t.array(
-      t
+    id: z.string(),
+    name: z.string(),
+    days: z.array(
+      z
         .object({
-          id: t.string(),
+          id: z.string(),
         })
         .strict(),
     ),
-    description: t.string().optional(),
+    description: z.string().optional(),
   })
   .strict();
 
-export type IProgramWeek = Readonly<t.infer<typeof TProgramWeek>>;
+export type IProgramWeek = Readonly<z.infer<typeof TProgramWeek>>;
 
-export const TProgramDay = t
+export const TProgramDay = z
   .object({
-    id: t.string(),
-    name: t.string(),
-    exercises: t.array(
-      t
+    id: z.string(),
+    name: z.string(),
+    exercises: z.array(
+      z
         .object({
-          id: t.string(),
+          id: z.string(),
         })
         .strict(),
     ),
-    description: t.string().optional(),
+    description: z.string().optional(),
   })
   .strict();
 
-export type IProgramDay = Readonly<t.infer<typeof TProgramDay>>;
+export type IProgramDay = Readonly<z.infer<typeof TProgramDay>>;
 
 const tags = [
   "first-starter",
@@ -670,148 +660,148 @@ const tags = [
   "hypertrophy",
 ] as const;
 
-export const TProgramTag = t.enum(tags);
-export type IProgramTag = Readonly<t.infer<typeof TProgramTag>>;
+export const TProgramTag = z.enum(tags);
+export type IProgramTag = Readonly<z.infer<typeof TProgramTag>>;
 
-export const TPlannerProgramDay = t
+export const TPlannerProgramDay = z
   .object({
-    name: t.string(),
-    exerciseText: t.string(),
-    id: t.string().optional(),
-    description: t.string().optional(),
+    name: z.string(),
+    exerciseText: z.string(),
+    id: z.string().optional(),
+    description: z.string().optional(),
   })
   .strict();
-export type IPlannerProgramDay = t.infer<typeof TPlannerProgramDay>;
+export type IPlannerProgramDay = z.infer<typeof TPlannerProgramDay>;
 
-export const TPlannerProgramWeek = t
+export const TPlannerProgramWeek = z
   .object({
-    name: t.string(),
-    days: t.array(TPlannerProgramDay),
-    id: t.string().optional(),
-    description: t.string().optional(),
+    name: z.string(),
+    days: z.array(TPlannerProgramDay),
+    id: z.string().optional(),
+    description: z.string().optional(),
   })
   .strict();
-export type IPlannerProgramWeek = Readonly<t.infer<typeof TPlannerProgramWeek>>;
+export type IPlannerProgramWeek = Readonly<z.infer<typeof TPlannerProgramWeek>>;
 
-export const TPlannerProgram = t
+export const TPlannerProgram = z
   .object({
-    vtype: t.literal("planner"),
-    name: t.string(),
-    weeks: t.array(TPlannerProgramWeek),
+    vtype: z.literal("planner"),
+    name: z.string(),
+    weeks: z.array(TPlannerProgramWeek),
   })
   .strict();
-export type IPlannerProgram = Readonly<t.infer<typeof TPlannerProgram>>;
+export type IPlannerProgram = Readonly<z.infer<typeof TPlannerProgram>>;
 
-export const TProgramExerciseReuseLogic = t
+export const TProgramExerciseReuseLogic = z
   .object({
-    selected: t.union([t.string(), t.undefined()]),
-    states: t.record(t.string(), TProgramState),
+    selected: z.union([z.string(), z.undefined()]),
+    states: z.record(z.string(), TProgramState),
   })
   .strict();
 export type IProgramExerciseReuseLogic = Readonly<
-  t.infer<typeof TProgramExerciseReuseLogic>
+  z.infer<typeof TProgramExerciseReuseLogic>
 >;
 
-export const TProgramSet = t
+export const TProgramSet = z
   .object({
-    repsExpr: t.string(),
-    weightExpr: t.string(),
+    repsExpr: z.string(),
+    weightExpr: z.string(),
 
-    isAmrap: t.boolean().optional(),
-    rpeExpr: t.string().optional(),
-    minRepsExpr: t.string().optional(),
-    logRpe: t.boolean().optional(),
-    askWeight: t.boolean().optional(),
-    label: t.string().optional(),
-    timerExpr: t.string().optional(),
+    isAmrap: z.boolean().optional(),
+    rpeExpr: z.string().optional(),
+    minRepsExpr: z.string().optional(),
+    logRpe: z.boolean().optional(),
+    askWeight: z.boolean().optional(),
+    label: z.string().optional(),
+    timerExpr: z.string().optional(),
   })
   .strict();
 
-export type IProgramSet = t.infer<typeof TProgramSet>;
+export type IProgramSet = z.infer<typeof TProgramSet>;
 
-export const TProgramExerciseVariation = t
+export const TProgramExerciseVariation = z
   .object({
-    sets: t.array(TProgramSet),
-    quickAddSets: t.boolean().optional(),
+    sets: z.array(TProgramSet),
+    quickAddSets: z.boolean().optional(),
   })
   .strict();
 export type IProgramExerciseVariation = Readonly<
-  t.infer<typeof TProgramExerciseVariation>
+  z.infer<typeof TProgramExerciseVariation>
 >;
 
-export const TProgramStateMetadataValue = t
+export const TProgramStateMetadataValue = z
   .object({
-    userPrompted: t.boolean().optional(),
+    userPrompted: z.boolean().optional(),
   })
   .strict();
-export type IProgramStateMetadataValue = t.infer<
+export type IProgramStateMetadataValue = z.infer<
   typeof TProgramStateMetadataValue
 >;
 
-export const TProgramStateMetadata = t.record(
-  t.string(),
+export const TProgramStateMetadata = z.record(
+  z.string(),
   TProgramStateMetadataValue,
 );
-export type IProgramStateMetadata = t.infer<typeof TProgramStateMetadata>;
+export type IProgramStateMetadata = z.infer<typeof TProgramStateMetadata>;
 
-export const TProgramExercise = t
+export const TProgramExercise = z
   .object({
     exerciseType: TExerciseType,
-    id: t.string(),
-    name: t.string(),
-    variations: t.array(TProgramExerciseVariation),
+    id: z.string(),
+    name: z.string(),
+    variations: z.array(TProgramExerciseVariation),
     state: TProgramState,
-    variationExpr: t.string(),
-    finishDayExpr: t.string(),
-    descriptions: t.array(t.string()),
+    variationExpr: z.string(),
+    finishDayExpr: z.string(),
+    descriptions: z.array(z.string()),
 
-    tags: t.array(t.number()).optional(),
-    updateDayExpr: t.string().optional(),
-    diffPaths: t.array(t.string()).optional(),
-    description: t.string().optional(),
-    descriptionExpr: t.string().optional(),
-    quickAddSets: t.boolean().optional(),
-    enableRepRanges: t.boolean().optional(),
-    enableRpe: t.boolean().optional(),
+    tags: z.array(z.number()).optional(),
+    updateDayExpr: z.string().optional(),
+    diffPaths: z.array(z.string()).optional(),
+    description: z.string().optional(),
+    descriptionExpr: z.string().optional(),
+    quickAddSets: z.boolean().optional(),
+    enableRepRanges: z.boolean().optional(),
+    enableRpe: z.boolean().optional(),
     stateMetadata: TProgramStateMetadata.optional(),
-    timerExpr: t.string().optional(),
+    timerExpr: z.string().optional(),
     reuseLogic: TProgramExerciseReuseLogic.optional(),
-    warmupSets: t.array(TProgramExerciseWarmupSet).optional(),
-    reuseFinishDayScript: t.string().optional(),
-    reuseUpdateDayScript: t.string().optional(),
+    warmupSets: z.array(TProgramExerciseWarmupSet).optional(),
+    reuseFinishDayScript: z.string().optional(),
+    reuseUpdateDayScript: z.string().optional(),
   })
   .strict();
 
-export type IProgramExercise = t.infer<typeof TProgramExercise>;
+export type IProgramExercise = z.infer<typeof TProgramExercise>;
 
-export const TProgram = t
+export const TProgram = z
   .object({
-    vtype: t.literal("program"),
-    exercises: t.array(TProgramExercise),
-    id: t.string(),
-    name: t.string(),
-    description: t.string(),
-    url: t.string(),
-    author: t.string(),
-    nextDay: t.number(),
-    days: t.array(TProgramDay),
-    weeks: t.array(TProgramWeek),
-    isMultiweek: t.boolean(),
-    tags: t.array(TProgramTag),
+    vtype: z.literal("program"),
+    exercises: z.array(TProgramExercise),
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    url: z.string(),
+    author: z.string(),
+    nextDay: z.number(),
+    days: z.array(TProgramDay),
+    weeks: z.array(TProgramWeek),
+    isMultiweek: z.boolean(),
+    tags: z.array(TProgramTag),
 
-    deletedDays: t.array(t.string()).optional(),
-    deletedWeeks: t.array(t.string()).optional(),
-    deletedExercises: t.array(t.string()).optional(),
-    clonedAt: t.number().optional(),
-    shortDescription: t.string().optional(),
+    deletedDays: z.array(z.string()).optional(),
+    deletedWeeks: z.array(z.string()).optional(),
+    deletedExercises: z.array(z.string()).optional(),
+    clonedAt: z.number().optional(),
+    shortDescription: z.string().optional(),
     planner: TPlannerProgram.optional(),
-    updatedAt: t.number().optional(),
-    authorid: t.union([t.string(), t.null()]).optional(),
-    source: t.union([t.string(), t.null()]).optional(),
+    updatedAt: z.number().optional(),
+    authorid: z.union([z.string(), z.null()]).optional(),
+    source: z.union([z.string(), z.null()]).optional(),
   })
   .strict();
 
-export type IProgram = t.infer<typeof TProgram>;
+export type IProgram = z.infer<typeof TProgram>;
 
 export interface IScriptBindings {
   day: number;

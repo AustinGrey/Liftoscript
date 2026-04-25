@@ -133,7 +133,7 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
            *
            * Either side of the comparison can be an array. If so, here is how the logic resolves
            * - Both arrays: comparison checked pair wise for each element. If the arrays are of different lengths, the shorter array is padded with 0s
-           * - Single array: comparison checked for each element in the array
+           * - Single array: comparison checked for every element in the array
            */
 
           function comparator(
@@ -160,8 +160,8 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
               const longestLength = Math.max(left.length, right.length);
               const leftPadded = pad(left, 0, longestLength);
               const rightPadded = pad(right, 0, longestLength);
-              // @TODO why all this coercion to 0? Seems like a foot gun. If comparison doesn't make sense, perhaps we should propagate an error?
               return leftPadded.every((l, i) =>
+                // @TODO why all this coercion to 0? Seems like a foot gun. If comparison doesn't make sense, perhaps we should propagate an error?
                 comparator(l ?? 0, rightPadded[i] ?? 0),
               );
             } else {
@@ -184,7 +184,7 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
         case "%":
           return left % right;
         default:
-          throw new Error(`Unsupported operator ${op}`);
+          return error(`Unsupported operator ${op}`, opNode);
       }
     }
 
