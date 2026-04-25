@@ -36,10 +36,10 @@ import {
 import { SetUtils_areEqual } from "@/utils/setUtils";
 import { UidFactory_generateUid } from "@/utils/generator";
 import {
-  type IPercentage,
+  type IDynamicWeight,
   type IUnit,
   type IWeight,
-  TPercentage,
+  TDynamicWeight,
   TUnit,
   TWeight,
 } from "@/models/weight.ts";
@@ -172,7 +172,7 @@ export type IStatsLength = z.infer<typeof TStatsLength>;
 export const TStatsPercentageValue = z
   .object({
     vtype: z.literal("stat"),
-    value: TPercentage,
+    value: TDynamicWeight,
     timestamp: z.number(),
     updatedAt: z.number().optional(),
     appleUuid: z.string().optional(),
@@ -299,7 +299,7 @@ export type IPlate = z.infer<typeof TPlate>;
 
 export const TProgramState = z.record(
   z.string(),
-  z.union([z.number(), TWeight, TPercentage]),
+  z.union([z.number(), TWeight, TDynamicWeight]),
 );
 export type IProgramState = z.infer<typeof TProgramState>;
 export type IProgramMode = "planner" | "update";
@@ -311,7 +311,7 @@ export const TSet = z
     id: z.string(),
 
     reps: z.number().optional(),
-    originalWeight: z.union([TWeight, TPercentage]).optional(),
+    originalWeight: z.union([TWeight, TDynamicWeight]).optional(),
     weight: TWeight.optional(),
     minReps: z.number().optional(),
     rpe: z.number().optional(),
@@ -804,7 +804,7 @@ export interface IScriptBindings {
   day: number;
   week: number;
   dayInWeek: number;
-  originalWeights: (IWeight | IPercentage)[];
+  originalWeights: (IWeight | IDynamicWeight)[];
   weights: (IWeight | undefined)[];
   completedWeights: (IWeight | undefined)[];
   rm1: IWeight;
@@ -835,7 +835,7 @@ export interface IScriptBindings {
 }
 
 export interface IScriptFnContext {
-  prints: (number | IWeight | IPercentage)[][];
+  prints: (number | IWeight | IDynamicWeight)[][];
   unit: IUnit;
   exerciseType?: IExerciseType;
 }
@@ -870,37 +870,37 @@ export interface IScriptFunctions {
       | number[]
       | IWeight
       | IWeight[]
-      | IPercentage
-      | IPercentage[]
+      | IDynamicWeight
+      | IDynamicWeight[]
     )[]
-  ): number | IWeight | IPercentage;
+  ): number | IWeight | IDynamicWeight;
   min(
     ...vals: (
       | number
       | number[]
       | IWeight
       | IWeight[]
-      | IPercentage
-      | IPercentage[]
+      | IDynamicWeight
+      | IDynamicWeight[]
     )[]
-  ): number | IWeight | IPercentage;
+  ): number | IWeight | IDynamicWeight;
   max(
     ...vals: (
       | number
       | number[]
       | IWeight
       | IWeight[]
-      | IPercentage
-      | IPercentage[]
+      | IDynamicWeight
+      | IDynamicWeight[]
     )[]
-  ): number | IWeight | IPercentage;
+  ): number | IWeight | IDynamicWeight;
   zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
   print(...args: unknown[]): (typeof args)[0];
   increment(val: IWeight, context: IScriptFnContext): IWeight;
-  increment(val: IPercentage, context: IScriptFnContext): IPercentage;
+  increment(val: IDynamicWeight, context: IScriptFnContext): IDynamicWeight;
   increment(val: number, context: IScriptFnContext): number;
   decrement(val: IWeight, context: IScriptFnContext): IWeight;
-  decrement(val: IPercentage, context: IScriptFnContext): IPercentage;
+  decrement(val: IDynamicWeight, context: IScriptFnContext): IDynamicWeight;
   decrement(val: number, context: IScriptFnContext): number;
   sets(
     from: number,
@@ -908,7 +908,7 @@ export interface IScriptFunctions {
     minReps: number,
     reps: number,
     isAmrap: number,
-    weight: IWeight | IPercentage | number,
+    weight: IWeight | IDynamicWeight | number,
     timer: number,
     rpe: number,
     logRpe: number,
@@ -992,18 +992,18 @@ function comparing(
   left:
     | number
     | IWeight
-    | IPercentage
-    | (number | IWeight | IPercentage | undefined)[],
+    | IDynamicWeight
+    | (number | IWeight | IDynamicWeight | undefined)[],
   right:
     | number
     | IWeight
-    | IPercentage
-    | (number | IWeight | IPercentage | undefined)[],
+    | IDynamicWeight
+    | (number | IWeight | IDynamicWeight | undefined)[],
   operator: ">" | "<" | ">=" | "<=" | "==" | "!=",
 ): boolean {
   function comparator(
-    l: number | IWeight | IPercentage,
-    r: number | IWeight | IPercentage,
+    l: number | IWeight | IDynamicWeight,
+    r: number | IWeight | IDynamicWeight,
   ): boolean {
     switch (operator) {
       case ">":
@@ -1053,7 +1053,7 @@ export type ILiftoscriptEvaluatorUpdate =
   | { type: "minReps"; value: ILiftoscriptVariableValue<number> }
   | {
       type: "weights";
-      value: ILiftoscriptVariableValue<number | IPercentage | IWeight>;
+      value: ILiftoscriptVariableValue<number | IDynamicWeight | IWeight>;
     }
   | { type: "timers"; value: ILiftoscriptVariableValue<number> }
   | { type: "RPE"; value: ILiftoscriptVariableValue<number> }
@@ -1374,7 +1374,7 @@ export class LiftoscriptEvaluator {
 
   private evaluateToNumberOrWeightOrPercentage(
     expr: SyntaxNode,
-  ): number | IWeight | IPercentage {
+  ): number | IWeight | IDynamicWeight {
     const v = this.evaluate(expr);
     const v1 = Array.isArray(v) ? v[0] : v;
     return Weight_is(v1) || Weight_isPct(v1)
@@ -1389,7 +1389,7 @@ export class LiftoscriptEvaluator {
   private changeNumberOfSets(
     expression: SyntaxNode,
     op: IAssignmentOp,
-  ): number | IWeight | IPercentage {
+  ): number | IWeight | IDynamicWeight {
     const oldNumberOfSets = this.bindings.weights.length;
     const evaluatedValue = MathUtils_applyOp(
       this.bindings.numberOfSets,
@@ -1488,7 +1488,7 @@ export class LiftoscriptEvaluator {
     expression: SyntaxNode,
     indexExprs: SyntaxNode[],
     op: IAssignmentOp,
-  ): number | IWeight | IPercentage {
+  ): number | IWeight | IDynamicWeight {
     const indexes = indexExprs.map((ie) => getChildren(ie)[0]);
     const maxTargetLength = 1;
     if (indexes.length > maxTargetLength) {
@@ -1500,7 +1500,7 @@ export class LiftoscriptEvaluator {
       maxTargetLength,
     );
     const [setIndex] = normalizedIndexValues;
-    let value: number | IWeight | IPercentage = 0;
+    let value: number | IWeight | IDynamicWeight = 0;
     if (key === "weights") {
       for (let i = 0; i < this.bindings.weights.length; i += 1) {
         if (
@@ -1568,7 +1568,7 @@ export class LiftoscriptEvaluator {
     expression: SyntaxNode,
     indexExprs: SyntaxNode[],
     op: IAssignmentOp,
-  ): number | IWeight | IPercentage {
+  ): number | IWeight | IDynamicWeight {
     const indexes = indexExprs.map((ie) => getChildren(ie)[0]);
     const maxTargetLength =
       key === "setVariationIndex" || key === "descriptionIndex"
@@ -1605,7 +1605,7 @@ export class LiftoscriptEvaluator {
       indexValues,
       maxTargetLength,
     );
-    let result: number | IWeight | IPercentage;
+    let result: number | IWeight | IDynamicWeight;
     if (key === "weights") {
       result = this.evaluateToNumberOrWeightOrPercentage(expression);
       this.updates.push({
@@ -1685,8 +1685,8 @@ export class LiftoscriptEvaluator {
       | number
       | boolean
       | IWeight
-      | IPercentage
-      | (IWeight | IPercentage | number | undefined)[],
+      | IDynamicWeight
+      | (IWeight | IDynamicWeight | number | undefined)[],
   ): number {
     if (typeof value === "number") {
       return value;
@@ -1709,8 +1709,8 @@ export class LiftoscriptEvaluator {
     | number
     | boolean
     | IWeight
-    | IPercentage
-    | (IWeight | IPercentage | number | undefined)[] {
+    | IDynamicWeight
+    | (IWeight | IDynamicWeight | number | undefined)[] {
     if (
       expr.type.name === NodeName.Program ||
       expr.type.name === NodeName.BlockExpression
@@ -1719,8 +1719,8 @@ export class LiftoscriptEvaluator {
         | number
         | boolean
         | IWeight
-        | (IWeight | IPercentage | number | undefined)[]
-        | IPercentage = 0;
+        | (IWeight | IDynamicWeight | number | undefined)[]
+        | IDynamicWeight = 0;
       for (const child of getChildren(expr)) {
         if (!child.type.isSkipped) {
           result = this.evaluate(child);
@@ -2298,46 +2298,46 @@ export class LiftoscriptEvaluator {
   }
 
   private add(
-    one: IWeight | number | IPercentage,
-    two: IWeight | number | IPercentage,
-  ): IWeight | number | IPercentage {
+    one: IWeight | number | IDynamicWeight,
+    two: IWeight | number | IDynamicWeight,
+  ): IWeight | number | IDynamicWeight {
     return this.operation(this.bindings.rm1, one, two, (a, b) => a + b);
   }
 
   private subtract(
-    one: IWeight | number | IPercentage,
-    two: IWeight | number | IPercentage,
-  ): IWeight | number | IPercentage {
+    one: IWeight | number | IDynamicWeight,
+    two: IWeight | number | IDynamicWeight,
+  ): IWeight | number | IDynamicWeight {
     return this.operation(this.bindings.rm1, one, two, (a, b) => a - b);
   }
 
   private multiply(
-    one: IWeight | number | IPercentage,
-    two: IWeight | number | IPercentage,
-  ): IWeight | number | IPercentage {
+    one: IWeight | number | IDynamicWeight,
+    two: IWeight | number | IDynamicWeight,
+  ): IWeight | number | IDynamicWeight {
     return this.operation(this.bindings.rm1, one, two, (a, b) => a * b);
   }
 
   private divide(
-    one: IWeight | number | IPercentage,
-    two: IWeight | number | IPercentage,
-  ): IWeight | number | IPercentage {
+    one: IWeight | number | IDynamicWeight,
+    two: IWeight | number | IDynamicWeight,
+  ): IWeight | number | IDynamicWeight {
     return this.operation(this.bindings.rm1, one, two, (a, b) => a / b);
   }
 
   private modulo(
-    one: IWeight | number | IPercentage,
-    two: IWeight | number | IPercentage,
-  ): IWeight | number | IPercentage {
+    one: IWeight | number | IDynamicWeight,
+    two: IWeight | number | IDynamicWeight,
+  ): IWeight | number | IDynamicWeight {
     return this.operation(undefined, one, two, (a, b) => a % b);
   }
 
   private operation(
     onerm: IWeight | undefined,
-    a: IWeight | number | IPercentage,
-    b: IWeight | number | IPercentage,
+    a: IWeight | number | IDynamicWeight,
+    b: IWeight | number | IDynamicWeight,
     op: (x: number, y: number) => number,
-  ): IWeight | number | IPercentage {
+  ): IWeight | number | IDynamicWeight {
     try {
       return Weight_op(onerm, a, b, op);
     } catch (error) {
@@ -2350,7 +2350,7 @@ export class LiftoscriptEvaluator {
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
 export function Weight_display(
-  weight: IWeight | IPercentage | number,
+  weight: IWeight | IDynamicWeight | number,
   withUnit: boolean = true,
 ): string {
   if (typeof weight === "number") {
@@ -2362,7 +2362,7 @@ export function Weight_display(
   }
 }
 
-export function Weight_rpePct(reps: number, rpe: number): IPercentage {
+export function Weight_rpePct(reps: number, rpe: number): IDynamicWeight {
   return Weight_buildPct(
     MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100),
   );
@@ -2392,7 +2392,9 @@ export function Weight_oppositeUnit(unit: IUnit): IUnit {
   return unit === "kg" ? "lb" : "kg";
 }
 
-export function Weight_print(weight: IWeight | IPercentage | number): string {
+export function Weight_print(
+  weight: IWeight | IDynamicWeight | number,
+): string {
   if (typeof weight === "number") {
     return `${n(weight)}`;
   } else {
@@ -2401,7 +2403,7 @@ export function Weight_print(weight: IWeight | IPercentage | number): string {
 }
 
 export function Weight_printNull(
-  weight: IWeight | IPercentage | number | undefined,
+  weight: IWeight | IDynamicWeight | number | undefined,
 ): string {
   if (weight == null) {
     return "";
@@ -2414,7 +2416,7 @@ export function Weight_printNull(
 
 export function Weight_parsePct(
   str?: string,
-): IPercentage | IWeight | undefined {
+): IDynamicWeight | IWeight | undefined {
   if (str == null) {
     return undefined;
   }
@@ -2439,19 +2441,19 @@ export function Weight_parse(str: string): IWeight | undefined {
 }
 
 export function Weight_printOrNumber(
-  weight: IWeight | IPercentage | number,
+  weight: IWeight | IDynamicWeight | number,
 ): string {
   return typeof weight === "number" ? `${weight}` : Weight_print(weight);
 }
 
-export function Weight_buildPct(value: number): IPercentage {
+export function Weight_buildPct(value: number): IDynamicWeight {
   return { value, unit: "%" };
 }
 
 export function Weight_buildAny(
   value: number,
   unit: IUnit | "%",
-): IWeight | IPercentage {
+): IWeight | IDynamicWeight {
   if (unit === "%") {
     return Weight_buildPct(value);
   } else {
@@ -2480,8 +2482,8 @@ export function Weight_clone(value: IWeight): IWeight {
 
 export function Weight_isOrPct(
   object: unknown,
-): object is IWeight | IPercentage {
-  const objWeight = object as IWeight | IPercentage;
+): object is IWeight | IDynamicWeight {
+  const objWeight = object as IWeight | IDynamicWeight;
   return (
     objWeight &&
     typeof objWeight === "object" &&
@@ -2504,8 +2506,8 @@ export function Weight_is(object: unknown): object is IWeight {
   );
 }
 
-export function Weight_isPct(object: unknown): object is IPercentage {
-  const objWeight = object as IPercentage;
+export function Weight_isPct(object: unknown): object is IDynamicWeight {
+  const objWeight = object as IDynamicWeight;
   return (
     objWeight &&
     typeof objWeight === "object" &&
@@ -2919,36 +2921,36 @@ export function Weight_divide(
 }
 
 export function Weight_gt(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a > b);
 }
 
 export function Weight_lt(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a < b);
 }
 
 export function Weight_gte(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a >= b);
 }
 
 export function Weight_lte(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a <= b);
 }
 
 export function Weight_eqNull(
-  weight: IWeight | number | IPercentage | undefined,
-  value: IWeight | number | IPercentage | undefined,
+  weight: IWeight | number | IDynamicWeight | undefined,
+  value: IWeight | number | IDynamicWeight | undefined,
 ): boolean {
   if (weight == null && value == null) {
     return true;
@@ -2962,8 +2964,8 @@ export function Weight_eqNull(
 }
 
 export function Weight_eq(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a === b);
 }
@@ -2991,7 +2993,7 @@ export function Weight_roundConvertTo(
 }
 
 export function Weight_type(
-  value: number | IWeight | IPercentage,
+  value: number | IWeight | IDynamicWeight,
 ): "weight" | "percentage" | "number" {
   if (typeof value === "number") {
     return "number";
@@ -3004,14 +3006,14 @@ export function Weight_type(
 
 export function Weight_convertTo(weight: IWeight, unit: IUnit): IWeight;
 export function Weight_convertTo(
-  weight: IPercentage,
+  weight: IDynamicWeight,
   unit: "%" | IUnit,
-): IPercentage;
+): IDynamicWeight;
 export function Weight_convertTo(weight: number, unit: IUnit): number;
 export function Weight_convertTo(
-  weight: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
   unit: IUnit | "%",
-): IWeight | number | IPercentage {
+): IWeight | number | IDynamicWeight {
   if (typeof weight === "number") {
     return weight;
   } else if (weight.unit === "%" || unit === "%") {
@@ -3036,8 +3038,8 @@ export function Weight_compareReverse(a: IWeight, b: IWeight): number {
 }
 
 function comparison(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
   o: (a: number, b: number) => boolean,
 ): boolean {
   if (typeof weight === "number" && typeof value === "number") {
@@ -3061,10 +3063,10 @@ function comparison(
 
 export function Weight_applyOp(
   onerm: IWeight | undefined,
-  oldValue: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  oldValue: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
   opr: "+=" | "-=" | "*=" | "/=" | "=",
-): IWeight | number | IPercentage {
+): IWeight | number | IDynamicWeight {
   if (opr === "=") {
     return value;
   } else if (opr === "+=") {
@@ -3084,10 +3086,10 @@ export function Weight_applyOp(
 
 export function Weight_op(
   onerm: IWeight | undefined,
-  a: IWeight | number | IPercentage,
-  b: IWeight | number | IPercentage,
+  a: IWeight | number | IDynamicWeight,
+  b: IWeight | number | IDynamicWeight,
   o: (x: number, y: number) => number,
-): IWeight | number | IPercentage {
+): IWeight | number | IDynamicWeight {
   if (typeof a === "number" && typeof b === "number") {
     return o(a, b);
   }
@@ -3158,7 +3160,7 @@ export function Weight_operation(
 
 export function Weight_convertToWeight(
   onerm: IWeight,
-  value: IWeight | number | IPercentage,
+  value: IWeight | number | IDynamicWeight,
   unit: IUnit,
 ): IWeight {
   if (typeof value === "number") {

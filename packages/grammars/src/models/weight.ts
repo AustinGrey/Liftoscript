@@ -13,13 +13,17 @@ export const TWeight = z.object({
   unit: TUnit,
 });
 export type IWeight = z.infer<typeof TWeight>;
-export const TPercentage = z.object({
+export const TDynamicWeight = z.object({
   value: z.number(),
   unit: z.literal("%"),
 });
-export type IPercentage = z.infer<typeof TPercentage>;
+export type IDynamicWeight = z.infer<typeof TDynamicWeight>;
 
-export function percent(value: number): IPercentage {
+/**
+ * @returns Model for specifying a percentage of the user's current one rep max
+ * @param value The percentage value
+ */
+export function percentORM(value: number): IDynamicWeight {
   return { value, unit: "%" };
 }
 
@@ -86,12 +90,15 @@ export function build(value: number, unit: IUnit): IWeight {
 }
 
 export function convertTo(weight: IWeight, unit: IUnit): IWeight;
-export function convertTo(weight: IPercentage, unit: "%" | IUnit): IPercentage;
+export function convertTo(
+  weight: IDynamicWeight,
+  unit: "%" | IUnit,
+): IDynamicWeight;
 export function convertTo(weight: number, unit: IUnit): number;
 export function convertTo(
-  weight: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
   unit: IUnit | "%",
-): IWeight | number | IPercentage {
+): IWeight | number | IDynamicWeight {
   if (isNumber(weight)) {
     return weight;
   } else if (weight.unit === "%" || unit === "%") {
@@ -119,8 +126,8 @@ export function convertTo(
  * @param o The comparison function to perform once the units are converted.
  */
 function comparison(
-  left: IWeight | number | IPercentage,
-  right: IWeight | number | IPercentage,
+  left: IWeight | number | IDynamicWeight,
+  right: IWeight | number | IDynamicWeight,
   o: (a: number, b: number) => boolean,
 ): boolean {
   if (isNumber(left)) {
