@@ -153,6 +153,17 @@ describe.each<{
     e: 1,
     options: { initialState: { foo: 2 }, adjustEmptyGlobals: { r: [0, 1] } },
   },
+  // If
+  {
+    s: `if (completedReps >= reps) {
+        state.foo = state.foo + 3
+      }`,
+    e: 5,
+    options: {
+      initialState: { foo: 2 },
+      adjustEmptyGlobals: { completedReps: [1, 2, 3], reps: [1, 2, 3] },
+    },
+  },
 ])("$s resolves to $e with options $options", ({ s, e, options }) => {
   const initialState = options?.initialState ?? ({} as IProgramState);
   test.each<
