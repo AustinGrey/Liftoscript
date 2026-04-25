@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@lezer/generator": "catalog:",
+    "type-fest": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

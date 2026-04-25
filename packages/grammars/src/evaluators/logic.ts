@@ -5,8 +5,15 @@ import {
   NodeName,
 } from "@/evaluators/logic-evaluator.ts";
 import { pad } from "@/utils/collection.ts";
-import { type IDynamicWeight, type IWeight } from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
+import {
+  type IDynamicWeight,
+  type IUnit,
+  type IWeight,
+  TUnit,
+} from "@/models/weight.ts";
+import { isLogicNode, LogicNodes } from "@/parsers/guards.ts";
+import { is, isNumber } from "@/utils/types.ts";
 
 export type Quantity = number | IWeight | IDynamicWeight;
 
@@ -189,6 +196,10 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
           return error(`Unsupported operator ${op}`, opNode);
       }
     }
+    case NodeName.WeightExpression: {
+      if (isLogicNode("WeightExpression", expr))
+        return getWeight(expr) ?? Weight.build(0, "kg");
+    }
 
     case NodeName.ForExpression:
     case NodeName.IfExpression:
@@ -197,7 +208,6 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
     case NodeName.IncAssignmentExpression:
     case NodeName.BuiltinFunctionExpression:
     case NodeName.UnaryExpression:
-    case NodeName.WeightExpression:
     case NodeName.VariableExpression:
     case NodeName.StateVariable:
     case NodeName.Variable:
@@ -286,4 +296,24 @@ function queryChild(
 ): SyntaxNode | undefined {
   const [result] = queryChildren(node, options);
   return result;
+}
+
+function getWeight(
+  expr: LogicNodes.WeightExpression,
+  tools: SourceTools,
+): IWeight | undefined {
+  const numberNode = getChild(expr, { ofType: NodeName.NumberExpression });
+  const unitNode = getChild(expr, { ofType: NodeName.Unit });
+  const num = evaluate(numberNode, tools);
+  if (!isNumber(num)) {
+    tools.error("WeightExpression must contain a number", numberNode);
+  }
+  const unit = tools.getText(unitNode);
+  if (!is(TUnit, unit)) {
+    tools.error(
+      "WeightExpression must contain a unit of either kg or lb",
+      unitNode,
+    );
+  }
+  return Weight.build(num, unit);
 }
