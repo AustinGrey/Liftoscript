@@ -79,7 +79,7 @@ describe.each<[string, IProgramState, LogicResult]>([
 ])("$0 resolves to $2 when state is $1", (logic, state, expected) => {
   test.each<[string, (logic: string, state: IProgramState) => LogicResult]>([
     ["old system", evalLogic],
-    ["new system", (logic, _) => run(logic)],
+    ["new system", (logic, _) => run(logic, state)],
   ])("$0", (_, evaluator) => {
     expect(evaluator(logic, state)).toEqual(expected);
   });

@@ -1,7 +1,7 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
-import type { SyntaxNode } from "@lezer/common";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
-import { getChild, queryChild } from "@/utils/grammars.ts";
+import { getDescendant } from "@/utils/grammars.ts";
+import type { TypedLogicNode } from "@/parsers/guards.ts";
 
 export const handler: LogicHandler<"StateVariable"> = (n, t) => {
   const stateKey = getStateKey(n, t);
@@ -11,23 +11,22 @@ export const handler: LogicHandler<"StateVariable"> = (n, t) => {
       n,
     );
   }
-  if (stateKey in t.state) {
-    return t.state[stateKey];
-  } else {
-    return t.error(`There's no state variable '${stateKey}'`, n);
-  }
+  return t.getState(stateKey, n);
 };
 
+/**
+ * Gets the text of the variable attempting to be accessed on the state
+ * e.g. state.foo, this would return 'foo'
+ * @param expr The node to get the state key from
+ * @param tools
+ */
 function getStateKey(
-  expr: SyntaxNode,
+  expr: TypedLogicNode<"StateVariable">,
   tools: EvaluateTools,
 ): string | undefined {
-  const index = queryChild(expr, { ofType: NodeName.StateVariableIndex });
-  if (index == null) {
-    const stateKeyNode = getChild(expr, { ofType: NodeName.Keyword });
-    if (stateKeyNode != null) {
-      return tools.getText(stateKeyNode);
-    }
+  try {
+    return tools.getText(getDescendant(expr, { ofType: NodeName.Keyword }));
+  } catch (e) {
+    return undefined;
   }
-  return undefined;
 }

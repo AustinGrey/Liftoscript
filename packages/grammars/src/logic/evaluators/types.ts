@@ -39,8 +39,26 @@ export type EvaluateTools = SourceTools & {
    * Continues evaluation into a node, using the same tools as the existing context
    */
   recurse: (node: SyntaxNode) => LogicResult;
-  getState: (key: string) => Quantity;
-  setState: (key: string, value: Quantity) => void;
+  /**
+   * Gets the value of a state variable. If the state variable is not found, it throws an error.
+   * @param key The key of the state variable
+   * @param relatedNode The node that caused this action
+   */
+  getState: (key: string, relatedNode: SyntaxNode) => Quantity;
+  /**
+   * Updates the value of a state variable. If the state variable is not found, it throws an error.
+   * @param key The key of the state variable
+   * @param value The new value of the state variable
+   * @param relatedNode The node that caused this action
+   */
+  updateState: (key: string, value: Quantity, relatedNode: SyntaxNode) => void;
+  /**
+   * Updates the value of a state variable. If the state variable is not found, it creates a new one.
+   * @param key The key of the state variable
+   * @param value The new value of the state variable
+   * @param relatedNode The node that caused this action
+   */
+  upsertState: (key: string, value: Quantity, relatedNode: SyntaxNode) => void;
 };
 
 /**

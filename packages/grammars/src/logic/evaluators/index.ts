@@ -40,7 +40,7 @@ const handlers: {
   Plus: (n, t) => t.error("Not implemented", n),
   Program: (await import("./node-program")).handler,
   StateKeyword: (n, t) => t.error("Not implemented", n),
-  StateVariable: (n, t) => t.error("Not implemented", n),
+  StateVariable: (await import("./node-state-variable")).handler,
   StateVariableIndex: (n, t) => t.error("Not implemented", n),
   Ternary: (await import("./node-ternary")).handler,
   Times: (n, t) => t.error("Not implemented", n),
@@ -53,7 +53,11 @@ const handlers: {
   Wildcard: (n, t) => t.error("Not implemented", n),
 };
 
-function handleLogic(node: SyntaxNode, tools: SourceTools): LogicResult {
+function handleLogic(
+  node: SyntaxNode,
+  tools: SourceTools,
+  initialState: Readonly<IProgramState>,
+): LogicResult {
   const handler: LogicHandler<NodeNames_Logic> | undefined = isLogicNodeName(
     node.name,
   )
@@ -62,10 +66,26 @@ function handleLogic(node: SyntaxNode, tools: SourceTools): LogicResult {
   if (!handler) {
     return tools.error(`No handler for node type: ${node.type}`, node);
   }
-  const state: IProgramState = {};
+  const state: IProgramState = { ...initialState };
   return handler(node as TypedLogicNode<NodeNames_Logic>, {
     ...tools,
-    recurse: (node) => handleLogic(node, tools),
+    recurse: (node) => handleLogic(node, tools, state),
+    getState: (key, relatedNode) => {
+      if (key in state) {
+        return state[key];
+      }
+      return tools.error(`There's no state variable '${key}'`, relatedNode);
+    },
+    updateState: (key, value, relatedNode) => {
+      if (key in state) {
+        state[key] = value;
+      } else {
+        return tools.error(`There's no state variable '${key}'`, relatedNode);
+      }
+    },
+    upsertState: (key, value, relatedNode) => {
+      state[key] = value;
+    },
   });
 }
 
@@ -73,34 +93,41 @@ function handleLogic(node: SyntaxNode, tools: SourceTools): LogicResult {
  * Runs a script to return it's value
  * @param logic The script to run
  */
-export function run(logic: string): LogicResult {
-  return handleLogic(parser.parse(logic).topNode, {
-    getText(node) {
-      return (
-        node === undefined ? undefined : logic.slice(node.from, node.to)
-      ) as typeof node extends undefined ? undefined : string;
-    },
-    locate(node: SyntaxNode) {
-      const linesLengths = logic.split("\n").map((l) => l.length + 1);
-      let offset = 0;
-      for (let i = 0; i < linesLengths.length; i++) {
-        const lineLength = linesLengths[i];
-        if (node.from > offset && node.from < offset + lineLength) {
-          return [i + 1, node.from - offset];
+export function run(
+  logic: string,
+  initialState: Readonly<IProgramState>,
+): LogicResult {
+  return handleLogic(
+    parser.parse(logic).topNode,
+    {
+      getText(node) {
+        return (
+          node === undefined ? undefined : logic.slice(node.from, node.to)
+        ) as typeof node extends undefined ? undefined : string;
+      },
+      locate(node: SyntaxNode) {
+        const linesLengths = logic.split("\n").map((l) => l.length + 1);
+        let offset = 0;
+        for (let i = 0; i < linesLengths.length; i++) {
+          const lineLength = linesLengths[i];
+          if (node.from > offset && node.from < offset + lineLength) {
+            return [i + 1, node.from - offset];
+          }
+          offset += lineLength;
         }
-        offset += lineLength;
-      }
-      return [linesLengths.length, linesLengths[linesLengths.length - 1]];
+        return [linesLengths.length, linesLengths[linesLengths.length - 1]];
+      },
+      error(message, node) {
+        const [line, offset] = this.locate(node);
+        throw new LiftoscriptSyntaxError(
+          `${message} (${line}:${offset})`,
+          line,
+          offset,
+          node.from,
+          node.to,
+        );
+      },
     },
-    error(message, node) {
-      const [line, offset] = this.locate(node);
-      throw new LiftoscriptSyntaxError(
-        `${message} (${line}:${offset})`,
-        line,
-        offset,
-        node.from,
-        node.to,
-      );
-    },
-  });
+    initialState,
+  );
 }

@@ -122,44 +122,27 @@ export function* queryDescendants<TTypes extends string>(
 }
 
 /**
- * Gets the first descendant of a node that matches the given type.
+ * Gets the descendant of a node that matches the given type.
+ * Throws if there is more than one matching descendant.
  * @param node The node to get the first matching descendant of
- * @param options
+ * @param options The query options to use when searching for the descendant
  */
 export function getDescendant<TTypes extends string>(
   node: SyntaxNode,
   options: QueryOptions<TTypes> = {},
 ): SyntaxNode {
-  const { ofType, includeSkipped } = options;
-  const cur = node.cursor();
-
-  // Depth-first search (pre-order) over descendants (excluding `node` itself).
-  if (!cur.firstChild()) {
+  const [result, ...rest] = queryDescendants(node, options);
+  if (!result) {
     throw new SyntaxError(
-      `Expected descendant${ofType ? ` of type ${ofType}` : ""}, but found none`,
+      `Expected descendant${options.ofType ? ` of type ${options.ofType}` : ""}, but found none`,
     );
   }
-
-  while (true) {
-    const current = cur.node;
-    const matchesType = !ofType || current.type.name === ofType;
-    const matchesSkipped = includeSkipped || !current.type.isSkipped;
-    if (matchesType && matchesSkipped) {
-      return current;
-    }
-
-    if (cur.firstChild()) {
-      continue;
-    }
-
-    while (!cur.nextSibling()) {
-      if (!cur.parent() || cur.node === node) {
-        throw new SyntaxError(
-          `Expected descendant${ofType ? ` of type ${ofType}` : ""}, but found none`,
-        );
-      }
-    }
+  if (rest.length > 0) {
+    throw new SyntaxError(
+      `Expected only one descendant${options.ofType ? ` of type ${options.ofType}` : ""}, but found ${rest.length}`,
+    );
   }
+  return result;
 }
 
 /**
