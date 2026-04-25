@@ -74,10 +74,11 @@ describe.each<[string, IProgramState, LogicResult]>([
   [`1lb == 1kg`, {}, false],
   [`1lb != 1kg`, {}, true],
   // Ternary
-  // [`true ? 1 : 0`, {}, -1],
-  // [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 8 }, 5],
-  // [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 4 }, 4],
-  // [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 2 }, 6],
+  [`4 < 5 ? 1 : 0`, {}, 1],
+  [`5 < 4 ? 1 : 0`, {}, 0],
+  [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 8 }, 5],
+  [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 4 }, 4],
+  [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 2 }, 6],
 ])("$0 resolves to $2 when state is $1", (logic, state, expected) => {
   test.each<[string, (logic: string, state: IProgramState) => LogicResult]>([
     ["old system", evalLogic],
