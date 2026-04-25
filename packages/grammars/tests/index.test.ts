@@ -48,7 +48,7 @@ function emptyGlobalData(): IScriptBindings {
     isCompleted: [],
     timers: [],
     w: [],
-    r: [],
+    r: [0, 1, 2, 3, 4, 5],
     cr: [],
     cw: [],
     mr: [],
@@ -64,95 +64,97 @@ function emptyGlobalData(): IScriptBindings {
   };
 }
 
-describe.each<
-  | [string, LogicResult]
-  | [
-      string,
-      LogicResult,
-      Partial<{
-        initialState: IProgramState;
-        globalData: IScriptBindings;
-      }>,
-    ]
->([
+describe.each<{
+  s: string;
+  e: LogicResult;
+  options?: Partial<{
+    initialState: IProgramState;
+    adjustEmptyGlobals: Partial<IScriptBindings>;
+  }>;
+}>([
   // Literal Number
-  [`1`, 1],
-  [`0`, 0],
-  [`-1`, -1],
+  { s: `1`, e: 1 },
+  { s: `0`, e: 0 },
+  { s: `-1`, e: -1 },
   // Percentages of one rep max
-  ["0%", percentORM(0)],
-  ["50%", percentORM(50)],
-  ["100%", percentORM(100)],
-  ["101%", percentORM(101)],
+  { s: "0%", e: percentORM(0) },
+  { s: "50%", e: percentORM(50) },
+  { s: "100%", e: percentORM(100) },
+  { s: "101%", e: percentORM(101) },
   /* Bad Cases
     ["NaN%", percentORM(0)],
     ["-50%", percentORM(-50)],
     ["-101%", percentORM(-101)],
      */
   // Comparisons
-  [`1 > 0`, true],
-  [`1 < 0`, false],
-  [`1 >= 0`, true],
-  [`1 <= 0`, false],
-  [`1 == 0`, false],
-  [`1 != 0`, true],
-  [`1kg > 0`, true],
-  [`1kg < 0`, false],
-  [`1kg >= 0`, true],
-  [`1kg <= 0`, false],
-  [`1kg == 0`, false],
-  [`1kg != 0`, true],
-  [`1lb > 0`, true],
-  [`1lb < 0`, false],
-  [`1lb >= 0`, true],
-  [`1lb <= 0`, false],
-  [`1lb == 0`, false],
-  [`1lb != 0`, true],
-  [`1 > 0kg`, true],
-  [`1 < 0kg`, false],
-  [`1 >= 0kg`, true],
-  [`1 <= 0kg`, false],
-  [`1 == 0kg`, false],
-  [`1 != 0kg`, true],
-  [`1 > 0lb`, true],
-  [`1 < 0lb`, false],
-  [`1 >= 0lb`, true],
-  [`1 <= 0lb`, false],
-  [`1 == 0lb`, false],
-  [`1 != 0lb`, true],
-  [`1kg > 1lb`, true],
-  [`1kg < 1lb`, false],
-  [`1kg >= 1lb`, true],
-  [`1kg <= 1lb`, false],
-  [`1kg == 1lb`, false],
-  [`1kg != 1lb`, true],
-  [`1lb > 1kg`, false],
-  [`1lb < 1kg`, true],
-  [`1lb >= 1kg`, false],
-  [`1lb <= 1kg`, true],
-  [`1lb == 1kg`, false],
-  [`1lb != 1kg`, true],
+  { s: `1 > 0`, e: true },
+  { s: `1 < 0`, e: false },
+  { s: `1 >= 0`, e: true },
+  { s: `1 <= 0`, e: false },
+  { s: `1 == 0`, e: false },
+  { s: `1 != 0`, e: true },
+  { s: `1kg > 0`, e: true },
+  { s: `1kg < 0`, e: false },
+  { s: `1kg >= 0`, e: true },
+  { s: `1kg <= 0`, e: false },
+  { s: `1kg == 0`, e: false },
+  { s: `1kg != 0`, e: true },
+  { s: `1lb > 0`, e: true },
+  { s: `1lb < 0`, e: false },
+  { s: `1lb >= 0`, e: true },
+  { s: `1lb <= 0`, e: false },
+  { s: `1lb == 0`, e: false },
+  { s: `1lb != 0`, e: true },
+  { s: `1 > 0kg`, e: true },
+  { s: `1 < 0kg`, e: false },
+  { s: `1 >= 0kg`, e: true },
+  { s: `1 <= 0kg`, e: false },
+  { s: `1 == 0kg`, e: false },
+  { s: `1 != 0kg`, e: true },
+  { s: `1 > 0lb`, e: true },
+  { s: `1 < 0lb`, e: false },
+  { s: `1 >= 0lb`, e: true },
+  { s: `1 <= 0lb`, e: false },
+  { s: `1 == 0lb`, e: false },
+  { s: `1 != 0lb`, e: true },
+  { s: `1kg > 1lb`, e: true },
+  { s: `1kg < 1lb`, e: false },
+  { s: `1kg >= 1lb`, e: true },
+  { s: `1kg <= 1lb`, e: false },
+  { s: `1kg == 1lb`, e: false },
+  { s: `1kg != 1lb`, e: true },
+  { s: `1lb > 1kg`, e: false },
+  { s: `1lb < 1kg`, e: true },
+  { s: `1lb >= 1kg`, e: false },
+  { s: `1lb <= 1kg`, e: true },
+  { s: `1lb == 1kg`, e: false },
+  { s: `1lb != 1kg`, e: true },
   // Ternary
-  [`4 < 5 ? 1 : 0`, 1],
-  [`5 < 4 ? 1 : 0`, 0],
-  [
-    `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
-    5,
-    { initialState: { foo: 8 } },
-  ],
-  [
-    `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
-    4,
-    { initialState: { foo: 4 } },
-  ],
-  [
-    `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
-    6,
-    { initialState: { foo: 2 } },
-  ],
+  { s: `4 < 5 ? 1 : 0`, e: 1 },
+  { s: `5 < 4 ? 1 : 0`, e: 0 },
+  {
+    s: `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
+    e: 5,
+    options: { initialState: { foo: 8 } },
+  },
+  {
+    s: `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
+    e: 4,
+    options: { initialState: { foo: 4 } },
+  },
+  {
+    s: `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
+    e: 6,
+    options: { initialState: { foo: 2 } },
+  },
   // Index access
-  [`r[state.foo]`, 2, { initialState: { foo: 2 } }],
-])("$0 resolves to $2 when state is $1", (logic, expected, initialState) => {
+  {
+    s: `r[state.foo]`,
+    e: 1,
+    options: { initialState: { foo: 2 }, adjustEmptyGlobals: { r: [0, 1] } },
+  },
+])("$s resolves to $e with options $options", ({ s, e, options }) => {
+  const initialState = options?.initialState ?? ({} as IProgramState);
   test.each<
     [
       string,
@@ -166,6 +168,11 @@ describe.each<
     ["old system", evalLogic],
     ["new system", run],
   ])("$0", (_, evaluator) => {
-    expect(evaluator(logic, initialState, emptyGlobalData())).toEqual(expected);
+    expect(
+      evaluator(s, initialState, {
+        ...emptyGlobalData(),
+        ...options?.adjustEmptyGlobals,
+      }),
+    ).toEqual(e);
   });
 });
