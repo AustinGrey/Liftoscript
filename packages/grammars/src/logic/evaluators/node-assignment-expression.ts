@@ -5,12 +5,15 @@ import {
 } from "@/logic/evaluators/types.ts";
 import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
-  type IAssignmentOp,
   NodeName,
   Weight_convertToWeight,
 } from "@/evaluators/logic-evaluator.ts";
 import { isLogicNodeOfType } from "@/parsers/guards.ts";
-import { isQuantity, type Quantity } from "@/logic/types.ts";
+import {
+  type IAssignmentOp,
+  isQuantity,
+  type Quantity,
+} from "@/logic/types.ts";
 import { toNumberUnsafe } from "@/logic/result-handling.ts";
 import type { SyntaxNode } from "@lezer/common";
 import {

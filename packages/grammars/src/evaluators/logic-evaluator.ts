@@ -50,6 +50,10 @@ import {
   type IScriptFunctions,
   TProgramState,
 } from "@/logic/evaluators/types.ts";
+import type {
+  IAssignmentOp,
+  ILiftoscriptEvaluatorUpdate,
+} from "@/logic/types.ts";
 // import { ExerciseImageUtils_exists } from "./exerciseImage";
 // import { IDispatch } from "../ducks/types";
 // import { Program_changeExerciseName } from "./program";
@@ -838,8 +842,6 @@ export enum NodeName {
   Unit = "Unit",
 }
 
-export type IAssignmentOp = "+=" | "-=" | "*=" | "/=" | "=";
-
 export class LiftoscriptSyntaxError extends SyntaxError {
   public readonly line: number;
   public readonly offset: number;
@@ -924,28 +926,6 @@ function assert(name: string): never {
     `Missing required nodes for ${name}, this should never happen`,
   );
 }
-
-export interface ILiftoscriptVariableValue<T> {
-  value: T;
-  op: IAssignmentOp;
-  target: ("*" | "_" | number)[];
-}
-
-export type ILiftoscriptEvaluatorUpdate =
-  | { type: "setVariationIndex"; value: ILiftoscriptVariableValue<number> }
-  | { type: "descriptionIndex"; value: ILiftoscriptVariableValue<number> }
-  | { type: "reps"; value: ILiftoscriptVariableValue<number> }
-  | { type: "minReps"; value: ILiftoscriptVariableValue<number> }
-  | {
-      type: "weights";
-      value: ILiftoscriptVariableValue<number | IDynamicWeight | IWeight>;
-    }
-  | { type: "timers"; value: ILiftoscriptVariableValue<number> }
-  | { type: "RPE"; value: ILiftoscriptVariableValue<number> }
-  | { type: "logrpes"; value: ILiftoscriptVariableValue<number> }
-  | { type: "amraps"; value: ILiftoscriptVariableValue<number> }
-  | { type: "askweights"; value: ILiftoscriptVariableValue<number> }
-  | { type: "numberOfSets"; value: ILiftoscriptVariableValue<number> };
 
 export class LiftoscriptEvaluator {
   private readonly script: string;

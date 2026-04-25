@@ -9,7 +9,11 @@ import {
 } from "@/models/weight.ts";
 import { z } from "zod";
 import type { IExerciseType } from "@/evaluators/logic-evaluator.ts";
-import type { LogicResult, Quantity } from "@/logic/types.ts";
+import type {
+  ILiftoscriptEvaluatorUpdate,
+  LogicResult,
+  Quantity,
+} from "@/logic/types.ts";
 
 export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
@@ -56,15 +60,21 @@ export type EvaluateTools = SourceTools & {
    * Updates the value of a state variable. If the state variable is not found, it creates a new one.
    * @param key The key of the state variable
    * @param value The new value of the state variable
-   * @param relatedNode The node that caused this action
    */
-  upsertState: (key: string, value: Quantity, relatedNode: SyntaxNode) => void;
+  upsertState: (key: string, value: Quantity) => void;
   getGlobal: <TKey extends keyof IScriptBindings>(
     key: TKey,
   ) => IScriptBindings[TKey];
   updateGlobal: <TKey extends keyof IScriptBindings>(
     key: TKey,
     value: IScriptBindings[TKey],
+  ) => void;
+  /**
+   * @TODO what are these updates for? Why can't the thing being updated be updated at the time this is created instead?
+   */
+  requestUpdate: <TKey extends ILiftoscriptEvaluatorUpdate["type"]>(
+    key: TKey,
+    value: (ILiftoscriptEvaluatorUpdate & { type: TKey })["value"],
   ) => void;
 };
 

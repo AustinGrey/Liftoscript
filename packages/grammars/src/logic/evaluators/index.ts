@@ -12,7 +12,10 @@ import type {
 import type { SyntaxNode } from "@lezer/common";
 import { parser } from "@/parsers/logic.ts";
 import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
-import type { LogicResult } from "@/logic/types.ts";
+import type {
+  ILiftoscriptEvaluatorUpdate,
+  LogicResult,
+} from "@/logic/types.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -70,6 +73,7 @@ function handleLogic(
     return tools.error(`No handler for node type: ${node.type}`, node);
   }
   const state: IProgramState = { ...initialState };
+  const updates: ILiftoscriptEvaluatorUpdate[] = [];
   return handler(node as TypedLogicNode<NodeNames_Logic>, {
     ...tools,
     recurse: (node) => handleLogic(node, tools, state, globalData),
@@ -86,16 +90,18 @@ function handleLogic(
         return tools.error(`There's no state variable '${key}'`, relatedNode);
       }
     },
-    upsertState: (key, value, relatedNode) => {
+    upsertState: (key, value) => {
       state[key] = value;
     },
-    getGlobal: <TKey extends keyof IScriptBindings>(key: TKey) =>
-      globalData[key],
-    updateGlobal: <TKey extends keyof IScriptBindings>(
-      key: TKey,
-      value: IScriptBindings[TKey],
-    ) => {
+    getGlobal: (key) => globalData[key],
+    updateGlobal: (key, value) => {
       globalData[key] = value;
+    },
+    requestUpdate: (type, value) => {
+      updates.push({
+        type: type,
+        value: value,
+      });
     },
   });
 }
