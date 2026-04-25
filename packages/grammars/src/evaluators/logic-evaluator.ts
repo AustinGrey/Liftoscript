@@ -35,8 +35,14 @@ import {
 } from "@/utils/string";
 import { SetUtils_areEqual } from "@/utils/setUtils";
 import { UidFactory_generateUid } from "@/utils/generator";
-import { type IPercentage, TPercentage } from "@/models/value";
-import { type IUnit, type IWeight, TUnit, TWeight } from "@/models/weight.ts";
+import {
+  type IPercentage,
+  type IUnit,
+  type IWeight,
+  TPercentage,
+  TUnit,
+  TWeight,
+} from "@/models/weight.ts";
 // import { ExerciseImageUtils_exists } from "./exerciseImage";
 // import { IDispatch } from "../ducks/types";
 // import { Program_changeExerciseName } from "./program";

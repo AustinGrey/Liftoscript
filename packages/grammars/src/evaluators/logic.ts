@@ -5,11 +5,12 @@ import {
   NodeName,
 } from "@/evaluators/logic-evaluator.ts";
 import { pad } from "@/utils/collection.ts";
-import { type IWeight } from "@/models/weight.ts";
+import { type IPercentage, type IWeight } from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
-import type { IPercentage } from "@/models/value.ts";
 
-type LogicResultSingular = number | boolean | IWeight | IPercentage | undefined;
+export type Quantity = number | IWeight | IPercentage;
+
+export type LogicResultSingular = Quantity | boolean | undefined;
 
 export type LogicResult = LogicResultSingular | LogicResultSingular[];
 /**

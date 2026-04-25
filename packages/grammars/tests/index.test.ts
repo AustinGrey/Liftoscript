@@ -5,7 +5,8 @@ import {
   LiftoscriptEvaluator,
 } from "@/evaluators/logic-evaluator";
 import { type LogicResult, run } from "@/evaluators/logic.ts";
-import { percent } from "../src/models/value.ts";
+
+import { percent } from "@/models/weight.ts";
 
 function evalLogic(logic: string, state: IProgramState) {
   return new LiftoscriptEvaluator(logic, state).evaluate(

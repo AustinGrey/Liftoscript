@@ -3,8 +3,8 @@ Values which represent weight. Like lbs, kg, etc.
  */
 
 import { z } from "zod";
-import type { IPercentage } from "@/models/value.ts";
 import { is, isNumber } from "@/utils/types.ts";
+import type { Quantity } from "@/evaluators/logic.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -13,53 +13,56 @@ export const TWeight = z.object({
   unit: TUnit,
 });
 export type IWeight = z.infer<typeof TWeight>;
+export const TPercentage = z.object({
+  value: z.number(),
+  unit: z.literal("%"),
+});
+export type IPercentage = z.infer<typeof TPercentage>;
+
+export function percent(value: number): IPercentage {
+  return { value, unit: "%" };
+}
 
 /**
  * A weight operation that only allows the right operand to be a number
  */
-type BiasedFunc = (left: IWeight, right: IWeight | number) => IWeight;
+type TOperation = (left: IWeight, right: IWeight | number) => IWeight;
 /**
  * A weight operation that allows both operands to be numbers, weights, or percentages
  */
-type UnbiasedFunc = (
-  left: IWeight | number | IPercentage,
-  right: IWeight | number | IPercentage,
-) => boolean;
+type TComparison = (left: Quantity, right: Quantity) => boolean;
 
-export const add: BiasedFunc = (l, r) => operation(l, r, (a, b) => a + b);
-export const subtract: BiasedFunc = (l, r) => operation(l, r, (a, b) => a - b);
-export const multiply: BiasedFunc = (l, r) => operation(l, r, (a, b) => a * b);
-export const divide: BiasedFunc = (l, r) => operation(l, r, (a, b) => a / b);
-export const gt: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a > b);
-export const lt: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a < b);
-export const gte: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a >= b);
-export const lte: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a <= b);
-export const eq: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a === b);
+export const add: TOperation = (l, r) => operation(l, r, (a, b) => a + b);
+export const subtract: TOperation = (l, r) => operation(l, r, (a, b) => a - b);
+export const multiply: TOperation = (l, r) => operation(l, r, (a, b) => a * b);
+export const divide: TOperation = (l, r) => operation(l, r, (a, b) => a / b);
+export const gt: TComparison = (l, r) => comparison(l, r, (a, b) => a > b);
+export const lt: TComparison = (l, r) => comparison(l, r, (a, b) => a < b);
+export const gte: TComparison = (l, r) => comparison(l, r, (a, b) => a >= b);
+export const lte: TComparison = (l, r) => comparison(l, r, (a, b) => a <= b);
+export const eq: TComparison = (l, r) => comparison(l, r, (a, b) => a === b);
 
 export function operation(
-  weight: IWeight,
-  value: IWeight | number,
+  left: IWeight,
+  right: IWeight | number,
   o: (a: number, b: number) => number,
 ): IWeight;
 export function operation(
-  weight: IWeight | number,
-  value: IWeight,
+  left: IWeight | number,
+  right: IWeight,
   o: (a: number, b: number) => number,
 ): IWeight;
 export function operation(
-  weight: IWeight | number,
-  value: IWeight | number,
+  left: IWeight | number,
+  right: IWeight | number,
   o: (a: number, b: number) => number,
 ): IWeight {
-  if (isNumber(weight) && !isNumber(value)) {
-    return build(o(weight, value.value), value.unit);
-  } else if (!isNumber(weight) && isNumber(value)) {
-    return build(o(weight.value, value), weight.unit);
-  } else if (!isNumber(weight) && !isNumber(value)) {
-    return build(
-      o(weight.value, convertTo(value, weight.unit).value),
-      weight.unit,
-    );
+  if (isNumber(left) && !isNumber(right)) {
+    return build(o(left, right.value), right.unit);
+  } else if (!isNumber(left) && isNumber(right)) {
+    return build(o(left.value, right), left.unit);
+  } else if (!isNumber(left) && !isNumber(right)) {
+    return build(o(left.value, convertTo(right, left.unit).value), left.unit);
   } else {
     throw new Error("Weight.operation should never work with numbers only");
   }
