@@ -1,11 +1,9 @@
-import type {
-  LogicHandler,
-  LogicResultSingular,
-} from "@/logic/evaluators/types.ts";
+import type { LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { isBoolean } from "@/utils/types.ts";
 import * as Weight from "@/models/weight.ts";
 import { pad } from "@/utils/collection.ts";
+import type { LogicResultSingular } from "@/logic/types.ts";
 
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });

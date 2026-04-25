@@ -9,10 +9,8 @@ import {
 } from "@/models/weight.ts";
 import { z } from "zod";
 import type { IExerciseType } from "@/evaluators/logic-evaluator.ts";
+import type { LogicResult, Quantity } from "@/logic/types.ts";
 
-export type Quantity = number | IWeight | IDynamicWeight;
-export type LogicResultSingular = Quantity | boolean | undefined;
-export type LogicResult = LogicResultSingular | LogicResultSingular[];
 export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
   tools: EvaluateTools,
@@ -64,6 +62,10 @@ export type EvaluateTools = SourceTools & {
   getGlobal: <TKey extends keyof IScriptBindings>(
     key: TKey,
   ) => IScriptBindings[TKey];
+  updateGlobal: <TKey extends keyof IScriptBindings>(
+    key: TKey,
+    value: IScriptBindings[TKey],
+  ) => void;
 };
 
 /**

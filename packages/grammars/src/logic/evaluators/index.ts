@@ -7,12 +7,12 @@ import type {
   IProgramState,
   IScriptBindings,
   LogicHandler,
-  LogicResult,
   SourceTools,
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
 import { parser } from "@/parsers/logic.ts";
 import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
+import type { LogicResult } from "@/logic/types.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -59,7 +59,7 @@ function handleLogic(
   node: SyntaxNode,
   tools: SourceTools,
   initialState: Readonly<IProgramState>,
-  globalData: Readonly<IScriptBindings>,
+  globalData: IScriptBindings,
 ): LogicResult {
   const handler: LogicHandler<NodeNames_Logic> | undefined = isLogicNodeName(
     node.name,
@@ -91,6 +91,12 @@ function handleLogic(
     },
     getGlobal: <TKey extends keyof IScriptBindings>(key: TKey) =>
       globalData[key],
+    updateGlobal: <TKey extends keyof IScriptBindings>(
+      key: TKey,
+      value: IScriptBindings[TKey],
+    ) => {
+      globalData[key] = value;
+    },
   });
 }
 
@@ -101,7 +107,7 @@ function handleLogic(
 export function run(
   logic: string,
   initialState: Readonly<IProgramState>,
-  globalData: Readonly<IScriptBindings>,
+  globalData: IScriptBindings,
 ): LogicResult {
   return handleLogic(
     parser.parse(logic).topNode,

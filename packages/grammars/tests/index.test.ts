@@ -8,8 +8,8 @@ import { percentORM } from "@/models/weight.ts";
 import type {
   IProgramState,
   IScriptBindings,
-  LogicResult,
 } from "@/logic/evaluators/types.ts";
+import type { LogicResult } from "@/logic/types.ts";
 
 function evalLogic(
   logic: string,

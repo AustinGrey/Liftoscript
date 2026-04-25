@@ -1,5 +1,6 @@
-import type { LogicHandler, LogicResult } from "@/logic/evaluators/types.ts";
+import type { LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
+import type { LogicResult } from "@/logic/types.ts";
 
 export const handler: LogicHandler<"BlockExpression"> = (n, t) => {
   let result: LogicResult = 0;
