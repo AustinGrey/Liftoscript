@@ -174,20 +174,17 @@ function recordVariableUpdate(
     );
   }
   const indexValues = calculateIndexValues(indexes, tools);
-  const normalizedIndexValues = this.normalizeTarget(
-    indexValues,
-    maxTargetLength,
-  );
+  const normalizedIndexValues = normalizeTarget(indexValues, maxTargetLength);
   let result: number | IWeight | IDynamicWeight;
   if (key === "weights") {
     result = evaluateToQuantity(expression, tools);
-    this.updates.push({
+    tools.requestUpdate({
       type: key,
       value: { value: result, op, target: normalizedIndexValues },
     });
   } else {
     result = evaluateToNumber(expression, tools);
-    this.updates.push({
+    tools.requestUpdate({
       type: key,
       value: { value: result, op, target: normalizedIndexValues },
     });
@@ -255,4 +252,22 @@ function evaluateToQuantity(expr: SyntaxNode, tools: EvaluateTools): Quantity {
       : v1
         ? 1
         : 0;
+}
+
+/**
+ * Adds '*' to the front of an array until it reaches the specified length.
+ * Returns a new array, the original is untouched
+ * @param target The target array
+ * @param length The target length to pad to
+ * @TODO move to the collection utils
+ */
+function normalizeTarget(
+  target: Readonly<(number | "*")[]>,
+  length: number,
+): (number | "*")[] {
+  const newTarget = [...target];
+  for (let i = 0; i < length - target.length; i++) {
+    newTarget.unshift("*");
+  }
+  return newTarget;
 }

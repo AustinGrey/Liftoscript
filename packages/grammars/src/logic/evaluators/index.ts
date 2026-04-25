@@ -97,11 +97,8 @@ function handleLogic(
     updateGlobal: (key, value) => {
       globalData[key] = value;
     },
-    requestUpdate: (type, value) => {
-      updates.push({
-        type: type,
-        value: value,
-      });
+    requestUpdate: (update) => {
+      updates.push(update);
     },
   });
 }

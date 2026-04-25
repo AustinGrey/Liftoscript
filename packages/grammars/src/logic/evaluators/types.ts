@@ -72,10 +72,7 @@ export type EvaluateTools = SourceTools & {
   /**
    * @TODO what are these updates for? Why can't the thing being updated be updated at the time this is created instead?
    */
-  requestUpdate: <TKey extends ILiftoscriptEvaluatorUpdate["type"]>(
-    key: TKey,
-    value: (ILiftoscriptEvaluatorUpdate & { type: TKey })["value"],
-  ) => void;
+  requestUpdate: (update: ILiftoscriptEvaluatorUpdate) => void;
 };
 
 /**
