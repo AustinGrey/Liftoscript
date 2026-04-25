@@ -5,6 +5,7 @@ import {
 } from "@/parsers/guards.ts";
 import type {
   IProgramState,
+  IScriptBindings,
   LogicHandler,
   LogicResult,
   SourceTools,
@@ -47,7 +48,7 @@ const handlers: {
   UnaryExpression: (n, t) => t.error("Not implemented", n),
   Unit: (n, t) => t.error("Not implemented", n),
   Variable: (n, t) => t.error("Not implemented", n),
-  VariableExpression: (n, t) => t.error("Not implemented", n),
+  VariableExpression: (await import("./node-variable-expression")).handler,
   VariableIndex: (n, t) => t.error("Not implemented", n),
   WeightExpression: (await import("./node-weight-expression")).handler,
   Wildcard: (n, t) => t.error("Not implemented", n),
@@ -57,6 +58,7 @@ function handleLogic(
   node: SyntaxNode,
   tools: SourceTools,
   initialState: Readonly<IProgramState>,
+  globalData: Readonly<IScriptBindings>,
 ): LogicResult {
   const handler: LogicHandler<NodeNames_Logic> | undefined = isLogicNodeName(
     node.name,
@@ -69,7 +71,7 @@ function handleLogic(
   const state: IProgramState = { ...initialState };
   return handler(node as TypedLogicNode<NodeNames_Logic>, {
     ...tools,
-    recurse: (node) => handleLogic(node, tools, state),
+    recurse: (node) => handleLogic(node, tools, state, globalData),
     getState: (key, relatedNode) => {
       if (key in state) {
         return state[key];
@@ -86,6 +88,8 @@ function handleLogic(
     upsertState: (key, value, relatedNode) => {
       state[key] = value;
     },
+    getGlobal: <TKey extends keyof IScriptBindings>(key: TKey) =>
+      globalData[key],
   });
 }
 
@@ -96,6 +100,7 @@ function handleLogic(
 export function run(
   logic: string,
   initialState: Readonly<IProgramState>,
+  globalData: Readonly<IScriptBindings>,
 ): LogicResult {
   return handleLogic(
     parser.parse(logic).topNode,
@@ -129,5 +134,6 @@ export function run(
       },
     },
     initialState,
+    globalData,
   );
 }

@@ -61,6 +61,9 @@ export type EvaluateTools = SourceTools & {
    * @param relatedNode The node that caused this action
    */
   upsertState: (key: string, value: Quantity, relatedNode: SyntaxNode) => void;
+  getGlobal: <TKey extends keyof IScriptBindings>(
+    key: TKey,
+  ) => IScriptBindings[TKey];
 };
 
 /**
