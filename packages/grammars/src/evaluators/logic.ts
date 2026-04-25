@@ -6,12 +6,7 @@ import {
 } from "@/evaluators/logic-evaluator.ts";
 import { pad } from "@/utils/collection.ts";
 import * as Weight from "@/models/weight.ts";
-import {
-  type IDynamicWeight,
-  type IUnit,
-  type IWeight,
-  TUnit,
-} from "@/models/weight.ts";
+import { type IDynamicWeight, type IWeight, TUnit } from "@/models/weight.ts";
 import { isLogicNode, LogicNodes } from "@/parsers/guards.ts";
 import { is, isNumber } from "@/utils/types.ts";
 
@@ -198,7 +193,7 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
     }
     case NodeName.WeightExpression: {
       if (isLogicNode("WeightExpression", expr))
-        return getWeight(expr) ?? Weight.build(0, "kg");
+        return getWeight(expr, tools) ?? Weight.build(0, "kg");
     }
 
     case NodeName.ForExpression:
