@@ -7,8 +7,8 @@ import {
 import { pad } from "@/utils/collection.ts";
 import * as Weight from "@/models/weight.ts";
 import { type IDynamicWeight, type IWeight, TUnit } from "@/models/weight.ts";
-import { isLogicNode, LogicNodes } from "@/parsers/guards.ts";
-import { is, isNumber } from "@/utils/types.ts";
+import { isLogicNode, type LogicNodes } from "@/parsers/guards.ts";
+import { is, isBoolean, isNumber } from "@/utils/types.ts";
 
 export type Quantity = number | IWeight | IDynamicWeight;
 
@@ -144,6 +144,14 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
             l: LogicResultSingular,
             r: LogicResultSingular,
           ): boolean {
+            if (
+              l === undefined ||
+              isBoolean(l) ||
+              r === undefined ||
+              isBoolean(r)
+            ) {
+              return false;
+            }
             switch (operator) {
               case ">":
                 return Weight.gt(l, r);
@@ -178,15 +186,15 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
           }
         }
         case "+":
-          return left + right;
+          return Weight.add(left, right);
         case "-":
-          return left - right;
+          return Weight.subtract(left, right);
         case "*":
-          return left * right;
+          return Weight.multiply(left, right);
         case "/":
-          return left / right;
+          return Weight.divide(left, right);
         case "%":
-          return left % right;
+          return Weight.modulo(left, right);
         default:
           return error(`Unsupported operator ${op}`, opNode);
       }

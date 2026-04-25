@@ -40,6 +40,7 @@ export const add: TOperation = (l, r) => operation(l, r, (a, b) => a + b);
 export const subtract: TOperation = (l, r) => operation(l, r, (a, b) => a - b);
 export const multiply: TOperation = (l, r) => operation(l, r, (a, b) => a * b);
 export const divide: TOperation = (l, r) => operation(l, r, (a, b) => a / b);
+export const modulo: TOperation = (l, r) => operation(l, r, (a, b) => a % b);
 export const gt: TComparison = (l, r) => comparison(l, r, (a, b) => a > b);
 export const lt: TComparison = (l, r) => comparison(l, r, (a, b) => a < b);
 export const gte: TComparison = (l, r) => comparison(l, r, (a, b) => a >= b);
