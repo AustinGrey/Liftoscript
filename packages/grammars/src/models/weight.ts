@@ -14,49 +14,26 @@ export const TWeight = z.object({
 });
 export type IWeight = z.infer<typeof TWeight>;
 
-export function add(weight: IWeight, value: IWeight | number): IWeight {
-  return operation(weight, value, (a, b) => a + b);
-}
+/**
+ * A weight operation that only allows the right operand to be a number
+ */
+type BiasedFunc = (left: IWeight, right: IWeight | number) => IWeight;
+/**
+ * A weight operation that allows both operands to be numbers, weights, or percentages
+ */
+type UnbiasedFunc = (
+  left: IWeight | number | IPercentage,
+  right: IWeight | number | IPercentage,
+) => boolean;
 
-export function subtract(weight: IWeight, value: IWeight | number): IWeight {
-  return operation(weight, value, (a, b) => a - b);
-}
-
-export function multiply(weight: IWeight, value: IWeight | number): IWeight {
-  return operation(weight, value, (a, b) => a * b);
-}
-
-export function divide(weight: IWeight, value: IWeight | number): IWeight {
-  return operation(weight, value, (a, b) => a / b);
-}
-
-export function gt(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
-): boolean {
-  return comparison(weight, value, (a, b) => a > b);
-}
-
-export function lt(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
-): boolean {
-  return comparison(weight, value, (a, b) => a < b);
-}
-
-export function gte(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
-): boolean {
-  return comparison(weight, value, (a, b) => a >= b);
-}
-
-export function lte(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
-): boolean {
-  return comparison(weight, value, (a, b) => a <= b);
-}
+export const add: BiasedFunc = (l, r) => operation(l, r, (a, b) => a + b);
+export const subtract: BiasedFunc = (l, r) => operation(l, r, (a, b) => a - b);
+export const multiply: BiasedFunc = (l, r) => operation(l, r, (a, b) => a * b);
+export const divide: BiasedFunc = (l, r) => operation(l, r, (a, b) => a / b);
+export const gt: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a > b);
+export const lt: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a < b);
+export const gte: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a >= b);
+export const lte: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a <= b);
 
 export function operation(
   weight: IWeight,
@@ -73,11 +50,11 @@ export function operation(
   value: IWeight | number,
   o: (a: number, b: number) => number,
 ): IWeight {
-  if (typeof weight === "number" && typeof value !== "number") {
+  if (isNumber(weight) && !isNumber(value)) {
     return build(o(weight, value.value), value.unit);
-  } else if (typeof weight !== "number" && typeof value === "number") {
+  } else if (!isNumber(weight) && isNumber(value)) {
     return build(o(weight.value, value), weight.unit);
-  } else if (typeof weight !== "number" && typeof value !== "number") {
+  } else if (!isNumber(weight) && !isNumber(value)) {
     return build(
       o(weight.value, convertTo(value, weight.unit).value),
       weight.unit,
