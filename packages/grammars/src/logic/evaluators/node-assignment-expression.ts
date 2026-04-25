@@ -1,8 +1,4 @@
-import type {
-  IProgramState,
-  LogicHandler,
-  LogicResult,
-} from "@/logic/evaluators/types.ts";
+import type { IProgramState, LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
@@ -17,15 +13,15 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   if (isLogicNodeOfType("VariableExpression", variableNode)) {
     const nameNode = variableNode.getChild(NodeName.Keyword);
     if (nameNode == null) {
-      this.error(`Missing variable name`, variableNode);
+      return t.error(`Missing variable name`, variableNode);
     }
     const indexExprs = variableNode.getChildren(NodeName.VariableIndex);
-    const variable = this.getValue(nameNode);
+    const variable = t.getText(nameNode);
     if (variable === "rm1") {
       if (indexExprs.length > 0) {
-        this.error(`rm1 is not an array`, expr);
+        return t.error(`rm1 is not an array`, n);
       }
-      const evaluatedValue = this.evaluate(expression);
+      const evaluatedValue = t.recurse(expression);
       let value = Array.isArray(evaluatedValue)
         ? evaluatedValue[0]
         : evaluatedValue;
@@ -64,11 +60,11 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     ) {
       return this.changeBinding(variable, expression, indexExprs, "=");
     } else {
-      this.error(`Unknown variable '${variable}'`, variableNode);
+      return t.error(`Unknown variable '${variable}'`, variableNode);
     }
   } else if (isLogicNodeOfType("Variable", variableNode)) {
-    const varKey = this.getValue(variableNode).replace("var.", "");
-    const value = this.evaluate(expression);
+    const varKey = t.getText(variableNode).replace("var.", "");
+    const value = t.recurse(expression);
     if (Weight_is(value) || Weight_isPct(value) || typeof value === "number") {
       this.vars[varKey] = value;
     } else {
@@ -88,11 +84,11 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
           this.error(`There's no state variable '${stateKey}'`, variableNode);
         }
       } else {
-        const indexEval = this.evaluate(indexNode);
+        const indexEval = t.recurse(indexNode);
         const index = this.toNumber(indexEval);
         state = this.otherStates[index];
       }
-      const value = this.evaluate(expression);
+      const value = t.recurse(expression);
       if (state != null) {
         if (
           Weight_is(value) ||
