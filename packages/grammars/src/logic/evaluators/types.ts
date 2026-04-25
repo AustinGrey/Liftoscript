@@ -7,7 +7,7 @@ export type LogicResultSingular = Quantity | boolean | undefined;
 export type LogicResult = LogicResultSingular | LogicResultSingular[];
 export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
-  tools: SourceTools & EvaluateTools,
+  tools: EvaluateTools,
 ) => LogicResult;
 /**
  * Tools related to the original source code. This keeps the evaluator from needing to know about the source code
@@ -28,7 +28,7 @@ export type SourceTools = {
   error: (message: string, node: SyntaxNode) => never;
 };
 
-export type EvaluateTools = {
+export type EvaluateTools = SourceTools & {
   /**
    * Continues evaluation into a node, using the same tools as the existing context
    */
