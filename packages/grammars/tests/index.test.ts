@@ -4,9 +4,10 @@ import {
   type IProgramState,
   LiftoscriptEvaluator,
 } from "@/evaluators/logic-evaluator";
-import { type LogicResult, run } from "@/evaluators/logic.ts";
+import { run } from "@/logic/evaluators";
 
 import { percentORM } from "@/models/weight.ts";
+import type { LogicResult } from "@/logic/evaluators/types.ts";
 
 function evalLogic(logic: string, state: IProgramState) {
   return new LiftoscriptEvaluator(logic, state).evaluate(

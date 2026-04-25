@@ -4,7 +4,8 @@ Values which represent weight. Like lbs, kg, etc.
 
 import { z } from "zod";
 import { is, isNumber } from "@/utils/types.ts";
-import type { Quantity } from "@/evaluators/logic.ts";
+
+import type { Quantity } from "@/logic/evaluators/types.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";

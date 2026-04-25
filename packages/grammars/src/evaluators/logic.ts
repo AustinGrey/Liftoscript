@@ -6,22 +6,15 @@ import {
 } from "@/evaluators/logic-evaluator.ts";
 import { pad } from "@/utils/collection.ts";
 import * as Weight from "@/models/weight.ts";
-import { type IDynamicWeight, type IWeight, TUnit } from "@/models/weight.ts";
-import {
-  isLogicNodeName,
-  isLogicNodeOfType,
-  type LogicNodes,
-  type NodeNames_Logic,
-  type TypedLogicNode,
-} from "@/parsers/guards.ts";
+import { type IWeight, TUnit } from "@/models/weight.ts";
+import { isLogicNodeOfType, type LogicNodes } from "@/parsers/guards.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
-import type { SourceTools } from "@/logic/evaluators/types.ts";
-
-export type Quantity = number | IWeight | IDynamicWeight;
-
-export type LogicResultSingular = Quantity | boolean | undefined;
-
-export type LogicResult = LogicResultSingular | LogicResultSingular[];
+import type {
+  LogicResult,
+  LogicResultSingular,
+  SourceTools,
+} from "@/logic/evaluators/types.ts";
+import { getChild, queryChild, queryChildren } from "@/utils/grammars.ts";
 
 /**
  * Runs a script to return it's value
@@ -208,86 +201,6 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
     default:
       throw new Error(`Unknown node type ${expr.type.name}`);
   }
-}
-
-/**
- * Options when querying for children of a syntax node
- */
-type QueryOptions = Partial<{
-  /**
-   * If provided, throws an error if the node has fewer than this many children of the given type
-   */
-  atLeast?: number;
-  /**
-   * If provided, skips all children not of this type
-   */
-  ofType: NodeName;
-  /**
-   * If true, includes skipped nodes in the result. Otherwise they are skipped.
-   * Defaults to false.
-   */
-  includeSkipped?: boolean;
-}>;
-
-/**
- * @yields all children of a syntax node, optionally restricting by type, and potentially returning nothing
- * @param node The node to get the children of
- * @param options
- * @param options.atLeast - If provided, throws an error if the node has fewer than this many children
- * @param options.ofType - If provided, only yields children of this type, and atLeast ensures that there are at least that number of children of this type
- */
-function* queryChildren(
-  node: SyntaxNode,
-  { atLeast, ofType, includeSkipped }: QueryOptions = {},
-): Generator<SyntaxNode> {
-  const cur = node.cursor();
-  let count = 0;
-  if (!cur.firstChild()) {
-    if (atLeast !== undefined && atLeast !== 0) {
-      throw new SyntaxError(
-        `Expected at least${atLeast} children${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
-      );
-    }
-    return;
-  }
-  do {
-    if (ofType && cur.node.type.name !== ofType) {
-      continue;
-    }
-    if (cur.node.type.isSkipped && !includeSkipped) {
-      continue;
-    }
-    yield cur.node;
-    count++;
-  } while (cur.nextSibling());
-  if (atLeast !== undefined && count < atLeast) {
-    throw new SyntaxError(
-      `Expected at least ${atLeast} children${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
-    );
-  }
-}
-
-/**
- * Gets child, or throws an error if there are no children
- * @param node The node to get the first matching child of
- * @param options Additional options to pass along to queryChildren
- */
-function getChild(node: SyntaxNode, options: QueryOptions = {}): SyntaxNode {
-  const [result] = queryChildren(node, { ...options, atLeast: 1 });
-  return result;
-}
-
-/**
- * Gets child, or returns undefined if there are no children
- * @param node The node to get the first matching child of
- * @param options Additional options to pass along to queryChildren
- */
-function queryChild(
-  node: SyntaxNode,
-  options: QueryOptions = {},
-): SyntaxNode | undefined {
-  const [result] = queryChildren(node, options);
-  return result;
 }
 
 function getWeight(

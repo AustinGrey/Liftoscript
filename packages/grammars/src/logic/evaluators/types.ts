@@ -1,10 +1,13 @@
 import type { SyntaxNode } from "@lezer/common";
-import type { LogicResult } from "@/evaluators/logic.ts";
 import type { NodeNames_Logic, TypedLogicNode } from "@/parsers/guards.ts";
+import type { IDynamicWeight, IWeight } from "@/models/weight.ts";
 
+export type Quantity = number | IWeight | IDynamicWeight;
+export type LogicResultSingular = Quantity | boolean | undefined;
+export type LogicResult = LogicResultSingular | LogicResultSingular[];
 export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
-  tools: SourceTools,
+  tools: SourceTools & EvaluateTools,
 ) => LogicResult;
 /**
  * Tools related to the original source code. This keeps the evaluator from needing to know about the source code
@@ -23,4 +26,11 @@ export type SourceTools = {
    * @param node The node to throw the error for
    */
   error: (message: string, node: SyntaxNode) => never;
+};
+
+export type EvaluateTools = {
+  /**
+   * Continues evaluation into a node, using the same tools as the existing context
+   */
+  recurse: (node: SyntaxNode) => LogicResult;
 };
