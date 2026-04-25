@@ -1,40 +1,6 @@
-import type * as logicTerms from "./logic.terms";
+import * as logicTerms from "./logic.terms";
 import type * as planTerms from "./workout-plan.terms";
 import type { SyntaxNode } from "@lezer/common";
-import {
-  AndOr,
-  AssignmentExpression,
-  BinaryExpression,
-  BlockExpression,
-  BuiltinFunctionExpression,
-  Cmp,
-  ForExpression,
-  ForInExpression,
-  IfExpression,
-  IncAssignment,
-  IncAssignmentExpression,
-  Keyword,
-  LineComment,
-  Not,
-  Number,
-  NumberExpression,
-  ParenthesisExpression,
-  Percentage,
-  Plus,
-  Program,
-  StateKeyword,
-  StateVariable,
-  StateVariableIndex,
-  Ternary,
-  Times,
-  UnaryExpression,
-  Unit,
-  Variable,
-  VariableExpression,
-  VariableIndex,
-  WeightExpression,
-  Wildcard,
-} from "./logic.terms";
 
 /**
  * Swaps keys for values in a record
@@ -48,12 +14,12 @@ type IdMap_Plan = typeof planTerms;
 type NameMap_Logic = Swap<IdMap_Logic>;
 type NameMap_Plan = Swap<IdMap_Plan>;
 
-type NodeNames_Logic = keyof IdMap_Logic;
+export type NodeNames_Logic = keyof IdMap_Logic;
 type NodeNames_Plan = keyof IdMap_Plan;
 type NodeIds_Logic = IdMap_Logic[NodeNames_Logic];
 type NodeIds_Plan = IdMap_Plan[NodeNames_Plan];
 
-type TypedLogicNode<T extends NodeNames_Logic> = SyntaxNode & {
+export type TypedLogicNode<T extends NodeNames_Logic> = SyntaxNode & {
   name: T;
   type: {
     name: T;
@@ -103,9 +69,13 @@ export namespace LogicNodes {
  * @param name The Syntax kind to guard to
  * @param node The node to guard
  */
-export function isLogicNode<T extends NodeNames_Logic>(
+export function isLogicNodeOfType<T extends NodeNames_Logic>(
   name: T,
   node: SyntaxNode,
 ): node is TypedLogicNode<T> {
   return node.type.name === name;
+}
+
+export function isLogicNodeName(name: string): name is NodeNames_Logic {
+  return name in logicTerms;
 }

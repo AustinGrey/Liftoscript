@@ -7,32 +7,21 @@ import {
 import { pad } from "@/utils/collection.ts";
 import * as Weight from "@/models/weight.ts";
 import { type IDynamicWeight, type IWeight, TUnit } from "@/models/weight.ts";
-import { isLogicNode, type LogicNodes } from "@/parsers/guards.ts";
+import {
+  isLogicNodeName,
+  isLogicNodeOfType,
+  type LogicNodes,
+  type NodeNames_Logic,
+  type TypedLogicNode,
+} from "@/parsers/guards.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
+import type { SourceTools } from "@/logic/evaluators/types.ts";
 
 export type Quantity = number | IWeight | IDynamicWeight;
 
 export type LogicResultSingular = Quantity | boolean | undefined;
 
 export type LogicResult = LogicResultSingular | LogicResultSingular[];
-/**
- * Tools related to the original source code. This keeps the evaluator from needing to know about the source code
- */
-type SourceTools = {
-  getText: <TNode extends SyntaxNode | undefined>(
-    node: TNode,
-  ) => TNode extends undefined ? undefined : string;
-  /**
-   * @returns The [line, offset] of the node in the source code
-   */
-  locate: (node: SyntaxNode) => [number, number];
-  /**
-   * Throws an error related to a node
-   * @param message The message to share
-   * @param node The node to throw the error for
-   */
-  error: (message: string, node: SyntaxNode) => never;
-};
 
 /**
  * Runs a script to return it's value
@@ -200,7 +189,7 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
       }
     }
     case NodeName.WeightExpression: {
-      if (isLogicNode("WeightExpression", expr))
+      if (isLogicNodeOfType("WeightExpression", expr))
         return getWeight(expr, tools) ?? Weight.build(0, "kg");
     }
 

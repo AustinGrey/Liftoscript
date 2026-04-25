@@ -19,7 +19,7 @@ describe.each<[string, IProgramState, LogicResult]>([
   [`1`, {}, 1],
   [`0`, {}, 0],
   [`-1`, {}, -1],
-  // Percentages
+  // Percentages of one rep max
   ["0%", {}, percentORM(0)],
   ["50%", {}, percentORM(50)],
   ["100%", {}, percentORM(100)],
