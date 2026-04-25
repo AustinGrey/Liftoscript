@@ -43,6 +43,7 @@ import {
   TUnit,
   TWeight,
 } from "@/models/weight.ts";
+import { type IProgramState, TProgramState } from "@/logic/evaluators/types.ts";
 // import { ExerciseImageUtils_exists } from "./exerciseImage";
 // import { IDispatch } from "../ducks/types";
 // import { Program_changeExerciseName } from "./program";
@@ -297,11 +298,6 @@ export const TPlate = z.object({
 });
 export type IPlate = z.infer<typeof TPlate>;
 
-export const TProgramState = z.record(
-  z.string(),
-  z.union([z.number(), TWeight, TDynamicWeight]),
-);
-export type IProgramState = z.infer<typeof TProgramState>;
 export type IProgramMode = "planner" | "update";
 
 export const TSet = z

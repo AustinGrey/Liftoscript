@@ -4,6 +4,7 @@ import {
   type TypedLogicNode,
 } from "@/parsers/guards.ts";
 import type {
+  IProgramState,
   LogicHandler,
   LogicResult,
   SourceTools,
@@ -61,6 +62,7 @@ function handleLogic(node: SyntaxNode, tools: SourceTools): LogicResult {
   if (!handler) {
     return tools.error(`No handler for node type: ${node.type}`, node);
   }
+  const state: IProgramState = {};
   return handler(node as TypedLogicNode<NodeNames_Logic>, {
     ...tools,
     recurse: (node) => handleLogic(node, tools),

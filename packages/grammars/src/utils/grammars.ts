@@ -7,7 +7,7 @@ type QueryOptions<TTypes extends string> = Partial<{
   /**
    * If provided, throws an error if the node has fewer than this many children of the given type
    */
-  atLeast?: number;
+  atLeast: number;
   /**
    * If provided, skips all children not of this type
    */
@@ -16,7 +16,7 @@ type QueryOptions<TTypes extends string> = Partial<{
    * If true, includes skipped nodes in the result. Otherwise they are skipped.
    * Defaults to false.
    */
-  includeSkipped?: boolean;
+  includeSkipped: boolean;
 }>;
 
 /**
@@ -68,6 +68,15 @@ export function getChild<TTypes extends string>(
 ): SyntaxNode {
   const [result] = queryChildren(node, { ...options, atLeast: 1 });
   return result;
+}
+
+/**
+ * Gets the first descendant of a node that matches the given type.
+ * @param node The node to get the first matching descendant of
+ * @param options
+ */
+export function getDescendant<TTypes extends string>(node: SyntaxNode, options: QueryOptions<TTypes> = {}){
+
 }
 
 /**

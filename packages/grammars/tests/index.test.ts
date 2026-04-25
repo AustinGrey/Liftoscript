@@ -1,13 +1,10 @@
 import { expect, test, describe } from "vite-plus/test";
 import { parser } from "@/parsers/logic";
-import {
-  type IProgramState,
-  LiftoscriptEvaluator,
-} from "@/evaluators/logic-evaluator";
+import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
 
 import { percentORM } from "@/models/weight.ts";
-import type { LogicResult } from "@/logic/evaluators/types.ts";
+import type { IProgramState, LogicResult } from "@/logic/evaluators/types.ts";
 
 function evalLogic(logic: string, state: IProgramState) {
   return new LiftoscriptEvaluator(logic, state).evaluate(
