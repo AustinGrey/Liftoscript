@@ -5,7 +5,10 @@
 // ["4", "5", "6"]
 // ["7", "8", "9"]
 // ["10"]
-export function CollectionUtils_inGroupsOf<T>(length: number, collection: T[]): T[][] {
+export function CollectionUtils_inGroupsOf<T>(
+  length: number,
+  collection: T[],
+): T[][] {
   if (collection.length > 0) {
     const result: T[][] = [[]];
     collection.forEach((item) => {
@@ -23,7 +26,10 @@ export function CollectionUtils_inGroupsOf<T>(length: number, collection: T[]): 
   }
 }
 
-export function CollectionUtils_splitIntoNGroups<T>(coll: T[], numberOfGroups: number): T[][] {
+export function CollectionUtils_splitIntoNGroups<T>(
+  coll: T[],
+  numberOfGroups: number,
+): T[][] {
   const result: T[][] = [];
   for (let i = 0; i < numberOfGroups; i += 1) {
     result.push([]);
@@ -42,9 +48,12 @@ export function CollectionUtils_splitIntoNGroups<T>(coll: T[], numberOfGroups: n
 export function CollectionUtils_inGroupsOfFilled<T>(
   length: number,
   collection: T[],
-  shouldFill?: boolean
+  shouldFill?: boolean,
 ): (T | undefined)[][] {
-  const result = CollectionUtils_inGroupsOf(length, collection) as (T | undefined)[][];
+  const result = CollectionUtils_inGroupsOf(length, collection) as (
+    | T
+    | undefined
+  )[][];
   if (result.length > 0) {
     const lastColl = result[result.length - 1];
     if (lastColl != null) {
@@ -56,7 +65,10 @@ export function CollectionUtils_inGroupsOfFilled<T>(
   return result;
 }
 
-export function CollectionUtils_groupBy<T>(items: T[], cond: (last: T, item: T) => boolean): T[][] {
+export function CollectionUtils_groupBy<T>(
+  items: T[],
+  cond: (last: T, item: T) => boolean,
+): T[][] {
   return items.reduce<T[][]>(
     (memo, set) => {
       let lastGroup = memo[memo.length - 1];
@@ -68,7 +80,7 @@ export function CollectionUtils_groupBy<T>(items: T[], cond: (last: T, item: T) 
       lastGroup.push(set);
       return memo;
     },
-    [[]]
+    [[]],
   );
 }
 
@@ -80,7 +92,11 @@ export function CollectionUtils_repeat<T>(el: T, length: number): T[] {
   return arr;
 }
 
-export function CollectionUtils_concatBy<T>(from: T[], to: T[], condition: (el: T) => string): T[] {
+export function CollectionUtils_concatBy<T>(
+  from: T[],
+  to: T[],
+  condition: (el: T) => string,
+): T[] {
   const map = [...from, ...to].reduce<Record<string, T>>((memo, item) => {
     memo[condition(item)] = item;
     return memo;
@@ -88,7 +104,10 @@ export function CollectionUtils_concatBy<T>(from: T[], to: T[], condition: (el: 
   return Object.keys(map).map((key) => map[key]);
 }
 
-export function CollectionUtils_compatBy<T>(arr: T[], condition: (el: T) => string): T[] {
+export function CollectionUtils_compatBy<T>(
+  arr: T[],
+  condition: (el: T) => string,
+): T[] {
   const map = arr.reduce<Record<string, T>>((memo, item) => {
     memo[condition(item)] = item;
     return memo;
@@ -113,7 +132,10 @@ export function CollectionUtils_groupByKey<
   }, {});
 }
 
-export function CollectionUtils_groupByExpr<T>(arr: T[], expr: (item: T) => string): Partial<Record<string, T[]>> {
+export function CollectionUtils_groupByExpr<T>(
+  arr: T[],
+  expr: (item: T) => string,
+): Partial<Record<string, T[]>> {
   return arr.reduce<Partial<Record<string, T[]>>>((memo, item) => {
     const value = expr(item);
     memo[value] = memo[value] || [];
@@ -134,7 +156,10 @@ export function CollectionUtils_groupByKeyUniq<
   }, {});
 }
 
-export function CollectionUtils_groupByExprUniq<T>(arr: T[], expr: (item: T) => string): Partial<Record<string, T>> {
+export function CollectionUtils_groupByExprUniq<T>(
+  arr: T[],
+  expr: (item: T) => string,
+): Partial<Record<string, T>> {
   return arr.reduce<Partial<Record<string, T>>>((memo, item) => {
     const value = expr(item);
     memo[value] = item;
@@ -142,7 +167,10 @@ export function CollectionUtils_groupByExprUniq<T>(arr: T[], expr: (item: T) => 
   }, {});
 }
 
-export function CollectionUtils_collectToSet<T, K extends keyof T>(arr: T[], key: K): Set<T[K]> {
+export function CollectionUtils_collectToSet<T, K extends keyof T>(
+  arr: T[],
+  key: K,
+): Set<T[K]> {
   const set = new Set<T[K]>();
   for (const el of arr) {
     set.add(el[key]);
@@ -153,7 +181,7 @@ export function CollectionUtils_collectToSet<T, K extends keyof T>(arr: T[], key
 export function CollectionUtils_collectToSetTransform<T, K extends keyof T, U>(
   arr: T[],
   key: K,
-  transformer: (val: T[K]) => U
+  transformer: (val: T[K]) => U,
 ): Set<U> {
   const set = new Set<U>();
   for (const el of arr) {
@@ -166,20 +194,31 @@ export function CollectionUtils_flat<T>(from: T[][]): T[] {
   return from.reduce((acc, val) => acc.concat(val), []);
 }
 
-export function CollectionUtils_sort<T>(arr: T[], compareFn?: (a: T, b: T) => number): T[] {
+export function CollectionUtils_sort<T>(
+  arr: T[],
+  compareFn?: (a: T, b: T) => number,
+): T[] {
   const arrCopy = [...arr];
   arrCopy.sort(compareFn);
   return arrCopy;
 }
 
-export function CollectionUtils_reorder<T>(arr: T[], start: number, end: number): T[] {
+export function CollectionUtils_reorder<T>(
+  arr: T[],
+  start: number,
+  end: number,
+): T[] {
   const newDays = [...arr];
   const [daysToMove] = newDays.splice(start, 1);
   newDays.splice(end, 0, daysToMove);
   return newDays;
 }
 
-export function CollectionUtils_sortInOrder<T extends {}, K extends keyof T>(arr: T[], key: K, order: T[K][]): T[] {
+export function CollectionUtils_sortInOrder<T extends {}, K extends keyof T>(
+  arr: T[],
+  key: K,
+  order: T[K][],
+): T[] {
   const arrCopy = [...arr];
   arrCopy.sort((a, b) => {
     const aIndex = order.indexOf(a[key]);
@@ -198,7 +237,7 @@ export function CollectionUtils_sortInOrder<T extends {}, K extends keyof T>(arr
 export function CollectionUtils_sortByMultiple<T extends {}, K extends keyof T>(
   arr: T[],
   keys: K[],
-  isReverse?: boolean
+  isReverse?: boolean,
 ): T[] {
   const arrCopy = [...arr];
   arrCopy.sort((a, b) => {
@@ -211,7 +250,9 @@ export function CollectionUtils_sortByMultiple<T extends {}, K extends keyof T>(
         if (typeof aVal === "number" && typeof bVal === "number") {
           return isReverse ? bVal - aVal : aVal - bVal;
         } else if (typeof aVal === "string" && typeof bVal === "string") {
-          return isReverse ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+          return isReverse
+            ? bVal.localeCompare(aVal)
+            : aVal.localeCompare(bVal);
         } else if (typeof aVal === "boolean" && typeof bVal === "boolean") {
           return isReverse ? (bVal ? -1 : 1) : aVal ? -1 : 1;
         } else if (aVal == null || bVal == null) {
@@ -228,7 +269,7 @@ export function CollectionUtils_sortByMultiple<T extends {}, K extends keyof T>(
 export function CollectionUtils_sortBy<T extends {}, K extends keyof T>(
   arr: T[],
   key: K,
-  isReverse?: boolean
+  isReverse?: boolean,
 ): T[K] extends number ? T[] : never {
   const arrCopy = [...arr];
   arrCopy.sort((a, b) => {
@@ -241,7 +282,11 @@ export function CollectionUtils_sortBy<T extends {}, K extends keyof T>(
   return arrCopy as any;
 }
 
-export function CollectionUtils_sortByExpr<T extends {}>(arr: T[], fn: (item: T) => number, isReverse?: boolean): T[] {
+export function CollectionUtils_sortByExpr<T extends {}>(
+  arr: T[],
+  fn: (item: T) => number,
+  isReverse?: boolean,
+): T[] {
   const arrCopy = [...arr];
   arrCopy.sort((a, b) => {
     const aVal = fn(a) as any;
@@ -254,10 +299,16 @@ export function CollectionUtils_sortByExpr<T extends {}>(arr: T[], fn: (item: T)
 }
 
 export function CollectionUtils_diff<T>(from: T[], to: T[]): T[] {
-  return from.filter((x) => !to.includes(x)).concat(to.filter((x) => !from.includes(x)));
+  return from
+    .filter((x) => !to.includes(x))
+    .concat(to.filter((x) => !from.includes(x)));
 }
 
-export function CollectionUtils_diffBy<T extends {}>(from: T[], to: T[], key: keyof T): T[] {
+export function CollectionUtils_diffBy<T extends {}>(
+  from: T[],
+  to: T[],
+  key: keyof T,
+): T[] {
   return from
     .filter((x) => !to.some((y) => x[key] === y[key]))
     .concat(to.filter((x) => !from.some((y) => x[key] === y[key])));
@@ -277,25 +328,27 @@ export function CollectionUtils_removeAt<T>(from: T[], index: number): T[] {
   return result;
 }
 
-export function CollectionUtils_setAt<T>(from: T[], index: number, item: T): T[] {
+export function CollectionUtils_setAt<T>(
+  from: T[],
+  index: number,
+  item: T,
+): T[] {
   return from.map((e, i) => (i === index ? item : e));
 }
 
-export function CollectionUtils_setBy<T extends {}, K extends keyof T, V extends T[K]>(
-  from: T[],
-  key: K,
-  value: V,
-  newItem: T
-): T[] {
+export function CollectionUtils_setBy<
+  T extends {},
+  K extends keyof T,
+  V extends T[K],
+>(from: T[], key: K, value: V, newItem: T): T[] {
   return from.map((e) => (e[key] === value ? newItem : e));
 }
 
-export function CollectionUtils_setOrAddBy<T extends {}, K extends keyof T, V extends T[K]>(
-  from: T[],
-  key: K,
-  value: V,
-  newItem: T
-): T[] {
+export function CollectionUtils_setOrAddBy<
+  T extends {},
+  K extends keyof T,
+  V extends T[K],
+>(from: T[], key: K, value: V, newItem: T): T[] {
   const hasKeyValue = from.some((e) => e[key] === value);
   if (hasKeyValue) {
     return CollectionUtils_setBy(from, key, value, newItem);
@@ -304,11 +357,11 @@ export function CollectionUtils_setOrAddBy<T extends {}, K extends keyof T, V ex
   }
 }
 
-export function CollectionUtils_removeBy<T extends {}, K extends keyof T, V extends T[K]>(
-  from: T[],
-  key: K,
-  value: V
-): T[] {
+export function CollectionUtils_removeBy<
+  T extends {},
+  K extends keyof T,
+  V extends T[K],
+>(from: T[], key: K, value: V): T[] {
   return from.filter((t) => t[key] !== value);
 }
 
@@ -316,7 +369,10 @@ export function CollectionUtils_nonnull<T>(from: (T | undefined)[]): T[] {
   return from.filter((t) => t != null) as T[];
 }
 
-export function CollectionUtils_uniqBy<T extends {}>(from: T[], key: keyof T): T[] {
+export function CollectionUtils_uniqBy<T extends {}>(
+  from: T[],
+  key: keyof T,
+): T[] {
   const set = new Set();
   const result = [];
   for (const el of from) {
@@ -329,7 +385,10 @@ export function CollectionUtils_uniqBy<T extends {}>(from: T[], key: keyof T): T
   return result;
 }
 
-export function CollectionUtils_uniqByExpr<T extends {}, V>(from: T[], fn: (item: T) => V): T[] {
+export function CollectionUtils_uniqByExpr<T extends {}, V>(
+  from: T[],
+  fn: (item: T) => V,
+): T[] {
   const set = new Set();
   const result = [];
   for (const el of from) {
@@ -342,7 +401,11 @@ export function CollectionUtils_uniqByExpr<T extends {}, V>(from: T[], fn: (item
   return result;
 }
 
-export function CollectionUtils_findBy<T extends {}, K extends keyof T>(from: T[], key: K, value: T[K]): T | undefined {
+export function CollectionUtils_findBy<T extends {}, K extends keyof T>(
+  from: T[],
+  key: K,
+  value: T[K],
+): T | undefined {
   let result: T | undefined = undefined;
   for (const el of from) {
     if (el[key] === value) {
@@ -353,7 +416,10 @@ export function CollectionUtils_findBy<T extends {}, K extends keyof T>(from: T[
   return result;
 }
 
-export function CollectionUtils_findIndexReverse<T>(from: T[], cb: (item: T) => boolean): number {
+export function CollectionUtils_findIndexReverse<T>(
+  from: T[],
+  cb: (item: T) => boolean,
+): number {
   for (let i = from.length - 1; i >= 0; i -= 1) {
     if (cb(from[i])) {
       return i;
@@ -366,7 +432,10 @@ export function CollectionUtils_merge<T>(from: T[], to: T[]): T[] {
   return Array.from(new Set([...from, ...to]));
 }
 
-export function CollectionUtils_compressArray(arr: number[], threshold: number): string[] {
+export function CollectionUtils_compressArray(
+  arr: number[],
+  threshold: number,
+): string[] {
   const result: string[] = [];
   let count = 1;
 
@@ -392,7 +461,7 @@ export function CollectionUtils_compressArray(arr: number[], threshold: number):
 export function CollectionUtils_areSortedInSameOrder<T, U>(
   coll1: T[],
   coll2: U[],
-  areEqual: (a: T, b: U) => boolean
+  areEqual: (a: T, b: U) => boolean,
 ): boolean {
   if (coll1.length !== coll2.length) {
     return false;
@@ -403,4 +472,17 @@ export function CollectionUtils_areSortedInSameOrder<T, U>(
     }
   }
   return true;
+}
+
+/**
+ * Pads an array with a given value to a specified length.
+ * @param arr The array to pad.
+ * @param padWith The value to pad with.
+ * @param targetLength The length to pad the array to.
+ * @returns The padded array.
+ */
+export function pad<T>(arr: T[], padWith: T, targetLength: number): T[] {
+  return arr.concat(
+    Array(Math.max(0, targetLength - arr.length)).fill(padWith),
+  );
 }
