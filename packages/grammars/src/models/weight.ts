@@ -34,6 +34,7 @@ export const gt: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a > b);
 export const lt: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a < b);
 export const gte: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a >= b);
 export const lte: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a <= b);
+export const eq: UnbiasedFunc = (l, r) => comparison(l, r, (a, b) => a === b);
 
 export function operation(
   weight: IWeight,

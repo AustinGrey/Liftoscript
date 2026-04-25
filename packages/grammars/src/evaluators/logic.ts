@@ -1,12 +1,13 @@
 import { parser } from "@/parsers/logic.ts";
 import type { SyntaxNode } from "@lezer/common";
 import {
-  type IPercentage,
   LiftoscriptSyntaxError,
   NodeName,
 } from "@/evaluators/logic-evaluator.ts";
 import { pad } from "@/utils/collection.ts";
-import type { IWeight } from "@/models/weight.ts";
+import { type IWeight } from "@/models/weight.ts";
+import * as Weight from "@/models/weight.ts";
+import type { IPercentage } from "@/models/value.ts";
 
 type LogicResultSingular = number | boolean | IWeight | IPercentage | undefined;
 
@@ -142,17 +143,17 @@ function evaluate(expr: SyntaxNode, tools: SourceTools): LogicResult {
           ): boolean {
             switch (operator) {
               case ">":
-                return Weight_gt(l, r);
+                return Weight.gt(l, r);
               case "<":
-                return Weight_lt(l, r);
+                return Weight.lt(l, r);
               case ">=":
-                return Weight_gte(l, r);
+                return Weight.gte(l, r);
               case "<=":
-                return Weight_lte(l, r);
+                return Weight.lte(l, r);
               case "==":
-                return Weight_eq(l, r);
+                return Weight.eq(l, r);
               case "!=":
-                return !Weight_eq(l, r);
+                return !Weight.eq(l, r);
             }
           }
           if (Array.isArray(left)) {
