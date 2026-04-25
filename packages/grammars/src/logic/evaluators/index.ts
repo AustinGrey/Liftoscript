@@ -94,8 +94,11 @@ function handleLogic(
       state[key] = value;
     },
     getGlobal: (key) => globalData[key],
-    updateGlobal: (key, value) => {
-      globalData[key] = value;
+    updateGlobal: (key, valueOrSetter) => {
+      globalData[key] =
+        typeof valueOrSetter === "function"
+          ? valueOrSetter(globalData[key])
+          : valueOrSetter;
     },
     requestUpdate: (update) => {
       updates.push(update);

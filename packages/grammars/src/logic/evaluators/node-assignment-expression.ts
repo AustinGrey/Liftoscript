@@ -6,10 +6,10 @@ import {
 import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
-  Weight_build,
   Weight_buildAny,
   Weight_convertToWeight,
 } from "@/evaluators/logic-evaluator.ts";
+import * as Weight from "@/models/weight";
 import { isLogicNodeOfType } from "@/parsers/guards.ts";
 import {
   type IAssignmentOp,
@@ -48,7 +48,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
       value = value ?? 0;
       value = value === true ? 1 : value === false ? 0 : value;
       // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
-      // I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
+      //     I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
       // value = Weight_convertToWeight(t.getGlobal("rm1"), value, this.unit);
       value = Weight_convertToWeight(t.getGlobal("rm1"), value, "kg");
       t.updateGlobal("rm1", value);
@@ -278,6 +278,14 @@ function normalizeTarget(
   return newTarget;
 }
 
+/**
+ * Many pieces of data in the globals are arrays that have the same length, the number of sets.
+ * So if you change the number of sets, you have to change the length of all these arrays too
+ * @TODO this hints at a problem with how this data is stored. If some data is a property of one of the sets, then we should probably have a "set" object, and an array of those
+ * @param expression The expression that will be evaluated to decide how many sets there will be
+ * @param op The operation used to evaluate the expression
+ * @param tools The evaluation tools in the current context
+ */
 function changeNumberOfSets(
   expression: SyntaxNode,
   op: IAssignmentOp,
@@ -290,44 +298,30 @@ function changeNumberOfSets(
     op,
   );
 
-  this.bindings.weights = tools.getGlobal("weights").slice(0, evaluatedValue);
-  this.bindings.originalWeights = tools
-    .getGlobal("originalWeights")
-    .slice(0, evaluatedValue);
-  this.bindings.reps = tools.getGlobal("reps").slice(0, evaluatedValue);
-  this.bindings.minReps = tools.getGlobal("minReps").slice(0, evaluatedValue);
-  this.bindings.RPE = tools.getGlobal("RPE").slice(0, evaluatedValue);
-  this.bindings.w = tools.getGlobal("weights").slice(0, evaluatedValue);
-  this.bindings.r = tools.getGlobal("reps").slice(0, evaluatedValue);
-  this.bindings.mr = tools.getGlobal("minReps").slice(0, evaluatedValue);
-  this.bindings.timers = tools.getGlobal("timers").slice(0, evaluatedValue);
-  this.bindings.amraps = tools.getGlobal("amraps").slice(0, evaluatedValue);
-  this.bindings.logrpes = tools.getGlobal("logrpes").slice(0, evaluatedValue);
-  this.bindings.askweights = tools
-    .getGlobal("askweights")
-    .slice(0, evaluatedValue);
-  this.bindings.completedReps = tools
-    .getGlobal("completedReps")
-    .slice(0, evaluatedValue);
-  this.bindings.completedRepsLeft = tools
-    .getGlobal("completedRepsLeft")
-    .slice(0, evaluatedValue);
-  this.bindings.cr = tools.getGlobal("cr").slice(0, evaluatedValue);
-  this.bindings.cw = tools.getGlobal("cw").slice(0, evaluatedValue);
-  this.bindings.completedWeights = tools
-    .getGlobal("completedWeights")
-    .slice(0, evaluatedValue);
-  this.bindings.completedRPE = tools
-    .getGlobal("completedRPE")
-    .slice(0, evaluatedValue);
-  this.bindings.isCompleted = tools
-    .getGlobal("isCompleted")
-    .slice(0, evaluatedValue);
+  tools.updateGlobal("weights", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("originalWeights", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("reps", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("minReps", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("RPE", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("w", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("r", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("mr", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("timers", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("amraps", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("logrpes", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("askweights", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("completedReps", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("completedRepsLeft", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("cr", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("cw", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("completedWeights", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("completedRPE", (x) => x.slice(0, evaluatedValue));
+  tools.updateGlobal("isCompleted", (x) => x.slice(0, evaluatedValue));
 
   const ns = oldNumberOfSets - 1;
   for (let i = 0; i < evaluatedValue; i += 1) {
     if (i > ns) {
-      this.bindings.weights[i] = Weight_build(
+      this.bindings.weights[i] = Weight.build(
         tools.getGlobal("weights")[ns]?.value ?? 0,
         tools.getGlobal("weights")[ns]?.unit || "lb",
       );

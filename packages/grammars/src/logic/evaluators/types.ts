@@ -67,7 +67,12 @@ export type EvaluateTools = SourceTools & {
   ) => IScriptBindings[TKey];
   updateGlobal: <TKey extends keyof IScriptBindings>(
     key: TKey,
-    value: IScriptBindings[TKey],
+    value:
+      | IScriptBindings[TKey]
+      // A function that takes in the current value.
+      | ((
+          currentValue: Readonly<IScriptBindings[TKey]>,
+        ) => IScriptBindings[TKey]),
   ) => void;
   /**
    * @TODO what are these updates for? Why can't the thing being updated be updated at the time this is created instead?
