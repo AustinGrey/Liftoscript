@@ -1,4 +1,4 @@
-import { expect, it, test, describe } from "vite-plus/test";
+import { expect, test, describe } from "vite-plus/test";
 import { parser } from "@/parsers/logic";
 import {
   type IProgramState,
@@ -36,6 +36,30 @@ describe.each<[string, IProgramState, LogicResult]>([
   [`1 <= 0`, {}, false],
   [`1 == 0`, {}, false],
   [`1 != 0`, {}, true],
+  [`1kg > 0`, {}, true],
+  [`1kg < 0`, {}, false],
+  [`1kg >= 0`, {}, true],
+  [`1kg <= 0`, {}, false],
+  [`1kg == 0`, {}, false],
+  [`1kg != 0`, {}, true],
+  [`1lb > 0`, {}, true],
+  [`1lb < 0`, {}, false],
+  [`1lb >= 0`, {}, true],
+  [`1lb <= 0`, {}, false],
+  [`1lb == 0`, {}, false],
+  [`1lb != 0`, {}, true],
+  [`1 > 0kg`, {}, true],
+  [`1 < 0kg`, {}, false],
+  [`1 >= 0kg`, {}, true],
+  [`1 <= 0kg`, {}, false],
+  [`1 == 0kg`, {}, false],
+  [`1 != 0kg`, {}, true],
+  [`1 > 0lb`, {}, true],
+  [`1 < 0lb`, {}, false],
+  [`1 >= 0lb`, {}, true],
+  [`1 <= 0lb`, {}, false],
+  [`1 == 0lb`, {}, false],
+  [`1 != 0lb`, {}, true],
   // Ternary
   // [`true ? 1 : 0`, {}, -1],
   // [`state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`, { foo: 8 }, 5],
