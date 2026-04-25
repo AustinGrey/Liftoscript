@@ -2,11 +2,11 @@ import { parser } from "@/parsers/logic.ts";
 import type { SyntaxNode } from "@lezer/common";
 import {
   type IPercentage,
-  type IWeight,
   LiftoscriptSyntaxError,
   NodeName,
 } from "@/evaluators/logic-evaluator.ts";
 import { pad } from "@/utils/collection.ts";
+import type { IWeight } from "@/models/weight.ts";
 
 type LogicResultSingular = number | boolean | IWeight | IPercentage | undefined;
 

@@ -1,40 +1,42 @@
 import { type SyntaxNode } from "@lezer/common";
 import {
   CollectionUtils_compact,
-  CollectionUtils_sort,
   CollectionUtils_compressArray,
   CollectionUtils_concatBy,
   CollectionUtils_flat,
+  CollectionUtils_sort,
 } from "@/utils/collection";
 import {
   MathUtils_applyOp,
-  MathUtils_round,
   MathUtils_clamp,
+  MathUtils_round,
   MathUtils_roundFloat,
-  n,
-  MathUtils_roundTo005,
   MathUtils_roundTo000005,
+  MathUtils_roundTo005,
+  n,
 } from "@/utils/math";
 import { parser as LiftoscriptParser } from "@/parsers/logic";
 import { z as z } from "zod";
 import {
-  ObjectUtils_keys,
-  ObjectUtils_values,
+  ObjectUtils_clone,
+  ObjectUtils_combinedKeys,
   ObjectUtils_filter,
   ObjectUtils_findMaxValue,
-  ObjectUtils_combinedKeys,
-  ObjectUtils_clone,
+  ObjectUtils_keys,
+  ObjectUtils_values,
 } from "@/utils/object";
 import {
-  StringUtils_fuzzySearch,
-  StringUtils_dashcase,
-  StringUtils_uncamelCase,
   StringUtils_camelCase,
-  StringUtils_undashcase,
   StringUtils_capitalize,
+  StringUtils_dashcase,
+  StringUtils_fuzzySearch,
+  StringUtils_uncamelCase,
+  StringUtils_undashcase,
 } from "@/utils/string";
 import { SetUtils_areEqual } from "@/utils/setUtils";
 import { UidFactory_generateUid } from "@/utils/generator";
+import { type IPercentage, TPercentage } from "@/models/value";
+import { type IUnit, type IWeight, TUnit, TWeight } from "@/models/weight.ts";
 // import { ExerciseImageUtils_exists } from "./exerciseImage";
 // import { IDispatch } from "../ducks/types";
 // import { Program_changeExerciseName } from "./program";
@@ -47,17 +49,6 @@ export type IEquipment = z.infer<typeof TEquipment>;
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
-
-export const units = ["kg", "lb"] as const;
-
-export const TUnit = z.enum(units);
-export type IUnit = z.infer<typeof TUnit>;
-
-export const TWeight = z.object({
-  value: z.number(),
-  unit: TUnit,
-});
-export type IWeight = z.infer<typeof TWeight>;
 
 export const TSettingsTimers = z
   .object({
@@ -2349,17 +2340,6 @@ export class LiftoscriptEvaluator {
     }
   }
 }
-
-// import {
-//   Equipment_getUnitOrDefaultForExerciseType,
-//   Equipment_getEquipmentDataForExerciseType,
-//   Equipment_smallestPlate,
-// } from "./equipment";
-// import {
-//   Exercise_get,
-//   Exercise_onerm,
-//   Exercise_defaultRounding,
-// } from "./exercise";
 
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
