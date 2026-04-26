@@ -102,8 +102,9 @@ export type EvaluateTools = SourceTools & {
    * Updates the value of a state variable. If the state variable is not found, @todo what should it do?
    * @param key The key of the state variable
    * @param value The new value of the state variable
+   * @returns the new value, for convenience
    */
-  updateVar: (key: string, value: Quantity) => void;
+  updateVar: (key: string, value: Quantity) => Quantity;
 };
 
 /**

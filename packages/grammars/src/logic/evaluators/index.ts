@@ -177,7 +177,7 @@ export function run(
       return vars[key];
     },
     updateVar(key, value) {
-      vars[key] = value;
+      return (vars[key] = value);
     },
   };
 

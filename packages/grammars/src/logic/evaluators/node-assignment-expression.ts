@@ -98,12 +98,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   } else if (isLogicNodeOfType("Variable", variableNode)) {
     const varKey = t.getText(variableNode).replace("var.", "");
     const value = t.recurse(expression);
-    if (isQuantity(value)) {
-      this.vars[varKey] = value;
-    } else {
-      this.vars[varKey] = value ? 1 : 0;
-    }
-    return this.vars[varKey];
+    return t.updateVar(varKey, isQuantity(value) ? value : value ? 1 : 0);
   } else if (isLogicNodeOfType("StateVariable", variableNode)) {
     const indexNode = variableNode.getChild(NodeName.StateVariableIndex);
     const stateKeyNode = variableNode.getChild(NodeName.Keyword);
