@@ -83,7 +83,7 @@ export function run(
   logic: string,
   initialState: Readonly<IProgramState>,
   globalData: IScriptBindings,
-): LogicResult {
+): { result: LogicResult; finalState: IProgramState } {
   const state: IProgramState = { ...initialState };
   const updates: ILiftoscriptEvaluatorUpdate[] = [];
   // @TODO in original liftoscript, there seems to be multiple use cases for this -> either states by tag, or by exercise, or something else.... not sure how to hook this up, or how to test for it.
@@ -181,10 +181,13 @@ export function run(
     },
   };
 
-  return handleLogic(
-    parser.parse(logic).topNode,
-    tools,
-    initialState,
-    globalData,
-  );
+  return {
+    result: handleLogic(
+      parser.parse(logic).topNode,
+      tools,
+      initialState,
+      globalData,
+    ),
+    finalState: state,
+  };
 }

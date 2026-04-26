@@ -232,12 +232,17 @@ if (!(completedReps >= reps)) {
 // End Simple Exercise Deload script`,
     cases: [
       {
-        result: NaN,
+        result: 0,
         initialState: () => ({
           successes: 0,
           failures: 0,
           weight: Weight.build(150, "lb"),
         }),
+        finalState: {
+          successes: 1,
+          failures: 0,
+          weight: Weight.build(150, "lb"),
+        },
       },
     ],
   },
@@ -281,9 +286,10 @@ if (!(completedReps >= reps)) {
     "Result is $e when initial state like $initialState",
     ({ result, initialState, adjustEmptyGlobals, finalState }) => {
       test("old system", () => {
+        const state = initialState?.() ?? {};
         const output = new LiftoscriptEvaluator(
           script,
-          initialState?.() ?? {},
+          state,
           {},
           {
             ...emptyGlobalData(),
@@ -294,29 +300,32 @@ if (!(completedReps >= reps)) {
           "kg",
           "planner",
         ).evaluate(parser.parse(script).topNode);
-        expect(output, "Script should evaluate to the expected result").toEqual(
-          result,
-        );
+        expect
+          .soft(output, "Script should evaluate to the expected result")
+          .toEqual(result);
         if (finalState) {
-          expect(
-            finalState,
-            "State after evaluation completes should match",
-          ).toEqual(finalState);
+          // State in the old system is mutable, the object itself is modified
+          expect
+            .soft(state, "State after evaluation completes should match")
+            .toEqual(finalState);
         }
       });
       test("new system", () => {
-        const output = run(script, initialState?.() ?? {}, {
-          ...emptyGlobalData(),
-          ...adjustEmptyGlobals,
-        });
-        expect(output, "Script should evaluate to the expected result").toEqual(
-          result,
+        const { result: output, finalState: state } = run(
+          script,
+          initialState?.() ?? {},
+          {
+            ...emptyGlobalData(),
+            ...adjustEmptyGlobals,
+          },
         );
+        expect
+          .soft(output, "Script should evaluate to the expected result")
+          .toEqual(result);
         if (finalState) {
-          expect(
-            finalState,
-            "State after evaluation completes should match",
-          ).toEqual(finalState);
+          expect
+            .soft(state, "State after evaluation completes should match")
+            .toEqual(finalState);
         }
       });
     },
