@@ -53,10 +53,15 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
         : evaluatedValue;
       value = value ?? 0;
       value = value === true ? 1 : value === false ? 0 : value;
-      // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
-      //     I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
-      // value = Weight_convertToWeight(t.getGlobal("rm1"), value, this.unit);
-      value = Weight_convertToWeight(t.getGlobal("rm1"), value, "kg");
+      value = Weight_convertToWeight(
+        t.getGlobal("rm1"),
+        value,
+
+        // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
+        //     I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
+        // this.unit,
+        "kg",
+      );
       t.updateGlobal("rm1", value);
       return value;
     } else if (
@@ -107,25 +112,18 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
       return 0;
     }
     const stateKey = t.getText(stateKeyNode);
-    let state: IProgramState | undefined;
-    if (indexNode == null) {
-      if (stateKey in this.state) {
-        state = this.state;
-      } else {
-        return t.error(`There's no state variable '${stateKey}'`, variableNode);
-      }
-    } else {
-      const index = toNumberUnsafe(t.recurse(indexNode));
-      state = this.otherStates[index];
-    }
+
+    // There are two different state sources - the normal "state" and the "otherStates" collection of various states
+    // @TODO Why? What makes these two different from each other? Hypothesis - "state" is the state of the current exercise, while otherStates is the state of all the other exercises, indexed by set
+    // If there is no index node, we assume we are trying to update the current state, otherwise, we pull the state from the other states at that index.
     const value = t.recurse(expression);
-    if (state != null) {
-      if (isQuantity(value)) {
-        state[stateKey] = value;
-      } else {
-        state[stateKey] = value ? 1 : 0;
-      }
-    }
+    t.updateState(
+      stateKey,
+      // @TODO why would we be forcing this to be a number? Would it make more sense to bubble an error?
+      isQuantity(value) ? value : value ? 1 : 0,
+      n,
+      indexNode ? toNumberUnsafe(t.recurse(indexNode)) : undefined,
+    );
     return value;
   }
   return t.error("Cannot assign a value to something other than a variable", n);

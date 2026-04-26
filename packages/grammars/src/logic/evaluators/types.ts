@@ -47,15 +47,22 @@ export type EvaluateTools = SourceTools & {
    * Gets the value of a state variable. If the state variable is not found, it throws an error.
    * @param key The key of the state variable
    * @param relatedNode The node that caused this action
+   * @param index There are "other states". If an index is passed, this will get from the state dictionary at that index. If not passed, it will get from the current state. @todo when getting from other states, should an error be thrown if that state doesn't exist?
    */
-  getState: (key: string, relatedNode: SyntaxNode) => Quantity;
+  getState: (key: string, relatedNode: SyntaxNode, index?: number) => Quantity;
   /**
    * Updates the value of a state variable. If the state variable is not found, it throws an error.
    * @param key The key of the state variable
    * @param value The new value of the state variable
    * @param relatedNode The node that caused this action
+   * @param index There are "other states". If an index is passed, this will effect the state dictionary at that index. If not passed, it will impact the current state. When updating from other states, an error is not thrown if the state dictionary doesn't exist (the update is just ignored in that case) but an error IS thrown if the dictionary exists, but the state variable to update does not
    */
-  updateState: (key: string, value: Quantity, relatedNode: SyntaxNode) => void;
+  updateState: (
+    key: string,
+    value: Quantity,
+    relatedNode: SyntaxNode,
+    index?: number,
+  ) => void;
   /**
    * Updates the value of a state variable. If the state variable is not found, it creates a new one.
    * @param key The key of the state variable

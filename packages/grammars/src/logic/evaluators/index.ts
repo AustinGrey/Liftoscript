@@ -74,20 +74,47 @@ function handleLogic(
   }
   const state: IProgramState = { ...initialState };
   const updates: ILiftoscriptEvaluatorUpdate[] = [];
+  // @TODO in original liftoscript, there seems to be multiple use cases for this -> either states by tag, or by exercise, or something else.... not sure how to hook this up, or how to test for it.
+  const otherStates: Record<string | number, IProgramState> = {};
   return handler(node as TypedLogicNode<NodeNames_Logic>, {
     ...tools,
     recurse: (node) => handleLogic(node, tools, state, globalData),
-    getState: (key, relatedNode) => {
-      if (key in state) {
-        return state[key];
-      }
-      return tools.error(`There's no state variable '${key}'`, relatedNode);
-    },
-    updateState: (key, value, relatedNode) => {
-      if (key in state) {
-        state[key] = value;
-      } else {
+    getState: (key, relatedNode, index) => {
+      if (index === undefined) {
+        if (key in state) {
+          return state[key];
+        }
         return tools.error(`There's no state variable '${key}'`, relatedNode);
+      }
+
+      if (index in otherStates && key in otherStates[key]) {
+        return otherStates[index][key];
+      }
+      return tools.error(
+        `There's no state variable '${key}' in the state dictionary at index '${index}'`,
+        relatedNode,
+      );
+    },
+    updateState: (key, value, relatedNode, index) => {
+      if (index === undefined) {
+        if (key in state) {
+          state[key] = value;
+        } else {
+          return tools.error(`There's no state variable '${key}'`, relatedNode);
+        }
+      } else {
+        if (index in otherStates && key in otherStates[key]) {
+          if (key in otherStates[index]) {
+            otherStates[index][key] = value;
+          } else {
+            return tools.error(
+              `There's no state variable '${key}' in the state dictionary at index '${index}'`,
+              relatedNode,
+            );
+          }
+        } else {
+          // Silently ignore update, as per the spec
+        }
       }
     },
     upsertState: (key, value) => {
