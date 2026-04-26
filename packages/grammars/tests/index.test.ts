@@ -121,90 +121,91 @@ function emptyGlobalData(): IScriptBindings {
 }
 
 describe.each<{
-  s: string;
+  script: string;
   cases: Array<{
-    e: LogicResult;
+    result: LogicResult;
     initialState?: () => IProgramState;
+    finalState?: IProgramState;
     adjustEmptyGlobals?: Partial<IScriptBindings>;
   }>;
 }>([
   // Literal Number
-  { s: `1`, cases: [{ e: 1 }] },
-  { s: `0`, cases: [{ e: 0 }] },
-  { s: `-1`, cases: [{ e: -1 }] },
+  { script: `1`, cases: [{ result: 1 }] },
+  { script: `0`, cases: [{ result: 0 }] },
+  { script: `-1`, cases: [{ result: -1 }] },
   // Percentages of one rep max
-  { s: "0%", cases: [{ e: percentORM(0) }] },
-  { s: "50%", cases: [{ e: percentORM(50) }] },
-  { s: "100%", cases: [{ e: percentORM(100) }] },
-  { s: "101%", cases: [{ e: percentORM(101) }] },
+  { script: "0%", cases: [{ result: percentORM(0) }] },
+  { script: "50%", cases: [{ result: percentORM(50) }] },
+  { script: "100%", cases: [{ result: percentORM(100) }] },
+  { script: "101%", cases: [{ result: percentORM(101) }] },
   /* Bad Cases
     ["NaN%", percentORM(0)],
     ["-50%", percentORM(-50)],
     ["-101%", percentORM(-101)],
      */
   // Comparisons
-  { s: `1 > 0`, cases: [{ e: true }] },
-  { s: `1 < 0`, cases: [{ e: false }] },
-  { s: `1 >= 0`, cases: [{ e: true }] },
-  { s: `1 <= 0`, cases: [{ e: false }] },
-  { s: `1 == 0`, cases: [{ e: false }] },
-  { s: `1 != 0`, cases: [{ e: true }] },
-  { s: `1kg > 0`, cases: [{ e: true }] },
-  { s: `1kg < 0`, cases: [{ e: false }] },
-  { s: `1kg >= 0`, cases: [{ e: true }] },
-  { s: `1kg <= 0`, cases: [{ e: false }] },
-  { s: `1kg == 0`, cases: [{ e: false }] },
-  { s: `1kg != 0`, cases: [{ e: true }] },
-  { s: `1lb > 0`, cases: [{ e: true }] },
-  { s: `1lb < 0`, cases: [{ e: false }] },
-  { s: `1lb >= 0`, cases: [{ e: true }] },
-  { s: `1lb <= 0`, cases: [{ e: false }] },
-  { s: `1lb == 0`, cases: [{ e: false }] },
-  { s: `1lb != 0`, cases: [{ e: true }] },
-  { s: `1 > 0kg`, cases: [{ e: true }] },
-  { s: `1 < 0kg`, cases: [{ e: false }] },
-  { s: `1 >= 0kg`, cases: [{ e: true }] },
-  { s: `1 <= 0kg`, cases: [{ e: false }] },
-  { s: `1 == 0kg`, cases: [{ e: false }] },
-  { s: `1 != 0kg`, cases: [{ e: true }] },
-  { s: `1 > 0lb`, cases: [{ e: true }] },
-  { s: `1 < 0lb`, cases: [{ e: false }] },
-  { s: `1 >= 0lb`, cases: [{ e: true }] },
-  { s: `1 <= 0lb`, cases: [{ e: false }] },
-  { s: `1 == 0lb`, cases: [{ e: false }] },
-  { s: `1 != 0lb`, cases: [{ e: true }] },
-  { s: `1kg > 1lb`, cases: [{ e: true }] },
-  { s: `1kg < 1lb`, cases: [{ e: false }] },
-  { s: `1kg >= 1lb`, cases: [{ e: true }] },
-  { s: `1kg <= 1lb`, cases: [{ e: false }] },
-  { s: `1kg == 1lb`, cases: [{ e: false }] },
-  { s: `1kg != 1lb`, cases: [{ e: true }] },
-  { s: `1lb > 1kg`, cases: [{ e: false }] },
-  { s: `1lb < 1kg`, cases: [{ e: true }] },
-  { s: `1lb >= 1kg`, cases: [{ e: false }] },
-  { s: `1lb <= 1kg`, cases: [{ e: true }] },
-  { s: `1lb == 1kg`, cases: [{ e: false }] },
-  { s: `1lb != 1kg`, cases: [{ e: true }] },
+  { script: `1 > 0`, cases: [{ result: true }] },
+  { script: `1 < 0`, cases: [{ result: false }] },
+  { script: `1 >= 0`, cases: [{ result: true }] },
+  { script: `1 <= 0`, cases: [{ result: false }] },
+  { script: `1 == 0`, cases: [{ result: false }] },
+  { script: `1 != 0`, cases: [{ result: true }] },
+  { script: `1kg > 0`, cases: [{ result: true }] },
+  { script: `1kg < 0`, cases: [{ result: false }] },
+  { script: `1kg >= 0`, cases: [{ result: true }] },
+  { script: `1kg <= 0`, cases: [{ result: false }] },
+  { script: `1kg == 0`, cases: [{ result: false }] },
+  { script: `1kg != 0`, cases: [{ result: true }] },
+  { script: `1lb > 0`, cases: [{ result: true }] },
+  { script: `1lb < 0`, cases: [{ result: false }] },
+  { script: `1lb >= 0`, cases: [{ result: true }] },
+  { script: `1lb <= 0`, cases: [{ result: false }] },
+  { script: `1lb == 0`, cases: [{ result: false }] },
+  { script: `1lb != 0`, cases: [{ result: true }] },
+  { script: `1 > 0kg`, cases: [{ result: true }] },
+  { script: `1 < 0kg`, cases: [{ result: false }] },
+  { script: `1 >= 0kg`, cases: [{ result: true }] },
+  { script: `1 <= 0kg`, cases: [{ result: false }] },
+  { script: `1 == 0kg`, cases: [{ result: false }] },
+  { script: `1 != 0kg`, cases: [{ result: true }] },
+  { script: `1 > 0lb`, cases: [{ result: true }] },
+  { script: `1 < 0lb`, cases: [{ result: false }] },
+  { script: `1 >= 0lb`, cases: [{ result: true }] },
+  { script: `1 <= 0lb`, cases: [{ result: false }] },
+  { script: `1 == 0lb`, cases: [{ result: false }] },
+  { script: `1 != 0lb`, cases: [{ result: true }] },
+  { script: `1kg > 1lb`, cases: [{ result: true }] },
+  { script: `1kg < 1lb`, cases: [{ result: false }] },
+  { script: `1kg >= 1lb`, cases: [{ result: true }] },
+  { script: `1kg <= 1lb`, cases: [{ result: false }] },
+  { script: `1kg == 1lb`, cases: [{ result: false }] },
+  { script: `1kg != 1lb`, cases: [{ result: true }] },
+  { script: `1lb > 1kg`, cases: [{ result: false }] },
+  { script: `1lb < 1kg`, cases: [{ result: true }] },
+  { script: `1lb >= 1kg`, cases: [{ result: false }] },
+  { script: `1lb <= 1kg`, cases: [{ result: true }] },
+  { script: `1lb == 1kg`, cases: [{ result: false }] },
+  { script: `1lb != 1kg`, cases: [{ result: true }] },
   // Ternary
   {
-    s: `4 < 5 ? 1 : 0`,
-    cases: [{ e: 1 }],
+    script: `4 < 5 ? 1 : 0`,
+    cases: [{ result: 1 }],
   },
-  { s: `5 < 4 ? 1 : 0`, cases: [{ e: 0 }] },
+  { script: `5 < 4 ? 1 : 0`, cases: [{ result: 0 }] },
   {
-    s: `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
+    script: `state.foo > 3 ? state.foo < 7 ? 4 : 5 : 6`,
     cases: [
-      { e: 5, initialState: () => ({ foo: 8 }) },
-      { e: 4, initialState: () => ({ foo: 4 }) },
-      { e: 6, initialState: () => ({ foo: 2 }) },
+      { result: 5, initialState: () => ({ foo: 8 }) },
+      { result: 4, initialState: () => ({ foo: 4 }) },
+      { result: 6, initialState: () => ({ foo: 2 }) },
     ],
   },
   // Index access
   {
-    s: `r[state.foo]`,
+    script: `r[state.foo]`,
     cases: [
       {
-        e: 1,
+        result: 1,
         initialState: () => ({ foo: 2 }),
         adjustEmptyGlobals: { r: [0, 1] },
       },
@@ -212,12 +213,12 @@ describe.each<{
   },
   // If
   {
-    s: `if (completedReps >= reps) {
+    script: `if (completedReps >= reps) {
         state.foo = state.foo + 3
       }`,
     cases: [
       {
-        e: 5,
+        result: 5,
         initialState: () => ({ foo: 2 }),
         adjustEmptyGlobals: { completedReps: [1, 2, 3], reps: [1, 2, 3] },
       },
@@ -225,7 +226,7 @@ describe.each<{
   },
   // Standard progression and deload
   {
-    s: `
+    script: `
 // Simple Exercise Progression script '5lb,2'
 if (completedReps >= reps) {
   state.successes = state.successes + 1
@@ -248,7 +249,7 @@ if (!(completedReps >= reps)) {
 // End Simple Exercise Deload script`,
     cases: [
       {
-        e: NaN,
+        result: NaN,
         initialState: () => ({
           successes: 0,
           failures: 0,
@@ -292,10 +293,10 @@ if (!(completedReps >= reps)) {
   //   `,
   //   e: NaN,
   // },
-])("$s", ({ s, cases }) => {
+])("$s", ({ script, cases }) => {
   describe.each(cases)(
     "Result is $e when initial state like $initialState",
-    ({ e, initialState, adjustEmptyGlobals }) => {
+    ({ result, initialState, adjustEmptyGlobals, finalState }) => {
       test.each<
         [
           string,
@@ -310,11 +311,15 @@ if (!(completedReps >= reps)) {
         ["new system", run],
       ])("$0", (_, evaluator) => {
         expect(
-          evaluator(s, initialState?.() ?? {}, {
+          evaluator(script, initialState?.() ?? {}, {
             ...emptyGlobalData(),
             ...adjustEmptyGlobals,
           }),
-        ).toEqual(e);
+          "Script should evaluate to the expected result",
+        ).toEqual(result);
+        if(finalState){
+          expect(,"State after evaluation completes should match").toEqual(finalState)
+        }
       });
     },
   );
