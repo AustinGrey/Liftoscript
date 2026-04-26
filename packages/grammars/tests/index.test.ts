@@ -232,16 +232,42 @@ if (!(completedReps >= reps)) {
 // End Simple Exercise Deload script`,
     cases: [
       {
-        result: 0,
         initialState: () => ({
           successes: 0,
           failures: 0,
           weight: Weight.build(150, "lb"),
         }),
+        result: 0,
         finalState: {
           successes: 1,
           failures: 0,
           weight: Weight.build(150, "lb"),
+        },
+      },
+      {
+        initialState: () => ({
+          successes: 2,
+          failures: 0,
+          weight: Weight.build(150, "lb"),
+        }),
+        result: 0,
+        finalState: {
+          successes: 0,
+          failures: 0,
+          weight: Weight.build(155, "lb"),
+        },
+      },
+      {
+        initialState: () => ({
+          successes: 1,
+          failures: 2,
+          weight: Weight.build(150, "lb"),
+        }),
+        result: 0,
+        finalState: {
+          successes: 0,
+          failures: 0,
+          weight: Weight.build(145, "lb"),
         },
       },
     ],
