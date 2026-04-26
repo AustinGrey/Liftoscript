@@ -87,7 +87,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
         variable === "minReps" ||
         variable === "timers")
     ) {
-      return this.changeBinding(variable, expression, indexExprs, "=");
+      return changeBinding(variable, expression, indexExprs, "=", t);
     } else {
       return t.error(`Unknown variable '${variable}'`, variableNode);
     }
@@ -380,47 +380,63 @@ function changeBinding(
   expression: SyntaxNode,
   indexExprs: SyntaxNode[],
   op: IAssignmentOp,
+  tools: EvaluateTools,
 ): number | IWeight | IDynamicWeight {
-  const indexes = indexExprs.map((ie) => getChildren(ie)[0]);
+  const indexes = indexExprs
+    .map((ie) => queryChild(ie))
+    .filter((x) => x !== undefined);
   const maxTargetLength = 1;
   if (indexes.length > maxTargetLength) {
-    this.error(`${key} can only have 1 value inside []`, expression);
+    return tools.error(`${key} can only have 1 value inside []`, expression);
   }
-  const indexValues = this.calculateIndexValues(indexes);
-  const normalizedIndexValues = this.normalizeTarget(
-    indexValues,
-    maxTargetLength,
-  );
+  const indexValues = calculateIndexValues(indexes, tools);
+  const normalizedIndexValues = normalizeTarget(indexValues, maxTargetLength);
   const [setIndex] = normalizedIndexValues;
   let value: number | IWeight | IDynamicWeight = 0;
   if (key === "weights") {
-    for (let i = 0; i < this.bindings.weights.length; i += 1) {
+    for (let i = 0; i < tools.getGlobal("weights").length; i += 1) {
       if (
-        !this.bindings.isCompleted[i] &&
+        !tools.getGlobal("isCompleted")[i] &&
         (setIndex === "*" || setIndex === i + 1)
       ) {
-        const evalutedValue =
-          this.evaluateToNumberOrWeightOrPercentage(expression);
+        const evalutedValue = evaluateToQuantity(expression, tools);
         const newValue = Weight_applyOp(
-          this.bindings.rm1,
-          this.bindings.weights[i] ?? Weight_build(0, this.unit),
+          tools.getGlobal("rm1"),
+          tools.getGlobal("weights")[i] ??
+            Weight_build(
+              0,
+              // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
+              //     I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
+              // this.unit,
+              "kg",
+            ),
           evalutedValue,
           op,
         );
-        value = Weight_convertToWeight(this.bindings.rm1, newValue, this.unit);
-        this.bindings.originalWeights[i] = value;
-        this.bindings.weights[i] = this.fns.roundWeight(value, this.fnContext);
+        value = Weight_convertToWeight(
+          tools.getGlobal("rm1"),
+          newValue,
+          // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
+          //     I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
+          // this.unit,
+          "kg",
+        );
+        tools.getGlobal("originalWeights")[i] = value;
+        tools.getGlobal("weights")[i] = this.fns.roundWeight(
+          value,
+          this.fnContext,
+        );
       }
     }
   } else {
-    for (let i = 0; i < this.bindings[key].length; i += 1) {
+    for (let i = 0; i < tools.getGlobal(key).length; i += 1) {
       if (
-        !this.bindings.isCompleted[i] &&
+        !tools.getGlobal("isCompleted")[i] &&
         (setIndex === "*" || setIndex === i + 1)
       ) {
-        const evaluatedValue = this.evaluateToNumber(expression);
+        const evaluatedValue = evaluateToNumber(expression, tools);
         value = MathUtils_applyOp(
-          this.bindings[key][i] ?? 0,
+          tools.getGlobal(key)[i] ?? 0,
           evaluatedValue,
           op,
         );
@@ -430,7 +446,7 @@ function changeBinding(
         if (key === "amraps" || key === "logrpes" || key === "askweights") {
           value = Math.round(MathUtils_clamp(value, 0, 1));
         }
-        this.bindings[key][i] = value;
+        tools.getGlobal(key)[i] = value;
       }
     }
   }
