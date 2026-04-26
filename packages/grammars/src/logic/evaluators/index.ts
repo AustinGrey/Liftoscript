@@ -49,7 +49,7 @@ const handlers: {
   StateVariableIndex: (n, t) => t.error("Not implemented", n),
   Ternary: (await import("./node-ternary")).handler,
   Times: (n, t) => t.error("Not implemented", n),
-  UnaryExpression: (n, t) => t.error("Not implemented", n),
+  UnaryExpression: (await import("./node-unary-expression")).handler,
   Unit: (n, t) => t.error("Not implemented", n),
   Variable: (n, t) => t.error("Not implemented", n),
   VariableExpression: (await import("./node-variable-expression")).handler,

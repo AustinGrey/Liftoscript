@@ -32,7 +32,9 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
+    "@lezer/common": "catalog:",
     "@lezer/generator": "catalog:",
+    "@lezer/lr": "catalog:",
     "type-fest": "catalog:",
     "zod": "catalog:"
   },

@@ -6,9 +6,15 @@ settings:
 
 catalogs:
   default:
+    '@lezer/common':
+      specifier: ^1.5.2
+      version: 1.5.2
     '@lezer/generator':
       specifier: ^1.8.0
       version: 1.8.0
+    '@lezer/lr':
+      specifier: ^1.4.10
+      version: 1.4.10
     prettier:
       specifier: ^3.8.3
       version: 3.8.3
@@ -48,9 +54,15 @@ importers:
 
   packages/grammars:
     dependencies:
+      '@lezer/common':
+        specifier: 'catalog:'
+        version: 1.5.2
       '@lezer/generator':
         specifier: 'catalog:'
         version: 1.8.0
+      '@lezer/lr':
+        specifier: 'catalog:'
+        version: 1.4.10
       type-fest:
         specifier: 'catalog:'
         version: 5.6.0
