@@ -28,6 +28,62 @@ function evalLogic(
   ).evaluate(parser.parse(logic).topNode);
 }
 
+function makeDefaultGlobalData(): IScriptBindings {
+  return {
+    day: 1,
+    week: 1,
+    dayInWeek: 1,
+    originalWeights: [
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+    ],
+    weights: [
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+    ],
+    completedWeights: [
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+    ],
+    isCompleted: [1, 1, 1],
+    reps: [1, 2, 3],
+    minReps: [1, 2, 3],
+    RPE: [0, 0, 0],
+    amraps: [0, 0, 0],
+    logrpes: [0, 0, 0],
+    askweights: [0, 0, 0],
+    timers: [0, 0, 0],
+    completedReps: [1, 2, 3],
+    completedRepsLeft: [0, 0, 0],
+    completedRPE: [0, 0, 0],
+    w: [
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+    ],
+    cw: [
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+      { value: 40, unit: "lb" },
+    ],
+    r: [1, 2, 3],
+    cr: [1, 2, 3],
+    mr: [1, 2, 3],
+    ns: 3,
+    programNumberOfSets: 3,
+    numberOfSets: 3,
+    completedNumberOfSets: 3,
+    setIndex: 1,
+    setVariationIndex: 1,
+    bodyweight: Weight.build(0, "lb"),
+    descriptionIndex: 1,
+    rm1: Weight.build(100, "lb"),
+  };
+}
+
 function emptyGlobalData(): IScriptBindings {
   return {
     day: 0,
@@ -167,6 +223,73 @@ describe.each<{
       adjustEmptyGlobals: { completedReps: [1, 2, 3], reps: [1, 2, 3] },
     },
   },
+  // Standard progression and deload
+  {
+    s: `
+// Simple Exercise Progression script '5lb,2'
+if (completedReps >= reps) {
+  state.successes = state.successes + 1
+  if (state.successes >= 2) {
+    state.weight = state.weight + 5lb
+    state.successes = 0
+    state.failures = 0
+  }
+}
+// End Simple Exercise Progression script
+// Simple Exercise Deload script '5lb,1'
+if (!(completedReps >= reps)) {
+  state.failures = state.failures + 1
+  if (state.failures >= 1) {
+    state.weight = state.weight - 5lb
+    state.successes = 0
+    state.failures = 0
+  }
+}
+// End Simple Exercise Deload script`,
+    e: NaN,
+    options: {
+      initialState: () => ({
+        successes: 0,
+        failures: 0,
+        weight: Weight.build(150, "lb"),
+      }),
+    },
+  },
+  // // Basic beginner
+  // {
+  //   s: `
+  //   if (cr[1] + cr[2] + cr[3] >= 15) {
+  //     state.weight = w[3] +
+  //       (cr[3] > 10 ? 5lb : 2.5lb)
+  //   } else {
+  //     state.weight = state.weight * 0.9
+  //   }
+  //   `,
+  //   e: NaN,
+  // },
+  // // GZCLP
+  // {
+  //   s: `
+  //   if (cr >= r) {
+  //     state.weight = w[5] + 10lb
+  //   } else if (state.stage < 3) {
+  //     state.stage = state.stage + 1
+  //   } else {
+  //     state.stage = 1
+  //     state.weight = state.weight * 0.85
+  //   }
+  //   `,
+  //   e: NaN,
+  // },
+  // // condition with numbers
+  // {
+  //   s: `
+  //   if (cr[3] >= 25) {
+  //     state.weight = state.weight + 5lb
+  //   }
+  //   `,
+  //   e: NaN,
+  // },
 ])("$s resolves to $e with options $options", ({ s, e, options }) => {
   test.each<
     [
@@ -181,7 +304,7 @@ describe.each<{
     ["old system", evalLogic],
     ["new system", run],
   ])("$0", (_, evaluator) => {
-    const initialState = options?.initialState?.() ?? ({} as IProgramState);
+    const initialState = options?.initialState?.() ?? {};
     expect(
       evaluator(s, initialState ?? {}, {
         ...emptyGlobalData(),
