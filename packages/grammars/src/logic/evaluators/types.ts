@@ -93,6 +93,17 @@ export type EvaluateTools = SourceTools & {
    * @TODO what are these updates for? Why can't the thing being updated be updated at the time this is created instead?
    */
   requestUpdate: (update: ILiftoscriptEvaluatorUpdate) => void;
+  /**
+   * Gets the value of a state variable. If the state variable is not found, @todo what should it do?
+   * @param key The key of the state variable
+   */
+  getVar: (key: string) => Quantity;
+  /**
+   * Updates the value of a state variable. If the state variable is not found, @todo what should it do?
+   * @param key The key of the state variable
+   * @param value The new value of the state variable
+   */
+  updateVar: (key: string, value: Quantity) => void;
 };
 
 /**

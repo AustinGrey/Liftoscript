@@ -4,10 +4,10 @@ import {
   type TypedLogicNode,
 } from "@/parsers/guards.ts";
 import type {
+  EvaluateTools,
   IProgramState,
   IScriptBindings,
   LogicHandler,
-  SourceTools,
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
 import { parser } from "@/parsers/logic.ts";
@@ -60,7 +60,7 @@ const handlers: {
 
 function handleLogic(
   node: SyntaxNode,
-  tools: SourceTools,
+  tools: EvaluateTools,
   initialState: Readonly<IProgramState>,
   globalData: IScriptBindings,
 ): LogicResult {
@@ -72,12 +72,53 @@ function handleLogic(
   if (!handler) {
     return tools.error(`No handler for node type: ${node.type}`, node);
   }
+  return handler(node as TypedLogicNode<NodeNames_Logic>, tools);
+}
+
+/**
+ * Runs a script to return it's value
+ * @param logic The script to run
+ */
+export function run(
+  logic: string,
+  initialState: Readonly<IProgramState>,
+  globalData: IScriptBindings,
+): LogicResult {
   const state: IProgramState = { ...initialState };
   const updates: ILiftoscriptEvaluatorUpdate[] = [];
   // @TODO in original liftoscript, there seems to be multiple use cases for this -> either states by tag, or by exercise, or something else.... not sure how to hook this up, or how to test for it.
   const otherStates: Record<string | number, IProgramState> = {};
-  return handler(node as TypedLogicNode<NodeNames_Logic>, {
-    ...tools,
+  // @TODO surely this is something which needs to be reset between blocks? Not sure at all why this is different that state if that's not the case
+  const vars: IProgramState = {};
+
+  const tools: EvaluateTools = {
+    getText(node) {
+      return (
+        node === undefined ? undefined : logic.slice(node.from, node.to)
+      ) as typeof node extends undefined ? undefined : string;
+    },
+    locate(node: SyntaxNode) {
+      const linesLengths = logic.split("\n").map((l) => l.length + 1);
+      let offset = 0;
+      for (let i = 0; i < linesLengths.length; i++) {
+        const lineLength = linesLengths[i];
+        if (node.from > offset && node.from < offset + lineLength) {
+          return [i + 1, node.from - offset];
+        }
+        offset += lineLength;
+      }
+      return [linesLengths.length, linesLengths[linesLengths.length - 1]];
+    },
+    error(message, node) {
+      const [line, offset] = this.locate(node);
+      throw new LiftoscriptSyntaxError(
+        `${message} (${line}:${offset})`,
+        line,
+        offset,
+        node.from,
+        node.to,
+      );
+    },
     // @TODO should probably figure out when and where this will change
     mode: "update",
     recurse: (node) => handleLogic(node, tools, state, globalData),
@@ -132,49 +173,17 @@ function handleLogic(
     requestUpdate: (update) => {
       updates.push(update);
     },
-  });
-}
+    getVar(key) {
+      return vars[key];
+    },
+    updateVar(key, value) {
+      vars[key] = value;
+    },
+  };
 
-/**
- * Runs a script to return it's value
- * @param logic The script to run
- */
-export function run(
-  logic: string,
-  initialState: Readonly<IProgramState>,
-  globalData: IScriptBindings,
-): LogicResult {
   return handleLogic(
     parser.parse(logic).topNode,
-    {
-      getText(node) {
-        return (
-          node === undefined ? undefined : logic.slice(node.from, node.to)
-        ) as typeof node extends undefined ? undefined : string;
-      },
-      locate(node: SyntaxNode) {
-        const linesLengths = logic.split("\n").map((l) => l.length + 1);
-        let offset = 0;
-        for (let i = 0; i < linesLengths.length; i++) {
-          const lineLength = linesLengths[i];
-          if (node.from > offset && node.from < offset + lineLength) {
-            return [i + 1, node.from - offset];
-          }
-          offset += lineLength;
-        }
-        return [linesLengths.length, linesLengths[linesLengths.length - 1]];
-      },
-      error(message, node) {
-        const [line, offset] = this.locate(node);
-        throw new LiftoscriptSyntaxError(
-          `${message} (${line}:${offset})`,
-          line,
-          offset,
-          node.from,
-          node.to,
-        );
-      },
-    },
+    tools,
     initialState,
     globalData,
   );
