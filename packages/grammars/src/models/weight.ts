@@ -6,6 +6,8 @@ import { z } from "zod";
 import { is, isNumber } from "@/utils/types.ts";
 
 import type { Quantity } from "@/logic/types.ts";
+import { MathUtils_roundFloat } from "@/utils/math.ts";
+import { Weight_multiply } from "@/evaluators/logic-evaluator.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -145,4 +147,48 @@ function comparison(
     return o(left.value, convertTo(right, left.unit).value);
   }
   return false;
+}
+export function op(
+  onerm: IWeight | undefined,
+  a: IWeight | number | IDynamicWeight,
+  b: IWeight | number | IDynamicWeight,
+  o: (x: number, y: number) => number,
+): IWeight | number | IDynamicWeight {
+  if (isNumber(a) && isNumber(b)) {
+    return o(a, b);
+  }
+  if (isNumber(a) && is(TDynamicWeight, b)) {
+    return percentORM(o(a, b.value));
+  }
+  if (isNumber(a) && is(TWeight, b)) {
+    return operation(a, b, o);
+  }
+
+  if (is(TWeight, a) && isNumber(b)) {
+    return percentORM(o(a.value, b));
+  }
+  if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
+    return percentORM(o(a.value, b.value));
+  }
+  if (is(TDynamicWeight, a) && is(TWeight, b)) {
+    const aWeight = onerm
+      ? multiply(onerm, a.value / 100)
+      : MathUtils_roundFloat(a.value / 100, 4);
+    return operation(aWeight, b, o);
+  }
+
+  if (is(TWeight, a) && isNumber(b)) {
+    return operation(a, b, o);
+  }
+  if (is(TWeight, a) && is(TDynamicWeight, b)) {
+    const bWeight = onerm
+      ? multiply(onerm, b.value / 100)
+      : MathUtils_roundFloat(b.value / 100, 4);
+    return operation(a, bWeight, o);
+  }
+  if (is(TWeight, a) && is(TWeight, b)) {
+    return operation(a, b, o);
+  }
+
+  throw new Error(`Can't apply operation to ${a} and ${b}`);
 }

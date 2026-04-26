@@ -1,9 +1,11 @@
-import type { LogicHandler } from "@/logic/evaluators/types.ts";
+import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { isBoolean } from "@/utils/types.ts";
 import * as Weight from "@/models/weight.ts";
 import { pad } from "@/utils/collection.ts";
-import type { LogicResultSingular } from "@/logic/types.ts";
+import type { LogicResultSingular, Quantity } from "@/logic/types.ts";
+import { type IWeight } from "@/models/weight.ts";
+import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });
@@ -79,16 +81,58 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
       }
     }
     case "+":
-      return Weight.add(left, right);
+      return add(left, right, t);
     case "-":
-      return Weight.subtract(left, right);
+      return subtract(left, right, t);
     case "*":
-      return Weight.multiply(left, right);
+      return multiply(left, right, t);
     case "/":
-      return Weight.divide(left, right);
+      return divide(left, right, t);
     case "%":
-      return Weight.modulo(left, right);
+      return modulo(left, right);
     default:
       return t.error(`Unsupported operator ${op}`, opNode);
   }
 };
+
+function add(one: Quantity, two: Quantity, tools: EvaluateTools): Quantity {
+  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a + b);
+}
+
+function subtract(
+  one: Quantity,
+  two: Quantity,
+  tools: EvaluateTools,
+): Quantity {
+  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a - b);
+}
+
+function multiply(
+  one: Quantity,
+  two: Quantity,
+  tools: EvaluateTools,
+): Quantity {
+  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a * b);
+}
+
+function divide(one: Quantity, two: Quantity, tools: EvaluateTools): Quantity {
+  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a / b);
+}
+
+function modulo(one: Quantity, two: Quantity): Quantity {
+  return operation(undefined, one, two, (a, b) => a % b);
+}
+
+function operation(
+  onerm: IWeight | undefined,
+  a: Quantity,
+  b: Quantity,
+  op: (x: number, y: number) => number,
+): Quantity {
+  try {
+    return Weight.op(onerm, a, b, op);
+  } catch (error) {
+    const e = error as Error;
+    throw new LiftoscriptSyntaxError(e.message, 0, 0, 0, 0);
+  }
+}
