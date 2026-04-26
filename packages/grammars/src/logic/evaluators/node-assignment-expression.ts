@@ -292,65 +292,68 @@ function changeNumberOfSets(
   tools: EvaluateTools,
 ): number | IWeight | IDynamicWeight {
   const oldNumberOfSets = tools.getGlobal("weights").length;
+  const ns = oldNumberOfSets - 1;
   const evaluatedValue = MathUtils_applyOp(
     tools.getGlobal("numberOfSets"),
     evaluateToNumber(expression, tools),
     op,
   );
 
-  tools.updateGlobal("weights", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("originalWeights", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("reps", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("minReps", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("RPE", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("w", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("r", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("mr", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("timers", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("amraps", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("logrpes", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("askweights", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("completedReps", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("completedRepsLeft", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("cr", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("cw", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("completedWeights", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("completedRPE", (x) => x.slice(0, evaluatedValue));
-  tools.updateGlobal("isCompleted", (x) => x.slice(0, evaluatedValue));
-
-  const ns = oldNumberOfSets - 1;
-  for (let i = 0; i < evaluatedValue; i += 1) {
-    if (i > ns) {
-      this.bindings.weights[i] = Weight.build(
-        tools.getGlobal("weights")[ns]?.value ?? 0,
-        tools.getGlobal("weights")[ns]?.unit || "lb",
-      );
-      this.bindings.originalWeights[i] = Weight_buildAny(
-        tools.getGlobal("originalWeights")[ns]?.value ?? 0,
-        tools.getGlobal("originalWeights")[ns]?.unit || "lb",
-      );
-      this.bindings.reps[i] = tools.getGlobal("reps")[ns] ?? 0;
-      this.bindings.timers[i] = tools.getGlobal("timers")[ns];
-      this.bindings.amraps[i] = tools.getGlobal("amraps")[ns];
-      this.bindings.logrpes[i] = tools.getGlobal("logrpes")[ns];
-      this.bindings.askweights[i] = tools.getGlobal("askweights")[ns];
-      this.bindings.minReps[i] = tools.getGlobal("minReps")[ns];
-      this.bindings.RPE[i] = tools.getGlobal("RPE")[ns];
-      this.bindings.w[i] = tools.getGlobal("weights")[i];
-      this.bindings.r[i] = tools.getGlobal("reps")[i];
-      this.bindings.mr[i] = tools.getGlobal("minReps")[i];
-      this.bindings.completedReps[i] = undefined;
-      this.bindings.completedRepsLeft[i] = undefined;
-      this.bindings.completedWeights[i] = undefined;
-      this.bindings.completedRPE[i] = undefined;
-      this.bindings.cr[i] = undefined;
-      this.bindings.cw[i] = undefined;
-      this.bindings.isCompleted[i] = 0;
-    }
+  // For each array whose length is based on the number of sets, we slice it in case the evaluated value is less than the current value, and then we concat a fill in case it's more than the current value
+  function chopOrFill<T>(arr: readonly T[], filler: T): T[] {
+    const spotsToFill = Math.max(evaluatedValue - arr.length, 0);
+    return arr.slice(0, evaluatedValue).concat(Array(spotsToFill).fill(filler));
   }
 
-  this.bindings.numberOfSets = evaluatedValue;
-  this.bindings.ns = evaluatedValue;
+  // @TODO several of these elements are aliases for others, but we have to duplicate and maintain consistent copies of the data. This is not good design. We should only store data for the vars once, and re-route aliases to access the single copy
+  tools.updateGlobal("weights", (x) =>
+    chopOrFill(
+      x,
+      // Copy the last entry to fill
+      Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
+    ),
+  );
+  // @TODO duplicated
+  tools.updateGlobal("w", (x) =>
+    chopOrFill(
+      x, // Copy the last entry to fill
+      Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
+    ),
+  );
+  tools.updateGlobal("originalWeights", (x) =>
+    chopOrFill(
+      x,
+      // Copy the last entry to fill
+      Weight_buildAny(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
+    ),
+  );
+
+  // @TODO duplicated
+  tools.updateGlobal("reps", (x) => chopOrFill(x, x[ns] ?? 0));
+  tools.updateGlobal("r", (x) => chopOrFill(x, x[ns] ?? 0));
+
+  tools.updateGlobal("timers", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("amraps", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("logrpes", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("askweights", (x) => chopOrFill(x, x[ns]));
+
+  // @TODO duplicated
+  tools.updateGlobal("minReps", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("mr", (x) => chopOrFill(x, x[ns]));
+
+  tools.updateGlobal("RPE", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("completedReps", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("completedRepsLeft", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("completedWeights", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("completedRPE", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("cr", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("cw", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("isCompleted", (x) => chopOrFill(x, 0));
+
+  // Then we can finally update the value
+  // @TODO duplicated
+  tools.updateGlobal("numberOfSets", evaluatedValue);
+  tools.updateGlobal("ns", evaluatedValue);
 
   return evaluatedValue;
 }
