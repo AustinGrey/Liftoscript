@@ -29,7 +29,18 @@ export function MathUtils_roundFloat(value: number, precision: number): number {
   return +value.toFixed(precision);
 }
 
-export function MathUtils_applyOp(a: number, b: number, opr: "+=" | "-=" | "*=" | "/=" | "="): number {
+/**
+ * Determines what the final result of an assignment expression will be
+ * @TODO this name is awful. Rename to getAssignmentResult
+ * @param a left side
+ * @param b right side
+ * @param opr Which assignment operator is being applied
+ */
+export function MathUtils_applyOp(
+  a: number,
+  b: number,
+  opr: "+=" | "-=" | "*=" | "/=" | "=",
+): number {
   if (opr === "=") {
     return b;
   } else if (opr === "+=") {
@@ -43,7 +54,11 @@ export function MathUtils_applyOp(a: number, b: number, opr: "+=" | "-=" | "*=" 
   }
 }
 
-export function MathUtils_clamp(value: number, min?: number, max?: number): number {
+export function MathUtils_clamp(
+  value: number,
+  min?: number,
+  max?: number,
+): number {
   if (min != null && max != null) {
     return Math.max(min, Math.min(max, value));
   } else if (min != null) {
@@ -59,9 +74,21 @@ export function MathUtils_toWord(num?: number): string | undefined {
   if (num == null) {
     return undefined;
   }
-  return ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"][
-    num
-  ];
+  return [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+  ][num];
 }
 
 export function MathUtils_parse(value?: string): number | undefined {

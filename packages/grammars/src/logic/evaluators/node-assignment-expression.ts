@@ -6,6 +6,8 @@ import {
 import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
+  Weight_applyOp,
+  Weight_build,
   Weight_buildAny,
   Weight_convertToWeight,
 } from "@/evaluators/logic-evaluator.ts";
@@ -26,7 +28,11 @@ import {
 } from "@/models/weight.ts";
 import { CollectionUtils_compact } from "@/utils/collection.ts";
 import { is, isNumber } from "@/utils/types.ts";
-import { MathUtils_applyOp } from "@/utils/math.ts";
+import {
+  MathUtils_applyOp,
+  MathUtils_clamp,
+  MathUtils_round,
+} from "@/utils/math.ts";
 
 export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   const [variableNode, expression] = queryChildren(n, { atLeast: 2 });
@@ -306,20 +312,6 @@ function changeNumberOfSets(
   }
 
   // @TODO several of these elements are aliases for others, but we have to duplicate and maintain consistent copies of the data. This is not good design. We should only store data for the vars once, and re-route aliases to access the single copy
-  tools.updateGlobal("weights", (x) =>
-    chopOrFill(
-      x,
-      // Copy the last entry to fill
-      Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
-    ),
-  );
-  // @TODO duplicated
-  tools.updateGlobal("w", (x) =>
-    chopOrFill(
-      x, // Copy the last entry to fill
-      Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
-    ),
-  );
   tools.updateGlobal("originalWeights", (x) =>
     chopOrFill(
       x,
@@ -327,28 +319,45 @@ function changeNumberOfSets(
       Weight_buildAny(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
     ),
   );
+  tools.updateGlobal("timers", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("amraps", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("logrpes", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("askweights", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("RPE", (x) => chopOrFill(x, x[ns]));
+  tools.updateGlobal("completedRepsLeft", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("completedRPE", (x) => chopOrFill(x, undefined));
+  tools.updateGlobal("isCompleted", (x) => chopOrFill(x, 0));
+
+  // @TODO duplicated
+  tools.updateGlobal("weights", (x) =>
+    chopOrFill(
+      x,
+      // Copy the last entry to fill
+      Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
+    ),
+  );
+  tools.updateGlobal("w", (x) =>
+    chopOrFill(
+      x, // Copy the last entry to fill
+      Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
+    ),
+  );
 
   // @TODO duplicated
   tools.updateGlobal("reps", (x) => chopOrFill(x, x[ns] ?? 0));
   tools.updateGlobal("r", (x) => chopOrFill(x, x[ns] ?? 0));
 
-  tools.updateGlobal("timers", (x) => chopOrFill(x, x[ns]));
-  tools.updateGlobal("amraps", (x) => chopOrFill(x, x[ns]));
-  tools.updateGlobal("logrpes", (x) => chopOrFill(x, x[ns]));
-  tools.updateGlobal("askweights", (x) => chopOrFill(x, x[ns]));
-
   // @TODO duplicated
   tools.updateGlobal("minReps", (x) => chopOrFill(x, x[ns]));
   tools.updateGlobal("mr", (x) => chopOrFill(x, x[ns]));
 
-  tools.updateGlobal("RPE", (x) => chopOrFill(x, x[ns]));
+  // @TODO duplicated
   tools.updateGlobal("completedReps", (x) => chopOrFill(x, undefined));
-  tools.updateGlobal("completedRepsLeft", (x) => chopOrFill(x, undefined));
-  tools.updateGlobal("completedWeights", (x) => chopOrFill(x, undefined));
-  tools.updateGlobal("completedRPE", (x) => chopOrFill(x, undefined));
   tools.updateGlobal("cr", (x) => chopOrFill(x, undefined));
+
+  // @TODO duplicated
+  tools.updateGlobal("completedWeights", (x) => chopOrFill(x, undefined));
   tools.updateGlobal("cw", (x) => chopOrFill(x, undefined));
-  tools.updateGlobal("isCompleted", (x) => chopOrFill(x, 0));
 
   // Then we can finally update the value
   // @TODO duplicated
@@ -356,4 +365,74 @@ function changeNumberOfSets(
   tools.updateGlobal("ns", evaluatedValue);
 
   return evaluatedValue;
+}
+
+function changeBinding(
+  key:
+    | "reps"
+    | "weights"
+    | "RPE"
+    | "minReps"
+    | "timers"
+    | "logrpes"
+    | "amraps"
+    | "askweights",
+  expression: SyntaxNode,
+  indexExprs: SyntaxNode[],
+  op: IAssignmentOp,
+): number | IWeight | IDynamicWeight {
+  const indexes = indexExprs.map((ie) => getChildren(ie)[0]);
+  const maxTargetLength = 1;
+  if (indexes.length > maxTargetLength) {
+    this.error(`${key} can only have 1 value inside []`, expression);
+  }
+  const indexValues = this.calculateIndexValues(indexes);
+  const normalizedIndexValues = this.normalizeTarget(
+    indexValues,
+    maxTargetLength,
+  );
+  const [setIndex] = normalizedIndexValues;
+  let value: number | IWeight | IDynamicWeight = 0;
+  if (key === "weights") {
+    for (let i = 0; i < this.bindings.weights.length; i += 1) {
+      if (
+        !this.bindings.isCompleted[i] &&
+        (setIndex === "*" || setIndex === i + 1)
+      ) {
+        const evalutedValue =
+          this.evaluateToNumberOrWeightOrPercentage(expression);
+        const newValue = Weight_applyOp(
+          this.bindings.rm1,
+          this.bindings.weights[i] ?? Weight_build(0, this.unit),
+          evalutedValue,
+          op,
+        );
+        value = Weight_convertToWeight(this.bindings.rm1, newValue, this.unit);
+        this.bindings.originalWeights[i] = value;
+        this.bindings.weights[i] = this.fns.roundWeight(value, this.fnContext);
+      }
+    }
+  } else {
+    for (let i = 0; i < this.bindings[key].length; i += 1) {
+      if (
+        !this.bindings.isCompleted[i] &&
+        (setIndex === "*" || setIndex === i + 1)
+      ) {
+        const evaluatedValue = this.evaluateToNumber(expression);
+        value = MathUtils_applyOp(
+          this.bindings[key][i] ?? 0,
+          evaluatedValue,
+          op,
+        );
+        if (key === "RPE") {
+          value = MathUtils_round(MathUtils_clamp(value, 0, 10), 0.5);
+        }
+        if (key === "amraps" || key === "logrpes" || key === "askweights") {
+          value = Math.round(MathUtils_clamp(value, 0, 1));
+        }
+        this.bindings[key][i] = value;
+      }
+    }
+  }
+  return value;
 }
