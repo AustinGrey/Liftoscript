@@ -8,7 +8,10 @@ import {
   TWeight,
 } from "@/models/weight.ts";
 import { z } from "zod";
-import type { IExerciseType } from "@/evaluators/logic-evaluator.ts";
+import type {
+  IExerciseType,
+  IProgramMode,
+} from "@/evaluators/logic-evaluator.ts";
 import type {
   ILiftoscriptEvaluatorUpdate,
   LogicResult,
@@ -39,6 +42,11 @@ export type SourceTools = {
 };
 
 export type EvaluateTools = SourceTools & {
+  /**
+   * @todo I don't know what this does.... like... at all, but it seems to be something that is stable for a complete evaluation pass of a program, so we just track it.
+   *    This needs documentation
+   */
+  mode: IProgramMode;
   /**
    * Continues evaluation into a node, using the same tools as the existing context
    */

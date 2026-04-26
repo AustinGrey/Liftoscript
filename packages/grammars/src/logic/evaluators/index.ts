@@ -78,6 +78,8 @@ function handleLogic(
   const otherStates: Record<string | number, IProgramState> = {};
   return handler(node as TypedLogicNode<NodeNames_Logic>, {
     ...tools,
+    // @TODO should probably figure out when and where this will change
+    mode: "update",
     recurse: (node) => handleLogic(node, tools, state, globalData),
     getState: (key, relatedNode, index) => {
       if (index === undefined) {

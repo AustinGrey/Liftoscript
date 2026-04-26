@@ -1,6 +1,5 @@
 import {
   type EvaluateTools,
-  type IProgramState,
   type LogicHandler,
 } from "@/logic/evaluators/types.ts";
 import { queryChild, queryChildren } from "@/utils/grammars.ts";
@@ -65,7 +64,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
       t.updateGlobal("rm1", value);
       return value;
     } else if (
-      this.mode === "planner" &&
+      t.mode === "planner" &&
       (variable === "reps" ||
         variable === "weights" ||
         variable === "RPE" ||
@@ -79,10 +78,10 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
         variable === "numberOfSets")
     ) {
       return recordVariableUpdate(variable, expression, indexExprs, "=", t);
-    } else if (this.mode === "update" && variable === "numberOfSets") {
+    } else if (t.mode === "update" && variable === "numberOfSets") {
       return changeNumberOfSets(expression, "=", t);
     } else if (
-      this.mode === "update" &&
+      t.mode === "update" &&
       (variable === "reps" ||
         variable === "weights" ||
         variable === "RPE" ||
