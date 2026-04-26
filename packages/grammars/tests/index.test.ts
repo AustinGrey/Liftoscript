@@ -238,6 +238,7 @@ if (!(completedReps >= reps)) {
           weight: Weight.build(150, "lb"),
         }),
         result: 0,
+        adjustEmptyGlobals: { reps: [3, 3, 3], completedReps: [3, 3, 3] },
         finalState: {
           successes: 1,
           failures: 0,
@@ -251,6 +252,7 @@ if (!(completedReps >= reps)) {
           weight: Weight.build(150, "lb"),
         }),
         result: 0,
+        adjustEmptyGlobals: { reps: [3, 3, 3], completedReps: [3, 3, 3] },
         finalState: {
           successes: 0,
           failures: 0,
@@ -264,7 +266,7 @@ if (!(completedReps >= reps)) {
           weight: Weight.build(150, "lb"),
         }),
         result: 0,
-        adjustEmptyGlobals: { completedReps: [3, 3, 2], reps: [3, 3, 3] },
+        adjustEmptyGlobals: { reps: [3, 3, 3], completedReps: [3, 3, 2] },
         finalState: {
           successes: 0,
           failures: 0,
