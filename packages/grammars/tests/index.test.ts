@@ -170,7 +170,6 @@ describe.each<{
     },
   ].slice(-1),
 )("$s resolves to $e with options $options", ({ s, e, options }) => {
-  const initialState = options?.initialState?.() ?? ({} as IProgramState);
   test.each<
     [
       string,
@@ -184,6 +183,7 @@ describe.each<{
     ["old system", evalLogic],
     ["new system", run],
   ])("$0", (_, evaluator) => {
+    const initialState = options?.initialState?.() ?? ({} as IProgramState);
     expect(
       evaluator(s, initialState ?? {}, {
         ...emptyGlobalData(),
