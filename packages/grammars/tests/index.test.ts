@@ -11,23 +11,6 @@ import type {
 } from "@/logic/evaluators/types.ts";
 import type { LogicResult } from "@/logic/types.ts";
 
-function evalLogic(
-  logic: string,
-  initialState: IProgramState,
-  globalData: IScriptBindings,
-) {
-  return new LiftoscriptEvaluator(
-    logic,
-    initialState,
-    {},
-    globalData,
-    {},
-    {},
-    "kg",
-    "planner",
-  ).evaluate(parser.parse(logic).topNode);
-}
-
 function makeDefaultGlobalData(): IScriptBindings {
   return {
     day: 1,
@@ -297,28 +280,43 @@ if (!(completedReps >= reps)) {
   describe.each(cases)(
     "Result is $e when initial state like $initialState",
     ({ result, initialState, adjustEmptyGlobals, finalState }) => {
-      test.each<
-        [
-          string,
-          (
-            logic: string,
-            initialState: IProgramState,
-            globalData: IScriptBindings,
-          ) => LogicResult,
-        ]
-      >([
-        ["old system", evalLogic],
-        ["new system", run],
-      ])("$0", (_, evaluator) => {
-        expect(
-          evaluator(script, initialState?.() ?? {}, {
+      test("old system", () => {
+        const output = new LiftoscriptEvaluator(
+          script,
+          initialState?.() ?? {},
+          {},
+          {
             ...emptyGlobalData(),
             ...adjustEmptyGlobals,
-          }),
-          "Script should evaluate to the expected result",
-        ).toEqual(result);
-        if(finalState){
-          expect(,"State after evaluation completes should match").toEqual(finalState)
+          },
+          {},
+          {},
+          "kg",
+          "planner",
+        ).evaluate(parser.parse(script).topNode);
+        expect(output, "Script should evaluate to the expected result").toEqual(
+          result,
+        );
+        if (finalState) {
+          expect(
+            finalState,
+            "State after evaluation completes should match",
+          ).toEqual(finalState);
+        }
+      });
+      test("new system", () => {
+        const output = run(script, initialState?.() ?? {}, {
+          ...emptyGlobalData(),
+          ...adjustEmptyGlobals,
+        });
+        expect(output, "Script should evaluate to the expected result").toEqual(
+          result,
+        );
+        if (finalState) {
+          expect(
+            finalState,
+            "State after evaluation completes should match",
+          ).toEqual(finalState);
         }
       });
     },
