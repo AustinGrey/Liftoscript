@@ -21,15 +21,9 @@ import {
   type LogicResult,
   type Quantity,
 } from "@/logic/types.ts";
-import {
-  type IDynamicWeight,
-  type IWeight,
-  TDynamicWeight,
-  TWeight,
-} from "@/models/weight.ts";
+import { type IWeight, TDynamicWeight, TWeight } from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
-import { transformLogicResult } from "@/logic/evaluators/common.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -360,28 +354,32 @@ function floor(num: IWeight): IWeight;
 function floor(num: Exclude<LogicResult, number | IWeight>): number;
 function floor(num: LogicResult): number | IWeight {
   return isNumber(num)
+    ? Math.floor(num)
+    : is(TWeight, num)
+      ? Weight.build(Math.floor(num.value), num.unit)
+      : 0;
+}
+
+function ceil(num: number): number;
+function ceil(num: IWeight): IWeight;
+function ceil(num: Exclude<LogicResult, number | IWeight>): number;
+function ceil(num: LogicResult): number | IWeight {
+  return isNumber(num)
     ? Math.ceil(num)
     : is(TWeight, num)
       ? Weight.build(Math.ceil(num.value), num.unit)
       : 0;
 }
 
-function ceil<T extends number | IWeight>(num: T): T {
-  if (num == null) {
-    return 0;
-  }
-  return isNumber(num)
-    ? Math.ceil(num)
-    : Weight.build(Math.ceil(num.value), num.unit);
-}
-
-function round<T extends number | IWeight>(num: T): T {
-  if (num == null) {
-    return 0;
-  }
+function round(num: number): number;
+function round(num: IWeight): IWeight;
+function round(num: Exclude<LogicResult, number | IWeight>): number;
+function round(num: LogicResult): number | IWeight {
   return isNumber(num)
     ? Math.round(num)
-    : Weight.build(Math.round(num.value), num.unit);
+    : is(TWeight, num)
+      ? Weight.build(Math.round(num.value), num.unit)
+      : 0;
 }
 
 function sum(...args: unknown[]): Quantity {

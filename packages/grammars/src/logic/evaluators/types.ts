@@ -198,10 +198,16 @@ export interface IScriptFunctions {
     (num: IWeight): IWeight;
     (num: Exclude<LogicResult, number | IWeight>): number;
   };
-  ceil(num: number): number;
-  ceil(num: IWeight): IWeight;
-  round(num: number): number;
-  round(num: IWeight): IWeight;
+  ceil: {
+    (num: number): number;
+    (num: IWeight): IWeight;
+    (num: Exclude<LogicResult, number | IWeight>): number;
+  };
+  round: {
+    (num: number): number;
+    (num: IWeight): IWeight;
+    (num: Exclude<LogicResult, number | IWeight>): number;
+  };
   sum(
     ...vals: (
       | number
