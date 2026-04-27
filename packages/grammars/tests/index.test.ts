@@ -339,29 +339,66 @@ if (!(completedReps >= reps)) {
       },
     ],
   },
-  // // GZCLP
-  // {
-  //   s: `
-  //   if (cr >= r) {
-  //     state.weight = w[5] + 10lb
-  //   } else if (state.stage < 3) {
-  //     state.stage = state.stage + 1
-  //   } else {
-  //     state.stage = 1
-  //     state.weight = state.weight * 0.85
-  //   }
-  //   `,
-  //   e: NaN,
-  // },
-  // // condition with numbers
-  // {
-  //   s: `
-  //   if (cr[3] >= 25) {
-  //     state.weight = state.weight + 5lb
-  //   }
-  //   `,
-  //   e: NaN,
-  // },
+  // GZCLP
+  {
+    script: `
+    if (cr >= r) {
+      state.weight = w[5] + 10lb
+    } else if (state.stage < 3) {
+      state.stage = state.stage + 1
+    } else {
+      state.stage = 1
+      state.weight = state.weight * 0.85
+    }
+    `,
+    cases: [
+      {
+        initialState: () => ({ stage: 1, weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          r: [5, 5, 5, 5, 5],
+          cr: [5, 5, 5, 5, 5],
+          w: [
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+          ],
+        },
+        finalState: { stage: 1, weight: Weight.build(160, "lb") },
+      },
+      {
+        initialState: () => ({ stage: 1, weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          r: [5, 5, 5, 5, 5],
+          cr: [5, 5, 5, 5, 4],
+          w: [
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+          ],
+        },
+        finalState: { stage: 2, weight: Weight.build(150, "lb") },
+      },
+      {
+        initialState: () => ({ stage: 3, weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          r: [5, 5, 5, 5, 5],
+          cr: [5, 5, 5, 5, 4],
+          w: [
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+          ],
+        },
+        finalState: { stage: 1, weight: Weight.build(127.5, "lb") },
+      },
+    ],
+  },
 ])("$script", ({ script, cases }) => {
   describe.each(cases)(
     "Result is $result for case %#: $description",
@@ -401,11 +438,11 @@ if (!(completedReps >= reps)) {
         }
       });
       test("new system", () => {
-        if (case_.description === "sum of crs < 15") {
-          console.log(
-            "This statement is here to you can easily break on this test",
-          );
-        }
+        // if (case_.description === "sum of crs < 15") {
+        //   console.log(
+        //     "This statement is here to you can easily break on this test",
+        //   );
+        // }
         const { result: output, finalState: state } = run(
           script,
           initialState?.() ?? {},
