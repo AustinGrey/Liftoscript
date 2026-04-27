@@ -5,12 +5,22 @@ import {
   type IUnit,
   type IWeight,
   TDynamicWeight,
+  TUnit,
   TWeight,
 } from "@/models/weight.ts";
 import { z } from "zod";
-import type {
-  IExerciseType,
-  IProgramMode,
+import {
+  type IExerciseType,
+  type IProgramMode,
+  TCustomExercise,
+  TExerciseDataValue,
+  TExerciseId,
+  TGym,
+  TLengthUnit,
+  TMuscleGroupsSettings,
+  TPlannerSettings,
+  TSettingsTimers,
+  TStatsEnabled,
 } from "@/evaluators/logic-evaluator.ts";
 import type {
   ILiftoscriptEvaluatorUpdate,
@@ -237,3 +247,61 @@ export interface IScriptFunctions {
     bindings: IScriptBindings,
   ): number;
 }
+
+export const TSettings = z
+  .object({
+    timers: TSettingsTimers,
+    gyms: z.array(TGym),
+    deletedGyms: z.array(z.string()),
+    // graphs: TGraphs,
+    // graphOptions: t.record(t.string(), TGraphOptions),
+    // graphsSettings: t
+    //   .object({
+    //     isSameXAxis: t.boolean().optional(),
+    //     isWithBodyweight: t.boolean().optional(),
+    //     isWithOneRm: t.boolean().optional(),
+    //     isWithProgramLines: t.boolean().optional(),
+    //     defaultType: TGraphExerciseSelectedType.optional(),
+    //     defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
+    //   })
+    //   .optional(),
+    exerciseStatsSettings: z
+      .object({
+        ascendingSort: z.boolean().optional(),
+        hideWithoutWorkoutNotes: z.boolean().optional(),
+        hideWithoutExerciseNotes: z.boolean().optional(),
+      })
+      .optional(),
+    exercises: z.record(z.string(), TCustomExercise),
+    statsEnabled: TStatsEnabled,
+    units: TUnit,
+    lengthUnits: TLengthUnit,
+    volume: z.number(),
+    exerciseData: z.record(z.string(), TExerciseDataValue),
+    planner: TPlannerSettings,
+    // workoutSettings: TWorkoutSettings,
+    muscleGroups: TMuscleGroupsSettings,
+
+    appleHealthSyncWorkout: z.boolean().optional(),
+    appleHealthSyncMeasurements: z.boolean().optional(),
+    appleHealthAnchor: z.string().optional(),
+    googleHealthSyncWorkout: z.boolean().optional(),
+    googleHealthSyncMeasurements: z.boolean().optional(),
+    googleHealthAnchor: z.string().optional(),
+    healthConfirmation: z.boolean().optional(),
+    ignoreDoNotDisturb: z.boolean().optional(),
+    currentGymId: z.string().optional(),
+    isPublicProfile: z.boolean().optional(),
+    nickname: z.string().optional(),
+    alwaysOnDisplay: z.boolean().optional(),
+    vibration: z.boolean().optional(),
+    startWeekFromMonday: z.boolean().optional(),
+    textSize: z.number().optional(),
+    starredExercises: z.record(TExerciseId, z.boolean()).optional(),
+    theme: z.enum(["dark", "light"]).optional(),
+    currentBodyweight: TWeight.optional(),
+    affiliateEnabled: z.boolean().optional(),
+  })
+  .strict();
+
+export type ISettings = z.infer<typeof TSettings>;
