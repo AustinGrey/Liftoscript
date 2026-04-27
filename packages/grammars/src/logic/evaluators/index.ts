@@ -21,7 +21,12 @@ import {
   type LogicResult,
   type Quantity,
 } from "@/logic/types.ts";
-import { type IWeight, TDynamicWeight, TWeight } from "@/models/weight.ts";
+import {
+  type IWeight,
+  percentORM,
+  TDynamicWeight,
+  TWeight,
+} from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
 
@@ -212,7 +217,7 @@ export function Progress_createScriptFunctions(
       const weight = Weight.build(vals, context.unit);
       return Weight.increment(weight, settings, context.exerciseType);
     } else if (is(TDynamicWeight, vals)) {
-      return Weight.buildPct(vals.value + 1);
+      return percentORM(vals.value + 1);
     } else {
       return Weight.increment(vals, settings, context.exerciseType);
     }
@@ -226,7 +231,7 @@ export function Progress_createScriptFunctions(
       const weight = Weight.build(vals, context.unit);
       return Weight.decrement(weight, settings, context.exerciseType);
     } else if (is(TDynamicWeight, vals)) {
-      return Weight.buildPct(vals.value - 1);
+      return percentORM(vals.value - 1);
     } else {
       return Weight.decrement(vals, settings, context.exerciseType);
     }
@@ -382,8 +387,8 @@ function round(num: LogicResult): number | IWeight {
       : 0;
 }
 
-function sum(...args: unknown[]): Quantity {
-  const flat = flattenScriptArgs(args);
+function sum(...args: LogicResult[]): Quantity {
+  const flat = [...flattenScriptArgs(args)];
   if (flat.length === 0) {
     return 0;
   }
@@ -393,8 +398,8 @@ function sum(...args: unknown[]): Quantity {
   );
 }
 
-function min(...args: unknown[]): Quantity {
-  const flat = flattenScriptArgs(args);
+function min(...args: LogicResult[]): Quantity {
+  const flat = [...flattenScriptArgs(args)];
   if (flat.length === 0) {
     return 0;
   }
@@ -404,8 +409,8 @@ function min(...args: unknown[]): Quantity {
   );
 }
 
-function max(...args: unknown[]): Quantity {
-  const flat = flattenScriptArgs(args);
+function max(...args: LogicResult[]): Quantity {
+  const flat = [...flattenScriptArgs(args)];
   if (flat.length === 0) {
     return 0;
   }
@@ -431,18 +436,20 @@ function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
   return true;
 }
 
-function flattenScriptArgs(args: unknown[]): Quantity[] {
-  const result: Quantity[] = [];
+/**
+ * Flattens the list of args and filters out non Quantity values
+ * @param args The list of arbitrary args to filter/flatten
+ */
+function* flattenScriptArgs(args: LogicResult[]): Generator<Quantity> {
   for (const arg of args) {
     if (Array.isArray(arg)) {
       for (const item of arg) {
         if (isQuantity(item)) {
-          result.push(item);
+          yield item;
         }
       }
     } else if (isQuantity(arg)) {
-      result.push(arg);
+      yield arg;
     }
   }
-  return result;
 }
