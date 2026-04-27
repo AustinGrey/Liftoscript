@@ -18,6 +18,7 @@ import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 import type {
   ILiftoscriptEvaluatorUpdate,
   LogicResult,
+  Quantity,
 } from "@/logic/types.ts";
 import {
   type IDynamicWeight,
@@ -26,7 +27,7 @@ import {
   TWeight,
 } from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
-import { is } from "@/utils/types.ts";
+import { is, isNumber } from "@/utils/types.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -206,17 +207,11 @@ export function run(
 export function Progress_createScriptFunctions(
   settings: ISettings,
 ): IScriptFunctions {
-  function increment(vals: number, context: IScriptFnContext): number;
-  function increment(vals: IWeight, context: IScriptFnContext): IWeight;
-  function increment(
-    vals: IDynamicWeight,
+  function increment<T extends Quantity>(
+    vals: T,
     context: IScriptFnContext,
-  ): IDynamicWeight;
-  function increment(
-    vals: IWeight | IDynamicWeight | number,
-    context: IScriptFnContext,
-  ): IWeight | IDynamicWeight | number {
-    if (typeof vals === "number") {
+  ): T {
+    if (isNumber(vals)) {
       const weight = Weight.build(vals, context.unit);
       return Weight.increment(weight, settings, context.exerciseType);
     } else if (is(TDynamicWeight, vals)) {
@@ -226,17 +221,11 @@ export function Progress_createScriptFunctions(
     }
   }
 
-  function decrement(vals: number, context: IScriptFnContext): number;
-  function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
-  function decrement(
-    vals: IDynamicWeight,
+  function decrement<T extends Quantity>(
+    vals: T,
     context: IScriptFnContext,
-  ): IDynamicWeight;
-  function decrement(
-    vals: IWeight | IDynamicWeight | number,
-    context: IScriptFnContext,
-  ): IWeight | IDynamicWeight | number {
-    if (typeof vals === "number") {
+  ): T {
+    if (isNumber(vals)) {
       const weight = Weight.build(vals, context.unit);
       return Weight.decrement(weight, settings, context.exerciseType);
     } else if (is(TDynamicWeight, vals)) {
@@ -292,14 +281,14 @@ export function Progress_createScriptFunctions(
     rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
       const reps = is(TWeight, repsRaw)
         ? repsRaw.value
-        : typeof repsRaw === "number"
+        : isNumber(repsRaw)
           ? repsRaw
           : 1;
       const rpe =
-        typeof rpeRawOrContext === "number" && context != null
+        isNumber(rpeRawOrContext) && context != null
           ? is(TWeight, rpeRawOrContext)
             ? rpeRawOrContext.value
-            : typeof rpeRawOrContext === "number"
+            : isNumber(rpeRawOrContext)
               ? rpeRawOrContext
               : 10
           : 10;
