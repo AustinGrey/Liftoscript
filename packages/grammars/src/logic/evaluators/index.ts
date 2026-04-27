@@ -15,10 +15,11 @@ import type {
 import type { SyntaxNode } from "@lezer/common";
 import { parser } from "@/parsers/logic.ts";
 import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
-import type {
-  ILiftoscriptEvaluatorUpdate,
-  LogicResult,
-  Quantity,
+import {
+  type ILiftoscriptEvaluatorUpdate,
+  isQuantity,
+  type LogicResult,
+  type Quantity,
 } from "@/logic/types.ts";
 import {
   type IDynamicWeight,
@@ -353,68 +354,62 @@ export function Progress_createScriptFunctions(
   return fns;
 }
 
-function floor(num: number): number;
-function floor(num: IWeight): IWeight;
-function floor(num: IWeight | number): IWeight | number {
+function floor<T extends number | IWeight>(num: T): T {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number"
+  return isNumber(num)
     ? Math.floor(num)
     : Weight.build(Math.floor(num.value), num.unit);
 }
 
-function ceil(num: number): number;
-function ceil(num: IWeight): IWeight;
-function ceil(num: IWeight | number): IWeight | number {
+function ceil<T extends number | IWeight>(num: T): T {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number"
+  return isNumber(num)
     ? Math.ceil(num)
     : Weight.build(Math.ceil(num.value), num.unit);
 }
 
-function round(num: number): number;
-function round(num: IWeight): IWeight;
-function round(num: IWeight | number): IWeight | number {
+function round<T extends number | IWeight>(num: T): T {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number"
+  return isNumber(num)
     ? Math.round(num)
     : Weight.build(Math.round(num.value), num.unit);
 }
 
-function sum(...args: unknown[]): IWeight | IPercentage | number {
+function sum(...args: unknown[]): Quantity {
   const flat = flattenScriptArgs(args);
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>(
-    (acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y),
+  return flat.reduce<Quantity>(
+    (acc, a) => Weight.op(undefined, acc, a, (x, y) => x + y),
     0,
   );
 }
 
-function min(...args: unknown[]): IWeight | IPercentage | number {
+function min(...args: unknown[]): Quantity {
   const flat = flattenScriptArgs(args);
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>(
-    (acc, a) => (Weight_lt(a, acc) ? a : acc),
+  return flat.reduce<Quantity>(
+    (acc, a) => (Weight.lt(a, acc) ? a : acc),
     flat[0],
   );
 }
 
-function max(...args: unknown[]): IWeight | IPercentage | number {
+function max(...args: unknown[]): Quantity {
   const flat = flattenScriptArgs(args);
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>(
-    (acc, a) => (Weight_lt(acc, a) ? a : acc),
+  return flat.reduce<Quantity>(
+    (acc, a) => (Weight.lt(acc, a) ? a : acc),
     flat[0],
   );
 }
@@ -426,11 +421,27 @@ function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
     if (
       aVal != null &&
       bVal != null &&
-      !Weight_eq(aVal, 0) &&
-      Weight_lt(aVal, bVal)
+      !Weight.eq(aVal, 0) &&
+      Weight.lt(aVal, bVal)
     ) {
       return false;
     }
   }
   return true;
+}
+
+function flattenScriptArgs(args: unknown[]): Quantity[] {
+  const result: Quantity[] = [];
+  for (const arg of args) {
+    if (Array.isArray(arg)) {
+      for (const item of arg) {
+        if (isQuantity(item)) {
+          result.push(item);
+        }
+      }
+    } else if (isQuantity(arg)) {
+      result.push(arg);
+    }
+  }
+  return result;
 }
