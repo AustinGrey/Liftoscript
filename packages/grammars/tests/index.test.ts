@@ -541,6 +541,7 @@ if (!(completedReps >= reps)) {
         initialState: () => ({ lastsetrir: 3, reps: 5 }),
         adjustEmptyGlobals: {
           reps: [5, 5],
+          completedReps: [5, 5],
         },
         finalState: { lastsetrir: 3, reps: 6 },
       },
@@ -557,7 +558,7 @@ if (!(completedReps >= reps)) {
       {
         initialState: () => ({ reps: 5 }),
         adjustEmptyGlobals: {
-          r: [6, 2],
+          r: [6, 3],
         },
         finalState: { reps: 6 },
       },
