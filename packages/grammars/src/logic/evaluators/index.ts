@@ -355,7 +355,9 @@ export function Progress_createScriptFunctions(
   return fns;
 }
 
-function floor<T extends number | IWeight>(num: T): T {
+function floor<T extends number | IWeight>(
+  num: T,
+): T extends number | IWeight ? T : number {
   return transformLogicResult(
     num,
     {
