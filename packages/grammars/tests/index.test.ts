@@ -399,6 +399,140 @@ if (!(completedReps >= reps)) {
       },
     ],
   },
+  // condition with numbers
+  {
+    script: `
+    if (cr[3] >= 25) {
+      state.weight = state.weight + 5lb
+    }
+    `,
+    cases: [
+      {
+        initialState: () => ({ weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          cr: [5, 5, 30],
+        },
+        finalState: { weight: Weight.build(155, "lb") },
+      },
+      {
+        initialState: () => ({ weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          cr: [5, 5, 5, 5, 5],
+        },
+        finalState: { weight: Weight.build(150, "lb") },
+      },
+    ],
+  },
+  // SBS
+  {
+    script: `
+    if (state.week != 7 && state.week != 14 && state.week != 21) {
+      if (completedReps[4] > reps[4] + 4) {
+        state.tm = state.tm * 1.03
+      } else if (completedReps[4] < reps[4] - 1) {
+        state.tm = state.tm * 0.95
+      } else if (completedReps[4] < reps[4]) {
+        state.tm = state.tm * 0.98
+      } else if (completedReps[4] > reps[4]) {
+        state.tm = state.tm * (1.0 + ((completedReps[4] - reps[4]) * 0.005))
+      }
+    }
+    
+    state.week = state.week + 1
+    if (state.week > 21) {
+      state.week = 1
+    }
+    
+    if (state.week == 2) { state.intensity = 72.5 }
+    if (state.week == 3) { state.intensity = 75 }
+    if (state.week == 4) { state.intensity = 72.5 }
+    if (state.week == 5) { state.intensity = 75 }
+    if (state.week == 6) { state.intensity = 77.5 }
+    if (state.week == 7) { state.intensity = 60 }
+    if (state.week == 8) { state.intensity = 72.5 }
+    if (state.week == 9) { state.intensity = 75 }
+    if (state.week == 10) { state.intensity = 77.5 }
+    if (state.week == 11) { state.intensity = 75 }
+    if (state.week == 12) { state.intensity = 77.5 }
+    if (state.week == 13) { state.intensity = 80 }
+    if (state.week == 14) { state.intensity = 60 }
+    if (state.week == 15) { state.intensity = 75 }
+    if (state.week == 16) { state.intensity = 77.5 }
+    if (state.week == 17) { state.intensity = 80 }
+    if (state.week == 18) { state.intensity = 77.5 }
+    if (state.week == 19) { state.intensity = 80 }
+    if (state.week == 20) { state.intensity = 82.5 }
+    if (state.week == 21) { state.intensity = 60 }
+    
+    if (state.intensity > 95) { state.lastrep = 1 }
+    else if (state.intensity > 90) { state.lastrep = 2 }
+    else if (state.intensity > 87.5) { state.lastrep = 3 }
+    else if (state.intensity > 85) { state.lastrep = 4 }
+    else if (state.intensity > 82.5) { state.lastrep = 5 }
+    else if (state.intensity > 80) { state.lastrep = 6 }
+    else if (state.intensity > 77.5) { state.lastrep = 8 }
+    else if (state.intensity > 75) { state.lastrep = 9 }
+    else if (state.intensity > 72.5) { state.lastrep = 10 }
+    else if (state.intensity > 70) { state.lastrep = 11 }
+    else if (state.intensity > 67.5) { state.lastrep = 12 }
+    else if (state.intensity > 65) { state.lastrep = 13 }
+    else if (state.intensity > 62.5) { state.lastrep = 15 }
+    else if (state.intensity > 60) { state.lastrep = 16 }
+    else if (state.intensity > 57.5) { state.lastrep = 18 }
+    else if (state.intensity > 55) { state.lastrep = 19 }
+    else if (state.intensity > 52.5) { state.lastrep = 21 }
+    else if (state.intensity > 50) { state.lastrep = 23 }
+    else { state.lastrep = 25 }
+    
+    if (state.intensity > 95) { state.reps = 1 }
+    else if (state.intensity > 87.5) { state.reps = 2 }
+    else if (state.intensity > 85) { state.reps = 3 }
+    else if (state.intensity > 82.5) { state.reps = 4 }
+    else if (state.intensity > 80) { state.reps = 5 }
+    else if (state.intensity > 77.5) { state.reps = 6 }
+    else if (state.intensity > 75) { state.reps = 7 }
+    else if (state.intensity > 72.5) { state.reps = 8 }
+    else if (state.intensity > 70) { state.reps = 9 }
+    else if (state.intensity > 67.5) { state.reps = 10 }
+    else if (state.intensity > 65) { state.reps = 11 }
+    else if (state.intensity > 62.5) { state.reps = 12 }
+    else if (state.intensity > 60) { state.reps = 13 }
+    else if (state.intensity > 57.5) { state.reps = 14 }
+    else if (state.intensity > 55) { state.reps = 15 }
+    else if (state.intensity > 52.5) { state.reps = 17 }
+    else if (state.intensity > 50) { state.reps = 18 }
+    else { state.reps = 20 }
+    `,
+    cases: [
+      {
+        initialState: () => ({
+          tm: Weight.build(1000, "lb"),
+          week: 1,
+          intensity: 70,
+          reps: 8,
+          lastrep: 9,
+        }),
+        adjustEmptyGlobals: {
+          r: [5, 5, 5, 5],
+          reps: [5, 5, 5, 5],
+          cr: [5, 5, 5, 6],
+          completedReps: [5, 5, 5, 6],
+          weights: [
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+          ],
+        },
+        finalState: expect.objectContaining({
+          week: 2,
+          intensity: 72.5,
+          reps: 9,
+          lastrep: 11,
+        }),
+      },
+    ],
+  },
 ])("$script", ({ script, cases }) => {
   describe.each(cases)(
     "Result is $result for case %#: $description",
