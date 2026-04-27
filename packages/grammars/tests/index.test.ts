@@ -533,6 +533,83 @@ if (!(completedReps >= reps)) {
       },
     ],
   },
+  // oneliner
+  {
+    script: `if (completedReps >= reps && state.lastsetrir>1) {state.reps=state.reps+1}`,
+    cases: [
+      {
+        initialState: () => ({ lastsetrir: 3, reps: 5 }),
+        adjustEmptyGlobals: {
+          reps: [5, 5],
+        },
+        finalState: { lastsetrir: 3, reps: 6 },
+      },
+    ],
+  },
+  //nested conditions
+  {
+    script: `
+      if ((r[1] == 3 || r[1] == 6) && (((r[2] == 3 ? 1 == 1 : 1 == 2)))) {
+        state.reps = 1 == 1 ? state.reps + 1 : state.reps + 2
+      }
+    `,
+    cases: [
+      {
+        initialState: () => ({ reps: 5 }),
+        adjustEmptyGlobals: {
+          r: [6, 2],
+        },
+        finalState: { reps: 6 },
+      },
+    ],
+  },
+  // fn in if
+  {
+    script: `
+      if (2 > 1) {
+        state.weight = roundWeight(state.weight * 0.323)
+      }
+    `,
+    cases: [
+      {
+        initialState: () => ({ weight: Weight.build(1000, "lb") }),
+        adjustEmptyGlobals: {},
+        finalState: { weight: Weight.build(323, "lb") },
+        result: Weight.build(323, "lb"),
+      },
+    ],
+  },
+  // fn in assignment
+  {
+    script: `
+      state.weight = roundWeight(state.weight * 0.323123)
+    `,
+    cases: [
+      {
+        initialState: () => ({ weight: Weight.build(1000, "lb") }),
+        adjustEmptyGlobals: {},
+        finalState: { weight: Weight.build(323.1, "lb") },
+      },
+    ],
+  },
+  // nested conditions 2
+  {
+    script: `
+    if (!(completedReps[1] >= reps[1] - 2)) {
+      state.failures = state.failures + 1
+    }
+    `,
+    cases: [
+      {
+        initialState: () => ({ failures: 0 }),
+        adjustEmptyGlobals: {
+          reps: [8],
+          completedReps: [5],
+        },
+        finalState: { failures: 1 },
+      },
+    ],
+  },
 ])("$script", ({ script, cases }) => {
   describe.each(cases)(
     "Result is $result for case %#: $description",
