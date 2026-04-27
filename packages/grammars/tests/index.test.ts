@@ -109,6 +109,7 @@ describe.each<{
   cases: Array<
     RequireAtLeastOne<
       {
+        description?: string;
         // The expected return value of running the script
         result?: LogicResult;
         initialState?: () => IProgramState;
@@ -295,6 +296,7 @@ if (!(completedReps >= reps)) {
     `,
     cases: [
       {
+        description: "sum of crs == 15",
         initialState: () => ({ weight: Weight.build(150, "lb") }),
         adjustEmptyGlobals: {
           reps: [5, 5, 5],
@@ -308,6 +310,7 @@ if (!(completedReps >= reps)) {
         finalState: { weight: Weight.build(152.5, "lb") },
       },
       {
+        description: "sum of crs > 15",
         initialState: () => ({ weight: Weight.build(150, "lb") }),
         adjustEmptyGlobals: {
           reps: [5, 5, 5],
@@ -321,6 +324,7 @@ if (!(completedReps >= reps)) {
         finalState: { weight: Weight.build(155, "lb") },
       },
       {
+        description: "sum of crs < 15",
         initialState: () => ({ weight: Weight.build(150, "lb") }),
         adjustEmptyGlobals: {
           reps: [5, 5, 5],
@@ -359,54 +363,68 @@ if (!(completedReps >= reps)) {
   //   e: NaN,
   // },
 ])("$script", ({ script, cases }) => {
-  describe.each(cases)("Result is $result for case %#", (case_) => {
-    const { initialState, adjustEmptyGlobals, finalState } = case_;
-    test("old system", () => {
-      const state = initialState?.() ?? {};
-      const output = new LiftoscriptEvaluator(
-        script,
-        state,
-        {},
-        {
-          ...emptyGlobalData(),
-          ...adjustEmptyGlobals,
-        },
-        {},
-        {},
-        "kg",
-        "planner",
-      ).evaluate(parser.parse(script).topNode);
-      if ("result" in case_) {
-        expect
-          .soft(output, "Script should evaluate to the expected result")
-          .toEqual(case_.result);
-      }
-      if (finalState) {
-        // State in the old system is mutable, the object itself is modified
-        expect
-          .soft(state, "State after evaluation completes should match")
-          .toEqual(finalState);
-      }
-    });
-    test("new system", () => {
-      const { result: output, finalState: state } = run(
-        script,
-        initialState?.() ?? {},
-        {
-          ...emptyGlobalData(),
-          ...adjustEmptyGlobals,
-        },
-      );
-      if ("result" in case_) {
-        expect
-          .soft(output, "Script should evaluate to the expected result")
-          .toEqual(case_.result);
-      }
-      if (finalState) {
-        expect
-          .soft(state, "State after evaluation completes should match")
-          .toEqual(finalState);
-      }
-    });
-  });
+  describe.each(cases)(
+    "Result is $result for case %#: $description",
+    (case_) => {
+      const { initialState, adjustEmptyGlobals, finalState } = case_;
+      test("old system", () => {
+        // if (case_.description === "sum of crs < 15") {
+        //   console.log(
+        //     "This statement is here to you can easily break on this test",
+        //   );
+        // }
+
+        const state = initialState?.() ?? {};
+        const output = new LiftoscriptEvaluator(
+          script,
+          state,
+          {},
+          {
+            ...emptyGlobalData(),
+            ...adjustEmptyGlobals,
+          },
+          {},
+          {},
+          "kg",
+          "planner",
+        ).evaluate(parser.parse(script).topNode);
+        if ("result" in case_) {
+          expect
+            .soft(output, "Script should evaluate to the expected result")
+            .toEqual(case_.result);
+        }
+        if (finalState) {
+          // State in the old system is mutable, the object itself is modified
+          expect
+            .soft(state, "State after evaluation completes should match")
+            .toEqual(finalState);
+        }
+      });
+      test("new system", () => {
+        if (case_.description === "sum of crs < 15") {
+          console.log(
+            "This statement is here to you can easily break on this test",
+          );
+        }
+        const { result: output, finalState: state } = run(
+          script,
+          initialState?.() ?? {},
+          {
+            ...emptyGlobalData(),
+            ...adjustEmptyGlobals,
+          },
+        );
+        if ("result" in case_) {
+          expect
+            .soft(output, "Script should evaluate to the expected result")
+            .toEqual(case_.result);
+        }
+        if (finalState) {
+          expect
+            .soft(state, "State after evaluation completes should match")
+            .toEqual(finalState);
+        }
+      });
+    },
+  );
 });

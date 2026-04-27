@@ -164,7 +164,7 @@ export function op(
     return operation(a, b, o);
   }
 
-  if (is(TWeight, a) && isNumber(b)) {
+  if (is(TDynamicWeight, a) && isNumber(b)) {
     return percentORM(o(a.value, b));
   }
   if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
