@@ -191,6 +191,7 @@ export function run(
     updateVar(key, value) {
       return (vars[key] = value);
     },
+    publicFunctions: Progress_createScriptFunctions({}),
   };
 
   return {
@@ -306,7 +307,7 @@ export function Progress_createScriptFunctions(
     print: (...fnArgs) => {
       fnArgs.pop();
       const context = fnArgs.pop() as IScriptFnContext;
-      const args = [...fnArgs.flat()] as (number | IWeight | IDynamicWeight)[];
+      const args = [...fnArgs.flat()] as Quantity[];
       context.prints = context.prints || [];
       context.prints.push(args);
       return args[0];
@@ -317,7 +318,7 @@ export function Progress_createScriptFunctions(
       minReps: number,
       reps: number,
       isAmrap: number,
-      weight: IWeight | IDynamicWeight | number,
+      weight: Quantity,
       timer: number,
       rpe: number,
       logRpe: number,
@@ -350,4 +351,86 @@ export function Progress_createScriptFunctions(
     },
   };
   return fns;
+}
+
+function floor(num: number): number;
+function floor(num: IWeight): IWeight;
+function floor(num: IWeight | number): IWeight | number {
+  if (num == null) {
+    return 0;
+  }
+  return typeof num === "number"
+    ? Math.floor(num)
+    : Weight.build(Math.floor(num.value), num.unit);
+}
+
+function ceil(num: number): number;
+function ceil(num: IWeight): IWeight;
+function ceil(num: IWeight | number): IWeight | number {
+  if (num == null) {
+    return 0;
+  }
+  return typeof num === "number"
+    ? Math.ceil(num)
+    : Weight.build(Math.ceil(num.value), num.unit);
+}
+
+function round(num: number): number;
+function round(num: IWeight): IWeight;
+function round(num: IWeight | number): IWeight | number {
+  if (num == null) {
+    return 0;
+  }
+  return typeof num === "number"
+    ? Math.round(num)
+    : Weight.build(Math.round(num.value), num.unit);
+}
+
+function sum(...args: unknown[]): IWeight | IPercentage | number {
+  const flat = flattenScriptArgs(args);
+  if (flat.length === 0) {
+    return 0;
+  }
+  return flat.reduce<IScriptArg>(
+    (acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y),
+    0,
+  );
+}
+
+function min(...args: unknown[]): IWeight | IPercentage | number {
+  const flat = flattenScriptArgs(args);
+  if (flat.length === 0) {
+    return 0;
+  }
+  return flat.reduce<IScriptArg>(
+    (acc, a) => (Weight_lt(a, acc) ? a : acc),
+    flat[0],
+  );
+}
+
+function max(...args: unknown[]): IWeight | IPercentage | number {
+  const flat = flattenScriptArgs(args);
+  if (flat.length === 0) {
+    return 0;
+  }
+  return flat.reduce<IScriptArg>(
+    (acc, a) => (Weight_lt(acc, a) ? a : acc),
+    flat[0],
+  );
+}
+
+function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const aVal = a[i];
+    const bVal = b[i];
+    if (
+      aVal != null &&
+      bVal != null &&
+      !Weight_eq(aVal, 0) &&
+      Weight_lt(aVal, bVal)
+    ) {
+      return false;
+    }
+  }
+  return true;
 }

@@ -115,6 +115,10 @@ export type EvaluateTools = SourceTools & {
    * @returns the new value, for convenience
    */
   updateVar: (key: string, value: Quantity) => Quantity;
+  /**
+   * The set of public functions which scripts might reference
+   */
+  publicFunctions: IScriptFunctions;
 };
 
 /**
@@ -254,17 +258,17 @@ export const TSettings = z
     gyms: z.array(TGym),
     deletedGyms: z.array(z.string()),
     // graphs: TGraphs,
-    // graphOptions: t.record(t.string(), TGraphOptions),
-    // graphsSettings: t
-    //   .object({
-    //     isSameXAxis: t.boolean().optional(),
-    //     isWithBodyweight: t.boolean().optional(),
-    //     isWithOneRm: t.boolean().optional(),
-    //     isWithProgramLines: t.boolean().optional(),
-    //     defaultType: TGraphExerciseSelectedType.optional(),
-    //     defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
-    //   })
-    //   .optional(),
+    // graphOptions: z.record(z.string(), TGraphOptions),
+    graphsSettings: z
+      .object({
+        isSameXAxis: z.boolean().optional(),
+        isWithBodyweight: z.boolean().optional(),
+        isWithOneRm: z.boolean().optional(),
+        isWithProgramLines: z.boolean().optional(),
+        // defaultType: TGraphExerciseSelectedType.optional(),
+        // defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
+      })
+      .optional(),
     exerciseStatsSettings: z
       .object({
         ascendingSort: z.boolean().optional(),
