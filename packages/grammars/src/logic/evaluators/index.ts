@@ -7,6 +7,8 @@ import type {
   EvaluateTools,
   IProgramState,
   IScriptBindings,
+  IScriptFnContext,
+  IScriptFunctions,
   LogicHandler,
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
@@ -16,6 +18,8 @@ import type {
   ILiftoscriptEvaluatorUpdate,
   LogicResult,
 } from "@/logic/types.ts";
+import type { IDynamicWeight, IWeight } from "@/models/weight.ts";
+import * as Weight from "@/models/weight.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -197,48 +201,54 @@ export function Progress_createScriptFunctions(
 ): IScriptFunctions {
   function increment(vals: number, context: IScriptFnContext): number;
   function increment(vals: IWeight, context: IScriptFnContext): IWeight;
-  function increment(vals: IPercentage, context: IScriptFnContext): IPercentage;
   function increment(
-    vals: IWeight | IPercentage | number,
+    vals: IDynamicWeight,
     context: IScriptFnContext,
-  ): IWeight | IPercentage | number {
+  ): IDynamicWeight;
+  function increment(
+    vals: IWeight | IDynamicWeight | number,
+    context: IScriptFnContext,
+  ): IWeight | IDynamicWeight | number {
     if (typeof vals === "number") {
-      const weight = Weight_build(vals, context.unit);
-      return Weight_increment(weight, settings, context.exerciseType);
-    } else if (Weight_isPct(vals)) {
-      return Weight_buildPct(vals.value + 1);
+      const weight = Weight.build(vals, context.unit);
+      return Weight.increment(weight, settings, context.exerciseType);
+    } else if (Weight.isPct(vals)) {
+      return Weight.buildPct(vals.value + 1);
     } else {
-      return Weight_increment(vals, settings, context.exerciseType);
+      return Weight.increment(vals, settings, context.exerciseType);
     }
   }
 
   function decrement(vals: number, context: IScriptFnContext): number;
   function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
-  function decrement(vals: IPercentage, context: IScriptFnContext): IPercentage;
   function decrement(
-    vals: IWeight | IPercentage | number,
+    vals: IDynamicWeight,
     context: IScriptFnContext,
-  ): IWeight | IPercentage | number {
+  ): IDynamicWeight;
+  function decrement(
+    vals: IWeight | IDynamicWeight | number,
+    context: IScriptFnContext,
+  ): IWeight | IDynamicWeight | number {
     if (typeof vals === "number") {
-      const weight = Weight_build(vals, context.unit);
-      return Weight_decrement(weight, settings, context.exerciseType);
-    } else if (Weight_isPct(vals)) {
-      return Weight_buildPct(vals.value - 1);
+      const weight = Weight.build(vals, context.unit);
+      return Weight.decrement(weight, settings, context.exerciseType);
+    } else if (Weight.isPct(vals)) {
+      return Weight.buildPct(vals.value - 1);
     } else {
-      return Weight_decrement(vals, settings, context.exerciseType);
+      return Weight.decrement(vals, settings, context.exerciseType);
     }
   }
 
   const fns: IScriptFunctions = {
     roundWeight: (num, context) => {
-      if (!Weight_is(num)) {
-        num = Weight_build(num, settings.units);
+      if (!Weight.is(num)) {
+        num = Weight.build(num, settings.units);
       }
       const unit = Equipment_getUnitForExerciseType(
         settings,
         context?.exerciseType,
       );
-      return Weight_round(
+      return Weight.round(
         num,
         settings,
         unit ?? settings.units,
@@ -246,14 +256,14 @@ export function Progress_createScriptFunctions(
       );
     },
     roundConvertWeight: (num, context) => {
-      if (!Weight_is(num)) {
-        num = Weight_build(num, settings.units);
+      if (!Weight.is(num)) {
+        num = Weight.build(num, settings.units);
       }
       const unit = Equipment_getUnitForExerciseType(
         settings,
         context?.exerciseType,
       );
-      return Weight_roundConvertTo(
+      return Weight.roundConvertTo(
         num,
         settings,
         unit ?? settings.units,
@@ -261,32 +271,32 @@ export function Progress_createScriptFunctions(
       );
     },
     calculateTrainingMax: (weight, reps, context) => {
-      if (!Weight_is(weight)) {
-        weight = Weight_build(weight, settings.units);
+      if (!Weight.is(weight)) {
+        weight = Weight.build(weight, settings.units);
       }
-      return Weight_getTrainingMax(weight, reps || 0, settings);
+      return Weight.getTrainingMax(weight, reps || 0, settings);
     },
     calculate1RM: (weight, reps, context) => {
       if (!Weight_is(weight)) {
         weight = Weight_build(weight, settings.units);
       }
-      return Weight_getOneRepMax(weight, reps);
+      return Weight.getOneRepMax(weight, reps);
     },
     rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
-      const reps = Weight_is(repsRaw)
+      const reps = Weight.is(repsRaw)
         ? repsRaw.value
         : typeof repsRaw === "number"
           ? repsRaw
           : 1;
       const rpe =
         typeof rpeRawOrContext === "number" && context != null
-          ? Weight_is(rpeRawOrContext)
+          ? Weight.is(rpeRawOrContext)
             ? rpeRawOrContext.value
             : typeof rpeRawOrContext === "number"
               ? rpeRawOrContext
               : 10
           : 10;
-      return Weight_rpeMultiplier(reps, rpe);
+      return Weight.rpeMultiplier(reps, rpe);
     },
     floor,
     ceil,
@@ -300,7 +310,7 @@ export function Progress_createScriptFunctions(
     print: (...fnArgs) => {
       fnArgs.pop();
       const context = fnArgs.pop() as IScriptFnContext;
-      const args = [...fnArgs.flat()] as (number | IWeight | IPercentage)[];
+      const args = [...fnArgs.flat()] as (number | IWeight | IDynamicWeight)[];
       context.prints = context.prints || [];
       context.prints.push(args);
       return args[0];
@@ -311,7 +321,7 @@ export function Progress_createScriptFunctions(
       minReps: number,
       reps: number,
       isAmrap: number,
-      weight: IWeight | IPercentage | number,
+      weight: IWeight | IDynamicWeight | number,
       timer: number,
       rpe: number,
       logRpe: number,
@@ -320,7 +330,7 @@ export function Progress_createScriptFunctions(
     ): number {
       for (let i = 0; i < bindings.numberOfSets; i++) {
         if (i >= from - 1 && i < to) {
-          const weightValue = Weight_convertToWeight(
+          const weightValue = Weight.convertToWeight(
             bindings.rm1,
             weight,
             context.unit,
@@ -328,7 +338,7 @@ export function Progress_createScriptFunctions(
           bindings.minReps[i] = reps !== minReps ? minReps : undefined;
           bindings.reps[i] = reps;
           bindings.originalWeights[i] = weightValue;
-          bindings.weights[i] = Weight_round(
+          bindings.weights[i] = Weight.round(
             weightValue,
             settings,
             context.unit,
