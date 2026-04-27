@@ -191,3 +191,157 @@ export function run(
     finalState: state,
   };
 }
+
+export function Progress_createScriptFunctions(
+  settings: ISettings,
+): IScriptFunctions {
+  function increment(vals: number, context: IScriptFnContext): number;
+  function increment(vals: IWeight, context: IScriptFnContext): IWeight;
+  function increment(vals: IPercentage, context: IScriptFnContext): IPercentage;
+  function increment(
+    vals: IWeight | IPercentage | number,
+    context: IScriptFnContext,
+  ): IWeight | IPercentage | number {
+    if (typeof vals === "number") {
+      const weight = Weight_build(vals, context.unit);
+      return Weight_increment(weight, settings, context.exerciseType);
+    } else if (Weight_isPct(vals)) {
+      return Weight_buildPct(vals.value + 1);
+    } else {
+      return Weight_increment(vals, settings, context.exerciseType);
+    }
+  }
+
+  function decrement(vals: number, context: IScriptFnContext): number;
+  function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
+  function decrement(vals: IPercentage, context: IScriptFnContext): IPercentage;
+  function decrement(
+    vals: IWeight | IPercentage | number,
+    context: IScriptFnContext,
+  ): IWeight | IPercentage | number {
+    if (typeof vals === "number") {
+      const weight = Weight_build(vals, context.unit);
+      return Weight_decrement(weight, settings, context.exerciseType);
+    } else if (Weight_isPct(vals)) {
+      return Weight_buildPct(vals.value - 1);
+    } else {
+      return Weight_decrement(vals, settings, context.exerciseType);
+    }
+  }
+
+  const fns: IScriptFunctions = {
+    roundWeight: (num, context) => {
+      if (!Weight_is(num)) {
+        num = Weight_build(num, settings.units);
+      }
+      const unit = Equipment_getUnitForExerciseType(
+        settings,
+        context?.exerciseType,
+      );
+      return Weight_round(
+        num,
+        settings,
+        unit ?? settings.units,
+        context?.exerciseType,
+      );
+    },
+    roundConvertWeight: (num, context) => {
+      if (!Weight_is(num)) {
+        num = Weight_build(num, settings.units);
+      }
+      const unit = Equipment_getUnitForExerciseType(
+        settings,
+        context?.exerciseType,
+      );
+      return Weight_roundConvertTo(
+        num,
+        settings,
+        unit ?? settings.units,
+        context?.exerciseType,
+      );
+    },
+    calculateTrainingMax: (weight, reps, context) => {
+      if (!Weight_is(weight)) {
+        weight = Weight_build(weight, settings.units);
+      }
+      return Weight_getTrainingMax(weight, reps || 0, settings);
+    },
+    calculate1RM: (weight, reps, context) => {
+      if (!Weight_is(weight)) {
+        weight = Weight_build(weight, settings.units);
+      }
+      return Weight_getOneRepMax(weight, reps);
+    },
+    rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
+      const reps = Weight_is(repsRaw)
+        ? repsRaw.value
+        : typeof repsRaw === "number"
+          ? repsRaw
+          : 1;
+      const rpe =
+        typeof rpeRawOrContext === "number" && context != null
+          ? Weight_is(rpeRawOrContext)
+            ? rpeRawOrContext.value
+            : typeof rpeRawOrContext === "number"
+              ? rpeRawOrContext
+              : 10
+          : 10;
+      return Weight_rpeMultiplier(reps, rpe);
+    },
+    floor,
+    ceil,
+    round,
+    sum,
+    min,
+    max,
+    increment,
+    decrement,
+    zeroOrGte,
+    print: (...fnArgs) => {
+      fnArgs.pop();
+      const context = fnArgs.pop() as IScriptFnContext;
+      const args = [...fnArgs.flat()] as (number | IWeight | IPercentage)[];
+      context.prints = context.prints || [];
+      context.prints.push(args);
+      return args[0];
+    },
+    sets(
+      from: number,
+      to: number,
+      minReps: number,
+      reps: number,
+      isAmrap: number,
+      weight: IWeight | IPercentage | number,
+      timer: number,
+      rpe: number,
+      logRpe: number,
+      context: IScriptFnContext,
+      bindings: IScriptBindings,
+    ): number {
+      for (let i = 0; i < bindings.numberOfSets; i++) {
+        if (i >= from - 1 && i < to) {
+          const weightValue = Weight_convertToWeight(
+            bindings.rm1,
+            weight,
+            context.unit,
+          );
+          bindings.minReps[i] = reps !== minReps ? minReps : undefined;
+          bindings.reps[i] = reps;
+          bindings.originalWeights[i] = weightValue;
+          bindings.weights[i] = Weight_round(
+            weightValue,
+            settings,
+            context.unit,
+            context.exerciseType,
+          );
+          bindings.RPE[i] = rpe !== 0 ? rpe : undefined;
+          bindings.amraps[i] = isAmrap !== 0 ? 1 : 0;
+          bindings.logrpes[i] = logRpe !== 0 ? 1 : 0;
+          bindings.timers[i] = timer !== 0 ? timer : undefined;
+        }
+      }
+      return to - from;
+    },
+  };
+  return fns;
+}
