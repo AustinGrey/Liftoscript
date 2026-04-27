@@ -29,6 +29,7 @@ import {
 } from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
+import { transformLogicResult } from "@/logic/evaluators/common.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -355,12 +356,14 @@ export function Progress_createScriptFunctions(
 }
 
 function floor<T extends number | IWeight>(num: T): T {
-  if (num == null) {
-    return 0;
-  }
-  return isNumber(num)
-    ? Math.floor(num)
-    : Weight.build(Math.floor(num.value), num.unit);
+  return transformLogicResult(
+    num,
+    {
+      number: (x) => Math.floor(x),
+      weight: (x) => Weight.build(Math.floor(x.value), x.unit),
+    },
+    0,
+  );
 }
 
 function ceil<T extends number | IWeight>(num: T): T {
