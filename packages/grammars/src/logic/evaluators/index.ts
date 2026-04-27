@@ -9,6 +9,7 @@ import type {
   IScriptBindings,
   IScriptFnContext,
   IScriptFunctions,
+  ISettings,
   LogicHandler,
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
@@ -18,8 +19,14 @@ import type {
   ILiftoscriptEvaluatorUpdate,
   LogicResult,
 } from "@/logic/types.ts";
-import type { IDynamicWeight, IWeight } from "@/models/weight.ts";
+import {
+  type IDynamicWeight,
+  type IWeight,
+  TDynamicWeight,
+  TWeight,
+} from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
+import { is } from "@/utils/types.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -212,7 +219,7 @@ export function Progress_createScriptFunctions(
     if (typeof vals === "number") {
       const weight = Weight.build(vals, context.unit);
       return Weight.increment(weight, settings, context.exerciseType);
-    } else if (Weight.isPct(vals)) {
+    } else if (is(TDynamicWeight, vals)) {
       return Weight.buildPct(vals.value + 1);
     } else {
       return Weight.increment(vals, settings, context.exerciseType);
@@ -232,7 +239,7 @@ export function Progress_createScriptFunctions(
     if (typeof vals === "number") {
       const weight = Weight.build(vals, context.unit);
       return Weight.decrement(weight, settings, context.exerciseType);
-    } else if (Weight.isPct(vals)) {
+    } else if (is(TDynamicWeight, vals)) {
       return Weight.buildPct(vals.value - 1);
     } else {
       return Weight.decrement(vals, settings, context.exerciseType);
@@ -241,7 +248,7 @@ export function Progress_createScriptFunctions(
 
   const fns: IScriptFunctions = {
     roundWeight: (num, context) => {
-      if (!Weight.is(num)) {
+      if (!is(TWeight, num)) {
         num = Weight.build(num, settings.units);
       }
       const unit = Equipment_getUnitForExerciseType(
@@ -256,7 +263,7 @@ export function Progress_createScriptFunctions(
       );
     },
     roundConvertWeight: (num, context) => {
-      if (!Weight.is(num)) {
+      if (!is(TWeight, num)) {
         num = Weight.build(num, settings.units);
       }
       const unit = Equipment_getUnitForExerciseType(
@@ -271,26 +278,26 @@ export function Progress_createScriptFunctions(
       );
     },
     calculateTrainingMax: (weight, reps, context) => {
-      if (!Weight.is(weight)) {
+      if (!is(TWeight, weight)) {
         weight = Weight.build(weight, settings.units);
       }
       return Weight.getTrainingMax(weight, reps || 0, settings);
     },
     calculate1RM: (weight, reps, context) => {
-      if (!Weight_is(weight)) {
-        weight = Weight_build(weight, settings.units);
+      if (!is(TWeight, weight)) {
+        weight = Weight.build(weight, settings.units);
       }
       return Weight.getOneRepMax(weight, reps);
     },
     rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
-      const reps = Weight.is(repsRaw)
+      const reps = is(TWeight, repsRaw)
         ? repsRaw.value
         : typeof repsRaw === "number"
           ? repsRaw
           : 1;
       const rpe =
         typeof rpeRawOrContext === "number" && context != null
-          ? Weight.is(rpeRawOrContext)
+          ? is(TWeight, rpeRawOrContext)
             ? rpeRawOrContext.value
             : typeof rpeRawOrContext === "number"
               ? rpeRawOrContext
