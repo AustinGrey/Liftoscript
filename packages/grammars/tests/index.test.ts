@@ -3,6 +3,7 @@ import { parser } from "@/parsers/logic";
 import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
 import * as Weight from "@/models/weight.ts";
+import type { RequireAtLeastOne } from "type-fest";
 
 import { percentORM } from "@/models/weight.ts";
 import type {
@@ -105,12 +106,19 @@ function emptyGlobalData(): IScriptBindings {
 
 describe.each<{
   script: string;
-  cases: Array<{
-    result: LogicResult;
-    initialState?: () => IProgramState;
-    finalState?: IProgramState;
-    adjustEmptyGlobals?: Partial<IScriptBindings>;
-  }>;
+  cases: Array<
+    RequireAtLeastOne<
+      {
+        // The expected return value of running the script
+        result?: LogicResult;
+        initialState?: () => IProgramState;
+        // The expected final state once the script finished executing
+        finalState?: IProgramState;
+        adjustEmptyGlobals?: Partial<IScriptBindings>;
+      },
+      "result" | "finalState"
+    >
+  >;
 }>([
   // Literal Number
   { script: `1`, cases: [{ result: 1 }] },
@@ -275,18 +283,58 @@ if (!(completedReps >= reps)) {
       },
     ],
   },
-  // // Basic beginner
-  // {
-  //   s: `
-  //   if (cr[1] + cr[2] + cr[3] >= 15) {
-  //     state.weight = w[3] +
-  //       (cr[3] > 10 ? 5lb : 2.5lb)
-  //   } else {
-  //     state.weight = state.weight * 0.9
-  //   }
-  //   `,
-  //   e: NaN,
-  // },
+  // Basic beginner
+  {
+    script: `
+    if (cr[1] + cr[2] + cr[3] >= 15) {
+      state.weight = w[3] +
+        (cr[3] > 10 ? 5lb : 2.5lb)
+    } else {
+      state.weight = state.weight * 0.9
+    }
+    `,
+    cases: [
+      {
+        initialState: () => ({ weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          reps: [5, 5, 5],
+          cr: [5, 5, 5],
+          w: [
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+          ],
+        },
+        finalState: { weight: Weight.build(152.5, "lb") },
+      },
+      {
+        initialState: () => ({ weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          reps: [5, 5, 5],
+          cr: [5, 5, 11],
+          w: [
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+          ],
+        },
+        finalState: { weight: Weight.build(155, "lb") },
+      },
+      {
+        initialState: () => ({ weight: Weight.build(150, "lb") }),
+        adjustEmptyGlobals: {
+          reps: [5, 5, 5],
+          cr: [5, 5, 3],
+          w: [
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+            Weight.build(150, "lb"),
+          ],
+        },
+        finalState: { weight: Weight.build(135, "lb") },
+      },
+    ],
+  },
   // // GZCLP
   // {
   //   s: `
@@ -311,52 +359,54 @@ if (!(completedReps >= reps)) {
   //   e: NaN,
   // },
 ])("$script", ({ script, cases }) => {
-  describe.each(cases)(
-    "Result is $result for case %#",
-    ({ result, initialState, adjustEmptyGlobals, finalState }) => {
-      test("old system", () => {
-        const state = initialState?.() ?? {};
-        const output = new LiftoscriptEvaluator(
-          script,
-          state,
-          {},
-          {
-            ...emptyGlobalData(),
-            ...adjustEmptyGlobals,
-          },
-          {},
-          {},
-          "kg",
-          "planner",
-        ).evaluate(parser.parse(script).topNode);
+  describe.each(cases)("Result is $result for case %#", (case_) => {
+    const { initialState, adjustEmptyGlobals, finalState } = case_;
+    test("old system", () => {
+      const state = initialState?.() ?? {};
+      const output = new LiftoscriptEvaluator(
+        script,
+        state,
+        {},
+        {
+          ...emptyGlobalData(),
+          ...adjustEmptyGlobals,
+        },
+        {},
+        {},
+        "kg",
+        "planner",
+      ).evaluate(parser.parse(script).topNode);
+      if ("result" in case_) {
         expect
           .soft(output, "Script should evaluate to the expected result")
-          .toEqual(result);
-        if (finalState) {
-          // State in the old system is mutable, the object itself is modified
-          expect
-            .soft(state, "State after evaluation completes should match")
-            .toEqual(finalState);
-        }
-      });
-      test("new system", () => {
-        const { result: output, finalState: state } = run(
-          script,
-          initialState?.() ?? {},
-          {
-            ...emptyGlobalData(),
-            ...adjustEmptyGlobals,
-          },
-        );
+          .toEqual(case_.result);
+      }
+      if (finalState) {
+        // State in the old system is mutable, the object itself is modified
+        expect
+          .soft(state, "State after evaluation completes should match")
+          .toEqual(finalState);
+      }
+    });
+    test("new system", () => {
+      const { result: output, finalState: state } = run(
+        script,
+        initialState?.() ?? {},
+        {
+          ...emptyGlobalData(),
+          ...adjustEmptyGlobals,
+        },
+      );
+      if ("result" in case_) {
         expect
           .soft(output, "Script should evaluate to the expected result")
-          .toEqual(result);
-        if (finalState) {
-          expect
-            .soft(state, "State after evaluation completes should match")
-            .toEqual(finalState);
-        }
-      });
-    },
-  );
+          .toEqual(case_.result);
+      }
+      if (finalState) {
+        expect
+          .soft(state, "State after evaluation completes should match")
+          .toEqual(finalState);
+      }
+    });
+  });
 });

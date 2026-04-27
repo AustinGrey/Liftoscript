@@ -35,15 +35,15 @@
     "@lezer/common": "catalog:",
     "@lezer/generator": "catalog:",
     "@lezer/lr": "catalog:",
-    "type-fest": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.6.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "bumpp": "^11.0.1",
     "prettier": "catalog:",
-    "typescript": "^6.0.2",
-    "vite-plus": "^0.1.14"
+    "type-fest": "catalog:",
+    "typescript": "^6.0.3",
+    "vite-plus": "^0.1.19"
   }
 }
