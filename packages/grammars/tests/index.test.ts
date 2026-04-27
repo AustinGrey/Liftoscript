@@ -310,9 +310,9 @@ if (!(completedReps >= reps)) {
   //   `,
   //   e: NaN,
   // },
-])("$s", ({ script, cases }) => {
+])("$script", ({ script, cases }) => {
   describe.each(cases)(
-    "Result is $e when initial state like $initialState",
+    "Result is $result for case %#",
     ({ result, initialState, adjustEmptyGlobals, finalState }) => {
       test("old system", () => {
         const state = initialState?.() ?? {};
