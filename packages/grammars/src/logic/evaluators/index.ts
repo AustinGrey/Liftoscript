@@ -355,17 +355,15 @@ export function Progress_createScriptFunctions(
   return fns;
 }
 
-function floor<T extends number | IWeight>(
-  num: T,
-): T extends number | IWeight ? T : number {
-  return transformLogicResult(
-    num,
-    {
-      number: (x) => Math.floor(x),
-      weight: (x) => Weight.build(Math.floor(x.value), x.unit),
-    },
-    0,
-  );
+function floor(num: number): number;
+function floor(num: IWeight): IWeight;
+function floor(num: Exclude<LogicResult, number | IWeight>): number;
+function floor(num: LogicResult): number | IWeight {
+  return isNumber(num)
+    ? Math.ceil(num)
+    : is(TWeight, num)
+      ? Weight.build(Math.ceil(num.value), num.unit)
+      : 0;
 }
 
 function ceil<T extends number | IWeight>(num: T): T {

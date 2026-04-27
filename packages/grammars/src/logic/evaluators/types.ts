@@ -193,8 +193,11 @@ export interface IScriptFunctions {
     rpe: number,
     context: IScriptFnContext,
   ) => number;
-  floor(num: number): number;
-  floor(num: IWeight): IWeight;
+  floor: {
+    (num: number): number;
+    (num: IWeight): IWeight;
+    (num: Exclude<LogicResult, number | IWeight>): number;
+  };
   ceil(num: number): number;
   ceil(num: IWeight): IWeight;
   round(num: number): number;
