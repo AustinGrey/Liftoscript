@@ -10,7 +10,6 @@ import {
 } from "@/models/weight.ts";
 import { z } from "zod";
 import {
-  type IExerciseType,
   type IProgramMode,
   TCustomExercise,
   TExerciseDataValue,
@@ -318,3 +317,14 @@ export const TSettings = z
   .strict();
 
 export type ISettings = z.infer<typeof TSettings>;
+
+export const TEquipment = z.string();
+export type IEquipment = z.infer<typeof TEquipment>;
+
+export const TExerciseType = z
+  .object({
+    id: TExerciseId,
+    equipment: TEquipment.optional(),
+  })
+  .strict();
+export type IExerciseType = z.infer<typeof TExerciseType>;

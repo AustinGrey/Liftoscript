@@ -7,7 +7,7 @@ import { is, isNumber } from "@/utils/types.ts";
 
 import type { Quantity } from "@/logic/types.ts";
 import { MathUtils_roundFloat } from "@/utils/math.ts";
-import { Weight_multiply } from "@/evaluators/logic-evaluator.ts";
+import type { IExerciseType, ISettings } from "@/logic/evaluators/types.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -191,4 +191,298 @@ export function op(
   }
 
   throw new Error(`Can't apply operation to ${a} and ${b}`);
+}
+
+export function increment(
+  weight: IWeight,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IWeight {
+  const equipmentData = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
+  if (equipmentData) {
+    const unit = equipmentData.unit ?? weight.unit;
+    const roundWeight = round(weight, settings, unit, exerciseType);
+    if (equipmentData.isFixed) {
+      const items = CollectionUtils_sort(
+        equipmentData.fixed.filter((e) => e.unit === unit),
+        (a, b) => compare(a, b),
+      );
+      const item = items.find((i) => gt(i, roundWeight));
+      return item ?? items[items.length - 1] ?? roundWeight;
+    } else {
+      const smallestPlate = multiply(
+        Equipment_smallestPlate(equipmentData, unit),
+        equipmentData.multiplier,
+      );
+      let newWeight = roundWeight;
+      let attempt = 0;
+      do {
+        newWeight = add(newWeight, smallestPlate);
+        attempt += 1;
+      } while (
+        attempt < 20 &&
+        eq(round(newWeight, settings, unit, exerciseType), roundWeight)
+      );
+      return newWeight;
+    }
+  } else {
+    const roundWeight = round(weight, settings, weight.unit, exerciseType);
+    const rounding = exerciseType
+      ? Exercise_defaultRounding(exerciseType, settings)
+      : 1;
+    return build(roundWeight.value + rounding, roundWeight.unit);
+  }
+}
+
+export function decrement(
+  weight: IWeight,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IWeight {
+  const equipmentData = exerciseType
+    ? Equipment_getEquipmentDataForExerciseType(settings, exerciseType)
+    : undefined;
+  if (equipmentData) {
+    const unit = equipmentData.unit ?? weight.unit;
+    const roundWeight = round(weight, settings, unit, exerciseType);
+    if (equipmentData.isFixed) {
+      const items = CollectionUtils_sort(
+        equipmentData.fixed.filter((e) => e.unit === unit),
+        (a, b) => compareReverse(a, b),
+      );
+      const item = items.find((i) => lt(i, roundWeight));
+      return item ?? items[items.length - 1] ?? roundWeight;
+    } else {
+      const smallestPlate = multiply(
+        Equipment_smallestPlate(equipmentData, unit),
+        equipmentData.multiplier,
+      );
+      const subtracted = subtract(roundWeight, smallestPlate);
+      const newWeight = round(subtracted, settings, unit, exerciseType);
+      return build(newWeight.value, newWeight.unit);
+    }
+  } else {
+    const roundWeight = round(weight, settings, weight.unit, exerciseType);
+    const rounding = exerciseType
+      ? Exercise_defaultRounding(exerciseType, settings)
+      : 1;
+    return build(roundWeight.value - rounding, roundWeight.unit);
+  }
+}
+
+export function round(
+  weight: IWeight,
+  settings: ISettings,
+  unit: IUnit,
+  exerciseType?: IExerciseType,
+): IWeight {
+  if (exerciseType == null) {
+    return roundTo005(weight);
+  }
+  return calculatePlates(weight, settings, unit, exerciseType).totalWeight;
+}
+
+export function roundTo005(weight: IWeight): IWeight {
+  return build(MathUtils_roundTo005(weight.value), weight.unit);
+}
+
+export function roundTo000005(weight: IWeight): IWeight {
+  return build(MathUtils_roundTo000005(weight.value), weight.unit);
+}
+
+export function calculatePlates(
+  allWeight: IWeight,
+  settings: ISettings,
+  units: IUnit,
+  exerciseType: IExerciseType,
+): { plates: IPlate[]; platesWeight: IWeight; totalWeight: IWeight } {
+  const equipmentData = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
+  if (equipmentData == null) {
+    const rounding = Exercise_defaultRounding(exerciseType, settings);
+    allWeight = build(
+      MathUtils_round(allWeight.value, rounding),
+      allWeight.unit,
+    );
+    return { plates: [], platesWeight: allWeight, totalWeight: allWeight };
+  }
+
+  const absAllWeight = abs(allWeight);
+  const inverted = allWeight.value < 0;
+  if (equipmentData.isFixed) {
+    const fixed = CollectionUtils_sort(
+      equipmentData.fixed.filter(
+        (w) => w.unit === (equipmentData.unit ?? units),
+      ),
+      (a, b) => b.value - a.value,
+    );
+    const weight =
+      fixed.find((w) => lte(w, absAllWeight)) ||
+      fixed[fixed.length - 1] ||
+      absAllWeight;
+    let roundedWeight = roundTo005(weight);
+    roundedWeight = inverted ? invert(roundedWeight) : roundedWeight;
+    return {
+      plates: [],
+      platesWeight: roundedWeight,
+      totalWeight: roundedWeight,
+    };
+  }
+  const availablePlatesArr = equipmentData.plates.filter(
+    (p) => p.weight.unit === units,
+  );
+  const barWeight =
+    equipmentData.useBodyweightForBar && settings.currentBodyweight
+      ? settings.currentBodyweight
+      : equipmentData.bar[units];
+  const multiplier = equipmentData.multiplier || 1;
+  const isAssisting = equipmentData.isAssisting || false;
+  const weight = roundTo000005(subtract(absAllWeight, barWeight));
+  const availablePlates: IPlate[] = JSON.parse(
+    JSON.stringify(availablePlatesArr),
+  );
+  availablePlates.sort((a, b) => compareReverse(a.weight, b.weight));
+  const plates: IPlate[] = calculatePlatesInternalFast(
+    weight,
+    availablePlates,
+    multiplier,
+    isAssisting,
+  );
+  const total = plates.reduce(
+    (memo, plate) => {
+      const weightToAdd = multiply(plate.weight, plate.num);
+      return isAssisting ? subtract(memo, weightToAdd) : add(memo, weightToAdd);
+    },
+    build(0, allWeight.unit),
+  );
+  const totalWeight = roundTo000005(
+    inverted ? invert(add(total, barWeight)) : add(total, barWeight),
+  );
+  const thePlatesWeight = inverted ? invert(total) : total;
+  return { plates, platesWeight: thePlatesWeight, totalWeight };
+}
+
+export function abs(weight: IWeight): IWeight {
+  return build(Math.abs(weight.value), weight.unit);
+}
+
+export function invert(weight: IWeight): IWeight {
+  return build(-weight.value, weight.unit);
+}
+
+export function compare(a: IWeight, b: IWeight): number {
+  return a.value - convertTo(b, a.unit).value;
+}
+
+export function compareReverse(a: IWeight, b: IWeight): number {
+  return convertTo(b, a.unit).value - a.value;
+}
+
+function calculatePlatesInternalFast(
+  weight: IWeight,
+  availablePlates: IPlate[],
+  multiplier: number,
+  isAssisting: boolean,
+): IPlate[] {
+  const targetValue = isAssisting ? -weight.value : weight.value;
+  if (targetValue <= 0) {
+    return [];
+  }
+
+  const plateTypes: {
+    weight: IWeight;
+    unitWeight: number;
+    maxUnits: number;
+  }[] = [];
+  for (const p of availablePlates) {
+    if (p.num >= multiplier) {
+      plateTypes.push({
+        weight: p.weight,
+        unitWeight: p.weight.value * multiplier,
+        maxUnits: Math.floor(p.num / multiplier),
+      });
+    }
+  }
+  if (plateTypes.length === 0) {
+    return [];
+  }
+
+  // Convert to integers for exact arithmetic
+  const allValues = [targetValue, ...plateTypes.map((p) => p.unitWeight)];
+  let maxDecimals = 0;
+  for (const v of allValues) {
+    const s = v.toString();
+    const dot = s.indexOf(".");
+    if (dot >= 0) {
+      maxDecimals = Math.max(maxDecimals, s.length - dot - 1);
+    }
+  }
+  const precision = Math.pow(10, Math.min(maxDecimals, 6));
+  const intTarget = Math.round(targetValue * precision);
+  const intWeights = plateTypes.map((p) =>
+    Math.round(p.unitWeight * precision),
+  );
+
+  // Max contribution from plates at index i and beyond (for pruning)
+  const maxFrom = new Array(plateTypes.length + 1).fill(0);
+  for (let i = plateTypes.length - 1; i >= 0; i--) {
+    maxFrom[i] = maxFrom[i + 1] + intWeights[i] * plateTypes[i].maxUnits;
+  }
+
+  const best = new Array(plateTypes.length).fill(0);
+  const current = new Array(plateTypes.length).fill(0);
+  let bestRemaining = intTarget + 1;
+  let iterations = 0;
+
+  function search(index: number, remaining: number): void {
+    if (bestRemaining === 0 || iterations >= 10000) {
+      return;
+    }
+    if (remaining === 0 || index >= plateTypes.length) {
+      if (remaining < bestRemaining) {
+        bestRemaining = remaining;
+        for (let i = 0; i < index; i++) {
+          best[i] = current[i];
+        }
+        for (let i = index; i < plateTypes.length; i++) {
+          best[i] = 0;
+        }
+      }
+      return;
+    }
+
+    iterations += 1;
+    const w = intWeights[index];
+    const maxCount = Math.min(
+      plateTypes[index].maxUnits,
+      w > 0 ? Math.floor(remaining / w) : 0,
+    );
+
+    for (let count = maxCount; count >= 0; count--) {
+      const newRemaining = remaining - count * w;
+      if (newRemaining - maxFrom[index + 1] >= bestRemaining) {
+        continue;
+      }
+      current[index] = count;
+      search(index + 1, newRemaining);
+      if (bestRemaining === 0) {
+        return;
+      }
+    }
+  }
+
+  search(0, intTarget);
+
+  const plates: IPlate[] = [];
+  for (let i = 0; i < plateTypes.length; i++) {
+    if (best[i] > 0) {
+      plates.push({ weight: plateTypes[i].weight, num: best[i] * multiplier });
+    }
+  }
+  return plates;
 }

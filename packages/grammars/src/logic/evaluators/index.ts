@@ -22,6 +22,7 @@ import {
   type Quantity,
 } from "@/logic/types.ts";
 import {
+  type IDynamicWeight,
   type IWeight,
   percentORM,
   TDynamicWeight,
@@ -96,6 +97,7 @@ export function run(
   logic: string,
   initialState: Readonly<IProgramState>,
   globalData: IScriptBindings,
+  settings: ISettings,
 ): { result: LogicResult; finalState: IProgramState } {
   const state: IProgramState = { ...initialState };
   const updates: ILiftoscriptEvaluatorUpdate[] = [];
@@ -192,7 +194,7 @@ export function run(
     updateVar(key, value) {
       return (vars[key] = value);
     },
-    publicFunctions: Progress_createScriptFunctions({}),
+    publicFunctions: Progress_createScriptFunctions(settings),
   };
 
   return {
@@ -209,10 +211,13 @@ export function run(
 export function Progress_createScriptFunctions(
   settings: ISettings,
 ): IScriptFunctions {
-  function increment<T extends Quantity>(
-    vals: T,
+  function increment(vals: number, context: IScriptFnContext): number;
+  function increment(vals: IWeight, context: IScriptFnContext): IWeight;
+  function increment(
+    vals: IDynamicWeight,
     context: IScriptFnContext,
-  ): T {
+  ): IDynamicWeight;
+  function increment(vals: Quantity, context: IScriptFnContext): Quantity {
     if (isNumber(vals)) {
       const weight = Weight.build(vals, context.unit);
       return Weight.increment(weight, settings, context.exerciseType);
@@ -223,10 +228,13 @@ export function Progress_createScriptFunctions(
     }
   }
 
-  function decrement<T extends Quantity>(
-    vals: T,
+  function decrement(vals: number, context: IScriptFnContext): number;
+  function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
+  function decrement(
+    vals: IDynamicWeight,
     context: IScriptFnContext,
-  ): T {
+  ): IDynamicWeight;
+  function decrement(vals: Quantity, context: IScriptFnContext): Quantity {
     if (isNumber(vals)) {
       const weight = Weight.build(vals, context.unit);
       return Weight.decrement(weight, settings, context.exerciseType);
