@@ -101,6 +101,7 @@ export function run(
   initialState: Readonly<IProgramState>,
   globalData: IScriptBindings,
   settings: ISettings,
+  fnContext: IScriptFnContext,
 ): { result: LogicResult; finalState: IProgramState } {
   const state: IProgramState = { ...initialState };
   const updates: ILiftoscriptEvaluatorUpdate[] = [];
@@ -198,6 +199,7 @@ export function run(
       return (vars[key] = value);
     },
     publicFunctions: Progress_createScriptFunctions(settings),
+    fnContext,
   };
 
   return {
@@ -335,28 +337,46 @@ export function Progress_createScriptFunctions(
       rpe: number,
       logRpe: number,
       context: IScriptFnContext,
-      bindings: IScriptBindings,
+      t: EvaluateTools,
     ): number {
-      for (let i = 0; i < bindings.numberOfSets; i++) {
+      for (let i = 0; i < t.getGlobal("numberOfSets"); i++) {
         if (i >= from - 1 && i < to) {
           const weightValue = Weight.convertToWeight(
-            bindings.rm1,
+            t.getGlobal("rm1"),
             weight,
             context.unit,
           );
-          bindings.minReps[i] = reps !== minReps ? minReps : undefined;
-          bindings.reps[i] = reps;
-          bindings.originalWeights[i] = weightValue;
-          bindings.weights[i] = Weight.round(
-            weightValue,
-            settings,
-            context.unit,
-            context.exerciseType,
+          t.updateGlobal("minReps", (x) =>
+            x.toSpliced(i, 1, reps !== minReps ? minReps : undefined),
           );
-          bindings.RPE[i] = rpe !== 0 ? rpe : undefined;
-          bindings.amraps[i] = isAmrap !== 0 ? 1 : 0;
-          bindings.logrpes[i] = logRpe !== 0 ? 1 : 0;
-          bindings.timers[i] = timer !== 0 ? timer : undefined;
+          t.updateGlobal("reps", (x) => x.toSpliced(i, 1, reps));
+          t.updateGlobal("originalWeights", (x) =>
+            x.toSpliced(i, 1, weightValue),
+          );
+          t.updateGlobal("weights", (x) =>
+            x.toSpliced(
+              i,
+              1,
+              Weight.round(
+                weightValue,
+                settings,
+                context.unit,
+                context.exerciseType,
+              ),
+            ),
+          );
+          t.updateGlobal("RPE", (x) =>
+            x.toSpliced(i, 1, rpe !== 0 ? rpe : undefined),
+          );
+          t.updateGlobal("amraps", (x) =>
+            x.toSpliced(i, 1, isAmrap !== 0 ? 1 : 0),
+          );
+          t.updateGlobal("logrpes", (x) =>
+            x.toSpliced(i, 1, logRpe !== 0 ? 1 : 0),
+          );
+          t.updateGlobal("timers", (x) =>
+            x.toSpliced(i, 1, timer !== 0 ? timer : undefined),
+          );
         }
       }
       return to - from;

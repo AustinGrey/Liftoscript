@@ -16,12 +16,10 @@ export const handler: LogicHandler<"BuiltinFunctionExpression"> = (n, t) => {
   if (name != null && fns[name] != null) {
     const argValues = args.map((a) => t.recurse(a));
     const fn = fns[name];
+    // @todo we can remove most of this any if we force all public functions to accept the IScriptFnContext as the first argument instead of as the last one, and also enforce that they can only return a LogicResult!
+    //     even then.... why not just pipe the entire tools object into the function?
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (fn as any).apply(undefined, [
-      ...argValues,
-      this.fnContext,
-      this.bindings,
-    ]);
+    return (fn as any).apply(undefined, [...argValues, t.fnContext, t]);
   } else {
     return t.error(`Unknown function '${name}'`, keyword);
   }

@@ -414,9 +414,9 @@ function changeBinding(
           "kg",
         );
         tools.getGlobal("originalWeights")[i] = value;
-        tools.getGlobal("weights")[i] = this.fns.roundWeight(
+        tools.getGlobal("weights")[i] = tools.publicFunctions.roundWeight(
           value,
-          this.fnContext,
+          tools.fnContext,
         );
       }
     }

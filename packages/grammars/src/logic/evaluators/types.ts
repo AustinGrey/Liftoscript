@@ -117,6 +117,10 @@ export type EvaluateTools = SourceTools & {
    * The set of public functions which scripts might reference
    */
   publicFunctions: IScriptFunctions;
+  /**
+   * @deprecated this should just be merged into one of the many readonly state objects
+   */
+  fnContext: IScriptFnContext;
 };
 
 /**
@@ -168,7 +172,7 @@ export interface IScriptBindings {
 }
 
 export interface IScriptFnContext {
-  prints: (number | IWeight | IDynamicWeight)[][];
+  prints: Quantity[][];
   unit: IUnit;
   exerciseType?: IExerciseType;
 }
@@ -215,7 +219,7 @@ export interface IScriptFunctions {
       | IDynamicWeight
       | IDynamicWeight[]
     )[]
-  ): number | IWeight | IDynamicWeight;
+  ): Quantity;
   min(
     ...vals: (
       | number
@@ -225,7 +229,7 @@ export interface IScriptFunctions {
       | IDynamicWeight
       | IDynamicWeight[]
     )[]
-  ): number | IWeight | IDynamicWeight;
+  ): Quantity;
   max(
     ...vals: (
       | number
@@ -235,7 +239,7 @@ export interface IScriptFunctions {
       | IDynamicWeight
       | IDynamicWeight[]
     )[]
-  ): number | IWeight | IDynamicWeight;
+  ): Quantity;
   zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
   print(...args: unknown[]): (typeof args)[0];
   increment(val: IWeight, context: IScriptFnContext): IWeight;
@@ -255,7 +259,7 @@ export interface IScriptFunctions {
     rpe: number,
     logRpe: number,
     context: IScriptFnContext,
-    bindings: IScriptBindings,
+    tools: EvaluateTools,
   ): number;
 }
 
