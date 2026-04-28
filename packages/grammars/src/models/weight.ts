@@ -6,8 +6,16 @@ import { z } from "zod";
 import { is, isNumber } from "@/utils/types.ts";
 
 import type { Quantity } from "@/logic/types.ts";
-import { MathUtils_roundFloat } from "@/utils/math.ts";
-import type { IExerciseType, ISettings } from "@/logic/evaluators/types.ts";
+import {
+  MathUtils_roundFloat,
+  MathUtils_roundTo000005,
+  MathUtils_roundTo005,
+} from "@/utils/math.ts";
+import type {
+  IExerciseType,
+  IPlate,
+  ISettings,
+} from "@/logic/evaluators/types.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";

@@ -14,7 +14,6 @@ import {
   TCustomExercise,
   TExerciseDataValue,
   TExerciseId,
-  TGym,
   TLengthUnit,
   TMuscleGroupsSettings,
   TPlannerSettings,
@@ -260,6 +259,54 @@ export interface IScriptFunctions {
   ): number;
 }
 
+export const TEquipment = z.string();
+export type IEquipment = z.infer<typeof TEquipment>;
+
+export const TEquipmentData = z
+  .object({
+    vtype: z.literal("equipment_data"),
+    bar: z
+      .object({
+        lb: TWeight,
+        kg: TWeight,
+      })
+      .strict(),
+    multiplier: z.number(),
+    plates: z.array(
+      z
+        .object({
+          weight: TWeight,
+          num: z.number(),
+        })
+        .strict(),
+    ),
+    fixed: z.array(TWeight),
+    isFixed: z.boolean(),
+
+    unit: TUnit.optional(),
+    name: z.string().optional(),
+    similarTo: z.string().optional(),
+    isDeleted: z.boolean().optional(),
+    useBodyweightForBar: z.boolean().optional(),
+    isAssisting: z.boolean().optional(),
+    notes: z.string().optional(),
+  })
+  .strict();
+
+export type IEquipmentData = z.infer<typeof TEquipmentData>;
+export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
+
+export const TGym = z
+  .object({
+    vtype: z.literal("gym"),
+    id: z.string(),
+    name: z.string(),
+    equipment: z.record(TEquipment, TEquipmentData),
+  })
+  .strict();
+
+export type IGym = z.infer<typeof TGym>;
+
 export const TSettings = z
   .object({
     timers: TSettingsTimers,
@@ -318,9 +365,6 @@ export const TSettings = z
 
 export type ISettings = z.infer<typeof TSettings>;
 
-export const TEquipment = z.string();
-export type IEquipment = z.infer<typeof TEquipment>;
-
 export const TExerciseType = z
   .object({
     id: TExerciseId,
@@ -328,3 +372,9 @@ export const TExerciseType = z
   })
   .strict();
 export type IExerciseType = z.infer<typeof TExerciseType>;
+
+export const TPlate = z.object({
+  weight: TWeight,
+  num: z.number(),
+});
+export type IPlate = z.infer<typeof TPlate>;
