@@ -510,3 +510,72 @@ export function roundConvertTo(
 ): IWeight {
   return round(convertTo(weight, unit), settings, unit, exerciseType);
 }
+
+export function getTrainingMax(
+  weight: IWeight,
+  reps: number,
+  settings: ISettings,
+): IWeight {
+  return round(
+    multiply(getOneRepMax(weight, reps), 0.9),
+    settings,
+    weight.unit,
+  );
+}
+
+export function getOneRepMax(
+  weight: IWeight,
+  reps: number,
+  rpe?: number,
+): IWeight {
+  if (reps === 0) {
+    return build(0, weight.unit);
+  } else if (reps === 1) {
+    return weight;
+  } else {
+    return roundTo005(divide(weight, rpeMultiplier(reps, rpe ?? 10)));
+  }
+}
+
+export function rpeMultiplier(reps: number, rpe: number): number {
+  if (reps === 1 && rpe === 10) {
+    return 1;
+  }
+  reps = Math.max(Math.min(reps, 24), 1);
+  rpe = Math.max(Math.min(rpe, 10), 1);
+
+  const x = 10.0 - rpe + (reps - 1);
+  if (x >= 16) {
+    return 0.5;
+  }
+  // The formula is taken from
+  // https://gitlab.com/openpowerlifting/plsource/-/blob/ba5194be6daa08d082bb1b7959d6f47b82e7802c/static/rpe-calc/index.html#L224
+  const intersection = 2.92;
+  if (x <= intersection) {
+    const a = 0.347619;
+    const b = -4.60714;
+    const c = 99.9667;
+    return (a * x * x + b * x + c) / 100;
+  } else {
+    const m = -2.64249;
+    const b = 97.0955;
+    return (m * x + b) / 100;
+  }
+}
+
+export function convertToWeight(
+  onerm: IWeight,
+  value: Quantity,
+  unit: IUnit,
+): IWeight {
+  if (isNumber(value)) {
+    return build(value, unit);
+  } else if (is(TDynamicWeight, value)) {
+    return convertTo(
+      multiply(onerm, MathUtils_roundFloat(value.value / 100, 4)),
+      unit,
+    );
+  } else {
+    return value;
+  }
+}

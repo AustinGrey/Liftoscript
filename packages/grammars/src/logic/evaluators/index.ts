@@ -30,6 +30,7 @@ import {
 } from "@/models/weight.ts";
 import * as Weight from "@/models/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
+import { Equipment_getUnitForExerciseType } from "@/models/equipment.ts";
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -41,7 +42,9 @@ const handlers: {
   AssignmentExpression: (await import("./node-assignment-expression")).handler,
   BinaryExpression: (await import("./node-binary-expression")).handler,
   BlockExpression: (await import("./node-block-expression")).handler,
-  BuiltinFunctionExpression: (n, t) => t.error("Not implemented", n),
+  BuiltinFunctionExpression: (
+    await import("./node-builtin-function-expression")
+  ).handler,
   Cmp: (n, t) => t.error("Not implemented", n),
   ForExpression: (n, t) => t.error("Not implemented", n),
   ForInExpression: (n, t) => t.error("Not implemented", n),
