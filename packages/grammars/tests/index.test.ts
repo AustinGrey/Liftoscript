@@ -9,8 +9,11 @@ import { percentORM } from "@/models/weight.ts";
 import type {
   IProgramState,
   IScriptBindings,
+  IScriptFnContext,
+  ISettings,
 } from "@/logic/evaluators/types.ts";
 import type { LogicResult } from "@/logic/types.ts";
+import { Progress_createScriptFunctions } from "@/logic/public-functions.ts";
 
 function makeDefaultGlobalData(): IScriptBindings {
   return {
@@ -103,6 +106,60 @@ function emptyGlobalData(): IScriptBindings {
     rm1: Weight.build(0, "kg"),
   };
 }
+
+const testSettings: ISettings = {
+  timers: {
+    warmup: 0,
+    workout: 0,
+    reminder: 0,
+    superset: 0,
+  },
+  gyms: [],
+  deletedGyms: [],
+  exercises: {},
+  statsEnabled: {
+    weight: {},
+    length: {},
+    percentage: {},
+  },
+  units: "kg",
+  lengthUnits: "cm",
+  volume: 0,
+  exerciseData: {},
+  planner: {
+    synergistMultiplier: 0,
+    strengthSetsPct: 0,
+    hypertrophySetsPct: 0,
+    weeklyRangeSets: {},
+    weeklyFrequency: {},
+  },
+  muscleGroups: {
+    vtype: "muscle_groups_settings",
+    data: {},
+  },
+  appleHealthSyncWorkout: false,
+  appleHealthSyncMeasurements: false,
+  appleHealthAnchor: "",
+  googleHealthSyncWorkout: false,
+  googleHealthSyncMeasurements: false,
+  googleHealthAnchor: "",
+  healthConfirmation: false,
+  ignoreDoNotDisturb: false,
+  currentGymId: "",
+  isPublicProfile: false,
+  nickname: "",
+  alwaysOnDisplay: false,
+  vibration: false,
+  startWeekFromMonday: false,
+  textSize: 0,
+  starredExercises: {},
+  affiliateEnabled: false,
+};
+const publicFunctions = Progress_createScriptFunctions(testSettings);
+const testFnContext: IScriptFnContext = {
+  prints: [],
+  unit: "kg",
+};
 
 describe.each<{
   script: string;
@@ -632,8 +689,8 @@ if (!(completedReps >= reps)) {
             ...emptyGlobalData(),
             ...adjustEmptyGlobals,
           },
-          {},
-          {},
+          publicFunctions,
+          testFnContext,
           "kg",
           "planner",
         ).evaluate(parser.parse(script).topNode);
@@ -662,58 +719,8 @@ if (!(completedReps >= reps)) {
             ...emptyGlobalData(),
             ...adjustEmptyGlobals,
           },
-          {
-            timers: {
-              warmup: 0,
-              workout: 0,
-              reminder: 0,
-              superset: 0,
-            },
-            gyms: [],
-            deletedGyms: [],
-            exercises: {},
-            statsEnabled: {
-              weight: {},
-              length: {},
-              percentage: {},
-            },
-            units: "kg",
-            lengthUnits: "cm",
-            volume: 0,
-            exerciseData: {},
-            planner: {
-              synergistMultiplier: 0,
-              strengthSetsPct: 0,
-              hypertrophySetsPct: 0,
-              weeklyRangeSets: {},
-              weeklyFrequency: {},
-            },
-            muscleGroups: {
-              vtype: "muscle_groups_settings",
-              data: {},
-            },
-            appleHealthSyncWorkout: false,
-            appleHealthSyncMeasurements: false,
-            appleHealthAnchor: "",
-            googleHealthSyncWorkout: false,
-            googleHealthSyncMeasurements: false,
-            googleHealthAnchor: "",
-            healthConfirmation: false,
-            ignoreDoNotDisturb: false,
-            currentGymId: "",
-            isPublicProfile: false,
-            nickname: "",
-            alwaysOnDisplay: false,
-            vibration: false,
-            startWeekFromMonday: false,
-            textSize: 0,
-            starredExercises: {},
-            affiliateEnabled: false,
-          },
-          {
-            prints: [],
-            unit: "kg",
-          },
+          publicFunctions,
+          testFnContext,
         );
         if ("result" in case_) {
           expect
