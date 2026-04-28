@@ -1,0 +1,105 @@
+import { CollectionUtils_sort } from "@/utils/collection.ts";
+import type { IUnit, IWeight } from "@/models/weight.ts";
+import * as Weight from "@/models/weight.ts";
+import type {
+  IEquipmentData,
+  IExerciseType,
+  IGym,
+  ISettings,
+} from "@/logic/evaluators/types.ts";
+import { Exercise_toKey } from "@/models/exercise.ts";
+
+export function Equipment_smallestPlate(
+  equipmentData: IEquipmentData,
+  unit: IUnit,
+): IWeight {
+  return (
+    CollectionUtils_sort(
+      equipmentData.plates.filter((p) => p.weight.unit === unit),
+      (a, b) => Weight.compare(a.weight, b.weight),
+    )[0]?.weight || Weight.build(1, unit)
+  );
+}
+
+export function Equipment_getUnitForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IUnit | undefined {
+  const equipment = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
+  const equipmentUnit = equipment?.unit;
+  return equipmentUnit == null || equipmentUnit === settings.units
+    ? undefined
+    : equipmentUnit;
+}
+
+export function Equipment_getUnitOrDefaultForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IUnit {
+  const equipment = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
+  return equipment?.unit ?? settings.units;
+}
+
+export function Equipment_getEquipmentDataForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IEquipmentData | undefined {
+  const equipment = Equipment_getEquipmentIdForExerciseType(
+    settings,
+    exerciseType,
+  );
+  const currentGym = Equipment_getCurrentGym(settings);
+  return equipment ? currentGym.equipment[equipment] : undefined;
+}
+
+export function Equipment_getGymByIdOrCurrent(
+  settings: ISettings,
+  gymId?: string,
+): IGym {
+  return (
+    settings.gyms.find((g) => g.id === (gymId ?? settings.currentGymId)) ??
+    settings.gyms[0]
+  );
+}
+
+export function Equipment_getCurrentGym(settings: ISettings): IGym {
+  return (
+    settings.gyms.find((g) => g.id === settings.currentGymId) ??
+    settings.gyms[0]
+  );
+}
+
+export function Equipment_getEquipmentIdForExerciseType(
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+  gymId?: string,
+): string | undefined {
+  if (exerciseType == null) {
+    return undefined;
+  }
+
+  const key = Exercise_toKey(exerciseType);
+  if (
+    !(
+      settings.exerciseData[key] &&
+      ("equipment" in settings.exerciseData[key] ||
+        "rounding" in settings.exerciseData[key])
+    )
+  ) {
+    return exerciseType.equipment;
+  }
+  const exerciseData = settings.exerciseData[key];
+  const exerciseEquipment = exerciseData?.equipment;
+  if (exerciseEquipment == null) {
+    return undefined;
+  }
+
+  const currentGym = Equipment_getGymByIdOrCurrent(settings, gymId);
+  return exerciseEquipment[currentGym.id];
+}

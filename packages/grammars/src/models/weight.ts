@@ -7,6 +7,7 @@ import { is, isNumber } from "@/utils/types.ts";
 
 import type { Quantity } from "@/logic/types.ts";
 import {
+  MathUtils_round,
   MathUtils_roundFloat,
   MathUtils_roundTo000005,
   MathUtils_roundTo005,
@@ -16,6 +17,12 @@ import type {
   IPlate,
   ISettings,
 } from "@/logic/evaluators/types.ts";
+import { CollectionUtils_sort } from "@/utils/collection.ts";
+import { Exercise_defaultRounding } from "@/models/exercise.ts";
+import {
+  Equipment_getEquipmentDataForExerciseType,
+  Equipment_smallestPlate,
+} from "@/models/equipment.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -493,4 +500,13 @@ function calculatePlatesInternalFast(
     }
   }
   return plates;
+}
+
+export function roundConvertTo(
+  weight: IWeight,
+  settings: ISettings,
+  unit: IUnit,
+  exerciseType?: IExerciseType,
+): IWeight {
+  return round(convertTo(weight, unit), settings, unit, exerciseType);
 }
