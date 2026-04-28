@@ -216,6 +216,19 @@ const cases: LogicTestSpec[] = [
   ["-50%", percentORM(-50)],
   ["-101%", percentORM(-101)],
    */
+  // Output from mixed inputs
+  { script: `1 + 1`, result: 2 },
+  { script: `1 + 1lb`, result: Weight.build(2, "lb") },
+  { script: `1 + 1%`, result: percentORM(2) },
+  { script: `1 + 1kg`, result: Weight.build(2, "kg") },
+  { script: `1lb + 1`, result: Weight.build(2, "lb") },
+  { script: `1lb + 1lb`, result: Weight.build(2, "lb") },
+  { script: `1lb + 1%`, result: Weight.build(1, "lb") },
+  { script: `1lb + 1kg`, result: Weight.build(3, "lb") },
+  { script: `1% + 1`, result: percentORM(2) },
+  { script: `1% + 1lb`, result: Weight.build(0.5, "kg") },
+  { script: `1% + 1%`, result: percentORM(2) },
+  { script: `1% + 1kg`, result: Weight.build(1, "kg") },
   // Comparisons
   { script: `1 > 0`, result: true },
   { script: `1 < 0`, result: false },
