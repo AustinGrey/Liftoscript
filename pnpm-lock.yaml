@@ -15,6 +15,9 @@ catalogs:
     '@lezer/lr':
       specifier: ^1.4.10
       version: 1.4.10
+    es-toolkit:
+      specifier: ^1.46.0
+      version: 1.46.0
     prettier:
       specifier: ^3.8.3
       version: 3.8.3
@@ -63,6 +66,9 @@ importers:
       '@lezer/lr':
         specifier: 'catalog:'
         version: 1.4.10
+      es-toolkit:
+        specifier: 'catalog:'
+        version: 1.46.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -744,6 +750,9 @@ packages:
 
   es-module-lexer@1.7.0:
     resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
+
+  es-toolkit@1.46.0:
+    resolution: {integrity: sha512-IToJ6ct9OLl5zz6WsC/1vZEwfSZ7Myil+ygl5Tf30Xjn9AEkzNB4kqp2G7VUJKF1DtTx/ra5M5KLlXvzOg51BA==}
 
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
@@ -1456,6 +1465,8 @@ snapshots:
   detect-libc@2.1.2: {}
 
   es-module-lexer@1.7.0: {}
+
+  es-toolkit@1.46.0: {}
 
   fdir@6.5.0(picomatch@4.0.4):
     optionalDependencies:

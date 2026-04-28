@@ -35,6 +35,7 @@
     "@lezer/common": "catalog:",
     "@lezer/generator": "catalog:",
     "@lezer/lr": "catalog:",
+    "es-toolkit": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
