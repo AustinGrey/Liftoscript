@@ -227,7 +227,8 @@ function sum(...args: LogicResult[]): Quantity {
     return 0;
   }
   return flat.reduce<Quantity>(
-    (acc, a) => Weight.op(undefined, acc, a, (x, y) => x + y),
+    (acc, a) =>
+      Weight.operateAfterNormalized(undefined, acc, a, (x, y) => x + y),
     0,
   );
 }

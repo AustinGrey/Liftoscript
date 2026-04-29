@@ -163,12 +163,20 @@ function comparison(
   }
   return false;
 }
-export function op(
+
+/**
+ * Applies the given operation after normalizing the units of the two quantities.
+ * @param onerm The 1 rep max weight
+ * @param a The first quantity
+ * @param b The second quantity
+ * @param o The operation to perform
+ */
+export function operateAfterNormalized(
   onerm: IWeight | undefined,
-  a: IWeight | number | IDynamicWeight,
-  b: IWeight | number | IDynamicWeight,
+  a: Quantity,
+  b: Quantity,
   o: (x: number, y: number) => number,
-): IWeight | number | IDynamicWeight {
+): Quantity {
   if (isNumber(a) && isNumber(b)) {
     return o(a, b);
   }

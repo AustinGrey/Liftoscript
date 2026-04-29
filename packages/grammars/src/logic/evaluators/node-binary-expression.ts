@@ -1,11 +1,17 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
-import { isBoolean } from "@/utils/types.ts";
+import { is, isBoolean, isNumber } from "@/utils/types.ts";
 import * as Weight from "@/models/weight.ts";
 import { pad } from "@/utils/collection.ts";
 import type { LogicResultSingular, Quantity } from "@/logic/types.ts";
-import { type IWeight } from "@/models/weight.ts";
+import {
+  type IWeight,
+  percentORM,
+  TDynamicWeight,
+  TWeight,
+} from "@/models/weight.ts";
 import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
+import { MathUtils_roundFloat } from "@/utils/math.ts";
 
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });
@@ -95,10 +101,6 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   }
 };
 
-function add(one: Quantity, two: Quantity, tools: EvaluateTools): Quantity {
-  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a + b);
-}
-
 function subtract(
   one: Quantity,
   two: Quantity,
@@ -130,9 +132,62 @@ function operation(
   op: (x: number, y: number) => number,
 ): Quantity {
   try {
-    return Weight.op(onerm, a, b, op);
+    return Weight.operateAfterNormalized(onerm, a, b, op);
   } catch (error) {
     const e = error as Error;
     throw new LiftoscriptSyntaxError(e.message, 0, 0, 0, 0);
   }
+}
+
+/**
+ * Applies the given operation after normalizing the units of the two quantities.
+ * @param tools the evaluation tools
+ * @param a The first quantity
+ * @param b The second quantity
+ * @param o The operation to perform
+ */
+export function add(
+  tools: EvaluateTools,
+  a: Quantity,
+  b: Quantity,
+  o: (x: number, y: number) => number,
+): Quantity {
+  const onerm = tools.getGlobal("rm1");
+  if (isNumber(a) && isNumber(b)) {
+    return o(a, b);
+  }
+  if (isNumber(a) && is(TDynamicWeight, b)) {
+    return percentORM(o(a, b.value));
+  }
+  if (isNumber(a) && is(TWeight, b)) {
+    return operation(a, b, o);
+  }
+
+  if (is(TDynamicWeight, a) && isNumber(b)) {
+    return percentORM(o(a.value, b));
+  }
+  if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
+    return percentORM(o(a.value, b.value));
+  }
+  if (is(TDynamicWeight, a) && is(TWeight, b)) {
+    const aWeight = onerm
+      ? multiply(onerm, a.value / 100)
+      : MathUtils_roundFloat(a.value / 100, 4);
+    return operation(aWeight, b, o);
+  }
+
+  if (is(TWeight, a) && isNumber(b)) {
+    return operation(a, b, o);
+  }
+  if (is(TWeight, a) && is(TDynamicWeight, b)) {
+    const bWeight = onerm
+      ? multiply(onerm, b.value / 100)
+      : MathUtils_roundFloat(b.value / 100, 4);
+    return operation(a, bWeight, o);
+  }
+  if (is(TWeight, a) && is(TWeight, b)) {
+    return operation(a, b, o);
+  }
+
+  throw new Error(`Can't apply operation to ${a} and ${b}`);
 }
