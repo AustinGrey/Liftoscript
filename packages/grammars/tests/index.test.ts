@@ -150,7 +150,7 @@ function normalizeLogicTest(test: LogicTestSpec): NormalizedLogicTest {
 }
 
 /**
- * Template literal tag that turns a string into an {@link IWeight} or {@link IDynamicWeight}
+ * Parses template literal as a number with a unit, if possible
  */
 const asRealNumberWithUnit: TaggedTemplateHandler<{
   amount: number;
@@ -176,6 +176,9 @@ const asRealNumberWithUnit: TaggedTemplateHandler<{
     raw,
   };
 };
+/**
+ * Builds {@link IDynamicWeight} from a string
+ */
 const dw: TaggedTemplateHandler<IDynamicWeight> = (s, ...v) => {
   const { amount, unit, raw } = asRealNumberWithUnit(s, v);
   if (unit !== "%") {
@@ -186,6 +189,9 @@ const dw: TaggedTemplateHandler<IDynamicWeight> = (s, ...v) => {
     unit,
   };
 };
+/**
+ * Builds {@link IWeight} from a string
+ */
 const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
   const { amount, unit, raw } = asRealNumberWithUnit(s, v);
   if (unit !== "kg" && unit !== "lb") {
@@ -207,11 +213,6 @@ const cases: LogicTestSpec[] = [
   { script: "50%", result: dw`50%` },
   { script: "100%", result: dw`100%` },
   { script: "101%", result: dw`101%` },
-  /* Bad Cases
-  ["NaN%", w`0%`],
-  ["-50%", w`-50%`],
-  ["-101%", w`-101%`],
-   */
   // Output from mixed inputs
   { script: `1 + 1`, result: 2 },
   { script: `1 + 1lb`, result: w`2lb` },

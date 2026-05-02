@@ -3,7 +3,12 @@ import { queryChildren } from "@/utils/grammars.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
 import * as Weight from "@/models/weight.ts";
 import { pad } from "@/utils/collection.ts";
-import type { LogicResultSingular, Quantity } from "@/logic/types.ts";
+import {
+  isQuantity,
+  type LogicResult,
+  type LogicResultSingular,
+  type Quantity,
+} from "@/logic/types.ts";
 import {
   type IWeight,
   percentORM,
@@ -12,6 +17,8 @@ import {
 } from "@/models/weight.ts";
 import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 import { MathUtils_roundFloat } from "@/utils/math.ts";
+import { kgToLb, lbToKg } from "@/utils/mass.ts";
+import { print, toQuantity } from "@/utils/logic-results.ts";
 
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });
@@ -87,7 +94,7 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
       }
     }
     case "+":
-      return add(left, right, t);
+      return binaryOp(t, left, right, t);
     case "-":
       return subtract(left, right, t);
     case "*":
@@ -140,16 +147,31 @@ function operation(
 }
 
 /**
- * Applies the given operation after normalizing the units of the two quantities.
+ * Applies the given operation after coercing the units of the two logic results
+ *
+ * Array coercion rules
+ * - If both sides are arrays, then the operation is applied to each element pairwise
+ *   - @todo what if the arrays are of different lengths?
+ * - If one side is an array, then the operation is applied to each element of the array with the other value
+ * - See single value coercion rules for the result of an operation on two single values which are not the same type.
+ *
+ * Single value coercion rules
+ * - If any value is a {@link Quantity}, then they are converted to the same unit and the operation applied. See unit coercion rules to determine what the resulting unit is.
+ * - Other like values
+ *
+ * Unit coercion rules
+ * - If there are 0 or 1 distinct units involved, then the result has the same 0 or 1 unit.
+ * - If there are 2 distinct units @todo what are the rules for determining the unit?
+ *
  * @param tools the evaluation tools
  * @param a The first quantity
  * @param b The second quantity
  * @param o The operation to perform
  */
-export function add(
+export function binaryOp(
   tools: EvaluateTools,
-  a: Quantity,
-  b: Quantity,
+  a: LogicResult,
+  b: LogicResult,
   o: (x: number, y: number) => number,
 ): Quantity {
   const onerm = tools.getGlobal("rm1");
@@ -160,7 +182,7 @@ export function add(
     return percentORM(o(a, b.value));
   }
   if (isNumber(a) && is(TWeight, b)) {
-    return operation(a, b, o);
+    return Weight.operation(a, b, o);
   }
 
   if (is(TDynamicWeight, a) && isNumber(b)) {
@@ -171,23 +193,147 @@ export function add(
   }
   if (is(TDynamicWeight, a) && is(TWeight, b)) {
     const aWeight = onerm
-      ? multiply(onerm, a.value / 100)
+      ? Weight.multiply(onerm, a.value / 100)
       : MathUtils_roundFloat(a.value / 100, 4);
-    return operation(aWeight, b, o);
+    return Weight.operation(aWeight, b, o);
   }
 
   if (is(TWeight, a) && isNumber(b)) {
-    return operation(a, b, o);
+    return Weight.operation(a, b, o);
   }
   if (is(TWeight, a) && is(TDynamicWeight, b)) {
     const bWeight = onerm
-      ? multiply(onerm, b.value / 100)
+      ? Weight.multiply(onerm, b.value / 100)
       : MathUtils_roundFloat(b.value / 100, 4);
-    return operation(a, bWeight, o);
+    return Weight.operation(a, bWeight, o);
   }
   if (is(TWeight, a) && is(TWeight, b)) {
-    return operation(a, b, o);
+    return Weight.operation(a, b, o);
   }
 
   throw new Error(`Can't apply operation to ${a} and ${b}`);
+}
+
+/**
+ * Applies the given math operation after coercing the units of the two logic results
+ *
+ * Single value coercion rules - when two values don't have the same types
+ * - If any value is a {@link Quantity}, then they are converted to the same unit and the operation applied. See {@link coerceUnits} for the rules of coercion for units.
+ * - Other like values are converted to numbers according to the coercion rules supplied. If undefined, an error is thrown.
+ *
+ * @param operator The operator that was in the original script
+ * @param tools the evaluation tools
+ * @param left The first quantity
+ * @param right The second quantity
+ * @param o The operation to perform
+ * @param coercion How non-numbers will be converted
+ */
+function binaryMathOpSingular(
+  operator: string,
+  left: LogicResultSingular,
+  right: LogicResultSingular,
+  o: (aValue: number, bValue: number) => number,
+  coercion: {
+    true: (() => Quantity) | undefined;
+    false: (() => Quantity) | undefined;
+    undefined: (() => Quantity) | undefined;
+  },
+  tools: EvaluateTools,
+): LogicResultSingular {
+  const { aCoerced: a, bCoerced: b } = coerceUnits(
+    toQuantity(left, coercion),
+    toQuantity(right, coercion),
+  );
+
+  const onerm = tools.getGlobal("rm1");
+
+  if (isNumber(a) && isNumber(b)) {
+    return o(a, b);
+  }
+  if (isNumber(a) && is(TDynamicWeight, b)) {
+    return percentORM(o(a, b.value));
+  }
+  if (isNumber(a) && is(TWeight, b)) {
+    return Weight.operation(a, b, o);
+  }
+
+  if (is(TDynamicWeight, a) && isNumber(b)) {
+    return percentORM(o(a.value, b));
+  }
+  if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
+    return percentORM(o(a.value, b.value));
+  }
+  if (is(TDynamicWeight, a) && is(TWeight, b)) {
+    const aWeight = onerm
+      ? Weight.multiply(onerm, a.value / 100)
+      : MathUtils_roundFloat(a.value / 100, 4);
+    return Weight.operation(aWeight, b, o);
+  }
+
+  if (is(TWeight, a) && isNumber(b)) {
+    return Weight.operation(a, b, o);
+  }
+  if (is(TWeight, a) && is(TDynamicWeight, b)) {
+    const bWeight = onerm
+      ? Weight.multiply(onerm, b.value / 100)
+      : MathUtils_roundFloat(b.value / 100, 4);
+    return Weight.operation(a, bWeight, o);
+  }
+  if (is(TWeight, a) && is(TWeight, b)) {
+    return Weight.operation(a, b, o);
+  }
+
+  throw new Error(`Can't apply operation to ${a} and ${b}`);
+}
+
+/**
+ * Determines what the unit should be for two quantities when an operation is applied
+ *
+ * Unit coercion rules
+ * - If there are 0 or 1 distinct units involved, then the result has the same 0 or 1 unit.
+ * - If there are 2 distinct units the unit is chosen from the first used in this list:
+ *   - "kg" or "lb", if a tie, the left unit wins
+ *   - "%"
+ *   - unitless
+ *
+ * @param a The left Quantity
+ * @param b The right Quantity
+ */
+function coerceUnits(
+  a: Quantity,
+  b: Quantity,
+): { aCoerced: Quantity; bCoerced: Quantity } {
+  // Weights
+  if (typeof a === "object" && (a.unit === "kg" || a.unit === "lb"))
+    return a.unit;
+  if (typeof b === "object" && (b.unit === "kg" || b.unit === "lb"))
+    return b.unit;
+
+  // Dynamic Weights
+  if (typeof a === "object" && a.unit === "%") return a.unit;
+  if (typeof b === "object" && b.unit === "%") return b.unit;
+
+  // Unitless
+  return null;
+}
+
+function asUnit(q: Quantity, unit: "kg" | "lb"): IWeight {
+  let value;
+
+  if (typeof q === "number") {
+    value = q;
+  } else {
+    if (q.unit === unit) {
+      value = q.value;
+    } else if (q.unit === "kg" && unit === "lb") {
+      value = kgToLb(q.value);
+    } else {
+      value = lbToKg(q.value);
+    }
+  }
+
+  return {
+    value,
+    unit,
+  };
 }
