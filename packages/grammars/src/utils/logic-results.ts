@@ -38,18 +38,18 @@ function printSingular(value: LogicResultSingular): string {
 export function toQuantity(
   value: LogicResultSingular,
   coercion: {
-    true: (() => Quantity) | undefined;
-    false: (() => Quantity) | undefined;
-    undefined: (() => Quantity) | undefined;
+    true: Quantity | undefined;
+    false: Quantity | undefined;
+    undefined: Quantity | undefined;
   },
 ): Quantity {
   if (isQuantity(value)) return value;
   if (value === true && coercion.true) {
-    return coercion.true();
+    return structuredClone(coercion.true);
   } else if (value === false && coercion.false) {
-    return coercion.false();
+    return structuredClone(coercion.false);
   } else if (value === undefined && coercion.undefined) {
-    return coercion.undefined();
+    return structuredClone(coercion.undefined);
   } else
     // @TODO really? Throwing an error here doesn't seem like a good idea unless we can give the user a better error message to track down where the value came from
     throw new Error(

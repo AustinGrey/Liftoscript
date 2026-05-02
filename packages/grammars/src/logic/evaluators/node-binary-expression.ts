@@ -19,6 +19,7 @@ import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 import { MathUtils_roundFloat } from "@/utils/math.ts";
 import { kgToLb, lbToKg } from "@/utils/mass.ts";
 import { print, toQuantity } from "@/utils/logic-results.ts";
+import { zip } from "es-toolkit";
 
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });
@@ -94,57 +95,74 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
       }
     }
     case "+":
-      return binaryOp(t, left, right, t);
+      return binaryMathOp(
+        op,
+        left,
+        right,
+        (a, b) => a + b,
+        {
+          true: 0,
+          false: 0,
+          undefined: 0,
+        },
+        t,
+      );
     case "-":
-      return subtract(left, right, t);
+      return binaryMathOp(
+        op,
+        left,
+        right,
+        (a, b) => a - b,
+        {
+          true: 0,
+          false: 0,
+          undefined: 0,
+        },
+        t,
+      );
     case "*":
-      return multiply(left, right, t);
+      return binaryMathOp(
+        op,
+        left,
+        right,
+        (a, b) => a * b,
+        {
+          true: 1,
+          false: 1,
+          undefined: 1,
+        },
+        t,
+      );
     case "/":
-      return divide(left, right, t);
+      return binaryMathOp(
+        op,
+        left,
+        right,
+        (a, b) => a / b,
+        {
+          true: 1,
+          false: 1,
+          undefined: 1,
+        },
+        t,
+      );
     case "%":
-      return modulo(left, right);
+      return binaryMathOp(
+        op,
+        left,
+        right,
+        (a, b) => a % b,
+        {
+          true: 1,
+          false: 1,
+          undefined: 1,
+        },
+        t,
+      );
     default:
       return t.error(`Unsupported operator ${op}`, opNode);
   }
 };
-
-function subtract(
-  one: Quantity,
-  two: Quantity,
-  tools: EvaluateTools,
-): Quantity {
-  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a - b);
-}
-
-function multiply(
-  one: Quantity,
-  two: Quantity,
-  tools: EvaluateTools,
-): Quantity {
-  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a * b);
-}
-
-function divide(one: Quantity, two: Quantity, tools: EvaluateTools): Quantity {
-  return operation(tools.getGlobal("rm1"), one, two, (a, b) => a / b);
-}
-
-function modulo(one: Quantity, two: Quantity): Quantity {
-  return operation(undefined, one, two, (a, b) => a % b);
-}
-
-function operation(
-  onerm: IWeight | undefined,
-  a: Quantity,
-  b: Quantity,
-  op: (x: number, y: number) => number,
-): Quantity {
-  try {
-    return Weight.operateAfterNormalized(onerm, a, b, op);
-  } catch (error) {
-    const e = error as Error;
-    throw new LiftoscriptSyntaxError(e.message, 0, 0, 0, 0);
-  }
-}
 
 /**
  * Applies the given operation after coercing the units of the two logic results
@@ -153,65 +171,44 @@ function operation(
  * - If both sides are arrays, then the operation is applied to each element pairwise
  *   - @todo what if the arrays are of different lengths?
  * - If one side is an array, then the operation is applied to each element of the array with the other value
- * - See single value coercion rules for the result of an operation on two single values which are not the same type.
+ * - See {@link binaryMathOpSingular} for coercion rules of the result of an operation on two single values which are not the same type.
  *
- * Single value coercion rules
- * - If any value is a {@link Quantity}, then they are converted to the same unit and the operation applied. See unit coercion rules to determine what the resulting unit is.
- * - Other like values
- *
- * Unit coercion rules
- * - If there are 0 or 1 distinct units involved, then the result has the same 0 or 1 unit.
- * - If there are 2 distinct units @todo what are the rules for determining the unit?
- *
- * @param tools the evaluation tools
- * @param a The first quantity
- * @param b The second quantity
+ * @param operator The operator that was in the original script
+ * @param left The first quantity
+ * @param right The second quantity
  * @param o The operation to perform
+ * @param coercion How non-numbers will be converted
+ * @param tools the evaluation tools
  */
-export function binaryOp(
-  tools: EvaluateTools,
-  a: LogicResult,
-  b: LogicResult,
+export function binaryMathOp(
+  operator: string,
+  left: LogicResult,
+  right: LogicResult,
   o: (x: number, y: number) => number,
-): Quantity {
-  const onerm = tools.getGlobal("rm1");
-  if (isNumber(a) && isNumber(b)) {
-    return o(a, b);
+  coercion: {
+    true: Quantity | undefined;
+    false: Quantity | undefined;
+    undefined: Quantity | undefined;
+  },
+  tools: EvaluateTools,
+): LogicResult {
+  if (Array.isArray(left)) {
+    if (Array.isArray(right)) {
+      //@todo zip gives undefined for the missing values of mixed length arrays, is that what we want?
+      return zip(left, right).map(([l, r]) =>
+        binaryMathOpSingular(operator, l, r, o, coercion, tools),
+      );
+    }
+    return left.map((l) =>
+      binaryMathOpSingular(operator, l, right, o, coercion, tools),
+    );
   }
-  if (isNumber(a) && is(TDynamicWeight, b)) {
-    return percentORM(o(a, b.value));
+  if (Array.isArray(right)) {
+    return right.map((r) =>
+      binaryMathOpSingular(operator, left, r, o, coercion, tools),
+    );
   }
-  if (isNumber(a) && is(TWeight, b)) {
-    return Weight.operation(a, b, o);
-  }
-
-  if (is(TDynamicWeight, a) && isNumber(b)) {
-    return percentORM(o(a.value, b));
-  }
-  if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
-    return percentORM(o(a.value, b.value));
-  }
-  if (is(TDynamicWeight, a) && is(TWeight, b)) {
-    const aWeight = onerm
-      ? Weight.multiply(onerm, a.value / 100)
-      : MathUtils_roundFloat(a.value / 100, 4);
-    return Weight.operation(aWeight, b, o);
-  }
-
-  if (is(TWeight, a) && isNumber(b)) {
-    return Weight.operation(a, b, o);
-  }
-  if (is(TWeight, a) && is(TDynamicWeight, b)) {
-    const bWeight = onerm
-      ? Weight.multiply(onerm, b.value / 100)
-      : MathUtils_roundFloat(b.value / 100, 4);
-    return Weight.operation(a, bWeight, o);
-  }
-  if (is(TWeight, a) && is(TWeight, b)) {
-    return Weight.operation(a, b, o);
-  }
-
-  throw new Error(`Can't apply operation to ${a} and ${b}`);
+  return binaryMathOpSingular(operator, left, right, o, coercion, tools);
 }
 
 /**
@@ -222,11 +219,11 @@ export function binaryOp(
  * - Other like values are converted to numbers according to the coercion rules supplied. If undefined, an error is thrown.
  *
  * @param operator The operator that was in the original script
- * @param tools the evaluation tools
  * @param left The first quantity
  * @param right The second quantity
  * @param o The operation to perform
  * @param coercion How non-numbers will be converted
+ * @param tools the evaluation tools
  */
 function binaryMathOpSingular(
   operator: string,
@@ -234,15 +231,16 @@ function binaryMathOpSingular(
   right: LogicResultSingular,
   o: (aValue: number, bValue: number) => number,
   coercion: {
-    true: (() => Quantity) | undefined;
-    false: (() => Quantity) | undefined;
-    undefined: (() => Quantity) | undefined;
+    true: Quantity | undefined;
+    false: Quantity | undefined;
+    undefined: Quantity | undefined;
   },
   tools: EvaluateTools,
 ): LogicResultSingular {
   const { aCoerced: a, bCoerced: b } = coerceUnits(
     toQuantity(left, coercion),
     toQuantity(right, coercion),
+    tools,
   );
 
   const onerm = tools.getGlobal("rm1");
@@ -298,37 +296,52 @@ function binaryMathOpSingular(
  *
  * @param a The left Quantity
  * @param b The right Quantity
+ * @return Both values coerced to the same unit.
  */
 function coerceUnits(
   a: Quantity,
   b: Quantity,
+  tools: EvaluateTools,
 ): { aCoerced: Quantity; bCoerced: Quantity } {
   // Weights
   if (typeof a === "object" && (a.unit === "kg" || a.unit === "lb"))
-    return a.unit;
+    return { aCoerced: a, bCoerced: asUnit(b, a.unit, tools) };
   if (typeof b === "object" && (b.unit === "kg" || b.unit === "lb"))
-    return b.unit;
+    return { aCoerced: asUnit(a, b.unit, tools), bCoerced: b };
 
   // Dynamic Weights
-  if (typeof a === "object" && a.unit === "%") return a.unit;
-  if (typeof b === "object" && b.unit === "%") return b.unit;
+  if (typeof a === "object" && a.unit === "%")
+    return { aCoerced: a, bCoerced: isNumber(b) ? percentORM(b) : b };
+  if (typeof b === "object" && b.unit === "%")
+    return { aCoerced: isNumber(a) ? percentORM(a) : a, bCoerced: b };
 
-  // Unitless
-  return null;
+  // Both Unitless
+  return { aCoerced: a, bCoerced: b };
 }
 
-function asUnit(q: Quantity, unit: "kg" | "lb"): IWeight {
-  let value;
+function asUnit(q: Quantity, unit: "kg" | "lb", tools: EvaluateTools): IWeight {
+  let value: number;
 
-  if (typeof q === "number") {
+  if (isNumber(q)) {
     value = q;
   } else {
     if (q.unit === unit) {
       value = q.value;
-    } else if (q.unit === "kg" && unit === "lb") {
-      value = kgToLb(q.value);
     } else {
-      value = lbToKg(q.value);
+      switch (q.unit) {
+        case "kg":
+          value = kgToLb(q.value);
+          break;
+        case "lb":
+          value = lbToKg(q.value);
+          break;
+        case "%":
+          value = tools.getGlobal("rm1").value * (q.value / 100);
+          break;
+        default:
+          q satisfies never;
+          value = q;
+      }
     }
   }
 

@@ -20,6 +20,9 @@ export function c<T>(value: unknown): T {
 export function isNumber(value: unknown): value is number {
   return typeof value === "number";
 }
+/**
+ * @deprecated This should not be a typeguard, instead this should accept a number so that others can typeguard to number first. Otherwise it's use as a typeguard could cause missing cases in switches etc.
+ */
 export function isRealNumber(value: unknown): value is number {
   return (
     typeof value === "number" && !Number.isNaN(value) && Number.isFinite(value)
