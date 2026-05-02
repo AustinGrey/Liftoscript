@@ -19,7 +19,15 @@ import {
   type ILiftoscriptEvaluatorUpdate,
   type LogicResult,
 } from "@/logic/types.ts";
-import { Progress_createScriptFunctions } from "@/logic/public-functions.ts";
+
+/**
+ * The handler for when we haven't decided how to handle a node
+ * @param n The node
+ * @param t The tools
+ * @deprecated There shouldn't be any unhandled nodes
+ */
+const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n, t) =>
+  t.error("Not implemented", n);
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -27,41 +35,41 @@ import { Progress_createScriptFunctions } from "@/logic/public-functions.ts";
 const handlers: {
   [Key in NodeNames_Logic]: LogicHandler<Key>;
 } = {
-  AndOr: (n, t) => t.error("Not implemented", n),
+  AndOr: NOT_IMPLEMENTED,
   AssignmentExpression: (await import("./node-assignment-expression")).handler,
   BinaryExpression: (await import("./node-binary-expression")).handler,
   BlockExpression: (await import("./node-block-expression")).handler,
   BuiltinFunctionExpression: (
     await import("./node-builtin-function-expression")
   ).handler,
-  Cmp: (n, t) => t.error("Not implemented", n),
-  ForExpression: (n, t) => t.error("Not implemented", n),
-  ForInExpression: (n, t) => t.error("Not implemented", n),
+  Cmp: NOT_IMPLEMENTED,
+  ForExpression: NOT_IMPLEMENTED,
+  ForInExpression: NOT_IMPLEMENTED,
   IfExpression: (await import("./node-if-expression")).handler,
-  IncAssignment: (n, t) => t.error("Not implemented", n),
-  IncAssignmentExpression: (n, t) => t.error("Not implemented", n),
-  Keyword: (n, t) => t.error("Not implemented", n),
+  IncAssignment: NOT_IMPLEMENTED,
+  IncAssignmentExpression: NOT_IMPLEMENTED,
+  Keyword: NOT_IMPLEMENTED,
   LineComment: (await import("./node-line-comment")).handler,
-  Not: (n, t) => t.error("Not implemented", n),
-  Number: (n, t) => t.error("Not implemented", n),
+  Not: NOT_IMPLEMENTED,
+  Number: NOT_IMPLEMENTED,
   NumberExpression: (await import("./node-number-expression")).handler,
   ParenthesisExpression: (await import("./node-parenthesis-expression"))
     .handler,
   Percentage: (await import("./node-percentage")).handler,
-  Plus: (n, t) => t.error("Not implemented", n),
+  Plus: NOT_IMPLEMENTED,
   Program: (await import("./node-program")).handler,
-  StateKeyword: (n, t) => t.error("Not implemented", n),
+  StateKeyword: NOT_IMPLEMENTED,
   StateVariable: (await import("./node-state-variable")).handler,
-  StateVariableIndex: (n, t) => t.error("Not implemented", n),
+  StateVariableIndex: NOT_IMPLEMENTED,
   Ternary: (await import("./node-ternary")).handler,
-  Times: (n, t) => t.error("Not implemented", n),
+  Times: NOT_IMPLEMENTED,
   UnaryExpression: (await import("./node-unary-expression")).handler,
-  Unit: (n, t) => t.error("Not implemented", n),
-  Variable: (n, t) => t.error("Not implemented", n),
+  Unit: NOT_IMPLEMENTED,
+  Variable: NOT_IMPLEMENTED,
   VariableExpression: (await import("./node-variable-expression")).handler,
-  VariableIndex: (n, t) => t.error("Not implemented", n),
+  VariableIndex: NOT_IMPLEMENTED,
   WeightExpression: (await import("./node-weight-expression")).handler,
-  Wildcard: (n, t) => t.error("Not implemented", n),
+  Wildcard: NOT_IMPLEMENTED,
 };
 
 function handleLogic(
