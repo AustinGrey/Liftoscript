@@ -118,6 +118,10 @@ type LogicTestCase = {
   // The expected final state once the script finished executing
   finalState?: IProgramState;
   adjustEmptyGlobals?: Partial<IScriptBindings>;
+  /**
+   * If true, the debugger will be called for this test
+   */
+  debug?: boolean;
 };
 
 type LogicTestSpec = { script: string } & LogicTestCase & {
@@ -635,11 +639,12 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
       (case_) => {
         const { initialState, adjustEmptyGlobals, finalState } = case_;
         test("old system", () => {
-          // if (case_.description === "sum of crs < 15") {
-          //   console.log(
-          //     "This statement is here to you can easily break on this test",
-          //   );
-          // }
+          if (case_.debug) {
+            console.log(
+              "This case has debug_ set true. The debugger will be called. If your debugger doesn't automatically break here, set a breakpoint.",
+            );
+            debugger;
+          }
 
           const state = initialState?.() ?? {};
           const output = new LiftoscriptEvaluator(
@@ -668,11 +673,12 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
           }
         });
         test("new system", () => {
-          // if (case_.description === "sum of crs < 15") {
-          //   console.log(
-          //     "This statement is here to you can easily break on this test",
-          //   );
-          // }
+          if (case_.debug) {
+            console.log(
+              "This case has debug_ set true. The debugger will be called. If your debugger doesn't automatically break here, set a breakpoint.",
+            );
+            debugger;
+          }
           const { result: output, finalState: state } = run(
             script,
             initialState?.() ?? {},
