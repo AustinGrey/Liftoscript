@@ -9,7 +9,6 @@ import type {
   IScriptBindings,
   IScriptFnContext,
   IScriptFunctions,
-  ISettings,
   LogicHandler,
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
@@ -72,12 +71,7 @@ const handlers: {
   Wildcard: NOT_IMPLEMENTED,
 };
 
-function handleLogic(
-  node: SyntaxNode,
-  tools: EvaluateTools,
-  initialState: Readonly<IProgramState>,
-  globalData: IScriptBindings,
-): LogicResult {
+function handleLogic(node: SyntaxNode, tools: EvaluateTools): LogicResult {
   const handler: LogicHandler<NodeNames_Logic> | undefined = isLogicNodeName(
     node.name,
   )
@@ -200,12 +194,7 @@ export function run(
   };
 
   return {
-    result: handleLogic(
-      parser.parse(logic).topNode,
-      tools,
-      initialState,
-      globalData,
-    ),
+    result: handleLogic(parser.parse(logic).topNode, tools),
     finalState: state,
   };
 }

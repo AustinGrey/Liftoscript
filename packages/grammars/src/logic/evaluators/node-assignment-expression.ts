@@ -249,13 +249,11 @@ function evaluateToNumber(expr: SyntaxNode, tools: EvaluateTools): number {
 function evaluateToQuantity(expr: SyntaxNode, tools: EvaluateTools): Quantity {
   const v = tools.recurse(expr);
   const v1 = Array.isArray(v) ? v[0] : v;
-  return is(TWeight, v1) || is(TDynamicWeight, v1)
+  return is(TWeight, v1) || is(TDynamicWeight, v1) || isNumber(v1)
     ? v1
-    : isNumber(v1)
-      ? v1
-      : v1
-        ? 1
-        : 0;
+    : v1
+      ? 1
+      : 0;
 }
 
 /**
