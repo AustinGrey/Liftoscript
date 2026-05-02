@@ -17,7 +17,6 @@ import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 import {
   type ILiftoscriptEvaluatorUpdate,
   type LogicResult,
-  type Quantity,
 } from "@/logic/types.ts";
 
 /**
@@ -132,7 +131,7 @@ export function run(
     },
     // @TODO should probably figure out when and where this will change
     mode: "update",
-    recurse: (node) => handleLogic(node, tools, state, globalData),
+    recurse: (node) => handleLogic(node, tools),
     getState: (key, relatedNode, index) => {
       if (index === undefined) {
         if (key in state) {

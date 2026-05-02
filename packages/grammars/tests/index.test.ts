@@ -3,7 +3,7 @@ import { parser } from "@/parsers/logic";
 import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
 import type { RequireAtLeastOne } from "type-fest";
-import { mapValues, toMerged } from "es-toolkit";
+import { toMerged } from "es-toolkit";
 
 import {
   type IDynamicWeight,
@@ -234,9 +234,22 @@ const cases: LogicTestSpec[] = [
   { script: `1lb + 1%`, result: w`1lb` },
   { script: `1lb + 1kg`, result: w`3lb` },
   { script: `1% + 1`, result: dw`2%` },
-  { script: `1% + 1lb`, result: w`0.5kg` },
+  {
+    script: `1% + 1lb`,
+    result: w`0.5kg`,
+    adjustEmptyGlobals: {
+      rm1: w`0kg`,
+    },
+    debug: true,
+  },
   { script: `1% + 1%`, result: dw`2%` },
-  { script: `1% + 1kg`, result: w`1kg` },
+  {
+    script: `1% + 1kg`,
+    result: w`1kg`,
+    adjustEmptyGlobals: {
+      rm1: w`0kg`,
+    },
+  },
   // Comparisons
   { script: `1 > 0`, result: true },
   { script: `1 < 0`, result: false },
@@ -647,7 +660,7 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
         const { initialState, adjustEmptyGlobals, finalState } = case_;
         test("old system", () => {
           if (case_.debug) {
-            console.log(
+            console.error(
               "This case has debug_ set true. The debugger will be called. If your debugger doesn't automatically break here, set a breakpoint.",
             );
             debugger;
@@ -681,7 +694,7 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
         });
         test("new system", () => {
           if (case_.debug) {
-            console.log(
+            console.error(
               "This case has debug_ set true. The debugger will be called. If your debugger doesn't automatically break here, set a breakpoint.",
             );
             debugger;

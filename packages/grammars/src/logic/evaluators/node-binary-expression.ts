@@ -4,7 +4,6 @@ import { is, isBoolean, isNumber } from "@/utils/types.ts";
 import * as Weight from "@/models/weight.ts";
 import { pad } from "@/utils/collection.ts";
 import {
-  isQuantity,
   type LogicResult,
   type LogicResultSingular,
   type Quantity,
@@ -15,11 +14,11 @@ import {
   TDynamicWeight,
   TWeight,
 } from "@/models/weight.ts";
-import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 import { MathUtils_roundFloat } from "@/utils/math.ts";
 import { kgToLb, lbToKg } from "@/utils/mass.ts";
-import { print, toQuantity } from "@/utils/logic-results.ts";
+import { toQuantity } from "@/utils/logic-results.ts";
 import { zip } from "es-toolkit";
+import { toWeight } from "@/utils/dynamic-weight.ts";
 
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });
@@ -290,63 +289,64 @@ function binaryMathOpSingular(
  * Unit coercion rules
  * - If there are 0 or 1 distinct units involved, then the result has the same 0 or 1 unit.
  * - If there are 2 distinct units the unit is chosen from the first used in this list:
- *   - "kg" or "lb", if a tie, the left unit wins
- *   - "%"
+ *   - "kg" or "lb", if a tie, the left unit wins. Dynamic units like "%" are resolved before this is decided.
  *   - unitless
  *
- * @param a The left Quantity
- * @param b The right Quantity
+ * @param left The left Quantity
+ * @param right The right Quantity
+ * @param tools the evaluation tools
  * @return Both values coerced to the same unit.
  */
 function coerceUnits(
-  a: Quantity,
-  b: Quantity,
+  left: Quantity,
+  right: Quantity,
   tools: EvaluateTools,
 ): { aCoerced: Quantity; bCoerced: Quantity } {
-  // Weights
-  if (typeof a === "object" && (a.unit === "kg" || a.unit === "lb"))
-    return { aCoerced: a, bCoerced: asUnit(b, a.unit, tools) };
-  if (typeof b === "object" && (b.unit === "kg" || b.unit === "lb"))
-    return { aCoerced: asUnit(a, b.unit, tools), bCoerced: b };
-
-  // Dynamic Weights
-  if (typeof a === "object" && a.unit === "%")
-    return { aCoerced: a, bCoerced: isNumber(b) ? percentORM(b) : b };
-  if (typeof b === "object" && b.unit === "%")
-    return { aCoerced: isNumber(a) ? percentORM(a) : a, bCoerced: b };
-
-  // Both Unitless
-  return { aCoerced: a, bCoerced: b };
+  if (is(TWeight, left)) {
+    if (is(TWeight, right)) {
+      return { aCoerced: left, bCoerced: right };
+    }
+    if (is(TDynamicWeight, right)) {
+      return {
+        aCoerced: left,
+        bCoerced: asUnit(toWeight(right, tools.getGlobal("rm1")), left.unit),
+      };
+    }
+    right satisfies number;
+    return { aCoerced: left, bCoerced: Weight.build(right, left.unit) };
+  }
+  if (is(TDynamicWeight, left)) {
+    const leftWeight = toWeight(left, tools.getGlobal("rm1"));
+    if (is(TWeight, right)) {
+      return { aCoerced: leftWeight, bCoerced: asUnit(right, leftWeight.unit) };
+    }
+    if (is(TDynamicWeight, right)) {
+      return { aCoerced: left, bCoerced: right };
+    }
+    right satisfies number;
+    return { aCoerced: left, bCoerced: percentORM(right) };
+  }
+  left satisfies number;
+  if (is(TWeight, right)) {
+    return { aCoerced: Weight.build(left, right.unit), bCoerced: right };
+  }
+  if (is(TDynamicWeight, right)) {
+    return { aCoerced: percentORM(left), bCoerced: right };
+  }
+  right satisfies number;
+  return { aCoerced: left, bCoerced: right };
 }
 
-function asUnit(q: Quantity, unit: "kg" | "lb", tools: EvaluateTools): IWeight {
-  let value: number;
-
-  if (isNumber(q)) {
-    value = q;
-  } else {
-    if (q.unit === unit) {
-      value = q.value;
-    } else {
-      switch (q.unit) {
-        case "kg":
-          value = kgToLb(q.value);
-          break;
-        case "lb":
-          value = lbToKg(q.value);
-          break;
-        case "%":
-          value = tools.getGlobal("rm1").value * (q.value / 100);
-          break;
-        default:
-          q satisfies never;
-          value = q;
-      }
+function asUnit(q: IWeight, unit: "kg" | "lb"): IWeight {
+  if (q.unit === "kg") {
+    if (unit === "kg") {
+      return q;
     }
+    return { value: kgToLb(q.value), unit };
   }
-
-  return {
-    value,
-    unit,
-  };
+  q.unit satisfies "lb";
+  if (unit === "lb") {
+    return q;
+  }
+  return { value: lbToKg(q.value), unit };
 }
