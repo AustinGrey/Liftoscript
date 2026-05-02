@@ -293,6 +293,7 @@ const cases: LogicTestSpec[] = [
   { script: `1lb <= 1kg`, result: true },
   { script: `1lb == 1kg`, result: false },
   { script: `1lb != 1kg`, result: true },
+  { script: `(1 == 1) == (1 == 1)`, result: true },
   // Ternary
   {
     script: `4 < 5 ? 1 : 0`,
