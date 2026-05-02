@@ -3,22 +3,29 @@ import { parser } from "@/parsers/logic";
 import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
 import type { RequireAtLeastOne } from "type-fest";
-import { toMerged } from "es-toolkit";
+import { mapValues, toMerged } from "es-toolkit";
 
-import { type IDynamicWeight, type IWeight } from "@/models/weight.ts";
+import {
+  type IDynamicWeight,
+  type IWeight,
+  TDynamicWeight,
+  TWeight,
+} from "@/models/weight.ts";
 import type {
   IProgramState,
   IScriptBindings,
   IScriptFnContext,
   ISettings,
 } from "@/logic/evaluators/types.ts";
-import type { LogicResult } from "@/logic/types.ts";
+import type { LogicResult, Quantity } from "@/logic/types.ts";
 import { Progress_createScriptFunctions } from "@/logic/public-functions.ts";
-import { isRealNumber } from "@/utils/types.ts";
+import { is, isNumber, isRealNumber } from "@/utils/types.ts";
 import {
   type TaggedTemplateHandler,
   taggedTemplateToString,
 } from "@/utils/string.ts";
+import { round } from "@/utils/logic-results.ts";
+import { MathUtils_round } from "@/utils/math.ts";
 
 function emptyGlobalData(): IScriptBindings {
   return {
@@ -689,9 +696,29 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
             publicFunctions,
             testFnContext,
           );
+
+          // The old system would round on every operation, propagating errors.
+          // The new system preserves all precision until the final result.
+          // So to have any hope of comparison, we need to round the results to the same degree that the old system would. Which is roughly 0.5 units
+          // But if the old system really did have significant error, there's nothing we can do, the old system is just wrong.
+          function rounder<TQ extends Quantity>(q: TQ): TQ {
+            const precision = 0.5;
+            if (isNumber(q)) {
+              return MathUtils_round(q, precision) as TQ;
+            }
+            if (is(TWeight, q) || is(TDynamicWeight, q)) {
+              const p: IWeight | IDynamicWeight = q;
+              return { ...p, value: MathUtils_round(p.value, precision) } as TQ;
+            }
+            throw new Error(`Could not round value: ${q}`);
+          }
+
           if ("result" in case_) {
             expect
-              .soft(output, "Script should evaluate to the expected result")
+              .soft(
+                round(output, rounder),
+                "Script should evaluate to the expected result",
+              )
               .toEqual(case_.result);
           }
           if (finalState) {

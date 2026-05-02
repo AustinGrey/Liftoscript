@@ -17,6 +17,7 @@ import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 import {
   type ILiftoscriptEvaluatorUpdate,
   type LogicResult,
+  type Quantity,
 } from "@/logic/types.ts";
 
 /**

@@ -56,3 +56,21 @@ export function toQuantity(
       `A value could not be converted into a Quantity, but is needed to be. The value was: ${print(value)}`,
     );
 }
+
+/**
+ * Rounds all quantities in the result using the given rounder function.
+ * @param result The result to round
+ * @param rounder The function to use to round quantities
+ */
+export function round<T extends LogicResult>(
+  result: T,
+  rounder: <TQ extends Quantity>(q: TQ) => TQ,
+): T {
+  if (Array.isArray(result)) {
+    return result.map((r) => round(r, rounder)) as T;
+  }
+  if (isQuantity(result)) {
+    return rounder(result);
+  }
+  return result;
+}
