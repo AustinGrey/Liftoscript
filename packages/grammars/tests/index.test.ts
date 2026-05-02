@@ -189,7 +189,7 @@ const dw: TaggedTemplateHandler<IDynamicWeight> = (s, ...v) => {
 const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
   const { amount, unit, raw } = asRealNumberWithUnit(s, v);
   if (unit !== "kg" && unit !== "lb") {
-    throw new Error(`${raw} is not a valid IDynamicWeight`);
+    throw new Error(`${raw} is not a valid IWeight`);
   }
   return {
     value: amount,
@@ -215,15 +215,15 @@ const cases: LogicTestSpec[] = [
   // Output from mixed inputs
   { script: `1 + 1`, result: 2 },
   { script: `1 + 1lb`, result: w`2lb` },
-  { script: `1 + 1%`, result: w`2%` },
+  { script: `1 + 1%`, result: dw`2%` },
   { script: `1 + 1kg`, result: w`2kg` },
   { script: `1lb + 1`, result: w`2lb` },
   { script: `1lb + 1lb`, result: w`2lb` },
   { script: `1lb + 1%`, result: w`1lb` },
   { script: `1lb + 1kg`, result: w`3lb` },
-  { script: `1% + 1`, result: w`2%` },
+  { script: `1% + 1`, result: dw`2%` },
   { script: `1% + 1lb`, result: w`0.5kg` },
-  { script: `1% + 1%`, result: w`2%` },
+  { script: `1% + 1%`, result: dw`2%` },
   { script: `1% + 1kg`, result: w`1kg` },
   // Comparisons
   { script: `1 > 0`, result: true },
