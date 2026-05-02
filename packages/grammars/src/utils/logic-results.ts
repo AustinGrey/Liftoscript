@@ -74,3 +74,22 @@ export function round<T extends LogicResult>(
   }
   return result;
 }
+
+/**
+ * Determines if two logic results are equal.
+ * @param left The left hand side of the comparison
+ * @param right The right hand side of the comparison
+ */
+export function equal(left: LogicResult, right: LogicResult): boolean {
+  if (Array.isArray(left)) {
+    return (
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((l, i) => equal(l, right[i]))
+    );
+  }
+  if (Array.isArray(right)) {
+    return false;
+  }
+  return left === right;
+}
