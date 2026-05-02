@@ -93,68 +93,36 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
         return comparator(left ?? 0, right ?? 0);
       }
     }
+    // These cases are of the form (number, number) => number
     case "+":
-      return binaryMathOp(
-        op,
-        left,
-        right,
-        (a, b) => a + b,
-        {
-          true: 0,
-          false: 0,
-          undefined: 0,
-        },
-        t,
-      );
     case "-":
-      return binaryMathOp(
-        op,
-        left,
-        right,
-        (a, b) => a - b,
-        {
-          true: 0,
-          false: 0,
-          undefined: 0,
-        },
-        t,
-      );
     case "*":
-      return binaryMathOp(
-        op,
-        left,
-        right,
-        (a, b) => a * b,
-        {
-          true: 1,
-          false: 1,
-          undefined: 1,
-        },
-        t,
-      );
     case "/":
-      return binaryMathOp(
-        op,
-        left,
-        right,
-        (a, b) => a / b,
-        {
-          true: 1,
-          false: 1,
-          undefined: 1,
-        },
-        t,
-      );
     case "%":
+      // The value that causes no change when applied to a value.
+      const identity = "+" === op || "-" === op ? 0 : 1;
       return binaryMathOp(
         op,
         left,
         right,
-        (a, b) => a % b,
+        (a, b) => {
+          switch (op) {
+            case "+":
+              return a + b;
+            case "-":
+              return a - b;
+            case "*":
+              return a * b;
+            case "/":
+              return a / b;
+            case "%":
+              return a % b;
+          }
+        },
         {
-          true: 1,
-          false: 1,
-          undefined: 1,
+          true: identity,
+          false: identity,
+          undefined: identity,
         },
         t,
       );
@@ -179,7 +147,7 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
  * @param coercion How non-numbers will be converted
  * @param tools the evaluation tools
  */
-export function binaryMathOp(
+function binaryMathOp(
   operator: string,
   left: LogicResult,
   right: LogicResult,
