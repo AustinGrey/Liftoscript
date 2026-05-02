@@ -1,6 +1,12 @@
 /* eslint-disable no-bitwise */
-export function StringUtils_pad(str: string, width: number, fill: string = "0"): string {
-  return str.length >= width ? str : new Array(width - str.length + 1).join(fill) + str;
+export function StringUtils_pad(
+  str: string,
+  width: number,
+  fill: string = "0",
+): string {
+  return str.length >= width
+    ? str
+    : new Array(width - str.length + 1).join(fill) + str;
 }
 
 export function StringUtils_capitalize(string: string): string {
@@ -25,7 +31,9 @@ export function StringUtils_uncamelCase(string: string): string {
 
 export function StringUtils_camelCase(string: string): string {
   return string
-    .replace(/(?:^\w|[A-Z]|\b\w)/g, (letter, index) => (index === 0 ? letter.toLowerCase() : letter.toUpperCase()))
+    .replace(/(?:^\w|[A-Z]|\b\w)/g, (letter, index) =>
+      index === 0 ? letter.toLowerCase() : letter.toUpperCase(),
+    )
     .replace(/\s+/g, "");
 }
 
@@ -42,16 +50,18 @@ export function StringUtils_truncate(string: string, length: number): string {
 }
 
 export function StringUtils_unindent(string: string): string {
-  const indent2 = string.split("\n").reduce<number | undefined>((memo, line) => {
-    const match = line.match(/^(\s*)\S/);
-    if (match != null) {
-      const spaces = match[1];
-      if (memo == null || memo > spaces.length) {
-        return spaces.length;
+  const indent2 = string
+    .split("\n")
+    .reduce<number | undefined>((memo, line) => {
+      const match = line.match(/^(\s*)\S/);
+      if (match != null) {
+        const spaces = match[1];
+        if (memo == null || memo > spaces.length) {
+          return spaces.length;
+        }
       }
-    }
-    return memo;
-  }, undefined);
+      return memo;
+    }, undefined);
   if (indent2 != null) {
     return string
       .split("\n")
@@ -70,7 +80,10 @@ export function StringUtils_indent(string: string, spaces: number): string {
     .join("\n");
 }
 
-export function StringUtils_fuzzySearch(needle: string, haystack: string): boolean {
+export function StringUtils_fuzzySearch(
+  needle: string,
+  haystack: string,
+): boolean {
   if (needle.length > haystack.length) {
     return false;
   } else if (needle === haystack) {
@@ -120,3 +133,27 @@ export function StringUtils_hashCode0To1(str: string): number {
 export function StringUtils_cleanJson(str: string): string {
   return str.trim().replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*?$/, "$1");
 }
+
+/**
+ * Convenience type for when you are defining a tagged template literal handler.
+ * @typeParam TReturn The return type of the handler function.
+ * @param strings The raw string components of the template literal.
+ * @param values The values to be interpolated into the template.
+ */
+export type TaggedTemplateHandler<TReturn> = (
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+) => TReturn;
+
+/**
+ * Converts a tagged template literal into a single concatenated string,
+ * replacing placeholders with their corresponding values.
+ *
+ * @param strings - The raw string components of the template literal.
+ * @param values - The values to be interpolated into the template.
+ * @return The resulting string after merging the strings and interpolated values.
+ */
+export const taggedTemplateToString: TaggedTemplateHandler<string> = (
+  strings,
+  ...values
+) => strings.reduce((acc, str, i) => acc + str + String(values[i] ?? ""), "");

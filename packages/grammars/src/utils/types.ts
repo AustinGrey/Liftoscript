@@ -20,6 +20,11 @@ export function c<T>(value: unknown): T {
 export function isNumber(value: unknown): value is number {
   return typeof value === "number";
 }
+export function isRealNumber(value: unknown): value is number {
+  return (
+    typeof value === "number" && !Number.isNaN(value) && Number.isFinite(value)
+  );
+}
 export function isBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }

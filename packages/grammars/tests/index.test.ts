@@ -2,11 +2,10 @@ import { expect, test, describe } from "vite-plus/test";
 import { parser } from "@/parsers/logic";
 import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
-import * as Weight from "@/models/weight.ts";
 import type { RequireAtLeastOne } from "type-fest";
 import { toMerged } from "es-toolkit";
 
-import { percentORM } from "@/models/weight.ts";
+import { type IDynamicWeight, type IWeight } from "@/models/weight.ts";
 import type {
   IProgramState,
   IScriptBindings,
@@ -15,62 +14,11 @@ import type {
 } from "@/logic/evaluators/types.ts";
 import type { LogicResult } from "@/logic/types.ts";
 import { Progress_createScriptFunctions } from "@/logic/public-functions.ts";
-
-function makeDefaultGlobalData(): IScriptBindings {
-  return {
-    day: 1,
-    week: 1,
-    dayInWeek: 1,
-    originalWeights: [
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-    ],
-    weights: [
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-    ],
-    completedWeights: [
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-    ],
-    isCompleted: [1, 1, 1],
-    reps: [1, 2, 3],
-    minReps: [1, 2, 3],
-    RPE: [0, 0, 0],
-    amraps: [0, 0, 0],
-    logrpes: [0, 0, 0],
-    askweights: [0, 0, 0],
-    timers: [0, 0, 0],
-    completedReps: [1, 2, 3],
-    completedRepsLeft: [0, 0, 0],
-    completedRPE: [0, 0, 0],
-    w: [
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-    ],
-    cw: [
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-      { value: 40, unit: "lb" },
-    ],
-    r: [1, 2, 3],
-    cr: [1, 2, 3],
-    mr: [1, 2, 3],
-    ns: 3,
-    programNumberOfSets: 3,
-    numberOfSets: 3,
-    completedNumberOfSets: 3,
-    setIndex: 1,
-    setVariationIndex: 1,
-    bodyweight: Weight.build(0, "lb"),
-    descriptionIndex: 1,
-    rm1: Weight.build(100, "lb"),
-  };
-}
+import { isRealNumber } from "@/utils/types.ts";
+import {
+  type TaggedTemplateHandler,
+  taggedTemplateToString,
+} from "@/utils/string.ts";
 
 function emptyGlobalData(): IScriptBindings {
   return {
@@ -102,9 +50,9 @@ function emptyGlobalData(): IScriptBindings {
     ns: 0,
     setVariationIndex: 1,
     descriptionIndex: 1,
-    bodyweight: Weight.build(0, "kg"),
+    bodyweight: w`0kg`,
     setIndex: 1,
-    rm1: Weight.build(0, "kg"),
+    rm1: w`0kg`,
   };
 }
 
@@ -201,34 +149,82 @@ function normalizeLogicTest(test: LogicTestSpec): NormalizedLogicTest {
   };
 }
 
+/**
+ * Template literal tag that turns a string into an {@link IWeight} or {@link IDynamicWeight}
+ */
+const asRealNumberWithUnit: TaggedTemplateHandler<{
+  amount: number;
+  unit: string;
+  raw: string;
+}> = (s, ...v) => {
+  const raw = taggedTemplateToString(s, v);
+  // Flatten everything into a single string before splitting the number away from the unit
+  const rawString = raw.replaceAll(/\s+/g, "").split(
+    // Finds the 0 width boundaries between the number portion, and the unit portion, splitting on that.
+    /(?<=[-0-9.])(?=[^-0-9.])/,
+  );
+  const [amountRaw, unit, ...rest] = rawString;
+  const amount = Number(amountRaw);
+  if (rest.length || !isRealNumber(amount)) {
+    throw new Error(
+      `${rawString} can not be interpreted as a single amount with a unit`,
+    );
+  }
+  return {
+    amount,
+    unit,
+    raw,
+  };
+};
+const dw: TaggedTemplateHandler<IDynamicWeight> = (s, ...v) => {
+  const { amount, unit, raw } = asRealNumberWithUnit(s, v);
+  if (unit !== "%") {
+    throw new Error(`${raw} is not a valid IDynamicWeight`);
+  }
+  return {
+    value: amount,
+    unit,
+  };
+};
+const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
+  const { amount, unit, raw } = asRealNumberWithUnit(s, v);
+  if (unit !== "kg" && unit !== "lb") {
+    throw new Error(`${raw} is not a valid IDynamicWeight`);
+  }
+  return {
+    value: amount,
+    unit,
+  };
+};
+
 const cases: LogicTestSpec[] = [
   // Literal Number
   { script: `1`, result: 1 },
   { script: `0`, result: 0 },
   { script: `-1`, result: -1 },
   // Percentages of one rep max
-  { script: "0%", result: percentORM(0) },
-  { script: "50%", result: percentORM(50) },
-  { script: "100%", result: percentORM(100) },
-  { script: "101%", result: percentORM(101) },
+  { script: "0%", result: dw`0%` },
+  { script: "50%", result: dw`50%` },
+  { script: "100%", result: dw`100%` },
+  { script: "101%", result: dw`101%` },
   /* Bad Cases
-  ["NaN%", percentORM(0)],
-  ["-50%", percentORM(-50)],
-  ["-101%", percentORM(-101)],
+  ["NaN%", w`0%`],
+  ["-50%", w`-50%`],
+  ["-101%", w`-101%`],
    */
   // Output from mixed inputs
   { script: `1 + 1`, result: 2 },
-  { script: `1 + 1lb`, result: Weight.build(2, "lb") },
-  { script: `1 + 1%`, result: percentORM(2) },
-  { script: `1 + 1kg`, result: Weight.build(2, "kg") },
-  { script: `1lb + 1`, result: Weight.build(2, "lb") },
-  { script: `1lb + 1lb`, result: Weight.build(2, "lb") },
-  { script: `1lb + 1%`, result: Weight.build(1, "lb") },
-  { script: `1lb + 1kg`, result: Weight.build(3, "lb") },
-  { script: `1% + 1`, result: percentORM(2) },
-  { script: `1% + 1lb`, result: Weight.build(0.5, "kg") },
-  { script: `1% + 1%`, result: percentORM(2) },
-  { script: `1% + 1kg`, result: Weight.build(1, "kg") },
+  { script: `1 + 1lb`, result: w`2lb` },
+  { script: `1 + 1%`, result: w`2%` },
+  { script: `1 + 1kg`, result: w`2kg` },
+  { script: `1lb + 1`, result: w`2lb` },
+  { script: `1lb + 1lb`, result: w`2lb` },
+  { script: `1lb + 1%`, result: w`1lb` },
+  { script: `1lb + 1kg`, result: w`3lb` },
+  { script: `1% + 1`, result: w`2%` },
+  { script: `1% + 1lb`, result: w`0.5kg` },
+  { script: `1% + 1%`, result: w`2%` },
+  { script: `1% + 1kg`, result: w`1kg` },
   // Comparisons
   { script: `1 > 0`, result: true },
   { script: `1 < 0`, result: false },
@@ -332,37 +328,37 @@ if (!(completedReps >= reps)) {
         initialState: () => ({
           successes: 0,
           failures: 0,
-          weight: Weight.build(150, "lb"),
+          weight: w`150lb`,
         }),
         finalState: {
           successes: 1,
           failures: 0,
-          weight: Weight.build(150, "lb"),
+          weight: w`150lb`,
         },
       },
       {
         initialState: () => ({
           successes: 2,
           failures: 0,
-          weight: Weight.build(150, "lb"),
+          weight: w`150lb`,
         }),
         finalState: {
           successes: 0,
           failures: 0,
-          weight: Weight.build(155, "lb"),
+          weight: w`155lb`,
         },
       },
       {
         initialState: () => ({
           successes: 1,
           failures: 2,
-          weight: Weight.build(150, "lb"),
+          weight: w`150lb`,
         }),
         adjustEmptyGlobals: { reps: [3, 3, 3], completedReps: [3, 3, 2] },
         finalState: {
           successes: 0,
           failures: 0,
-          weight: Weight.build(145, "lb"),
+          weight: w`145lb`,
         },
       },
     ],
@@ -377,14 +373,10 @@ if (!(completedReps >= reps)) {
       state.weight = state.weight * 0.9
     }
     `,
-    initialState: () => ({ weight: Weight.build(150, "lb") }),
+    initialState: () => ({ weight: w`150lb` }),
     adjustEmptyGlobals: {
       reps: [5, 5, 5],
-      w: [
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-      ],
+      w: [w`150lb`, w`150lb`, w`150lb`],
     },
     cases: [
       {
@@ -392,21 +384,21 @@ if (!(completedReps >= reps)) {
         adjustEmptyGlobals: {
           cr: [5, 5, 5],
         },
-        finalState: { weight: Weight.build(152.5, "lb") },
+        finalState: { weight: w`152.5lb` },
       },
       {
         description: "sum of crs > 15",
         adjustEmptyGlobals: {
           cr: [5, 5, 11],
         },
-        finalState: { weight: Weight.build(155, "lb") },
+        finalState: { weight: w`155lb` },
       },
       {
         description: "sum of crs < 15",
         adjustEmptyGlobals: {
           cr: [5, 5, 3],
         },
-        finalState: { weight: Weight.build(135, "lb") },
+        finalState: { weight: w`135lb` },
       },
     ],
   },
@@ -424,35 +416,29 @@ if (!(completedReps >= reps)) {
     `,
     adjustEmptyGlobals: {
       r: [5, 5, 5, 5, 5],
-      w: [
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-      ],
+      w: [w`150lb`, w`150lb`, w`150lb`, w`150lb`, w`150lb`],
     },
     cases: [
       {
-        initialState: () => ({ stage: 1, weight: Weight.build(150, "lb") }),
+        initialState: () => ({ stage: 1, weight: w`150lb` }),
         adjustEmptyGlobals: {
           cr: [5, 5, 5, 5, 5],
         },
-        finalState: { stage: 1, weight: Weight.build(160, "lb") },
+        finalState: { stage: 1, weight: w`160lb` },
       },
       {
-        initialState: () => ({ stage: 1, weight: Weight.build(150, "lb") }),
+        initialState: () => ({ stage: 1, weight: w`150lb` }),
         adjustEmptyGlobals: {
           cr: [5, 5, 5, 5, 4],
         },
-        finalState: { stage: 2, weight: Weight.build(150, "lb") },
+        finalState: { stage: 2, weight: w`150lb` },
       },
       {
-        initialState: () => ({ stage: 3, weight: Weight.build(150, "lb") }),
+        initialState: () => ({ stage: 3, weight: w`150lb` }),
         adjustEmptyGlobals: {
           cr: [5, 5, 5, 5, 4],
         },
-        finalState: { stage: 1, weight: Weight.build(127.5, "lb") },
+        finalState: { stage: 1, weight: w`127.5lb` },
       },
     ],
   },
@@ -463,19 +449,19 @@ if (!(completedReps >= reps)) {
       state.weight = state.weight + 5lb
     }
     `,
-    initialState: () => ({ weight: Weight.build(150, "lb") }),
+    initialState: () => ({ weight: w`150lb` }),
     cases: [
       {
         adjustEmptyGlobals: {
           cr: [5, 5, 30],
         },
-        finalState: { weight: Weight.build(155, "lb") },
+        finalState: { weight: w`155lb` },
       },
       {
         adjustEmptyGlobals: {
           cr: [5, 5, 5, 5, 5],
         },
-        finalState: { weight: Weight.build(150, "lb") },
+        finalState: { weight: w`150lb` },
       },
     ],
   },
@@ -560,7 +546,7 @@ if (!(completedReps >= reps)) {
     else { state.reps = 20 }
     `,
     initialState: () => ({
-      tm: Weight.build(1000, "lb"),
+      tm: w`1000lb`,
       week: 1,
       intensity: 70,
       reps: 8,
@@ -571,12 +557,7 @@ if (!(completedReps >= reps)) {
       reps: [5, 5, 5, 5],
       cr: [5, 5, 5, 6],
       completedReps: [5, 5, 5, 6],
-      weights: [
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-        Weight.build(150, "lb"),
-      ],
+      weights: [w`150lb`, w`150lb`, w`150lb`, w`150lb`],
     },
     finalState: expect.objectContaining({
       week: 2,
@@ -615,19 +596,19 @@ if (!(completedReps >= reps)) {
         state.weight = roundWeight(state.weight * 0.323)
       }
     `,
-    initialState: () => ({ weight: Weight.build(1000, "lb") }),
+    initialState: () => ({ weight: w`1000lb` }),
     adjustEmptyGlobals: {},
-    finalState: { weight: Weight.build(323, "lb") },
-    result: Weight.build(323, "lb"),
+    finalState: { weight: w`323lb` },
+    result: w`323lb`,
   },
   // fn in assignment
   {
     script: `
       state.weight = roundWeight(state.weight * 0.323123)
     `,
-    initialState: () => ({ weight: Weight.build(1000, "lb") }),
+    initialState: () => ({ weight: w`1000lb` }),
     adjustEmptyGlobals: {},
-    finalState: { weight: Weight.build(323.1, "lb") },
+    finalState: { weight: w`323.1lb` },
   },
   // nested conditions 2
   {
