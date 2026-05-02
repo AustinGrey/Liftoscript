@@ -1,23 +1,7 @@
-# vite-plus-starter
+# Liftoscript
 
-A starter for creating a Vite Plus project.
+An extraction of the simple logic language used by [Liftosaur](https://github.com/astashov/liftosaur).
 
-## Development
+## License
 
-- Install dependencies:
-
-```bash
-vp install
-```
-
-- Run the unit tests:
-
-```bash
-vp test
-```
-
-- Build the library:
-
-```bash
-vp pack
-```
+A significant portion of this code is derived from the [Liftosaur](https://github.com/astashov/liftosaur) project, which is licensed under the GNU Affero General Public License v3.0. As per the terms of that license, this project also is under the same license.
