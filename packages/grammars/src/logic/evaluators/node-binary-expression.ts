@@ -2,7 +2,6 @@ import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
 import * as Weight from "@/models/weight.ts";
-import { pad } from "@/utils/collection.ts";
 import {
   type LogicResult,
   type LogicResultSingular,
@@ -27,70 +26,6 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const right = t.recurse(rightNode);
   return binaryOpMaybeArray(left, right, (l, r) => {
     switch (op) {
-      case "&&":
-        return left && right;
-      case "||":
-        return left || right;
-      case ">":
-      case "<":
-      case ">=":
-      case "<=":
-      case "==":
-      case "!=": {
-        const operator = op;
-        /*
-         * Compare two logic results using the specified operator
-         *
-         * Either side of the comparison can be an array. If so, here is how the logic resolves
-         * - Both arrays: comparison checked pair wise for each element. If the arrays are of different lengths, the shorter array is padded with 0s
-         * - Single array: comparison checked for every element in the array
-         */
-
-        function comparator(
-          l: LogicResultSingular,
-          r: LogicResultSingular,
-        ): boolean {
-          if (
-            l === undefined ||
-            isBoolean(l) ||
-            r === undefined ||
-            isBoolean(r)
-          ) {
-            return false;
-          }
-          switch (operator) {
-            case ">":
-              return Weight.gt(l, r);
-            case "<":
-              return Weight.lt(l, r);
-            case ">=":
-              return Weight.gte(l, r);
-            case "<=":
-              return Weight.lte(l, r);
-            case "==":
-              return Weight.eq(l, r);
-            case "!=":
-              return !Weight.eq(l, r);
-          }
-        }
-        if (Array.isArray(left)) {
-          if (Array.isArray(right)) {
-            const longestLength = Math.max(left.length, right.length);
-            const leftPadded = pad(left, 0, longestLength);
-            const rightPadded = pad(right, 0, longestLength);
-            return leftPadded.every((l, i) =>
-              // @TODO why all this coercion to 0? Seems like a foot gun. If comparison doesn't make sense, perhaps we should propagate an error?
-              comparator(l ?? 0, rightPadded[i] ?? 0),
-            );
-          } else {
-            return left.every((l) => comparator(l ?? 0, right ?? 0));
-          }
-        } else if (Array.isArray(right)) {
-          return right.every((r) => comparator(left ?? 0, r ?? 0));
-        } else {
-          return comparator(left ?? 0, right ?? 0);
-        }
-      }
       // These cases are of the form (LogicResultSingular, LogicResultSingular) => boolean
       case "==":
         return equal(l, r);
@@ -125,14 +60,29 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
         );
       // These cases are of the form (boolean, boolean) => boolean
       case "&&":
-      case "||":
-        // These cases are of the form (Quantity, Quantity) => number
-        break;
+      case "||": {
+        // The value that causes no change when applied to a value.
+        const identity = op === "&&" ? true : false;
+        return binaryBooleanOp(
+          l,
+          r,
+          (a, b) => {
+            return op === "&&" ? a && b : a || b;
+          },
+          {
+            number: identity,
+            weight: identity,
+            dynamicWeight: identity,
+            undefined: identity,
+          },
+        );
+      }
+      // These cases are of the form (Quantity, Quantity) => number
       case "+":
       case "-":
       case "*":
       case "/":
-      case "%":
+      case "%": {
         // The value that causes no change when applied to a value.
         const identity = "+" === op || "-" === op ? 0 : 1;
         return binaryMathOp(
@@ -160,6 +110,7 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
           },
           t,
         );
+      }
       default:
         return t.error(`Unsupported operator ${op}`, opNode);
     }
@@ -203,10 +154,6 @@ function binaryOpMaybeArray(
 /**
  * Applies the given math operation after coercing the units of the two logic results
  *
- * Single value coercion rules - when two values don't have the same types
- * - If any value is a {@link Quantity}, then they are converted to the same unit and the operation applied. See {@link coerceUnits} for the rules of coercion for units.
- * - Other like values are converted to numbers according to the coercion rules supplied. If undefined, an error is thrown.
- *
  * @param operator The operator that was in the original script
  * @param left The first quantity
  * @param right The second quantity
@@ -226,7 +173,7 @@ function binaryMathOp(
   },
   tools: EvaluateTools,
 ): LogicResultSingular {
-  const { aCoerced: a, bCoerced: b } = coerceUnits(
+  const { aCoerced: a, bCoerced: b } = coerceQuantities(
     toQuantity(left, coercion),
     toQuantity(right, coercion),
     tools,
@@ -287,7 +234,7 @@ function binaryMathOp(
  * @param tools the evaluation tools
  * @return Both values coerced to the same unit.
  */
-function coerceUnits(
+function coerceQuantities(
   left: Quantity,
   right: Quantity,
   tools: EvaluateTools,
@@ -342,11 +289,7 @@ function asUnit(q: IWeight, unit: "kg" | "lb"): IWeight {
 }
 
 /**
- * Applies the given math operation after coercing the units of the two logic results
- *
- * Single value coercion rules - when two values don't have the same types
- * - If any value is a {@link Quantity}, then they are converted to the same unit and the operation applied. See {@link coerceUnits} for the rules of coercion for units.
- * - Other like values are converted to numbers according to the coercion rules supplied. If undefined, an error is thrown.
+ * Applies the given comparison operation after coercing the units of the two logic results
  *
  * @param left The first quantity
  * @param right The second quantity
@@ -365,10 +308,44 @@ function binaryCompareOp(
   },
   tools: EvaluateTools,
 ): LogicResultSingular {
-  const { aCoerced: a, bCoerced: b } = coerceUnits(
+  const { aCoerced: a, bCoerced: b } = coerceQuantities(
     toQuantity(left, coercion),
     toQuantity(right, coercion),
     tools,
   );
   return o(isNumber(a) ? a : a.value, isNumber(b) ? b : b.value);
+}
+
+/**
+ * Applies the given comparison operation after coercing the units of the two logic results
+ *
+ * @param left The first quantity
+ * @param right The second quantity
+ * @param o The operation to perform
+ * @param coercion How non-numbers will be converted
+ */
+function binaryBooleanOp(
+  left: LogicResultSingular,
+  right: LogicResultSingular,
+  o: (aValue: boolean, bValue: boolean) => boolean,
+  coercion: {
+    number: boolean | undefined;
+    weight: boolean | undefined;
+    dynamicWeight: boolean | undefined;
+    undefined: boolean | undefined;
+  },
+): LogicResultSingular {
+  function coerceToBoolean(val: LogicResultSingular): boolean {
+    if (isBoolean(val)) return val;
+    if (isNumber(val) && coercion.number) return coercion.number;
+    if (is(TWeight, val) && coercion.weight) return coercion.weight;
+    if (is(TDynamicWeight, val) && coercion.dynamicWeight)
+      return coercion.dynamicWeight;
+    if (val === undefined && coercion.undefined) return coercion.undefined;
+    // @todo shouldn't I bubble up the error to give a better, tracable error message?
+    throw new Error(
+      `A value needed to be turned into a boolean but could not be. The value was: ${val}`,
+    );
+  }
+  return o(coerceToBoolean(left), coerceToBoolean(right));
 }
