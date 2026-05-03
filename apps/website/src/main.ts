@@ -1,60 +1,66 @@
 import "./style.css";
-import typescriptLogo from "./assets/typescript.svg";
-import viteLogo from "./assets/vite.svg";
-import heroImg from "./assets/hero.png";
-import { setupCounter } from "./counter.ts";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import {
+  bracketMatching,
+  defaultHighlightStyle,
+  indentOnInput,
+  syntaxHighlighting,
+  type LanguageSupport,
+} from "@codemirror/language";
+import { EditorState } from "@codemirror/state";
+import {
+  drawSelection,
+  EditorView,
+  highlightActiveLine,
+  keymap,
+  lineNumbers,
+} from "@codemirror/view";
+import { logicLanguage, workoutPlanLanguage } from "./languages.ts";
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+const SAMPLE_LOGIC = `// Progression logic preview
+state.workingWeight = 100kg
+if (day > 0) {
+  w + 2.5kg
+} else {
+  w * 1.05
+}`;
 
-<div class="ticks"></div>
+const SAMPLE_WORKOUT = `/// Bench-focused day
+# Week 2 — strength block
+## Day 1
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+Bench Press / reps: 3x5 80kg @8 180s
+  // backoff sets
+  Bench Press / 2x8 60kg
 
-<div class="ticks"></div>
-<section id="spacer"></section>
+Squat / warmup: none
+Squat / 3x5 100kg
 `;
 
-setupCounter(document.querySelector<HTMLButtonElement>("#counter")!);
+function mount(parent: HTMLElement, doc: string, support: LanguageSupport) {
+  return new EditorView({
+    parent,
+    state: EditorState.create({
+      doc,
+      extensions: [
+        support,
+        lineNumbers(),
+        highlightActiveLine(),
+        drawSelection(),
+        bracketMatching(),
+        indentOnInput(),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        history(),
+        keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+      ],
+    }),
+  });
+}
+
+mount(document.querySelector<HTMLElement>("#editor-logic")!, SAMPLE_LOGIC, logicLanguage());
+
+mount(
+  document.querySelector<HTMLElement>("#editor-workout-plan")!,
+  SAMPLE_WORKOUT,
+  workoutPlanLanguage(),
+);

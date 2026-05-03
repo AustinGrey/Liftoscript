@@ -16,7 +16,7 @@ import {
   n,
 } from "@/utils/math";
 import { parser as LiftoscriptParser } from "@/parsers/logic";
-import { z as z } from "zod";
+import { z } from "zod";
 import {
   ObjectUtils_clone,
   ObjectUtils_combinedKeys,

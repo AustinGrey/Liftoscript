@@ -8,6 +8,14 @@
     "build": "tsc && vp build",
     "preview": "vp preview"
   },
+  "dependencies": {
+    "@codemirror/commands": "catalog:",
+    "@codemirror/language": "catalog:",
+    "@codemirror/state": "catalog:",
+    "@codemirror/view": "catalog:",
+    "@lezer/highlight": "catalog:",
+    "grammars": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "~6.0.2",
     "vite": "catalog:",

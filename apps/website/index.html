@@ -4,10 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>website</title>
+    <title>Liftoscript — grammar preview</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <header class="page-header">
+        <h1>Grammar preview</h1>
+        <p class="lede">
+          CodeMirror 6 with the <strong>logic</strong> and <strong>workout-plan</strong> Lezer
+          grammars from the <code>grammars</code> package.
+        </p>
+      </header>
+      <main class="editor-grid">
+        <section class="editor-panel" aria-labelledby="logic-heading">
+          <h2 id="logic-heading">Logic</h2>
+          <div id="editor-logic" class="cm-host" role="textbox" aria-multiline="true"></div>
+        </section>
+        <section class="editor-panel" aria-labelledby="plan-heading">
+          <h2 id="plan-heading">Workout plan</h2>
+          <div id="editor-workout-plan" class="cm-host" role="textbox" aria-multiline="true"></div>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
