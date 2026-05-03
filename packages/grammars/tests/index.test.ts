@@ -124,6 +124,12 @@ type LogicTestCase = {
   initialState?: () => IProgramState;
   // The expected final state once the script finished executing
   finalState?: IProgramState;
+  /**
+   * The old system doesn't support everything this new system does.
+   * If you set this, the old system test expects it to throw.
+   * The value should be an explaination why it's expected.
+   */
+  expectOldSystemToThrow?: string;
   adjustEmptyGlobals?: Partial<IScriptBindings>;
   /**
    * If true, the debugger will be called for this test
@@ -292,7 +298,12 @@ const cases: LogicTestSpec[] = [
   { script: `1lb <= 1kg`, result: true },
   { script: `1lb == 1kg`, result: false },
   { script: `1lb != 1kg`, result: true },
-  { script: `(1 == 1) == (1 == 1)`, result: true },
+  {
+    script: `(1 == 1) == (1 == 1)`,
+    result: true,
+    expectOldSystemToThrow:
+      "Old system never supported comparing booleans. So it threw a syntax error even though that is syntactically correct",
+  },
   // Ternary
   {
     script: `4 < 5 ? 1 : 0`,
@@ -667,7 +678,7 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
           }
 
           const state = initialState?.() ?? {};
-          const output = new LiftoscriptEvaluator(
+          const evaluator = new LiftoscriptEvaluator(
             script,
             state,
             {},
@@ -679,7 +690,18 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
             testFnContext,
             "kg",
             "planner",
-          ).evaluate(parser.parse(script).topNode);
+          );
+
+          if (case_.expectOldSystemToThrow) {
+            expect(
+              () => evaluator.evaluate(parser.parse(script).topNode),
+              case_.expectOldSystemToThrow,
+            ).toThrow();
+            return;
+          }
+
+          const output = evaluator.evaluate(parser.parse(script).topNode);
+
           if ("result" in case_) {
             expect
               .soft(output, "Script should evaluate to the expected result")
