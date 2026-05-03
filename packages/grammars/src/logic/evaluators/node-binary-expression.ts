@@ -24,7 +24,8 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const left = t.recurse(leftNode);
   const op = t.getText(opNode);
   const right = t.recurse(rightNode);
-  return binaryOpMaybeArray(left, right, (l, r) => {
+
+  const maybeArrayResult = binaryOpMaybeArray(left, right, (l, r) => {
     switch (op) {
       // These cases are of the form (LogicResultSingular, LogicResultSingular) => boolean
       case "==":
@@ -115,6 +116,24 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
         return t.error(`Unsupported operator ${op}`, opNode);
     }
   });
+
+  /*
+  Weird special case:
+  For comparison operations on arrays. There is an additional combining of the result. The result is true if and only if every element in the resulting array is true.
+  This is because in original liftoscript, boolean arrays aren't a legal result type.
+  But I relaxed that requirement, so this is no longer necessary.
+  However we want to maintain compatibility with the original language, so we will still perform this operation.
+  @todo Is compatibility really important here? I think the language needs an "every" or "some" operation to give script writers control over the language
+   */
+
+  if (
+    Array.isArray(maybeArrayResult) &&
+    maybeArrayResult.every((x) => typeof x === "boolean")
+  ) {
+    return maybeArrayResult.every((x) => x);
+  }
+
+  return maybeArrayResult;
 };
 
 /**
