@@ -240,7 +240,6 @@ const cases: LogicTestSpec[] = [
     adjustEmptyGlobals: {
       rm1: w`0kg`,
     },
-    debug: true,
   },
   { script: `1% + 1%`, result: dw`2%` },
   {

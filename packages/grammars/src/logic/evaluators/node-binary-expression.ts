@@ -241,7 +241,7 @@ function coerceQuantities(
 ): { aCoerced: Quantity; bCoerced: Quantity } {
   if (is(TWeight, left)) {
     if (is(TWeight, right)) {
-      return { aCoerced: left, bCoerced: right };
+      return { aCoerced: left, bCoerced: asUnit(right, left.unit) };
     }
     if (is(TDynamicWeight, right)) {
       return {
