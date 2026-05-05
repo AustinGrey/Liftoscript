@@ -124,7 +124,7 @@ export function Progress_createScriptFunctions(
     print: (...fnArgs) => {
       fnArgs.pop();
       const context = fnArgs.pop() as IScriptFnContext;
-      const args = [...fnArgs.flat()] as Quantity[];
+      const args = fnArgs.flat() as Quantity[];
       context.prints = context.prints || [];
       context.prints.push(args);
       return args[0];

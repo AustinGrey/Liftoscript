@@ -2285,7 +2285,7 @@ export function Weight_parsePct(
   if (str == null) {
     return undefined;
   }
-  const match = str.match(/^([\-+]?[0-9.]+)%$/);
+  const match = str.match(/^([-+]?[0-9.]+)%$/);
   if (match) {
     return Weight_buildPct(MathUtils_roundFloat(parseFloat(match[1]), 2));
   } else {
@@ -2294,7 +2294,7 @@ export function Weight_parsePct(
 }
 
 export function Weight_parse(str: string): IWeight | undefined {
-  const match = str.match(/^([\-+]?[0-9.]+)\s*(kg|lb)$/);
+  const match = str.match(/^([-+]?[0-9.]+)\s*(kg|lb)$/);
   if (match) {
     return Weight_build(
       MathUtils_roundFloat(parseFloat(match[1]), 2),
@@ -8641,9 +8641,7 @@ export function Muscle_getBuiltinMuscleGroups(): IScreenMuscle[] {
 export function Muscle_getHiddenMuscleGroups(
   settings: ISettings,
 ): IScreenMuscle[] {
-  return [
-    ...screenMuscles.filter((sm) => settings.muscleGroups.data[sm]?.isHidden),
-  ];
+  return screenMuscles.filter((sm) => settings.muscleGroups.data[sm]?.isHidden);
 }
 
 export function Muscle_getMusclesFromScreenMuscle(

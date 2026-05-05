@@ -22,10 +22,7 @@ function getWeight(
   }
   const unit = tools.getText(unitNode);
   if (!is(TUnit, unit)) {
-    tools.error(
-      "WeightExpression must contain a unit of either kg or lb",
-      unitNode,
-    );
+    tools.error("WeightExpression must contain a unit of either kg or lb", unitNode);
   }
   return Weight.build(num, unit);
 }

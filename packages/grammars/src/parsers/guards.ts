@@ -55,11 +55,9 @@ export namespace LogicNodes {
   export type VariableExpression = TypedLogicNode<"VariableExpression">;
   export type VariableIndex = TypedLogicNode<"VariableIndex">;
   export type Wildcard = TypedLogicNode<"Wildcard">;
-  export type IncAssignmentExpression =
-    TypedLogicNode<"IncAssignmentExpression">;
+  export type IncAssignmentExpression = TypedLogicNode<"IncAssignmentExpression">;
   export type IncAssignment = TypedLogicNode<"IncAssignment">;
-  export type BuiltinFunctionExpression =
-    TypedLogicNode<"BuiltinFunctionExpression">;
+  export type BuiltinFunctionExpression = TypedLogicNode<"BuiltinFunctionExpression">;
   export type UnaryExpression = TypedLogicNode<"UnaryExpression">;
   export type Not = TypedLogicNode<"Not">;
 }

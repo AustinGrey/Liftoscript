@@ -24,7 +24,10 @@ export function SetUtils_areAllEqual<T>(sets: Set<T>[]): boolean {
   return true;
 }
 
-export function SetUtils_containsAnyValues<T>(within: Set<T>, from: Set<T>): boolean {
+export function SetUtils_containsAnyValues<T>(
+  within: Set<T>,
+  from: Set<T>,
+): boolean {
   for (const item of from) {
     if (within.has(item)) {
       return true;
