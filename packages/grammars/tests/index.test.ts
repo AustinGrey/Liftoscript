@@ -127,7 +127,7 @@ type LogicTestCase = {
   /**
    * The old system doesn't support everything this new system does.
    * If you set this, the old system test expects it to throw.
-   * The value should be an explaination why it's expected.
+   * The value should be an explanation why it's expected.
    */
   expectOldSystemToThrow?: string;
   adjustEmptyGlobals?: Partial<IScriptBindings>;

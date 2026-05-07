@@ -36,6 +36,7 @@
     "@lezer/generator": "catalog:",
     "@lezer/lr": "catalog:",
     "es-toolkit": "catalog:",
+    "micro-memoize": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
