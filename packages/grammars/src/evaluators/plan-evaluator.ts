@@ -194,27 +194,27 @@ declare let __HOST__: string;
 
 const encodedProgramHashToShortUrl: Partial<Record<string, string>> = {};
 
-interface IProgramIndexEntry {
-  id: string;
-  name: string;
-  author: string;
-  authorUrl: string;
-  url: string;
-  shortDescription: string;
-  description?: string;
-  isMultiweek: boolean;
-  tags: string[];
-  frequency?: number;
-  age?: string;
-  duration?: string;
-  goal?: string;
-  exercises?: IExerciseType[];
-  equipment?: string[];
-  exercisesRange?: [number, number];
-  weeksCount?: number;
-  datePublished?: string;
-  dateModified?: string;
-}
+// interface IProgramIndexEntry {
+//   id: string;
+//   name: string;
+//   author: string;
+//   authorUrl: string;
+//   url: string;
+//   shortDescription: string;
+//   description?: string;
+//   isMultiweek: boolean;
+//   tags: string[];
+//   frequency?: number;
+//   age?: string;
+//   duration?: string;
+//   goal?: string;
+//   exercises?: IExerciseType[];
+//   equipment?: string[];
+//   exercisesRange?: [number, number];
+//   weeksCount?: number;
+//   datePublished?: string;
+//   dateModified?: string;
+// }
 
 interface IExportedProgram {
   program: IProgram;
@@ -251,117 +251,117 @@ interface IEvaluatedProgram {
   weeks: IEvaluatedProgramWeek[];
   states: IByTag<IProgramState>;
 }
-type IEProgram = IProgram | IEvaluatedProgram;
+// type IEProgram = IProgram | IEvaluatedProgram;
 
-type IProgramMode = "planner" | "update";
+// type IProgramMode = "planner" | "update";
 const emptyProgramId = "emptyprogram";
 
-function isEvaluatedProgram(program: IEProgram): program is IEvaluatedProgram {
-  return "type" in program && program.type === "evaluatedProgram";
-}
+// function isEvaluatedProgram(program: IEProgram): program is IEvaluatedProgram {
+//   return "type" in program && program.type === "evaluatedProgram";
+// }
 
-function ev(program: IEProgram, settings: ISettings): IEvaluatedProgram {
-  if (isEvaluatedProgram(program)) {
-    return program;
-  } else {
-    return Program_evaluate(program, settings);
-  }
-}
+// function ev(program: IEProgram, settings: ISettings): IEvaluatedProgram {
+//   if (isEvaluatedProgram(program)) {
+//     return program;
+//   } else {
+//     return Program_evaluate(program, settings);
+//   }
+// }
+//
+// function Program_getProgram(state: IState, id?: string): IProgram | undefined {
+//   if (id === emptyProgramId) {
+//     return Program_createEmptyProgram();
+//   } else {
+//     return state.storage.programs.find((p) => p.id === id);
+//   }
+// }
 
-function Program_getProgram(state: IState, id?: string): IProgram | undefined {
-  if (id === emptyProgramId) {
-    return Program_createEmptyProgram();
-  } else {
-    return state.storage.programs.find((p) => p.id === id);
-  }
-}
+// function Program_getFullProgram(
+//   state: IState,
+//   id?: string,
+// ): IProgram | undefined {
+//   const program = Program_getProgram(state, id);
+//   if (program) {
+//     return Program_fullProgram(program, state.storage.settings);
+//   } else {
+//     return undefined;
+//   }
+// }
 
-function Program_getFullProgram(
-  state: IState,
-  id?: string,
-): IProgram | undefined {
-  const program = Program_getProgram(state, id);
-  if (program) {
-    return Program_fullProgram(program, state.storage.settings);
-  } else {
-    return undefined;
-  }
-}
+// function Program_cleanPlannerProgram(program: IProgram): IProgram {
+//   const planner = program.planner;
+//   if (planner != null) {
+//     const newPlanner = {
+//       ...planner,
+//       weeks: planner.weeks.map((w) => ({
+//         ...ObjectUtils_omit(w, ["id"]),
+//         days: w.days.map((d) => ({
+//           ...ObjectUtils_omit(d, ["id"]),
+//         })),
+//       })),
+//     };
+//     return {
+//       ...program,
+//       planner: newPlanner,
+//       exercises: [],
+//       days: [],
+//       weeks: [],
+//       deletedDays: [],
+//       deletedWeeks: [],
+//       deletedExercises: [],
+//     };
+//   } else {
+//     return program;
+//   }
+// }
 
-function Program_cleanPlannerProgram(program: IProgram): IProgram {
-  const planner = program.planner;
-  if (planner != null) {
-    const newPlanner = {
-      ...planner,
-      weeks: planner.weeks.map((w) => ({
-        ...ObjectUtils_omit(w, ["id"]),
-        days: w.days.map((d) => ({
-          ...ObjectUtils_omit(d, ["id"]),
-        })),
-      })),
-    };
-    return {
-      ...program,
-      planner: newPlanner,
-      exercises: [],
-      days: [],
-      weeks: [],
-      deletedDays: [],
-      deletedWeeks: [],
-      deletedExercises: [],
-    };
-  } else {
-    return program;
-  }
-}
-
-function Program_isEmpty(program?: IProgram | IEvaluatedProgram): boolean {
-  return program?.id === emptyProgramId;
-}
-
-function Program_uses1RM(program: IEvaluatedProgram): boolean {
-  const allExercises = Program_getAllProgramExercises(program);
-  return allExercises.some((e) => ProgramExercise_doesUse1RM(e));
-}
-
-function Program_usesRPE(program: IEvaluatedProgram): boolean {
-  const allExercises = Program_getAllProgramExercises(program);
-  return allExercises.some((e) => ProgramExercise_doesUseRPE(e));
-}
-
-function Program_getProgramExercisesFromExerciseType(
-  program: IEvaluatedProgram,
-  exerciseType: IExerciseType,
-): IPlannerProgramExercise[] {
-  return Program_getAllUsedProgramExercises(program).filter((p) =>
-    Exercise_eq(p.exerciseType, exerciseType),
-  );
-}
-
-function Program_getProgramIndex(state: IState, id: string): number {
-  return state.storage.programs.findIndex((p) => p.id === id);
-}
+// function Program_isEmpty(program?: IProgram | IEvaluatedProgram): boolean {
+//   return program?.id === emptyProgramId;
+// }
+//
+// function Program_uses1RM(program: IEvaluatedProgram): boolean {
+//   const allExercises = Program_getAllProgramExercises(program);
+//   return allExercises.some((e) => ProgramExercise_doesUse1RM(e));
+// }
+//
+// function Program_usesRPE(program: IEvaluatedProgram): boolean {
+//   const allExercises = Program_getAllProgramExercises(program);
+//   return allExercises.some((e) => ProgramExercise_doesUseRPE(e));
+// }
+//
+// function Program_getProgramExercisesFromExerciseType(
+//   program: IEvaluatedProgram,
+//   exerciseType: IExerciseType,
+// ): IPlannerProgramExercise[] {
+//   return Program_getAllUsedProgramExercises(program).filter((p) =>
+//     Exercise_eq(p.exerciseType, exerciseType),
+//   );
+// }
+//
+// function Program_getProgramIndex(state: IState, id: string): number {
+//   return state.storage.programs.findIndex((p) => p.id === id);
+// }
 
 function Program_getCurrentProgram(storage: IStorage): IProgram | undefined {
   return storage.programs.filter((p) => p.id === storage.currentProgramId)[0];
 }
 
-function Program_storageToExportedProgram(
-  storage: IStorage,
-  programId: string,
-): IExportedProgram | undefined {
-  const program = storage.programs.find((p) => p.id === programId);
-  if (!program) {
-    return undefined;
-  }
-  const settings = storage.settings;
-  return {
-    program: Program_cleanPlannerProgram(program),
-    customExercises: settings.exercises,
-    version: storage.version,
-    settings: settings,
-  };
-}
+// function Program_storageToExportedProgram(
+//   storage: IStorage,
+//   programId: string,
+// ): IExportedProgram | undefined {
+//   const program = storage.programs.find((p) => p.id === programId);
+//   if (!program) {
+//     return undefined;
+//   }
+//   const settings = storage.settings;
+//   return {
+//     program: Program_cleanPlannerProgram(program),
+//     customExercises: settings.exercises,
+//     version: storage.version,
+//     settings: settings,
+//   };
+// }
 
 function Program_nextHistoryEntry(
   program: IEvaluatedProgram,
@@ -437,26 +437,26 @@ function Program_nextHistoryEntry(
   return newEntry;
 }
 
-function Program_stateValue(
-  state: IProgramState,
-  key: string,
-  value?: string,
-): number | IWeight | IPercentage | undefined {
-  if (value == null) {
-    return undefined;
-  }
-  const numValue = parseFloat(value);
-  const oldValue = state[key];
-  if (oldValue == null) {
-    return numValue;
-  } else if (Weight_is(oldValue)) {
-    return Weight_build(numValue, oldValue.unit);
-  } else if (Weight_isPct(oldValue)) {
-    return Weight_buildPct(numValue);
-  } else {
-    return numValue;
-  }
-}
+// function Program_stateValue(
+//   state: IProgramState,
+//   key: string,
+//   value?: string,
+// ): number | IWeight | IPercentage | undefined {
+//   if (value == null) {
+//     return undefined;
+//   }
+//   const numValue = parseFloat(value);
+//   const oldValue = state[key];
+//   if (oldValue == null) {
+//     return numValue;
+//   } else if (Weight_is(oldValue)) {
+//     return Weight_build(numValue, oldValue.unit);
+//   } else if (Weight_isPct(oldValue)) {
+//     return Weight_buildPct(numValue);
+//   } else {
+//     return numValue;
+//   }
+// }
 
 export function Program_nextHistoryRecord(
   aProgram: IProgram,
@@ -524,124 +524,124 @@ function Program_nextHistoryRecordFromEvaluated(
   };
 }
 
-function Program_getSupersetGroups(
-  evaluatedProgram: IEvaluatedProgram,
-  dayData: IShortDayData,
-  excludeExercise?: IPlannerProgramExercise,
-): Partial<Record<string, IPlannerProgramExerciseWithType[]>> {
-  const programDay = Program_getProgramDay(
-    evaluatedProgram,
-    Program_getDayNumber(evaluatedProgram, dayData.week, dayData.dayInWeek),
-  );
-  const dayExercises = programDay
-    ? Program_getProgramDayUsedExercises(programDay)
-    : [];
-  const groups: Partial<Record<string, IPlannerProgramExerciseWithType[]>> = {};
-  for (const exercise of dayExercises) {
-    if (exercise.superset != null) {
-      if (!groups[exercise.superset.name]) {
-        groups[exercise.superset.name] = [];
-      }
-      if (exercise.key !== excludeExercise?.key) {
-        groups[exercise.superset.name]!.push(exercise);
-      }
-    }
-  }
-  return groups;
-}
-
-function Program_getSupersetExercises(
-  evalutedProgram: IEvaluatedProgram,
-  plannerExercise: IPlannerProgramExercise,
-): IPlannerProgramExerciseWithType[] {
-  if (plannerExercise.superset == null) {
-    return [];
-  }
-  const dayData = plannerExercise.dayData;
-  const programDay = Program_getProgramDay(evalutedProgram, dayData.day);
-  const dayExercises = programDay
-    ? Program_getProgramDayUsedExercises(programDay)
-    : [];
-  const result = dayExercises.filter(
-    (e) => e.superset?.name === plannerExercise.superset?.name,
-  );
-  return result;
-}
-
-function Program_runExerciseFinishDayScript(
-  entry: IHistoryEntry,
-  dayData: IDayData,
-  settings: ISettings,
-  state: IProgramState,
-  otherStates: IByExercise<IProgramState>,
-  programExercise: IPlannerProgramExercise,
-  stats: IStats,
-  userPromptedStateVars?: IProgramState,
-): IEither<
-  {
-    state: IProgramState;
-    bindings: IScriptBindings;
-    updates: ILiftoscriptEvaluatorUpdate[];
-    prints: [number | IPercentage | IWeight][];
-  },
-  string
-> {
-  const script =
-    PlannerProgramExercise_getProgressScript(programExercise) || "";
-  const setVariationIndex =
-    PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
-  const descriptionIndex =
-    PlannerProgramExercise_currentDescriptionIndex(programExercise);
-
-  const bindings = Progress_createScriptBindings(
-    dayData,
-    entry,
-    settings,
-    programExercise.evaluatedSetVariations[setVariationIndex]?.sets.length ?? 0,
-    Stats_getCurrentMovingAverageBodyweight(stats, settings),
-    undefined,
-    setVariationIndex + 1,
-    descriptionIndex + 1,
-  );
-  const fns = Progress_createScriptFunctions(settings);
-  let updates: ILiftoscriptEvaluatorUpdate[] = [];
-  const newState: IProgramState = ObjectUtils_clone({
-    ...state,
-    ...userPromptedStateVars,
-  });
-
-  const fnContext = {
-    exerciseType: entry.exercise,
-    unit: settings.units,
-    prints: [],
-  };
-  try {
-    const runner = new ScriptRunner(
-      script,
-      newState,
-      ObjectUtils_clone(otherStates),
-      bindings,
-      fns,
-      settings.units,
-      fnContext,
-      "planner",
-    );
-    runner.execute();
-    updates = runner.getUpdates();
-  } catch (e) {
-    if (e instanceof SyntaxError) {
-      return { success: false, error: e.message };
-    } else {
-      throw e;
-    }
-  }
-
-  const stateDiff = { ...entry.state, ...ObjectUtils_diff(state, newState) };
-  return {
-    success: true,
-    data: { state: stateDiff, updates, bindings, prints: fnContext.prints },
-  };
-}
+// function Program_getSupersetGroups(
+//   evaluatedProgram: IEvaluatedProgram,
+//   dayData: IShortDayData,
+//   excludeExercise?: IPlannerProgramExercise,
+// ): Partial<Record<string, IPlannerProgramExerciseWithType[]>> {
+//   const programDay = Program_getProgramDay(
+//     evaluatedProgram,
+//     Program_getDayNumber(evaluatedProgram, dayData.week, dayData.dayInWeek),
+//   );
+//   const dayExercises = programDay
+//     ? Program_getProgramDayUsedExercises(programDay)
+//     : [];
+//   const groups: Partial<Record<string, IPlannerProgramExerciseWithType[]>> = {};
+//   for (const exercise of dayExercises) {
+//     if (exercise.superset != null) {
+//       if (!groups[exercise.superset.name]) {
+//         groups[exercise.superset.name] = [];
+//       }
+//       if (exercise.key !== excludeExercise?.key) {
+//         groups[exercise.superset.name]!.push(exercise);
+//       }
+//     }
+//   }
+//   return groups;
+// }
+//
+// function Program_getSupersetExercises(
+//   evalutedProgram: IEvaluatedProgram,
+//   plannerExercise: IPlannerProgramExercise,
+// ): IPlannerProgramExerciseWithType[] {
+//   if (plannerExercise.superset == null) {
+//     return [];
+//   }
+//   const dayData = plannerExercise.dayData;
+//   const programDay = Program_getProgramDay(evalutedProgram, dayData.day);
+//   const dayExercises = programDay
+//     ? Program_getProgramDayUsedExercises(programDay)
+//     : [];
+//   const result = dayExercises.filter(
+//     (e) => e.superset?.name === plannerExercise.superset?.name,
+//   );
+//   return result;
+// }
+//
+// function Program_runExerciseFinishDayScript(
+//   entry: IHistoryEntry,
+//   dayData: IDayData,
+//   settings: ISettings,
+//   state: IProgramState,
+//   otherStates: IByExercise<IProgramState>,
+//   programExercise: IPlannerProgramExercise,
+//   stats: IStats,
+//   userPromptedStateVars?: IProgramState,
+// ): IEither<
+//   {
+//     state: IProgramState;
+//     bindings: IScriptBindings;
+//     updates: ILiftoscriptEvaluatorUpdate[];
+//     prints: [number | IPercentage | IWeight][];
+//   },
+//   string
+// > {
+//   const script =
+//     PlannerProgramExercise_getProgressScript(programExercise) || "";
+//   const setVariationIndex =
+//     PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
+//   const descriptionIndex =
+//     PlannerProgramExercise_currentDescriptionIndex(programExercise);
+//
+//   const bindings = Progress_createScriptBindings(
+//     dayData,
+//     entry,
+//     settings,
+//     programExercise.evaluatedSetVariations[setVariationIndex]?.sets.length ?? 0,
+//     Stats_getCurrentMovingAverageBodyweight(stats, settings),
+//     undefined,
+//     setVariationIndex + 1,
+//     descriptionIndex + 1,
+//   );
+//   const fns = Progress_createScriptFunctions(settings);
+//   let updates: ILiftoscriptEvaluatorUpdate[] = [];
+//   const newState: IProgramState = ObjectUtils_clone({
+//     ...state,
+//     ...userPromptedStateVars,
+//   });
+//
+//   const fnContext = {
+//     exerciseType: entry.exercise,
+//     unit: settings.units,
+//     prints: [],
+//   };
+//   try {
+//     const runner = new ScriptRunner(
+//       script,
+//       newState,
+//       ObjectUtils_clone(otherStates),
+//       bindings,
+//       fns,
+//       settings.units,
+//       fnContext,
+//       "planner",
+//     );
+//     runner.execute();
+//     updates = runner.getUpdates();
+//   } catch (e) {
+//     if (e instanceof SyntaxError) {
+//       return { success: false, error: e.message };
+//     } else {
+//       throw e;
+//     }
+//   }
+//
+//   const stateDiff = { ...entry.state, ...ObjectUtils_diff(state, newState) };
+//   return {
+//     success: true,
+//     data: { state: stateDiff, updates, bindings, prints: fnContext.prints },
+//   };
+// }
 
 function Program_runFinishDayScript(
   programExercise: IPlannerProgramExercise,
@@ -735,36 +735,36 @@ function Program_runFinishDayScript(
   };
 }
 
-function Program_dayAverageTimeMs(
-  program: IEvaluatedProgram,
-  settings: ISettings,
-): number {
-  const dayApproxTimes: number[] = [];
-  for (const week of program.weeks) {
-    for (const day of week.days) {
-      dayApproxTimes.push(Program_dayApproxTimeMs(day, settings));
-    }
-  }
-  return dayApproxTimes.reduce((acc, t) => acc + t, 0) / dayApproxTimes.length;
-}
-
-function Program_dayApproxTimeMs(
-  programDay: IEvaluatedProgramDay,
-  settings: ISettings,
-): number {
-  return Program_getProgramDayUsedExercises(programDay).reduce((acc, e) => {
-    return acc + ProgramExercise_approxTimeMs(e, settings);
-  }, 0);
-}
-
-function Program_getProgramExerciseForKeyAndShortDayData(
-  program: IEvaluatedProgram,
-  dayData: IShortDayData,
-  key: string,
-): IPlannerProgramExerciseWithType | undefined {
-  const day = Program_getDayNumber(program, dayData.week, dayData.dayInWeek);
-  return Program_getProgramExerciseForKeyAndDay(program, day, key);
-}
+// function Program_dayAverageTimeMs(
+//   program: IEvaluatedProgram,
+//   settings: ISettings,
+// ): number {
+//   const dayApproxTimes: number[] = [];
+//   for (const week of program.weeks) {
+//     for (const day of week.days) {
+//       dayApproxTimes.push(Program_dayApproxTimeMs(day, settings));
+//     }
+//   }
+//   return dayApproxTimes.reduce((acc, t) => acc + t, 0) / dayApproxTimes.length;
+// }
+//
+// function Program_dayApproxTimeMs(
+//   programDay: IEvaluatedProgramDay,
+//   settings: ISettings,
+// ): number {
+//   return Program_getProgramDayUsedExercises(programDay).reduce((acc, e) => {
+//     return acc + ProgramExercise_approxTimeMs(e, settings);
+//   }, 0);
+// }
+//
+// function Program_getProgramExerciseForKeyAndShortDayData(
+//   program: IEvaluatedProgram,
+//   dayData: IShortDayData,
+//   key: string,
+// ): IPlannerProgramExerciseWithType | undefined {
+//   const day = Program_getDayNumber(program, dayData.week, dayData.dayInWeek);
+//   return Program_getProgramExerciseForKeyAndDay(program, day, key);
+// }
 
 function Program_getProgramExerciseForKeyAndDay(
   program: IEvaluatedProgram,
@@ -899,111 +899,111 @@ function Program_createVariation(
   };
 }
 
-function Program_createExercise(units: IUnit): IProgramExercise {
-  const defaultWarmup = warmupValues(units)[45];
-  return {
-    name: "Squat",
-    id: UidFactory_generateUid(8),
-    variations: [Program_createVariation(true)],
-    exerciseType: {
-      id: "squat",
-      equipment: "barbell",
-    },
-    state: {
-      weight:
-        units === "kg"
-          ? allExercisesList.squat.startingWeightKg
-          : allExercisesList.squat.startingWeightLb,
-    },
-    warmupSets: defaultWarmup,
-    finishDayExpr: "",
-    variationExpr: "1",
-    descriptions: [""],
-    stateMetadata: {},
-    reuseLogic: { selected: undefined, states: {} },
-  };
-}
-
-function Program_previewProgram(
-  dispatch: IDispatch,
-  programId: string,
-  showCustomPrograms: boolean,
-): void {
-  updateState(
-    dispatch,
-    [
-      lb<IState>().p("previewProgram").record({
-        id: programId,
-        showCustomPrograms,
-      }),
-    ],
-    "Preview program",
-  );
-  dispatch(Thunk_pushScreen("programPreview"));
-}
-
-function Program_createEmptyProgram(): IProgram {
-  return {
-    vtype: "program",
-    exercises: [],
-    id: emptyProgramId,
-    name: "Ad-Hoc Workout",
-    description: "",
-    url: "",
-    author: "",
-    nextDay: 1,
-    days: [],
-    weeks: [],
-    isMultiweek: false,
-    planner: {
-      vtype: "planner",
-      name: "Ad-Hoc Workout",
-      weeks: [{ name: "", days: [{ name: "", exerciseText: "" }] }],
-    },
-    tags: [],
-  };
-}
-
-function Program_cloneProgram(
-  dispatch: IDispatch,
-  program: IProgram,
-  settings: ISettings,
-): void {
-  const newProgramId = UidFactory_generateUid(8);
-  updateState(
-    dispatch,
-    [
-      lb<IState>()
-        .p("storage")
-        .p("programs")
-        .recordModify((programs) => {
-          const newProgram = {
-            ...program,
-            clonedAt: Date.now(),
-            id: newProgramId,
-          };
-          if (newProgram.planner) {
-            newProgram.planner = PlannerProgram_switchToUnit(
-              newProgram.planner,
-              settings,
-            );
-          }
-          return [...programs, newProgram];
-        }),
-      lb<IState>().p("storage").p("currentProgramId").record(newProgramId),
-    ],
-    "Clone program",
-  );
-}
-
-function Program_selectProgram(dispatch: IDispatch, programId: string): void {
-  updateState(
-    dispatch,
-    [lb<IState>().p("storage").p("currentProgramId").record(programId)],
-    "Select program",
-  );
-  dispatch(Thunk_pushScreen("main", undefined, { tab: "home" }));
-}
+// function Program_createExercise(units: IUnit): IProgramExercise {
+//   const defaultWarmup = warmupValues(units)[45];
+//   return {
+//     name: "Squat",
+//     id: UidFactory_generateUid(8),
+//     variations: [Program_createVariation(true)],
+//     exerciseType: {
+//       id: "squat",
+//       equipment: "barbell",
+//     },
+//     state: {
+//       weight:
+//         units === "kg"
+//           ? allExercisesList.squat.startingWeightKg
+//           : allExercisesList.squat.startingWeightLb,
+//     },
+//     warmupSets: defaultWarmup,
+//     finishDayExpr: "",
+//     variationExpr: "1",
+//     descriptions: [""],
+//     stateMetadata: {},
+//     reuseLogic: { selected: undefined, states: {} },
+//   };
+// }
+//
+// function Program_previewProgram(
+//   dispatch: IDispatch,
+//   programId: string,
+//   showCustomPrograms: boolean,
+// ): void {
+//   updateState(
+//     dispatch,
+//     [
+//       lb<IState>().p("previewProgram").record({
+//         id: programId,
+//         showCustomPrograms,
+//       }),
+//     ],
+//     "Preview program",
+//   );
+//   dispatch(Thunk_pushScreen("programPreview"));
+// }
+//
+// function Program_createEmptyProgram(): IProgram {
+//   return {
+//     vtype: "program",
+//     exercises: [],
+//     id: emptyProgramId,
+//     name: "Ad-Hoc Workout",
+//     description: "",
+//     url: "",
+//     author: "",
+//     nextDay: 1,
+//     days: [],
+//     weeks: [],
+//     isMultiweek: false,
+//     planner: {
+//       vtype: "planner",
+//       name: "Ad-Hoc Workout",
+//       weeks: [{ name: "", days: [{ name: "", exerciseText: "" }] }],
+//     },
+//     tags: [],
+//   };
+// }
+//
+// function Program_cloneProgram(
+//   dispatch: IDispatch,
+//   program: IProgram,
+//   settings: ISettings,
+// ): void {
+//   const newProgramId = UidFactory_generateUid(8);
+//   updateState(
+//     dispatch,
+//     [
+//       lb<IState>()
+//         .p("storage")
+//         .p("programs")
+//         .recordModify((programs) => {
+//           const newProgram = {
+//             ...program,
+//             clonedAt: Date.now(),
+//             id: newProgramId,
+//           };
+//           if (newProgram.planner) {
+//             newProgram.planner = PlannerProgram_switchToUnit(
+//               newProgram.planner,
+//               settings,
+//             );
+//           }
+//           return [...programs, newProgram];
+//         }),
+//       lb<IState>().p("storage").p("currentProgramId").record(newProgramId),
+//     ],
+//     "Clone program",
+//   );
+// }
+//
+// function Program_selectProgram(dispatch: IDispatch, programId: string): void {
+//   updateState(
+//     dispatch,
+//     [lb<IState>().p("storage").p("currentProgramId").record(programId)],
+//     "Select program",
+//   );
+//   dispatch(Thunk_pushScreen("main", undefined, { tab: "home" }));
+// }
 
 function Program_getAllProgramExercises(
   evaluatedProgram: IEvaluatedProgram,
@@ -1031,27 +1031,27 @@ function Program_getAllProgramExercisesWithType(
   return used as IPlannerProgramExerciseWithType[];
 }
 
-function Program_getProgramExerciseByTypeWeekAndDay(
-  evaluatedProgram: IEvaluatedProgram,
-  exerciseType: IExerciseType,
-  week: number,
-  dayInWeek: number,
-): IPlannerProgramExercise | undefined {
-  let exercise: IPlannerProgramExercise | undefined;
-  PP_iterate2(evaluatedProgram.weeks, (e, weekIndex, dayInWeekIndex) => {
-    if (
-      weekIndex + 1 === week &&
-      dayInWeekIndex + 1 === dayInWeek &&
-      e.exerciseType &&
-      Exercise_eq(e.exerciseType, exerciseType)
-    ) {
-      exercise = e;
-      return true;
-    }
-    return false;
-  });
-  return exercise;
-}
+// function Program_getProgramExerciseByTypeWeekAndDay(
+//   evaluatedProgram: IEvaluatedProgram,
+//   exerciseType: IExerciseType,
+//   week: number,
+//   dayInWeek: number,
+// ): IPlannerProgramExercise | undefined {
+//   let exercise: IPlannerProgramExercise | undefined;
+//   PP_iterate2(evaluatedProgram.weeks, (e, weekIndex, dayInWeekIndex) => {
+//     if (
+//       weekIndex + 1 === week &&
+//       dayInWeekIndex + 1 === dayInWeek &&
+//       e.exerciseType &&
+//       Exercise_eq(e.exerciseType, exerciseType)
+//     ) {
+//       exercise = e;
+//       return true;
+//     }
+//     return false;
+//   });
+//   return exercise;
+// }
 
 function Program_forceEvaluate(
   program: IProgram,
@@ -1142,83 +1142,83 @@ function Program_forceEvaluate(
   return result;
 }
 
-function Program_getNumberOfExerciseInstances(
-  program: IEvaluatedProgram,
-  exerciseKey: string,
-): number {
-  let count = 0;
-  PP_iterate2(program.weeks, (exercise) => {
-    if (exercise.key === exerciseKey) {
-      count += 1;
-    }
-  });
-  return count;
-}
-
-function Program_changeExerciseName(
-  from: string,
-  to: string,
-  program: IProgram,
-  settings: ISettings,
-): IProgram {
-  const planner = program.planner;
-  if (!planner) {
-    return program;
-  }
-  return {
-    ...program,
-    planner: {
-      ...planner,
-      weeks: planner.weeks.map((week) => {
-        return {
-          ...week,
-          days: week.days.map((day) => {
-            return {
-              ...day,
-              exerciseText: PlannerEvaluator_changeExerciseName(
-                day.exerciseText,
-                from,
-                to,
-                settings,
-              ),
-            };
-          }),
-        };
-      }),
-    },
-  };
-}
+// function Program_getNumberOfExerciseInstances(
+//   program: IEvaluatedProgram,
+//   exerciseKey: string,
+// ): number {
+//   let count = 0;
+//   PP_iterate2(program.weeks, (exercise) => {
+//     if (exercise.key === exerciseKey) {
+//       count += 1;
+//     }
+//   });
+//   return count;
+// }
+//
+// function Program_changeExerciseName(
+//   from: string,
+//   to: string,
+//   program: IProgram,
+//   settings: ISettings,
+// ): IProgram {
+//   const planner = program.planner;
+//   if (!planner) {
+//     return program;
+//   }
+//   return {
+//     ...program,
+//     planner: {
+//       ...planner,
+//       weeks: planner.weeks.map((week) => {
+//         return {
+//           ...week,
+//           days: week.days.map((day) => {
+//             return {
+//               ...day,
+//               exerciseText: PlannerEvaluator_changeExerciseName(
+//                 day.exerciseText,
+//                 from,
+//                 to,
+//                 settings,
+//               ),
+//             };
+//           }),
+//         };
+//       }),
+//     },
+//   };
+// }
 
 function Program_numberOfDays(program: IEvaluatedProgram): number {
   return program.weeks.reduce((memo, week) => memo + week.days.length, 0);
 }
 
-function Program_weeksRange(program: IEvaluatedProgram): string | undefined {
-  return program.weeks.length > 1
-    ? `${program.weeks.length} ${StringUtils_pluralize("week", program.weeks.length)}`
-    : "";
-}
-
-function Program_daysRange(program: IEvaluatedProgram): string {
-  const minDays = Math.min(...program.weeks.map((w) => w.days.length));
-  const maxDays = Math.max(...program.weeks.map((w) => w.days.length));
-  if (minDays === maxDays) {
-    return `${minDays} ${StringUtils_pluralize("day", minDays)} per week`;
-  } else {
-    return `${minDays}-${maxDays} days per week`;
-  }
-}
-
-function Program_exerciseRange(program: IEvaluatedProgram): string {
-  const days = program.weeks.flatMap((w) => w.days);
-  const minExs = Math.min(
-    ...days.map((d) => Program_getProgramDayUsedExercises(d).length),
-  );
-  const maxExs = Math.max(
-    ...days.map((d) => Program_getProgramDayUsedExercises(d).length),
-  );
-  return Program_exerciseRangeFormat(minExs, maxExs);
-}
+// function Program_weeksRange(program: IEvaluatedProgram): string | undefined {
+//   return program.weeks.length > 1
+//     ? `${program.weeks.length} ${StringUtils_pluralize("week", program.weeks.length)}`
+//     : "";
+// }
+//
+// function Program_daysRange(program: IEvaluatedProgram): string {
+//   const minDays = Math.min(...program.weeks.map((w) => w.days.length));
+//   const maxDays = Math.max(...program.weeks.map((w) => w.days.length));
+//   if (minDays === maxDays) {
+//     return `${minDays} ${StringUtils_pluralize("day", minDays)} per week`;
+//   } else {
+//     return `${minDays}-${maxDays} days per week`;
+//   }
+// }
+//
+// function Program_exerciseRange(program: IEvaluatedProgram): string {
+//   const days = program.weeks.flatMap((w) => w.days);
+//   const minExs = Math.min(
+//     ...days.map((d) => Program_getProgramDayUsedExercises(d).length),
+//   );
+//   const maxExs = Math.max(
+//     ...days.map((d) => Program_getProgramDayUsedExercises(d).length),
+//   );
+//   return Program_exerciseRangeFormat(minExs, maxExs);
+// }
 
 function Program_exerciseRangeFormat(minExs: number, maxExs: number): string {
   if (minExs === maxExs) {
@@ -1243,39 +1243,39 @@ function Program_getWeekFromDay(
   return 1;
 }
 
-function Program_getDayNumber(
-  program: IPlannerProgram | IEvaluatedProgram,
-  week: number,
-  dayInWeek: number,
-): number {
-  let dayIndex = 1;
-  for (let w = 0; w < program.weeks.length; w += 1) {
-    for (let d = 0; d < program.weeks[w].days.length; d += 1) {
-      if (w === week - 1 && d === dayInWeek - 1) {
-        return dayIndex;
-      }
-      dayIndex += 1;
-    }
-  }
-  return -1;
-}
-
-function Program_getExerciseTypesForWeekDay(
-  program: IEvaluatedProgram,
-  week: number,
-  day: number,
-): IExerciseType[] {
-  const exerciseTypes: IExerciseType[] = [];
-  PP_iterate2(program.weeks, (exercise, weekIndex, dayInWeekIndex) => {
-    if (weekIndex + 1 === week && dayInWeekIndex + 1 === day) {
-      const exType = exercise.exerciseType;
-      if (exType && !exerciseTypes.some((et) => Exercise_eq(et, exType))) {
-        exerciseTypes.push(exType);
-      }
-    }
-  });
-  return exerciseTypes;
-}
+// function Program_getDayNumber(
+//   program: IPlannerProgram | IEvaluatedProgram,
+//   week: number,
+//   dayInWeek: number,
+// ): number {
+//   let dayIndex = 1;
+//   for (let w = 0; w < program.weeks.length; w += 1) {
+//     for (let d = 0; d < program.weeks[w].days.length; d += 1) {
+//       if (w === week - 1 && d === dayInWeek - 1) {
+//         return dayIndex;
+//       }
+//       dayIndex += 1;
+//     }
+//   }
+//   return -1;
+// }
+//
+// function Program_getExerciseTypesForWeekDay(
+//   program: IEvaluatedProgram,
+//   week: number,
+//   day: number,
+// ): IExerciseType[] {
+//   const exerciseTypes: IExerciseType[] = [];
+//   PP_iterate2(program.weeks, (exercise, weekIndex, dayInWeekIndex) => {
+//     if (weekIndex + 1 === week && dayInWeekIndex + 1 === day) {
+//       const exType = exercise.exerciseType;
+//       if (exType && !exerciseTypes.some((et) => Exercise_eq(et, exType))) {
+//         exerciseTypes.push(exType);
+//       }
+//     }
+//   });
+//   return exerciseTypes;
+// }
 
 function Program_getDayData(
   program: IEvaluatedProgram,
@@ -1307,31 +1307,31 @@ function Program_getDayName(program: IEvaluatedProgram, day: number): string {
   return `${isMultiweek ? `${week.name} - ` : ""}${programDay?.name}`;
 }
 
-function Program_getListOfDays(program: IEvaluatedProgram): [string, string][] {
-  const days: [string, string][] = [];
-  const isReallyMultiweek = program.weeks.length > 1;
-  let dayIndex = 0;
-  for (const week of program.weeks) {
-    for (const day of week.days) {
-      dayIndex += 1;
-      days.push([
-        `${dayIndex}`,
-        `${isReallyMultiweek ? `${week.name} - ` : ""}${day.name}`,
-      ]);
-    }
-  }
-  return days;
-}
-
-function Program_getProgramWeek(
-  program: IEvaluatedProgram,
-  day?: number,
-): IEvaluatedProgramWeek {
-  return (
-    program.weeks[Program_getWeekFromDay(program, day || 1) - 1] ||
-    program.weeks[0]
-  );
-}
+// function Program_getListOfDays(program: IEvaluatedProgram): [string, string][] {
+//   const days: [string, string][] = [];
+//   const isReallyMultiweek = program.weeks.length > 1;
+//   let dayIndex = 0;
+//   for (const week of program.weeks) {
+//     for (const day of week.days) {
+//       dayIndex += 1;
+//       days.push([
+//         `${dayIndex}`,
+//         `${isReallyMultiweek ? `${week.name} - ` : ""}${day.name}`,
+//       ]);
+//     }
+//   }
+//   return days;
+// }
+//
+// function Program_getProgramWeek(
+//   program: IEvaluatedProgram,
+//   day?: number,
+// ): IEvaluatedProgramWeek {
+//   return (
+//     program.weeks[Program_getWeekFromDay(program, day || 1) - 1] ||
+//     program.weeks[0]
+//   );
+// }
 
 function Program_getProgramDay(
   program: IEvaluatedProgram,
@@ -1379,110 +1379,110 @@ export function Program_applyEvaluatedProgram(
   return newProgram;
 }
 
-function Program_getProgramExercise(
-  day: number,
-  program?: IEvaluatedProgram,
-  key?: string,
-): IPlannerProgramExercise | undefined {
-  if (key == null || program == null) {
-    return undefined;
-  }
-  const programDay = Program_getProgramDay(program, day);
-  return programDay?.exercises.find((e) => e.key === key);
-}
-
-function Program_getFirstProgramExercise(
-  program?: IEvaluatedProgram,
-  key?: string,
-): IPlannerProgramExercise | undefined {
-  if (key == null || program == null) {
-    return undefined;
-  }
-  return Program_getAllProgramExercises(program).find(
-    (e) => e.key === key || e.fullName === key,
-  );
-}
-
-function Program_getProgramExerciseFromDay(
-  programDay?: IEvaluatedProgramDay,
-  key?: string,
-): IPlannerProgramExercise | undefined {
-  if (key == null || programDay == null) {
-    return undefined;
-  }
-  return programDay?.exercises.find((e) => e.key === key);
-}
-
-function Program_getEvaluatedExercise(
-  program: IProgram,
-  day: number,
-  key: string,
-  settings: ISettings,
-): IPlannerProgramExercise | undefined {
-  const { weeks: evaluatedWeeks } = Program_evaluate(program, settings);
-  let plannerProgramExercise: IPlannerProgramExercise | undefined;
-  PP_iterate2(
-    evaluatedWeeks,
-    (exercise, weekIndex, dayInWeekIndex, dayIndex) => {
-      if (dayIndex === day - 1 && exercise.key === key) {
-        plannerProgramExercise = exercise;
-        return true;
-      } else {
-        return undefined;
-      }
-    },
-  );
-  return plannerProgramExercise;
-}
+// function Program_getProgramExercise(
+//   day: number,
+//   program?: IEvaluatedProgram,
+//   key?: string,
+// ): IPlannerProgramExercise | undefined {
+//   if (key == null || program == null) {
+//     return undefined;
+//   }
+//   const programDay = Program_getProgramDay(program, day);
+//   return programDay?.exercises.find((e) => e.key === key);
+// }
+//
+// function Program_getFirstProgramExercise(
+//   program?: IEvaluatedProgram,
+//   key?: string,
+// ): IPlannerProgramExercise | undefined {
+//   if (key == null || program == null) {
+//     return undefined;
+//   }
+//   return Program_getAllProgramExercises(program).find(
+//     (e) => e.key === key || e.fullName === key,
+//   );
+// }
+//
+// function Program_getProgramExerciseFromDay(
+//   programDay?: IEvaluatedProgramDay,
+//   key?: string,
+// ): IPlannerProgramExercise | undefined {
+//   if (key == null || programDay == null) {
+//     return undefined;
+//   }
+//   return programDay?.exercises.find((e) => e.key === key);
+// }
+//
+// function Program_getEvaluatedExercise(
+//   program: IProgram,
+//   day: number,
+//   key: string,
+//   settings: ISettings,
+// ): IPlannerProgramExercise | undefined {
+//   const { weeks: evaluatedWeeks } = Program_evaluate(program, settings);
+//   let plannerProgramExercise: IPlannerProgramExercise | undefined;
+//   PP_iterate2(
+//     evaluatedWeeks,
+//     (exercise, weekIndex, dayInWeekIndex, dayIndex) => {
+//       if (dayIndex === day - 1 && exercise.key === key) {
+//         plannerProgramExercise = exercise;
+//         return true;
+//       } else {
+//         return undefined;
+//       }
+//     },
+//   );
+//   return plannerProgramExercise;
+// }
 
 function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
   const nd = (day != null ? day % Program_numberOfDays(program) : 0) + 1;
   return isNaN(nd) ? 1 : nd;
 }
 
-function Program_editAction(
-  dispatch: IDispatch,
-  program: IProgram,
-  dayData?: IDayData,
-  key?: string,
-  opts?: INavigateOpts,
-): void {
-  const plannerState = EditProgram_initPlannerState(
-    program.id,
-    program,
-    dayData,
-    key,
-  );
-  updateState(
-    dispatch,
-    [lb<IState>().p("editProgramStates").p(program.id).record(plannerState)],
-    "Set edit program state",
-  );
-  dispatch(Thunk_pushScreen("editProgram", { programId: program.id }, opts));
-}
-
-function Program_exportProgramToFile(
-  program: IProgram,
-  settings: ISettings,
-  version: string,
-): void {
-  const payload = Program_exportProgram(program, settings, version);
-  Exporter_toFile(
-    `liftosaur_${program.name.replace(/\s+/g, "-")}_${DateUtils_formatYYYYMMDD(Date.now())}.json`,
-    JSON.stringify(payload, null, 2),
-  );
-}
-
-async function Program_exportProgramToLink(
-  program: IProgram,
-  settings: ISettings,
-  version: string,
-): Promise<string> {
-  const payload = Program_exportProgram(program, settings, version);
-  const url = await Encoder_encodeIntoUrl(JSON.stringify(payload), __HOST__);
-  url.pathname = "/program";
-  return url.toString();
-}
+// function Program_editAction(
+//   dispatch: IDispatch,
+//   program: IProgram,
+//   dayData?: IDayData,
+//   key?: string,
+//   opts?: INavigateOpts,
+// ): void {
+//   const plannerState = EditProgram_initPlannerState(
+//     program.id,
+//     program,
+//     dayData,
+//     key,
+//   );
+//   updateState(
+//     dispatch,
+//     [lb<IState>().p("editProgramStates").p(program.id).record(plannerState)],
+//     "Set edit program state",
+//   );
+//   dispatch(Thunk_pushScreen("editProgram", { programId: program.id }, opts));
+// }
+//
+// function Program_exportProgramToFile(
+//   program: IProgram,
+//   settings: ISettings,
+//   version: string,
+// ): void {
+//   const payload = Program_exportProgram(program, settings, version);
+//   Exporter_toFile(
+//     `liftosaur_${program.name.replace(/\s+/g, "-")}_${DateUtils_formatYYYYMMDD(Date.now())}.json`,
+//     JSON.stringify(payload, null, 2),
+//   );
+// }
+//
+// async function Program_exportProgramToLink(
+//   program: IProgram,
+//   settings: ISettings,
+//   version: string,
+// ): Promise<string> {
+//   const payload = Program_exportProgram(program, settings, version);
+//   const url = await Encoder_encodeIntoUrl(JSON.stringify(payload), __HOST__);
+//   url.pathname = "/program";
+//   return url.toString();
+// }
 
 function Program_exportProgram(
   program: IProgram,
@@ -1565,223 +1565,223 @@ export function Program_create(name: string, id?: string): IProgram {
   };
 }
 
-function Program_isChanged(aProgram: IProgram, bProgram: IProgram): boolean {
-  const { ...cleanedAProgram } = aProgram;
-  const { ...cleanedBProgram } = bProgram;
-  const changed = !ObjectUtils_isEqual(cleanedAProgram, cleanedBProgram);
-  if (changed) {
-    const paths = ObjectUtils_diffPaths(cleanedAProgram, cleanedBProgram);
-    return paths.some((p) => {
-      return (
-        !p.match(/exercises.\d+.state/) &&
-        !p.match(/exercises.\d+.reuseLogic\.states/) &&
-        !p.match(/nextDay/)
-      );
-    });
-  }
-  return false;
-}
-
-function Program_mergePrograms(
-  oldProgram: IProgram,
-  newProgram: IProgram,
-  enforceNew: boolean = false,
-): IProgram {
-  const deletedWeeks = new Set([
-    ...(oldProgram.deletedWeeks || []),
-    ...(newProgram.deletedWeeks || []),
-  ]);
-  const deletedDays = new Set([
-    ...(oldProgram.deletedDays || []),
-    ...(newProgram.deletedDays || []),
-  ]);
-  const deletedExercises = new Set([
-    ...(oldProgram.deletedExercises || []),
-    ...(newProgram.deletedExercises || []),
-  ]);
-  return {
-    vtype: "program",
-    id: newProgram.id,
-    name: newProgram.name,
-    description: newProgram.description,
-    url: newProgram.url,
-    author: newProgram.author,
-    nextDay: newProgram.nextDay,
-    days: newProgram.days,
-    deletedDays: Array.from(deletedDays),
-    weeks: newProgram.weeks,
-    deletedWeeks: Array.from(deletedWeeks),
-    isMultiweek: newProgram.isMultiweek,
-    tags: newProgram.tags,
-    shortDescription: newProgram.shortDescription,
-    exercises: newProgram.exercises,
-    deletedExercises: Array.from(deletedExercises),
-    clonedAt: newProgram.clonedAt || oldProgram.clonedAt,
-    planner: newProgram.planner,
-  };
-}
-
-async function Program_toUrl(
-  program: IProgram,
-  settings: ISettings,
-  client: Window["fetch"],
-  userId?: string,
-): Promise<string> {
-  const exportedProgram = Program_exportProgram(program, settings);
-  const baseUrl = UrlUtils_build(
-    "/planner",
-    typeof window !== "undefined"
-      ? window.location.href
-      : "https://www.liftosaur.com",
-  );
-  const json = JSON.stringify(exportedProgram);
-  const hash = StringUtils_hashString(json);
-  const encodedUrl = await Encoder_encodeIntoUrl(json, baseUrl.toString());
-  const encodedProgramUrl = encodedUrl.toString();
-  if (encodedProgramHashToShortUrl[hash]) {
-    return encodedProgramHashToShortUrl[hash];
-  } else {
-    const service = new Service(client);
-    const shortUrl = await service.postShortUrl(
-      encodedProgramUrl,
-      "p",
-      settings.affiliateEnabled ? userId : undefined,
-    );
-    encodedProgramHashToShortUrl[hash] = shortUrl;
-    return shortUrl;
-  }
-}
-
-function Program_createFromHistoryRecord(
-  programName: string,
-  record: IHistoryRecord,
-  settings: ISettings,
-): IProgram {
-  const dayData = { week: 1, day: 1, dayInWeek: 1 };
-  const program: IProgram = {
-    ...Program_create(programName),
-    planner: {
-      vtype: "planner",
-      name: programName,
-      weeks: [{ name: "Week 1", days: [{ name: "Day 1", exerciseText: "" }] }],
-    },
-  };
-  const evaluatedProgram = Program_evaluate(program, settings);
-  const planner = program.planner!;
-  planner.weeks[0].days[0].exerciseText = record.entries
-    .map((entry) => {
-      const exercise = Exercise_get(entry.exercise, settings.exercises);
-      return Exercise_fullName(exercise, settings);
-    })
-    .join("\n");
-  const newDay: IEvaluatedProgramDay = {
-    dayData: dayData,
-    name: "Day 1",
-    exercises: record.entries.map((e, i) => {
-      return PlannerProgramExercise_createExerciseFromEntry(
-        e,
-        dayData,
-        settings,
-        i,
-      );
-    }),
-  };
-  evaluatedProgram.weeks[0].days[0] = newDay;
-  const newPlanner = new ProgramToPlanner(
-    evaluatedProgram,
-    settings,
-  ).convertToPlanner();
-  const newProgram = {
-    ...ObjectUtils_clone(program),
-    planner: newPlanner,
-  };
-  return newProgram;
-}
-
-function Program_addDayFromHistoryRecord(
-  program: IProgram,
-  afterDay: number,
-  record: IHistoryRecord,
-  settings: ISettings,
-): { program: IProgram; dayData: Required<IDayData> } {
-  const evaluatedProgram = Program_evaluate(program, settings);
-  const dayData = Program_getDayData(evaluatedProgram, afterDay);
-  const newDayData = {
-    week: dayData.week,
-    day: dayData.day + 1,
-    dayInWeek: dayData.dayInWeek + 1,
-  };
-  const newDay: IEvaluatedProgramDay = {
-    dayData: newDayData,
-    name: `Day ${dayData.day + 1}`,
-    exercises: record.entries.map((e, i) => {
-      return PlannerProgramExercise_createExerciseFromEntry(
-        e,
-        newDayData,
-        settings,
-        i,
-      );
-    }),
-  };
-  evaluatedProgram.weeks[dayData.week - 1].days.splice(
-    dayData.dayInWeek,
-    0,
-    newDay,
-  );
-  evaluatedProgram.planner.weeks[dayData.week - 1].days.splice(
-    dayData.dayInWeek,
-    0,
-    {
-      name: newDay.name,
-      exerciseText: newDay.exercises.map((e) => e.fullName).join("\n"),
-    },
-  );
-  const newPlanner = new ProgramToPlanner(
-    evaluatedProgram,
-    settings,
-  ).convertToPlanner();
-  const newProgram = {
-    ...ObjectUtils_clone(program),
-    planner: newPlanner,
-  };
-  return { program: newProgram, dayData: newDayData };
-}
-
-function Program_getReusingSetsExercises(
-  evaluatedProgram: IEvaluatedProgram,
-  programExercise: IPlannerProgramExercise,
-): IPlannerProgramExercise[] {
-  const exercises: IPlannerProgramExercise[] = [];
-  PP_iterate2(evaluatedProgram.weeks, (e) => {
-    if (
-      e.reuse?.exercise?.key === programExercise.key &&
-      e.reuse?.exercise.dayData.week === programExercise.dayData.week &&
-      e.reuse?.exercise.dayData.dayInWeek === programExercise.dayData.dayInWeek
-    ) {
-      exercises.push(e);
-    }
-  });
-  return exercises;
-}
-
-function Program_getReusingDescriptionsExercises(
-  evaluatedProgram: IEvaluatedProgram,
-  programExercise: IPlannerProgramExercise,
-): IPlannerProgramExercise[] {
-  const exercises: IPlannerProgramExercise[] = [];
-  PP_iterate2(evaluatedProgram.weeks, (e) => {
-    if (
-      e.descriptions.reuse?.exercise?.key === programExercise.key &&
-      e.descriptions.reuse?.exercise.dayData.week ===
-        programExercise.dayData.week &&
-      e.descriptions.reuse?.exercise.dayData.dayInWeek ===
-        programExercise.dayData.dayInWeek
-    ) {
-      exercises.push(e);
-    }
-  });
-  return exercises;
-}
+// function Program_isChanged(aProgram: IProgram, bProgram: IProgram): boolean {
+//   const { ...cleanedAProgram } = aProgram;
+//   const { ...cleanedBProgram } = bProgram;
+//   const changed = !ObjectUtils_isEqual(cleanedAProgram, cleanedBProgram);
+//   if (changed) {
+//     const paths = ObjectUtils_diffPaths(cleanedAProgram, cleanedBProgram);
+//     return paths.some((p) => {
+//       return (
+//         !p.match(/exercises.\d+.state/) &&
+//         !p.match(/exercises.\d+.reuseLogic\.states/) &&
+//         !p.match(/nextDay/)
+//       );
+//     });
+//   }
+//   return false;
+// }
+//
+// function Program_mergePrograms(
+//   oldProgram: IProgram,
+//   newProgram: IProgram,
+//   enforceNew: boolean = false,
+// ): IProgram {
+//   const deletedWeeks = new Set([
+//     ...(oldProgram.deletedWeeks || []),
+//     ...(newProgram.deletedWeeks || []),
+//   ]);
+//   const deletedDays = new Set([
+//     ...(oldProgram.deletedDays || []),
+//     ...(newProgram.deletedDays || []),
+//   ]);
+//   const deletedExercises = new Set([
+//     ...(oldProgram.deletedExercises || []),
+//     ...(newProgram.deletedExercises || []),
+//   ]);
+//   return {
+//     vtype: "program",
+//     id: newProgram.id,
+//     name: newProgram.name,
+//     description: newProgram.description,
+//     url: newProgram.url,
+//     author: newProgram.author,
+//     nextDay: newProgram.nextDay,
+//     days: newProgram.days,
+//     deletedDays: Array.from(deletedDays),
+//     weeks: newProgram.weeks,
+//     deletedWeeks: Array.from(deletedWeeks),
+//     isMultiweek: newProgram.isMultiweek,
+//     tags: newProgram.tags,
+//     shortDescription: newProgram.shortDescription,
+//     exercises: newProgram.exercises,
+//     deletedExercises: Array.from(deletedExercises),
+//     clonedAt: newProgram.clonedAt || oldProgram.clonedAt,
+//     planner: newProgram.planner,
+//   };
+// }
+//
+// async function Program_toUrl(
+//   program: IProgram,
+//   settings: ISettings,
+//   client: Window["fetch"],
+//   userId?: string,
+// ): Promise<string> {
+//   const exportedProgram = Program_exportProgram(program, settings);
+//   const baseUrl = UrlUtils_build(
+//     "/planner",
+//     typeof window !== "undefined"
+//       ? window.location.href
+//       : "https://www.liftosaur.com",
+//   );
+//   const json = JSON.stringify(exportedProgram);
+//   const hash = StringUtils_hashString(json);
+//   const encodedUrl = await Encoder_encodeIntoUrl(json, baseUrl.toString());
+//   const encodedProgramUrl = encodedUrl.toString();
+//   if (encodedProgramHashToShortUrl[hash]) {
+//     return encodedProgramHashToShortUrl[hash];
+//   } else {
+//     const service = new Service(client);
+//     const shortUrl = await service.postShortUrl(
+//       encodedProgramUrl,
+//       "p",
+//       settings.affiliateEnabled ? userId : undefined,
+//     );
+//     encodedProgramHashToShortUrl[hash] = shortUrl;
+//     return shortUrl;
+//   }
+// }
+//
+// function Program_createFromHistoryRecord(
+//   programName: string,
+//   record: IHistoryRecord,
+//   settings: ISettings,
+// ): IProgram {
+//   const dayData = { week: 1, day: 1, dayInWeek: 1 };
+//   const program: IProgram = {
+//     ...Program_create(programName),
+//     planner: {
+//       vtype: "planner",
+//       name: programName,
+//       weeks: [{ name: "Week 1", days: [{ name: "Day 1", exerciseText: "" }] }],
+//     },
+//   };
+//   const evaluatedProgram = Program_evaluate(program, settings);
+//   const planner = program.planner!;
+//   planner.weeks[0].days[0].exerciseText = record.entries
+//     .map((entry) => {
+//       const exercise = Exercise_get(entry.exercise, settings.exercises);
+//       return Exercise_fullName(exercise, settings);
+//     })
+//     .join("\n");
+//   const newDay: IEvaluatedProgramDay = {
+//     dayData: dayData,
+//     name: "Day 1",
+//     exercises: record.entries.map((e, i) => {
+//       return PlannerProgramExercise_createExerciseFromEntry(
+//         e,
+//         dayData,
+//         settings,
+//         i,
+//       );
+//     }),
+//   };
+//   evaluatedProgram.weeks[0].days[0] = newDay;
+//   const newPlanner = new ProgramToPlanner(
+//     evaluatedProgram,
+//     settings,
+//   ).convertToPlanner();
+//   const newProgram = {
+//     ...ObjectUtils_clone(program),
+//     planner: newPlanner,
+//   };
+//   return newProgram;
+// }
+//
+// function Program_addDayFromHistoryRecord(
+//   program: IProgram,
+//   afterDay: number,
+//   record: IHistoryRecord,
+//   settings: ISettings,
+// ): { program: IProgram; dayData: Required<IDayData> } {
+//   const evaluatedProgram = Program_evaluate(program, settings);
+//   const dayData = Program_getDayData(evaluatedProgram, afterDay);
+//   const newDayData = {
+//     week: dayData.week,
+//     day: dayData.day + 1,
+//     dayInWeek: dayData.dayInWeek + 1,
+//   };
+//   const newDay: IEvaluatedProgramDay = {
+//     dayData: newDayData,
+//     name: `Day ${dayData.day + 1}`,
+//     exercises: record.entries.map((e, i) => {
+//       return PlannerProgramExercise_createExerciseFromEntry(
+//         e,
+//         newDayData,
+//         settings,
+//         i,
+//       );
+//     }),
+//   };
+//   evaluatedProgram.weeks[dayData.week - 1].days.splice(
+//     dayData.dayInWeek,
+//     0,
+//     newDay,
+//   );
+//   evaluatedProgram.planner.weeks[dayData.week - 1].days.splice(
+//     dayData.dayInWeek,
+//     0,
+//     {
+//       name: newDay.name,
+//       exerciseText: newDay.exercises.map((e) => e.fullName).join("\n"),
+//     },
+//   );
+//   const newPlanner = new ProgramToPlanner(
+//     evaluatedProgram,
+//     settings,
+//   ).convertToPlanner();
+//   const newProgram = {
+//     ...ObjectUtils_clone(program),
+//     planner: newPlanner,
+//   };
+//   return { program: newProgram, dayData: newDayData };
+// }
+//
+// function Program_getReusingSetsExercises(
+//   evaluatedProgram: IEvaluatedProgram,
+//   programExercise: IPlannerProgramExercise,
+// ): IPlannerProgramExercise[] {
+//   const exercises: IPlannerProgramExercise[] = [];
+//   PP_iterate2(evaluatedProgram.weeks, (e) => {
+//     if (
+//       e.reuse?.exercise?.key === programExercise.key &&
+//       e.reuse?.exercise.dayData.week === programExercise.dayData.week &&
+//       e.reuse?.exercise.dayData.dayInWeek === programExercise.dayData.dayInWeek
+//     ) {
+//       exercises.push(e);
+//     }
+//   });
+//   return exercises;
+// }
+//
+// function Program_getReusingDescriptionsExercises(
+//   evaluatedProgram: IEvaluatedProgram,
+//   programExercise: IPlannerProgramExercise,
+// ): IPlannerProgramExercise[] {
+//   const exercises: IPlannerProgramExercise[] = [];
+//   PP_iterate2(evaluatedProgram.weeks, (e) => {
+//     if (
+//       e.descriptions.reuse?.exercise?.key === programExercise.key &&
+//       e.descriptions.reuse?.exercise.dayData.week ===
+//         programExercise.dayData.week &&
+//       e.descriptions.reuse?.exercise.dayData.dayInWeek ===
+//         programExercise.dayData.dayInWeek
+//     ) {
+//       exercises.push(e);
+//     }
+//   });
+//   return exercises;
+// }
 
 function Program_getReusingCustomProgressExercises(
   evaluatedProgram: IEvaluatedProgram,
@@ -1812,110 +1812,110 @@ function Program_getReusingSetProgressExercises(
   return exercises;
 }
 
-function Program_getReusingProgressExercises(
-  evaluatedProgram: IEvaluatedProgram,
-  programExercise: IPlannerProgramExercise,
-): IPlannerProgramExercise[] {
-  const reusingCustomProgressExercises =
-    Program_getReusingCustomProgressExercises(
-      evaluatedProgram,
-      programExercise,
-    );
-  const reusingSetProgressExercises = Program_getReusingSetProgressExercises(
-    evaluatedProgram,
-    programExercise,
-  );
-  const exercises = CollectionUtils_uniqBy(
-    [...reusingCustomProgressExercises, ...reusingSetProgressExercises],
-    "fullName",
-  );
-  return exercises;
-}
-
-function Program_getReusingUpdateExercises(
-  evaluatedProgram: IEvaluatedProgram,
-  programExercise: IPlannerProgramExercise,
-): IPlannerProgramExercise[] {
-  const exercises: IPlannerProgramExercise[] = [];
-  PP_iterate2(evaluatedProgram.weeks, (e) => {
-    if (e.reuse?.fullName === programExercise.fullName) {
-      exercises.push(e);
-    }
-  });
-  return exercises;
-}
-
-const Program_fullProgram = memoize(
-  (program: IProgram, settings: ISettings): IProgram => {
-    return program;
-  },
-  { maxSize: 10 },
-);
-
-export const Program_evaluate = memoize(Program_forceEvaluate, { maxSize: 10 });
-
-function Program_getDiffState(
-  state: IProgramState,
-  newState: IProgramState,
-  units: IUnit,
-): Record<string, string | undefined> {
-  return ObjectUtils_keys(state).reduce<Record<string, string | undefined>>(
-    (memo, key) => {
-      const oldValue = state[key];
-      const newValue = newState[key];
-      if (newValue != null && !Weight_eq(oldValue, newValue)) {
-        const oldValueStr = Weight_display(
-          Weight_convertTo(oldValue as number, units),
-        );
-        const newValueStr = Weight_display(
-          Weight_convertTo(newValue as number, units),
-        );
-        memo[key] = `${oldValueStr} -> ${newValueStr}`;
-      }
-      return memo;
-    },
-    {},
-  );
-}
-
-function Program_getDiffVars(
-  entry: IHistoryEntry,
-  updates: ILiftoscriptEvaluatorUpdate[],
-  bindings: IScriptBindings,
-  settings: ISettings,
-): Record<string, string | undefined> {
-  const diffVars: Record<string, string | undefined> = {};
-  if (bindings.rm1 != null) {
-    const oldOnerm = Exercise_onerm(entry.exercise, settings);
-    if (!Weight_eq(oldOnerm, bindings.rm1)) {
-      diffVars["1 RM"] =
-        `${Weight_display(Weight_convertTo(oldOnerm, settings.units))} -> ${Weight_display(
-          Weight_convertTo(bindings.rm1, settings.units),
-        )}`;
-    }
-  }
-  for (const update of updates) {
-    const key = update.type;
-    const value = update.value;
-    const target = value.target;
-    while (target[0] === "*") {
-      target.shift();
-    }
-    const keyStr = `${key}${target.length > 0 ? `[${target.join(":")}]` : ""}`;
-    diffVars[keyStr] =
-      `${value.op !== "=" ? `${value.op} ` : ""}${Weight_printOrNumber(value.value)}`;
-  }
-  return diffVars;
-}
-
-function Program_getEvaluatedProgramFromState(
-  state: IState,
-): IEvaluatedProgram | undefined {
-  const program = Program_getCurrentProgram(state.storage);
-  return program
-    ? Program_evaluate(program, state.storage.settings)
-    : undefined;
-}
+// function Program_getReusingProgressExercises(
+//   evaluatedProgram: IEvaluatedProgram,
+//   programExercise: IPlannerProgramExercise,
+// ): IPlannerProgramExercise[] {
+//   const reusingCustomProgressExercises =
+//     Program_getReusingCustomProgressExercises(
+//       evaluatedProgram,
+//       programExercise,
+//     );
+//   const reusingSetProgressExercises = Program_getReusingSetProgressExercises(
+//     evaluatedProgram,
+//     programExercise,
+//   );
+//   const exercises = CollectionUtils_uniqBy(
+//     [...reusingCustomProgressExercises, ...reusingSetProgressExercises],
+//     "fullName",
+//   );
+//   return exercises;
+// }
+//
+// function Program_getReusingUpdateExercises(
+//   evaluatedProgram: IEvaluatedProgram,
+//   programExercise: IPlannerProgramExercise,
+// ): IPlannerProgramExercise[] {
+//   const exercises: IPlannerProgramExercise[] = [];
+//   PP_iterate2(evaluatedProgram.weeks, (e) => {
+//     if (e.reuse?.fullName === programExercise.fullName) {
+//       exercises.push(e);
+//     }
+//   });
+//   return exercises;
+// }
+//
+// const Program_fullProgram = memoize(
+//   (program: IProgram, settings: ISettings): IProgram => {
+//     return program;
+//   },
+//   { maxSize: 10 },
+// );
+//
+// export const Program_evaluate = memoize(Program_forceEvaluate, { maxSize: 10 });
+//
+// function Program_getDiffState(
+//   state: IProgramState,
+//   newState: IProgramState,
+//   units: IUnit,
+// ): Record<string, string | undefined> {
+//   return ObjectUtils_keys(state).reduce<Record<string, string | undefined>>(
+//     (memo, key) => {
+//       const oldValue = state[key];
+//       const newValue = newState[key];
+//       if (newValue != null && !Weight_eq(oldValue, newValue)) {
+//         const oldValueStr = Weight_display(
+//           Weight_convertTo(oldValue as number, units),
+//         );
+//         const newValueStr = Weight_display(
+//           Weight_convertTo(newValue as number, units),
+//         );
+//         memo[key] = `${oldValueStr} -> ${newValueStr}`;
+//       }
+//       return memo;
+//     },
+//     {},
+//   );
+// }
+//
+// function Program_getDiffVars(
+//   entry: IHistoryEntry,
+//   updates: ILiftoscriptEvaluatorUpdate[],
+//   bindings: IScriptBindings,
+//   settings: ISettings,
+// ): Record<string, string | undefined> {
+//   const diffVars: Record<string, string | undefined> = {};
+//   if (bindings.rm1 != null) {
+//     const oldOnerm = Exercise_onerm(entry.exercise, settings);
+//     if (!Weight_eq(oldOnerm, bindings.rm1)) {
+//       diffVars["1 RM"] =
+//         `${Weight_display(Weight_convertTo(oldOnerm, settings.units))} -> ${Weight_display(
+//           Weight_convertTo(bindings.rm1, settings.units),
+//         )}`;
+//     }
+//   }
+//   for (const update of updates) {
+//     const key = update.type;
+//     const value = update.value;
+//     const target = value.target;
+//     while (target[0] === "*") {
+//       target.shift();
+//     }
+//     const keyStr = `${key}${target.length > 0 ? `[${target.join(":")}]` : ""}`;
+//     diffVars[keyStr] =
+//       `${value.op !== "=" ? `${value.op} ` : ""}${Weight_printOrNumber(value.value)}`;
+//   }
+//   return diffVars;
+// }
+//
+// function Program_getEvaluatedProgramFromState(
+//   state: IState,
+// ): IEvaluatedProgram | undefined {
+//   const program = Program_getCurrentProgram(state.storage);
+//   return program
+//     ? Program_evaluate(program, state.storage.settings)
+//     : undefined;
+// }
 
 //#endregion
 
@@ -2221,208 +2221,208 @@ function Settings_buildPlannerSettings(): IPlannerSettings {
   };
 }
 
-function Settings_applyExportedProgram(
-  settings: ISettings,
-  exportedProgram: IExportedProgram,
-): ISettings {
-  const result = {
-    ...settings,
-    exercises: {
-      ...settings.exercises,
-      ...exportedProgram.customExercises,
-    },
-    units: settings.units || exportedProgram.settings.units,
-    timers: {
-      ...settings.timers,
-      workout:
-        settings.timers.workout || exportedProgram.settings.timers?.workout,
-      warmup: settings.timers.warmup || exportedProgram.settings.timers?.warmup,
-    },
-    planner: settings.planner || exportedProgram.settings.planner,
-    muscleGroups:
-      settings.muscleGroups || exportedProgram.settings.muscleGroups,
-    exerciseData: {
-      ...settings.exerciseData,
-      ...exportedProgram.settings.exerciseData,
-    },
-    workoutSettings: {
-      ...settings.workoutSettings,
-      ...exportedProgram.settings.workoutSettings,
-    },
-  };
-  return result;
-}
-
-function Settings_activeCustomExercises(
-  settings: ISettings,
-): IAllCustomExercises {
-  return ObjectUtils_filter(settings.exercises, (k, v) => !v?.isDeleted);
-}
-
-function Settings_getNextTargetType(
-  type: ITargetType,
-  skipPlatesCalculator: boolean,
-): ITargetType {
-  const index = targetTypes.indexOf(type);
-  let nextTargetType: ITargetType;
-  if (index === -1) {
-    nextTargetType = targetTypes[0];
-  } else if (index === targetTypes.length - 1) {
-    nextTargetType = targetTypes[0];
-  } else {
-    nextTargetType = targetTypes[index + 1];
-  }
-  if (nextTargetType === "platescalculator" && skipPlatesCalculator) {
-    nextTargetType = Settings_getNextTargetType(
-      "platescalculator",
-      skipPlatesCalculator,
-    );
-  }
-  return nextTargetType;
-}
-
-function Settings_toggleStarredExercise(
-  dispatch: IDispatch,
-  key: string,
-): void {
-  updateSettings(
-    dispatch,
-    lb<ISettings>()
-      .p("starredExercises")
-      .recordModify((starred) => {
-        if (starred?.[key]) {
-          delete starred[key];
-        } else {
-          starred = starred || {};
-          starred[key] = true;
-        }
-        return starred;
-      }),
-    `Toggle starred exercise ${key}`,
-  );
-}
-
-function Settings_changePickerSettings(
-  dispatch: IDispatch,
-  settings: IExercisePickerSettings,
-): void {
-  updateSettings(
-    dispatch,
-    lb<ISettings>()
-      .p("workoutSettings")
-      .recordModify((workoutSettings) => {
-        return { ...workoutSettings, ...settings };
-      }),
-    `Change picker settings`,
-  );
-}
-
-function Settings_doesProgramHaveUnset1RMs(
-  program: IProgram,
-  settings: ISettings,
-): boolean {
-  return Settings_getExercisesWithUnset1RMs(program, settings).length > 0;
-}
-
-function Settings_getExercisesWithUnset1RMs(
-  program: IProgram,
-  settings: ISettings,
-): IExercise[] {
-  const evalutedProgram = Program_evaluate(program, settings);
-  const plannerExercises = Program_getAllUsedProgramExercises(
-    evalutedProgram,
-  ).filter((exercise) => {
-    return ProgramExercise_doesUse1RM(exercise);
-  });
-  const exerciseTypes = CollectionUtils_uniqByExpr(
-    plannerExercises
-      .filter((exercise) => {
-        return (
-          settings.exerciseData[Exercise_toKey(exercise.exerciseType)]?.rm1 ==
-          null
-        );
-      })
-      .map((exercise) => exercise.exerciseType),
-    (e) => Exercise_toKey(e),
-  );
-  const exercises = exerciseTypes.map((e) =>
-    Exercise_get(e, settings.exercises),
-  );
-  return CollectionUtils_sort(exercises, (a, b) => {
-    return Exercise_nameWithEquipment(a, settings).localeCompare(
-      Exercise_nameWithEquipment(b, settings),
-    );
-  });
-}
-
-function Settings_setOneRM(
-  dispatch: IDispatch,
-  exerciseType: IExerciseType,
-  value: IWeight,
-  settings: ISettings,
-): void {
-  updateSettings(
-    dispatch,
-    lb<ISettings>()
-      .p("exerciseData")
-      .recordModify((data) => {
-        const key = Exercise_toKey(exerciseType);
-        return { ...data, [key]: { ...data[key], rm1: value } };
-      }),
-    `Set 1RM for ${Exercise_nameWithEquipment(Exercise_get(exerciseType, settings.exercises), settings)} to ${Weight_print(value)}`,
-  );
-}
-
-function Settings_getTheme(settings: ISettings): "dark" | "light" {
-  return settings.theme
-    ? settings.theme
-    : window.lftSystemDarkMode
-      ? "dark"
-      : "light";
-}
-
-function Settings_applyTheme(theme?: "dark" | "light"): void {
-  if (theme === "dark") {
-    document.body.classList.add("dark");
-    SendMessage_toIosAndAndroid({ type: "theme", value: "dark" });
-  } else {
-    document.body.classList.remove("dark");
-    SendMessage_toIosAndAndroid({ type: "theme", value: "light" });
-  }
-}
+// function Settings_applyExportedProgram(
+//   settings: ISettings,
+//   exportedProgram: IExportedProgram,
+// ): ISettings {
+//   const result = {
+//     ...settings,
+//     exercises: {
+//       ...settings.exercises,
+//       ...exportedProgram.customExercises,
+//     },
+//     units: settings.units || exportedProgram.settings.units,
+//     timers: {
+//       ...settings.timers,
+//       workout:
+//         settings.timers.workout || exportedProgram.settings.timers?.workout,
+//       warmup: settings.timers.warmup || exportedProgram.settings.timers?.warmup,
+//     },
+//     planner: settings.planner || exportedProgram.settings.planner,
+//     muscleGroups:
+//       settings.muscleGroups || exportedProgram.settings.muscleGroups,
+//     exerciseData: {
+//       ...settings.exerciseData,
+//       ...exportedProgram.settings.exerciseData,
+//     },
+//     workoutSettings: {
+//       ...settings.workoutSettings,
+//       ...exportedProgram.settings.workoutSettings,
+//     },
+//   };
+//   return result;
+// }
+//
+// function Settings_activeCustomExercises(
+//   settings: ISettings,
+// ): IAllCustomExercises {
+//   return ObjectUtils_filter(settings.exercises, (k, v) => !v?.isDeleted);
+// }
+//
+// function Settings_getNextTargetType(
+//   type: ITargetType,
+//   skipPlatesCalculator: boolean,
+// ): ITargetType {
+//   const index = targetTypes.indexOf(type);
+//   let nextTargetType: ITargetType;
+//   if (index === -1) {
+//     nextTargetType = targetTypes[0];
+//   } else if (index === targetTypes.length - 1) {
+//     nextTargetType = targetTypes[0];
+//   } else {
+//     nextTargetType = targetTypes[index + 1];
+//   }
+//   if (nextTargetType === "platescalculator" && skipPlatesCalculator) {
+//     nextTargetType = Settings_getNextTargetType(
+//       "platescalculator",
+//       skipPlatesCalculator,
+//     );
+//   }
+//   return nextTargetType;
+// }
+//
+// function Settings_toggleStarredExercise(
+//   dispatch: IDispatch,
+//   key: string,
+// ): void {
+//   updateSettings(
+//     dispatch,
+//     lb<ISettings>()
+//       .p("starredExercises")
+//       .recordModify((starred) => {
+//         if (starred?.[key]) {
+//           delete starred[key];
+//         } else {
+//           starred = starred || {};
+//           starred[key] = true;
+//         }
+//         return starred;
+//       }),
+//     `Toggle starred exercise ${key}`,
+//   );
+// }
+//
+// function Settings_changePickerSettings(
+//   dispatch: IDispatch,
+//   settings: IExercisePickerSettings,
+// ): void {
+//   updateSettings(
+//     dispatch,
+//     lb<ISettings>()
+//       .p("workoutSettings")
+//       .recordModify((workoutSettings) => {
+//         return { ...workoutSettings, ...settings };
+//       }),
+//     `Change picker settings`,
+//   );
+// }
+//
+// function Settings_doesProgramHaveUnset1RMs(
+//   program: IProgram,
+//   settings: ISettings,
+// ): boolean {
+//   return Settings_getExercisesWithUnset1RMs(program, settings).length > 0;
+// }
+//
+// function Settings_getExercisesWithUnset1RMs(
+//   program: IProgram,
+//   settings: ISettings,
+// ): IExercise[] {
+//   const evalutedProgram = Program_evaluate(program, settings);
+//   const plannerExercises = Program_getAllUsedProgramExercises(
+//     evalutedProgram,
+//   ).filter((exercise) => {
+//     return ProgramExercise_doesUse1RM(exercise);
+//   });
+//   const exerciseTypes = CollectionUtils_uniqByExpr(
+//     plannerExercises
+//       .filter((exercise) => {
+//         return (
+//           settings.exerciseData[Exercise_toKey(exercise.exerciseType)]?.rm1 ==
+//           null
+//         );
+//       })
+//       .map((exercise) => exercise.exerciseType),
+//     (e) => Exercise_toKey(e),
+//   );
+//   const exercises = exerciseTypes.map((e) =>
+//     Exercise_get(e, settings.exercises),
+//   );
+//   return CollectionUtils_sort(exercises, (a, b) => {
+//     return Exercise_nameWithEquipment(a, settings).localeCompare(
+//       Exercise_nameWithEquipment(b, settings),
+//     );
+//   });
+// }
+//
+// function Settings_setOneRM(
+//   dispatch: IDispatch,
+//   exerciseType: IExerciseType,
+//   value: IWeight,
+//   settings: ISettings,
+// ): void {
+//   updateSettings(
+//     dispatch,
+//     lb<ISettings>()
+//       .p("exerciseData")
+//       .recordModify((data) => {
+//         const key = Exercise_toKey(exerciseType);
+//         return { ...data, [key]: { ...data[key], rm1: value } };
+//       }),
+//     `Set 1RM for ${Exercise_nameWithEquipment(Exercise_get(exerciseType, settings.exercises), settings)} to ${Weight_print(value)}`,
+//   );
+// }
+//
+// function Settings_getTheme(settings: ISettings): "dark" | "light" {
+//   return settings.theme
+//     ? settings.theme
+//     : window.lftSystemDarkMode
+//       ? "dark"
+//       : "light";
+// }
+//
+// function Settings_applyTheme(theme?: "dark" | "light"): void {
+//   if (theme === "dark") {
+//     document.body.classList.add("dark");
+//     SendMessage_toIosAndAndroid({ type: "theme", value: "dark" });
+//   } else {
+//     document.body.classList.remove("dark");
+//     SendMessage_toIosAndAndroid({ type: "theme", value: "light" });
+//   }
+// }
 //#endregion
 
 //#region Planner Program
-type IExerciseTypeToProperties = Record<
-  string,
-  (IPlannerProgramProperty & { dayData: Required<IDayData> })[]
->;
-type IExerciseTypeToWarmupSets = Record<
-  string,
-  IPlannerProgramExerciseWarmupSet[] | undefined
->;
-
-class PlannerDayDataError extends Error {
-  constructor(
-    message: string,
-    public readonly dayData: Required<IDayData>,
-  ) {
-    super(message);
-  }
-}
-
-type IDereuseDecision = "all" | "weight" | "rpe" | "timer";
-
-function PlannerProgram_isValid(
-  program: IPlannerProgram | undefined,
-  settings: ISettings,
-): boolean {
-  if (!program) {
-    return false;
-  }
-  const { evaluatedWeeks } = PlannerProgram_evaluate(program, settings);
-  return evaluatedWeeks.every((week) => week.every((day) => day.success));
-}
+// type IExerciseTypeToProperties = Record<
+//   string,
+//   (IPlannerProgramProperty & { dayData: Required<IDayData> })[]
+// >;
+// type IExerciseTypeToWarmupSets = Record<
+//   string,
+//   IPlannerProgramExerciseWarmupSet[] | undefined
+// >;
+//
+// class PlannerDayDataError extends Error {
+//   constructor(
+//     message: string,
+//     public readonly dayData: Required<IDayData>,
+//   ) {
+//     super(message);
+//   }
+// }
+//
+// type IDereuseDecision = "all" | "weight" | "rpe" | "timer";
+//
+// function PlannerProgram_isValid(
+//   program: IPlannerProgram | undefined,
+//   settings: ISettings,
+// ): boolean {
+//   if (!program) {
+//     return false;
+//   }
+//   const { evaluatedWeeks } = PlannerProgram_evaluate(program, settings);
+//   return evaluatedWeeks.every((week) => week.every((day) => day.success));
+// }
 
 export function PlannerProgram_replaceWeight(
   program: IEvaluatedProgram,
@@ -2574,440 +2574,440 @@ export function PlannerProgram_replaceAndValidateExercise(
     return { success: true, data: { ...program, planner: newPlanner } };
   }
 }
-
-function PlannerProgram_modifyTopLineItems(
-  aPlannerProgram: IPlannerProgram,
-  settings: ISettings,
-  firstPass: (
-    line: IPlannerTopLineItem,
-    weekIndex: number,
-    dayInWeekIndex: number,
-    dayIndex: number,
-    lineIndex: number,
-  ) => IPlannerTopLineItem,
-): IPlannerProgram {
-  let dayIndex = 0;
-  const plannerProgram = ObjectUtils_clone(aPlannerProgram);
-  const mapping = plannerProgram.weeks.map((week, weekIndex) => {
-    return week.days.map((day, dayInWeekIndex) => {
-      const tree = plannerExerciseParser.parse(day.exerciseText);
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-        {
-          day: dayIndex + 1,
-          dayInWeek: dayInWeekIndex + 1,
-          week: weekIndex + 1,
-        },
-      );
-      dayIndex += 1;
-      const map = evaluator.topLineMap(tree.topNode);
-      return map;
-    });
-  });
-
-  dayIndex = 0;
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const week = mapping[weekIndex];
-    for (
-      let dayInWeekIndex = 0;
-      dayInWeekIndex < week.length;
-      dayInWeekIndex += 1
-    ) {
-      const day = week[dayInWeekIndex];
-      for (let lineIndex = 0; lineIndex < day.length; lineIndex += 1) {
-        const line = day[lineIndex];
-        const newLine = firstPass(
-          line,
-          weekIndex,
-          dayInWeekIndex,
-          dayIndex,
-          lineIndex,
-        );
-        day[lineIndex] = newLine;
-      }
-      dayIndex += 1;
-    }
-  }
-
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const programWeek = plannerProgram.weeks[weekIndex];
-    const week = mapping[weekIndex];
-    for (
-      let dayInWeekIndex = 0;
-      dayInWeekIndex < week.length;
-      dayInWeekIndex += 1
-    ) {
-      const day = week[dayInWeekIndex];
-      const programDay = programWeek.days[dayInWeekIndex];
-      let str = "";
-      for (const line of day) {
-        str += PlannerProgram_topLineItemToText(line);
-      }
-      programDay.exerciseText = str.trim();
-    }
-  }
-
-  return plannerProgram;
-}
-
-function PlannerProgram_topLineItemToText(line: IPlannerTopLineItem): string {
-  let str = "";
-  if (line.type === "description") {
-    //
-  } else if (line.type === "exercise") {
-    if (!line.used) {
-      if (line.descriptions && line.descriptions.length > 0) {
-        str += `${line.descriptions.join("\n\n")}\n`;
-      }
-      let repeatStr = "";
-      if (
-        (line.order != null && line.order !== 0) ||
-        (line.repeatRanges && line.repeatRanges.length > 0)
-      ) {
-        const repeatParts = [];
-        if (line.order != null && line.order !== 0) {
-          repeatParts.push(line.order);
-        }
-        if (line.repeatRanges && line.repeatRanges.length > 0) {
-          repeatParts.push(line.repeatRanges.join(","));
-        }
-        repeatStr = `[${repeatParts.join(",")}]`;
-      }
-      str += `${line.fullName}${repeatStr} / ${line.sections}\n`;
-    }
-  } else {
-    str += line.value + "\n";
-  }
-  return str;
-}
-
-function PlannerProgram_switchToUnit(
-  plannerProgram: IPlannerProgram,
-  settings: ISettings,
-): IPlannerProgram {
-  const newPlannerProgram = ObjectUtils_clone(plannerProgram);
-  for (const week of newPlannerProgram.weeks) {
-    for (const day of week.days) {
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-      );
-      const tree = plannerExerciseParser.parse(day.exerciseText);
-      day.exerciseText = evaluator.switchWeightsToUnit(tree.topNode, settings);
-    }
-  }
-  return newPlannerProgram;
-}
-
-function PlannerProgram_hasNonSelectedWeightUnit(
-  plannerProgram: IPlannerProgram,
-  settings: ISettings,
-): boolean {
-  for (const week of plannerProgram.weeks) {
-    for (const day of week.days) {
-      const tree = plannerExerciseParser.parse(day.exerciseText);
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-      );
-      if (
-        evaluator.hasWeightInUnit(
-          tree.topNode,
-          settings.units === "kg" ? "lb" : "kg",
-        )
-      ) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function PlannerProgram_compact(
-  oldPlannerProgram: IPlannerProgram,
-  plannerProgram: IPlannerProgram,
-  settings: ISettings,
-  additionalRepeatingExercises?: Set<string>,
-): IPlannerProgram {
-  let dayIndex = 0;
-  const repeatingExercises = new Set<string>();
-  const { evaluatedWeeks } = PlannerProgram_evaluate(
-    ObjectUtils_clone(oldPlannerProgram),
-    settings,
-  );
-  const { evaluatedWeeks: newEvaluatedWeeks } = PlannerProgram_evaluate(
-    ObjectUtils_clone(plannerProgram),
-    settings,
-  );
-  for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
-    PP_iterate(ev, (exercise) => {
-      if (exercise.repeat != null && exercise.repeat.length > 0) {
-        repeatingExercises.add(exercise.key);
-      }
-    });
-  }
-  for (const ex of additionalRepeatingExercises || []) {
-    repeatingExercises.add(ex);
-  }
-
-  const lastDescriptions: Partial<Record<number, string | undefined>> = {};
-  plannerProgram.weeks.forEach((week) => {
-    week.days.forEach((day, dayInWeekIndex) => {
-      if (lastDescriptions[dayInWeekIndex] == null) {
-        lastDescriptions[dayInWeekIndex] = day.description;
-      } else if (lastDescriptions[dayInWeekIndex] === day.description) {
-        day.description = undefined;
-      } else {
-        lastDescriptions[dayInWeekIndex] = day.description;
-      }
-    });
-  });
-
-  const mapping = plannerProgram.weeks.map((week, weekIndex) => {
-    return week.days.map((day, dayInWeekIndex) => {
-      const tree = plannerExerciseParser.parse(day.exerciseText);
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-        {
-          day: dayIndex + 1,
-          dayInWeek: dayInWeekIndex + 1,
-          week: weekIndex + 1,
-        },
-      );
-      dayIndex += 1;
-      const map = evaluator.topLineMap(tree.topNode);
-      return map;
-    });
-  });
-
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const week = mapping[weekIndex];
-    for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
-      for (const line of day) {
-        if (
-          line.type === "exercise" &&
-          !line.used &&
-          repeatingExercises.has(line.value)
-        ) {
-          const repeatRanges: [number, number | undefined][] = [];
-          for (
-            let repeatWeekIndex = weekIndex + 1;
-            repeatWeekIndex < mapping.length;
-            repeatWeekIndex += 1
-          ) {
-            const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
-            const repeatedExercises = (repeatDay || []).filter((e) => {
-              if (
-                e.type !== "exercise" ||
-                e.value !== line.value ||
-                e.sectionsToReuse !== line.sectionsToReuse ||
-                e.exerciseIndex !== line.exerciseIndex ||
-                !ObjectUtils_isEqual(
-                  e.descriptions || [],
-                  line.descriptions || [],
-                )
-              ) {
-                return false;
-              }
-              const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
-              const oldExercise = oldDay.success
-                ? oldDay.data.find((ex) => ex.key === e.value)
-                : undefined;
-              return oldExercise?.repeating?.includes(weekIndex + 1);
-            });
-            for (const e of repeatedExercises) {
-              e.used = true;
-            }
-            if (repeatedExercises.length > 0) {
-              if (
-                repeatRanges.length === 0 ||
-                repeatRanges[repeatRanges.length - 1][1] != null
-              ) {
-                repeatRanges.push([repeatWeekIndex, undefined]);
-              }
-            } else {
-              if (repeatRanges.length > 0) {
-                repeatRanges[repeatRanges.length - 1][1] = repeatWeekIndex;
-              }
-              break;
-            }
-          }
-          if (
-            repeatRanges.length > 0 &&
-            repeatRanges[repeatRanges.length - 1][1] == null
-          ) {
-            repeatRanges[repeatRanges.length - 1][1] = mapping.length;
-          }
-          line.repeatRanges = repeatRanges.map((r) => `${r[0]}-${r[1]}`);
-        }
-      }
-    }
-  }
-
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const programWeek = plannerProgram.weeks[weekIndex];
-    const week = mapping[weekIndex];
-    for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
-      const programDay = programWeek.days[dayIndex];
-      let str = "";
-      let ongoingDescriptions = false;
-      for (const line of day) {
-        if (line.type === "description") {
-          ongoingDescriptions = true;
-          //
-        } else if (line.type === "exercise") {
-          ongoingDescriptions = false;
-          if (!line.used) {
-            if (line.descriptions && line.descriptions.length > 0) {
-              str += `${line.descriptions.filter((d) => d.trim()).join("\n\n")}\n`;
-            }
-            let repeatStr = "";
-            if (
-              (line.order != null && line.order !== 0) ||
-              (line.repeatRanges && line.repeatRanges.length > 0)
-            ) {
-              const repeatParts = [];
-              if (line.order != null && line.order !== 0) {
-                repeatParts.push(line.order);
-              }
-              if (line.repeatRanges && line.repeatRanges.length > 0) {
-                repeatParts.push(line.repeatRanges.join(","));
-              }
-              repeatStr = `[${repeatParts.join(",")}]`;
-            }
-            str +=
-              [`${line.fullName}${repeatStr}`, line.sections]
-                .filter((r) => r)
-                .join(" / ") + `\n`;
-          }
-        } else if (line.type === "empty") {
-          if (!ongoingDescriptions) {
-            str += line.value + "\n";
-          }
-        } else {
-          str += line.value + "\n";
-        }
-      }
-      programDay.exerciseText = str.trim();
-    }
-  }
-
-  return plannerProgram;
-}
-
-function PlannerProgram_groupedTopLines(
-  topLine: IPlannerTopLineItem[][][],
-): IPlannerTopLineItem[][][][] {
-  const groupedTopLine: IPlannerTopLineItem[][][][] = [];
-  for (let weekIndex = 0; weekIndex < topLine.length; weekIndex += 1) {
-    const topLineWeek = topLine[weekIndex];
-    groupedTopLine.push([]);
-    for (
-      let dayInWeekIndex = 0;
-      dayInWeekIndex < topLineWeek.length;
-      dayInWeekIndex += 1
-    ) {
-      const topLineDay = topLineWeek[dayInWeekIndex];
-      const group: IPlannerTopLineItem[][] = [];
-      groupedTopLine[weekIndex].push(group);
-      let reset = true;
-      for (let lineIndex = 0; lineIndex < topLineDay.length; lineIndex += 1) {
-        if (reset) {
-          group.push([]);
-          reset = false;
-        }
-        const line = topLineDay[lineIndex];
-        group[group.length - 1] = group[group.length - 1] || [];
-        group[group.length - 1].push(line);
-        if (line.type === "exercise") {
-          reset = true;
-        }
-      }
-    }
-  }
-  for (const week of groupedTopLine) {
-    for (const day of week) {
-      day.sort((group1, group2) => {
-        const ex1 = group1.find((l) => l.type === "exercise");
-        const ex2 = group2.find((l) => l.type === "exercise");
-        if (ex1 == null || ex2 == null) {
-          return 0;
-        }
-        if (ex1.exerciseIndex === ex2.exerciseIndex) {
-          return (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0);
-        } else {
-          return (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
-        }
-      });
-    }
-  }
-  return groupedTopLine;
-}
-
-function PlannerProgram_topLineItems(
-  plannerProgram: IPlannerProgram,
-  settings: ISettings,
-): IPlannerTopLineItem[][][] {
-  let dayIndex = 0;
-
-  const mapping = plannerProgram.weeks.map((week, weekIndex) => {
-    return week.days.map((day, dayInWeekIndex) => {
-      const tree = plannerExerciseParser.parse(day.exerciseText);
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-        {
-          day: dayIndex + 1,
-          dayInWeek: dayInWeekIndex + 1,
-          week: weekIndex + 1,
-        },
-      );
-      dayIndex += 1;
-      const map = evaluator.topLineMap(tree.topNode);
-      return map;
-    });
-  });
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const week = mapping[weekIndex];
-    for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
-      for (const exercise of day) {
-        for (const r of exercise.repeat || []) {
-          const reuseDay = mapping[r - 1]?.[dayIndex];
-          if (
-            reuseDay &&
-            !reuseDay.some(
-              (e) => e.type === "exercise" && e.value === exercise.value,
-            )
-          ) {
-            if (exercise.descriptions) {
-              for (let di = 0; di < exercise.descriptions.length; di += 1) {
-                if (di !== 0) {
-                  reuseDay.push({ type: "empty", value: "" });
-                }
-                reuseDay.push({
-                  type: "description",
-                  value: exercise.descriptions[di],
-                });
-              }
-            }
-            reuseDay.push({ ...exercise, repeat: undefined });
-          }
-        }
-      }
-    }
-  }
-  return mapping;
-}
+//
+// function PlannerProgram_modifyTopLineItems(
+//   aPlannerProgram: IPlannerProgram,
+//   settings: ISettings,
+//   firstPass: (
+//     line: IPlannerTopLineItem,
+//     weekIndex: number,
+//     dayInWeekIndex: number,
+//     dayIndex: number,
+//     lineIndex: number,
+//   ) => IPlannerTopLineItem,
+// ): IPlannerProgram {
+//   let dayIndex = 0;
+//   const plannerProgram = ObjectUtils_clone(aPlannerProgram);
+//   const mapping = plannerProgram.weeks.map((week, weekIndex) => {
+//     return week.days.map((day, dayInWeekIndex) => {
+//       const tree = plannerExerciseParser.parse(day.exerciseText);
+//       const evaluator = new PlannerExerciseEvaluator(
+//         day.exerciseText,
+//         settings,
+//         "perday",
+//         {
+//           day: dayIndex + 1,
+//           dayInWeek: dayInWeekIndex + 1,
+//           week: weekIndex + 1,
+//         },
+//       );
+//       dayIndex += 1;
+//       const map = evaluator.topLineMap(tree.topNode);
+//       return map;
+//     });
+//   });
+//
+//   dayIndex = 0;
+//   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
+//     const week = mapping[weekIndex];
+//     for (
+//       let dayInWeekIndex = 0;
+//       dayInWeekIndex < week.length;
+//       dayInWeekIndex += 1
+//     ) {
+//       const day = week[dayInWeekIndex];
+//       for (let lineIndex = 0; lineIndex < day.length; lineIndex += 1) {
+//         const line = day[lineIndex];
+//         const newLine = firstPass(
+//           line,
+//           weekIndex,
+//           dayInWeekIndex,
+//           dayIndex,
+//           lineIndex,
+//         );
+//         day[lineIndex] = newLine;
+//       }
+//       dayIndex += 1;
+//     }
+//   }
+//
+//   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
+//     const programWeek = plannerProgram.weeks[weekIndex];
+//     const week = mapping[weekIndex];
+//     for (
+//       let dayInWeekIndex = 0;
+//       dayInWeekIndex < week.length;
+//       dayInWeekIndex += 1
+//     ) {
+//       const day = week[dayInWeekIndex];
+//       const programDay = programWeek.days[dayInWeekIndex];
+//       let str = "";
+//       for (const line of day) {
+//         str += PlannerProgram_topLineItemToText(line);
+//       }
+//       programDay.exerciseText = str.trim();
+//     }
+//   }
+//
+//   return plannerProgram;
+// }
+//
+// function PlannerProgram_topLineItemToText(line: IPlannerTopLineItem): string {
+//   let str = "";
+//   if (line.type === "description") {
+//     //
+//   } else if (line.type === "exercise") {
+//     if (!line.used) {
+//       if (line.descriptions && line.descriptions.length > 0) {
+//         str += `${line.descriptions.join("\n\n")}\n`;
+//       }
+//       let repeatStr = "";
+//       if (
+//         (line.order != null && line.order !== 0) ||
+//         (line.repeatRanges && line.repeatRanges.length > 0)
+//       ) {
+//         const repeatParts = [];
+//         if (line.order != null && line.order !== 0) {
+//           repeatParts.push(line.order);
+//         }
+//         if (line.repeatRanges && line.repeatRanges.length > 0) {
+//           repeatParts.push(line.repeatRanges.join(","));
+//         }
+//         repeatStr = `[${repeatParts.join(",")}]`;
+//       }
+//       str += `${line.fullName}${repeatStr} / ${line.sections}\n`;
+//     }
+//   } else {
+//     str += line.value + "\n";
+//   }
+//   return str;
+// }
+//
+// function PlannerProgram_switchToUnit(
+//   plannerProgram: IPlannerProgram,
+//   settings: ISettings,
+// ): IPlannerProgram {
+//   const newPlannerProgram = ObjectUtils_clone(plannerProgram);
+//   for (const week of newPlannerProgram.weeks) {
+//     for (const day of week.days) {
+//       const evaluator = new PlannerExerciseEvaluator(
+//         day.exerciseText,
+//         settings,
+//         "perday",
+//       );
+//       const tree = plannerExerciseParser.parse(day.exerciseText);
+//       day.exerciseText = evaluator.switchWeightsToUnit(tree.topNode, settings);
+//     }
+//   }
+//   return newPlannerProgram;
+// }
+//
+// function PlannerProgram_hasNonSelectedWeightUnit(
+//   plannerProgram: IPlannerProgram,
+//   settings: ISettings,
+// ): boolean {
+//   for (const week of plannerProgram.weeks) {
+//     for (const day of week.days) {
+//       const tree = plannerExerciseParser.parse(day.exerciseText);
+//       const evaluator = new PlannerExerciseEvaluator(
+//         day.exerciseText,
+//         settings,
+//         "perday",
+//       );
+//       if (
+//         evaluator.hasWeightInUnit(
+//           tree.topNode,
+//           settings.units === "kg" ? "lb" : "kg",
+//         )
+//       ) {
+//         return true;
+//       }
+//     }
+//   }
+//   return false;
+// }
+//
+// function PlannerProgram_compact(
+//   oldPlannerProgram: IPlannerProgram,
+//   plannerProgram: IPlannerProgram,
+//   settings: ISettings,
+//   additionalRepeatingExercises?: Set<string>,
+// ): IPlannerProgram {
+//   let dayIndex = 0;
+//   const repeatingExercises = new Set<string>();
+//   const { evaluatedWeeks } = PlannerProgram_evaluate(
+//     ObjectUtils_clone(oldPlannerProgram),
+//     settings,
+//   );
+//   const { evaluatedWeeks: newEvaluatedWeeks } = PlannerProgram_evaluate(
+//     ObjectUtils_clone(plannerProgram),
+//     settings,
+//   );
+//   for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
+//     PP_iterate(ev, (exercise) => {
+//       if (exercise.repeat != null && exercise.repeat.length > 0) {
+//         repeatingExercises.add(exercise.key);
+//       }
+//     });
+//   }
+//   for (const ex of additionalRepeatingExercises || []) {
+//     repeatingExercises.add(ex);
+//   }
+//
+//   const lastDescriptions: Partial<Record<number, string | undefined>> = {};
+//   plannerProgram.weeks.forEach((week) => {
+//     week.days.forEach((day, dayInWeekIndex) => {
+//       if (lastDescriptions[dayInWeekIndex] == null) {
+//         lastDescriptions[dayInWeekIndex] = day.description;
+//       } else if (lastDescriptions[dayInWeekIndex] === day.description) {
+//         day.description = undefined;
+//       } else {
+//         lastDescriptions[dayInWeekIndex] = day.description;
+//       }
+//     });
+//   });
+//
+//   const mapping = plannerProgram.weeks.map((week, weekIndex) => {
+//     return week.days.map((day, dayInWeekIndex) => {
+//       const tree = plannerExerciseParser.parse(day.exerciseText);
+//       const evaluator = new PlannerExerciseEvaluator(
+//         day.exerciseText,
+//         settings,
+//         "perday",
+//         {
+//           day: dayIndex + 1,
+//           dayInWeek: dayInWeekIndex + 1,
+//           week: weekIndex + 1,
+//         },
+//       );
+//       dayIndex += 1;
+//       const map = evaluator.topLineMap(tree.topNode);
+//       return map;
+//     });
+//   });
+//
+//   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
+//     const week = mapping[weekIndex];
+//     for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
+//       const day = week[dayIndex];
+//       for (const line of day) {
+//         if (
+//           line.type === "exercise" &&
+//           !line.used &&
+//           repeatingExercises.has(line.value)
+//         ) {
+//           const repeatRanges: [number, number | undefined][] = [];
+//           for (
+//             let repeatWeekIndex = weekIndex + 1;
+//             repeatWeekIndex < mapping.length;
+//             repeatWeekIndex += 1
+//           ) {
+//             const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
+//             const repeatedExercises = (repeatDay || []).filter((e) => {
+//               if (
+//                 e.type !== "exercise" ||
+//                 e.value !== line.value ||
+//                 e.sectionsToReuse !== line.sectionsToReuse ||
+//                 e.exerciseIndex !== line.exerciseIndex ||
+//                 !ObjectUtils_isEqual(
+//                   e.descriptions || [],
+//                   line.descriptions || [],
+//                 )
+//               ) {
+//                 return false;
+//               }
+//               const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
+//               const oldExercise = oldDay.success
+//                 ? oldDay.data.find((ex) => ex.key === e.value)
+//                 : undefined;
+//               return oldExercise?.repeating?.includes(weekIndex + 1);
+//             });
+//             for (const e of repeatedExercises) {
+//               e.used = true;
+//             }
+//             if (repeatedExercises.length > 0) {
+//               if (
+//                 repeatRanges.length === 0 ||
+//                 repeatRanges[repeatRanges.length - 1][1] != null
+//               ) {
+//                 repeatRanges.push([repeatWeekIndex, undefined]);
+//               }
+//             } else {
+//               if (repeatRanges.length > 0) {
+//                 repeatRanges[repeatRanges.length - 1][1] = repeatWeekIndex;
+//               }
+//               break;
+//             }
+//           }
+//           if (
+//             repeatRanges.length > 0 &&
+//             repeatRanges[repeatRanges.length - 1][1] == null
+//           ) {
+//             repeatRanges[repeatRanges.length - 1][1] = mapping.length;
+//           }
+//           line.repeatRanges = repeatRanges.map((r) => `${r[0]}-${r[1]}`);
+//         }
+//       }
+//     }
+//   }
+//
+//   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
+//     const programWeek = plannerProgram.weeks[weekIndex];
+//     const week = mapping[weekIndex];
+//     for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
+//       const day = week[dayIndex];
+//       const programDay = programWeek.days[dayIndex];
+//       let str = "";
+//       let ongoingDescriptions = false;
+//       for (const line of day) {
+//         if (line.type === "description") {
+//           ongoingDescriptions = true;
+//           //
+//         } else if (line.type === "exercise") {
+//           ongoingDescriptions = false;
+//           if (!line.used) {
+//             if (line.descriptions && line.descriptions.length > 0) {
+//               str += `${line.descriptions.filter((d) => d.trim()).join("\n\n")}\n`;
+//             }
+//             let repeatStr = "";
+//             if (
+//               (line.order != null && line.order !== 0) ||
+//               (line.repeatRanges && line.repeatRanges.length > 0)
+//             ) {
+//               const repeatParts = [];
+//               if (line.order != null && line.order !== 0) {
+//                 repeatParts.push(line.order);
+//               }
+//               if (line.repeatRanges && line.repeatRanges.length > 0) {
+//                 repeatParts.push(line.repeatRanges.join(","));
+//               }
+//               repeatStr = `[${repeatParts.join(",")}]`;
+//             }
+//             str +=
+//               [`${line.fullName}${repeatStr}`, line.sections]
+//                 .filter((r) => r)
+//                 .join(" / ") + `\n`;
+//           }
+//         } else if (line.type === "empty") {
+//           if (!ongoingDescriptions) {
+//             str += line.value + "\n";
+//           }
+//         } else {
+//           str += line.value + "\n";
+//         }
+//       }
+//       programDay.exerciseText = str.trim();
+//     }
+//   }
+//
+//   return plannerProgram;
+// }
+//
+// function PlannerProgram_groupedTopLines(
+//   topLine: IPlannerTopLineItem[][][],
+// ): IPlannerTopLineItem[][][][] {
+//   const groupedTopLine: IPlannerTopLineItem[][][][] = [];
+//   for (let weekIndex = 0; weekIndex < topLine.length; weekIndex += 1) {
+//     const topLineWeek = topLine[weekIndex];
+//     groupedTopLine.push([]);
+//     for (
+//       let dayInWeekIndex = 0;
+//       dayInWeekIndex < topLineWeek.length;
+//       dayInWeekIndex += 1
+//     ) {
+//       const topLineDay = topLineWeek[dayInWeekIndex];
+//       const group: IPlannerTopLineItem[][] = [];
+//       groupedTopLine[weekIndex].push(group);
+//       let reset = true;
+//       for (let lineIndex = 0; lineIndex < topLineDay.length; lineIndex += 1) {
+//         if (reset) {
+//           group.push([]);
+//           reset = false;
+//         }
+//         const line = topLineDay[lineIndex];
+//         group[group.length - 1] = group[group.length - 1] || [];
+//         group[group.length - 1].push(line);
+//         if (line.type === "exercise") {
+//           reset = true;
+//         }
+//       }
+//     }
+//   }
+//   for (const week of groupedTopLine) {
+//     for (const day of week) {
+//       day.sort((group1, group2) => {
+//         const ex1 = group1.find((l) => l.type === "exercise");
+//         const ex2 = group2.find((l) => l.type === "exercise");
+//         if (ex1 == null || ex2 == null) {
+//           return 0;
+//         }
+//         if (ex1.exerciseIndex === ex2.exerciseIndex) {
+//           return (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0);
+//         } else {
+//           return (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
+//         }
+//       });
+//     }
+//   }
+//   return groupedTopLine;
+// }
+//
+// function PlannerProgram_topLineItems(
+//   plannerProgram: IPlannerProgram,
+//   settings: ISettings,
+// ): IPlannerTopLineItem[][][] {
+//   let dayIndex = 0;
+//
+//   const mapping = plannerProgram.weeks.map((week, weekIndex) => {
+//     return week.days.map((day, dayInWeekIndex) => {
+//       const tree = plannerExerciseParser.parse(day.exerciseText);
+//       const evaluator = new PlannerExerciseEvaluator(
+//         day.exerciseText,
+//         settings,
+//         "perday",
+//         {
+//           day: dayIndex + 1,
+//           dayInWeek: dayInWeekIndex + 1,
+//           week: weekIndex + 1,
+//         },
+//       );
+//       dayIndex += 1;
+//       const map = evaluator.topLineMap(tree.topNode);
+//       return map;
+//     });
+//   });
+//   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
+//     const week = mapping[weekIndex];
+//     for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
+//       const day = week[dayIndex];
+//       for (const exercise of day) {
+//         for (const r of exercise.repeat || []) {
+//           const reuseDay = mapping[r - 1]?.[dayIndex];
+//           if (
+//             reuseDay &&
+//             !reuseDay.some(
+//               (e) => e.type === "exercise" && e.value === exercise.value,
+//             )
+//           ) {
+//             if (exercise.descriptions) {
+//               for (let di = 0; di < exercise.descriptions.length; di += 1) {
+//                 if (di !== 0) {
+//                   reuseDay.push({ type: "empty", value: "" });
+//                 }
+//                 reuseDay.push({
+//                   type: "description",
+//                   value: exercise.descriptions[di],
+//                 });
+//               }
+//             }
+//             reuseDay.push({ ...exercise, repeat: undefined });
+//           }
+//         }
+//       }
+//     }
+//   }
+//   return mapping;
+// }
 
 function PlannerProgram_evaluate(
   plannerProgram: IPlannerProgram,
@@ -3015,13 +3015,13 @@ function PlannerProgram_evaluate(
 ): { evaluatedWeeks: IPlannerEvalResult[][]; exerciseFullNames: string[] } {
   return PlannerEvaluator_evaluate(plannerProgram, settings);
 }
-
-function PlannerProgram_evaluateFull(
-  fullProgramText: string,
-  settings: ISettings,
-): { evaluatedWeeks: IPlannerEvalFullResult; exerciseFullNames: string[] } {
-  return PlannerEvaluator_evaluateFull(fullProgramText, settings);
-}
+//
+// function PlannerProgram_evaluateFull(
+//   fullProgramText: string,
+//   settings: ISettings,
+// ): { evaluatedWeeks: IPlannerEvalFullResult; exerciseFullNames: string[] } {
+//   return PlannerEvaluator_evaluateFull(fullProgramText, settings);
+// }
 
 export function PlannerProgram_evaluateText(
   fullProgramText: string,
@@ -3047,16 +3047,16 @@ export function PlannerProgram_evaluateText(
   }
   return weeks;
 }
-
-function PlannerProgram_fullToWeekEvalResult(
-  fullResult: IPlannerEvalFullResult,
-): IPlannerEvalResult[][] {
-  return fullResult.success
-    ? fullResult.data.map((week) =>
-        week.days.map((d) => ({ success: true, data: d.exercises })),
-      )
-    : [[fullResult]];
-}
+//
+// function PlannerProgram_fullToWeekEvalResult(
+//   fullResult: IPlannerEvalFullResult,
+// ): IPlannerEvalResult[][] {
+//   return fullResult.success
+//     ? fullResult.data.map((week) =>
+//         week.days.map((d) => ({ success: true, data: d.exercises })),
+//       )
+//     : [[fullResult]];
+// }
 
 export function PlannerProgram_generateFullText(
   weeks: IPlannerProgramWeek[],
@@ -3106,112 +3106,112 @@ function PlannerProgram_usedExercises(
     });
   });
 }
-
-function PlannerProgram_usedEquipment(
-  equipment: IAllEquipment,
-  evaluatedWeeks: IPlannerEvalResult[][],
-): IAllEquipment {
-  return ObjectUtils_filter(equipment, (key, value) => {
-    return evaluatedWeeks.some((week) => {
-      return week.some((day) => {
-        return (
-          day.success &&
-          day.data.some((d) => d.equipment?.toLowerCase() === key)
-        );
-      });
-    });
-  });
-}
-
-function PlannerProgram_convertExportedPlannerToProgram(
-  planner: IExportedPlannerProgram,
-  settings: ISettings,
-): IExportedProgram {
-  const newProgram = Program_create(planner.program.name, planner.id);
-  const newSettings: ISettings = {
-    ...settings,
-    exercises: { ...settings.exercises, ...planner.settings.exercises },
-  };
-  const program = { ...newProgram, planner: planner.program };
-  return {
-    program: program,
-    settings: {
-      timers: newSettings.timers,
-      planner: newSettings.planner,
-      units: newSettings.units,
-    },
-    customExercises: planner.settings.exercises,
-    version: planner.version,
-  };
-}
-
-function PlannerProgram_buildExportedProgram(
-  id: string,
-  program: IPlannerProgram,
-  settings: ISettings,
-  nextDay?: number,
-): IExportedProgram {
-  const { evaluatedWeeks } = PlannerProgram_evaluate(program, settings);
-
-  const exportedPlannerProgram: IExportedPlannerProgram = {
-    id,
-    type: "v2",
-    version: getLatestMigrationVersion(),
-    program: program,
-    plannerSettings: settings.planner,
-    settings: {
-      exercises: PlannerProgram_usedExercises(
-        settings.exercises,
-        evaluatedWeeks,
-      ),
-      timer: settings.timers.workout ?? 0,
-    },
-  };
-  return Program_exportedPlannerProgramToExportedProgram(
-    exportedPlannerProgram,
-    nextDay,
-  );
-}
-
-async function PlannerProgram_getExportedPlannerProgram(
-  program: IExportedPlannerProgram,
-  settings: ISettings,
-): Promise<IEither<IExportedPlannerProgram, string[]>> {
-  const storage = Storage_getDefault();
-  storage.version = program.version;
-  storage.programs = [
-    { ...Program_create(program.program.name), planner: program.program },
-  ];
-  storage.settings = {
-    ...storage.settings,
-    planner: program.plannerSettings || storage.settings.planner,
-  };
-  storage.settings.exercises = {
-    ...storage.settings.exercises,
-    ...settings.exercises,
-  };
-
-  const result = Storage_get(storage);
-  if (result.success) {
-    const newStorage = result.data;
-    return {
-      success: true,
-      data: {
-        id: program.id,
-        type: "v2",
-        version: newStorage.version,
-        program: newStorage.programs[0].planner!,
-        plannerSettings: storage.settings.planner,
-        settings: {
-          exercises: storage.settings.exercises || {},
-          timer: storage.settings.timers?.workout || 180,
-        },
-      },
-    };
-  } else {
-    return { success: false, error: result.error };
-  }
-}
+//
+// function PlannerProgram_usedEquipment(
+//   equipment: IAllEquipment,
+//   evaluatedWeeks: IPlannerEvalResult[][],
+// ): IAllEquipment {
+//   return ObjectUtils_filter(equipment, (key, value) => {
+//     return evaluatedWeeks.some((week) => {
+//       return week.some((day) => {
+//         return (
+//           day.success &&
+//           day.data.some((d) => d.equipment?.toLowerCase() === key)
+//         );
+//       });
+//     });
+//   });
+// }
+//
+// function PlannerProgram_convertExportedPlannerToProgram(
+//   planner: IExportedPlannerProgram,
+//   settings: ISettings,
+// ): IExportedProgram {
+//   const newProgram = Program_create(planner.program.name, planner.id);
+//   const newSettings: ISettings = {
+//     ...settings,
+//     exercises: { ...settings.exercises, ...planner.settings.exercises },
+//   };
+//   const program = { ...newProgram, planner: planner.program };
+//   return {
+//     program: program,
+//     settings: {
+//       timers: newSettings.timers,
+//       planner: newSettings.planner,
+//       units: newSettings.units,
+//     },
+//     customExercises: planner.settings.exercises,
+//     version: planner.version,
+//   };
+// }
+//
+// function PlannerProgram_buildExportedProgram(
+//   id: string,
+//   program: IPlannerProgram,
+//   settings: ISettings,
+//   nextDay?: number,
+// ): IExportedProgram {
+//   const { evaluatedWeeks } = PlannerProgram_evaluate(program, settings);
+//
+//   const exportedPlannerProgram: IExportedPlannerProgram = {
+//     id,
+//     type: "v2",
+//     version: getLatestMigrationVersion(),
+//     program: program,
+//     plannerSettings: settings.planner,
+//     settings: {
+//       exercises: PlannerProgram_usedExercises(
+//         settings.exercises,
+//         evaluatedWeeks,
+//       ),
+//       timer: settings.timers.workout ?? 0,
+//     },
+//   };
+//   return Program_exportedPlannerProgramToExportedProgram(
+//     exportedPlannerProgram,
+//     nextDay,
+//   );
+// }
+//
+// async function PlannerProgram_getExportedPlannerProgram(
+//   program: IExportedPlannerProgram,
+//   settings: ISettings,
+// ): Promise<IEither<IExportedPlannerProgram, string[]>> {
+//   const storage = Storage_getDefault();
+//   storage.version = program.version;
+//   storage.programs = [
+//     { ...Program_create(program.program.name), planner: program.program },
+//   ];
+//   storage.settings = {
+//     ...storage.settings,
+//     planner: program.plannerSettings || storage.settings.planner,
+//   };
+//   storage.settings.exercises = {
+//     ...storage.settings.exercises,
+//     ...settings.exercises,
+//   };
+//
+//   const result = Storage_get(storage);
+//   if (result.success) {
+//     const newStorage = result.data;
+//     return {
+//       success: true,
+//       data: {
+//         id: program.id,
+//         type: "v2",
+//         version: newStorage.version,
+//         program: newStorage.programs[0].planner!,
+//         plannerSettings: storage.settings.planner,
+//         settings: {
+//           exercises: storage.settings.exercises || {},
+//           timer: storage.settings.timers?.workout || 180,
+//         },
+//       },
+//     };
+//   } else {
+//     return { success: false, error: result.error };
+//   }
+// }
 
 //#endregion
 
@@ -3260,174 +3260,174 @@ const TBuiltinEquipment = t.keyof(
   ),
   "TBuiltinEquipment",
 );
-type IBuiltinEquipment = t.TypeOf<typeof TBuiltinEquipment>;
-
-const exerciseTypes = [
-  "abWheel",
-  "arnoldPress",
-  "aroundTheWorld",
-  "backExtension",
-  "ballSlams",
-  "battleRopes",
-  "benchDip",
-  "benchPress",
-  "benchPressCloseGrip",
-  "benchPressWideGrip",
-  "bentOverOneArmRow",
-  "bentOverRow",
-  "bicepCurl",
-  "bicycleCrunch",
-  "boxJump",
-  "boxSquat",
-  "bulgarianSplitSquat",
-  "burpee",
-  "cableCrossover",
-  "cableCrunch",
-  "cableKickback",
-  "cablePullThrough",
-  "cableTwist",
-  "calfPressOnLegPress",
-  "calfPressOnSeatedLegPress",
-  "chestDip",
-  "chestFly",
-  "chestPress",
-  "chinUp",
-  "clean",
-  "cleanandJerk",
-  "concentrationCurl",
-  "crossBodyCrunch",
-  "crunch",
-  "cycling",
-  "deadlift",
-  "deadliftHighPull",
-  "declineBenchPress",
-  "declineCrunch",
-  "deficitDeadlift",
-  "ellipticalMachine",
-  "facePull",
-  "flatKneeRaise",
-  "flatLegRaise",
-  "frontRaise",
-  "frontSquat",
-  "gluteBridge",
-  "gluteBridgeMarch",
-  "gluteKickback",
-  "gobletSquat",
-  "goodMorning",
-  "hackSquat",
-  "hammerCurl",
-  "handstandPushUp",
-  "hangClean",
-  "hangSnatch",
-  "hangingLegRaise",
-  "highKneeSkips",
-  "highRow",
-  "hipAbductor",
-  "hipAdductor",
-  "hipThrust",
-  "inclineBenchPress",
-  "inclineChestFly",
-  "inclineChestPress",
-  "inclineCurl",
-  "inclineRow",
-  "invertedRow",
-  "isoLateralChestPress",
-  "isoLateralRow",
-  "jackknifeSitUp",
-  "jumpRope",
-  "jumpSquat",
-  "jumpingJack",
-  "kettlebellSwing",
-  "kettlebellTurkishGetUp",
-  "kippingPullUp",
-  "kneeRaise",
-  "kneelingPulldown",
-  "kneestoElbows",
-  "latPulldown",
-  "lateralBoxJump",
-  "lateralRaise",
-  "legExtension",
-  "legPress",
-  "lunge",
-  "lyingLegCurl",
-  "mountainClimber",
-  "muscleUp",
-  "obliqueCrunch",
-  "overheadPress",
-  "overheadSquat",
-  "pecDeck",
-  "pendlayRow",
-  "pistolSquat",
-  "plank",
-  "powerClean",
-  "powerSnatch",
-  "preacherCurl",
-  "pressUnder",
-  "pullUp",
-  "pullover",
-  "pushPress",
-  "pushUp",
-  "reverseCrunch",
-  "reverseCurl",
-  "reverseFly",
-  "reverseGripConcentrationCurl",
-  "reverseHyperextension",
-  "reverseWristCurl",
-  "reverseLunge",
-  "reversePlank",
-  "romanianDeadlift",
-  "rowing",
-  "russianTwist",
-  "seatedCalfRaise",
-  "seatedLegCurl",
-  "seatedLegPress",
-  "seatedOverheadPress",
-  "seatedPalmsUpWristCurl",
-  "seatedRow",
-  "seatedWideGripRow",
-  "shoulderPress",
-  "shrug",
-  "sideBend",
-  "sideCrunch",
-  "sideHipAbductor",
-  "sideLyingClam",
-  "sidePlank",
-  "singleLegBridge",
-  "singleLegDeadlift",
-  "singleLegGluteBridgeBench",
-  "singleLegGluteBridgeStraight",
-  "singleLegGluteBridgeBentKnee",
-  "singleLegHipThrust",
-  "sitUp",
-  "skullcrusher",
-  "snatch",
-  "snatchPull",
-  "splitSquat",
-  "splitJerk",
-  "squat",
-  "squatRow",
-  "standingCalfRaise",
-  "stepUp",
-  "stiffLegDeadlift",
-  "straightLegDeadlift",
-  "sumoDeadlift",
-  "sumoDeadliftHighPull",
-  "superman",
-  "tBarRow",
-  "thruster",
-  "toesToBar",
-  "torsoRotation",
-  "trapBarDeadlift",
-  "tricepsDip",
-  "tricepsExtension",
-  "tricepsPushdown",
-  "uprightRow",
-  "vUp",
-  "widePullUp",
-  "wristCurl",
-  "wristRoller",
-  "zercherSquat",
-] as const;
+// type IBuiltinEquipment = t.TypeOf<typeof TBuiltinEquipment>;
+//
+// const exerciseTypes = [
+//   "abWheel",
+//   "arnoldPress",
+//   "aroundTheWorld",
+//   "backExtension",
+//   "ballSlams",
+//   "battleRopes",
+//   "benchDip",
+//   "benchPress",
+//   "benchPressCloseGrip",
+//   "benchPressWideGrip",
+//   "bentOverOneArmRow",
+//   "bentOverRow",
+//   "bicepCurl",
+//   "bicycleCrunch",
+//   "boxJump",
+//   "boxSquat",
+//   "bulgarianSplitSquat",
+//   "burpee",
+//   "cableCrossover",
+//   "cableCrunch",
+//   "cableKickback",
+//   "cablePullThrough",
+//   "cableTwist",
+//   "calfPressOnLegPress",
+//   "calfPressOnSeatedLegPress",
+//   "chestDip",
+//   "chestFly",
+//   "chestPress",
+//   "chinUp",
+//   "clean",
+//   "cleanandJerk",
+//   "concentrationCurl",
+//   "crossBodyCrunch",
+//   "crunch",
+//   "cycling",
+//   "deadlift",
+//   "deadliftHighPull",
+//   "declineBenchPress",
+//   "declineCrunch",
+//   "deficitDeadlift",
+//   "ellipticalMachine",
+//   "facePull",
+//   "flatKneeRaise",
+//   "flatLegRaise",
+//   "frontRaise",
+//   "frontSquat",
+//   "gluteBridge",
+//   "gluteBridgeMarch",
+//   "gluteKickback",
+//   "gobletSquat",
+//   "goodMorning",
+//   "hackSquat",
+//   "hammerCurl",
+//   "handstandPushUp",
+//   "hangClean",
+//   "hangSnatch",
+//   "hangingLegRaise",
+//   "highKneeSkips",
+//   "highRow",
+//   "hipAbductor",
+//   "hipAdductor",
+//   "hipThrust",
+//   "inclineBenchPress",
+//   "inclineChestFly",
+//   "inclineChestPress",
+//   "inclineCurl",
+//   "inclineRow",
+//   "invertedRow",
+//   "isoLateralChestPress",
+//   "isoLateralRow",
+//   "jackknifeSitUp",
+//   "jumpRope",
+//   "jumpSquat",
+//   "jumpingJack",
+//   "kettlebellSwing",
+//   "kettlebellTurkishGetUp",
+//   "kippingPullUp",
+//   "kneeRaise",
+//   "kneelingPulldown",
+//   "kneestoElbows",
+//   "latPulldown",
+//   "lateralBoxJump",
+//   "lateralRaise",
+//   "legExtension",
+//   "legPress",
+//   "lunge",
+//   "lyingLegCurl",
+//   "mountainClimber",
+//   "muscleUp",
+//   "obliqueCrunch",
+//   "overheadPress",
+//   "overheadSquat",
+//   "pecDeck",
+//   "pendlayRow",
+//   "pistolSquat",
+//   "plank",
+//   "powerClean",
+//   "powerSnatch",
+//   "preacherCurl",
+//   "pressUnder",
+//   "pullUp",
+//   "pullover",
+//   "pushPress",
+//   "pushUp",
+//   "reverseCrunch",
+//   "reverseCurl",
+//   "reverseFly",
+//   "reverseGripConcentrationCurl",
+//   "reverseHyperextension",
+//   "reverseWristCurl",
+//   "reverseLunge",
+//   "reversePlank",
+//   "romanianDeadlift",
+//   "rowing",
+//   "russianTwist",
+//   "seatedCalfRaise",
+//   "seatedLegCurl",
+//   "seatedLegPress",
+//   "seatedOverheadPress",
+//   "seatedPalmsUpWristCurl",
+//   "seatedRow",
+//   "seatedWideGripRow",
+//   "shoulderPress",
+//   "shrug",
+//   "sideBend",
+//   "sideCrunch",
+//   "sideHipAbductor",
+//   "sideLyingClam",
+//   "sidePlank",
+//   "singleLegBridge",
+//   "singleLegDeadlift",
+//   "singleLegGluteBridgeBench",
+//   "singleLegGluteBridgeStraight",
+//   "singleLegGluteBridgeBentKnee",
+//   "singleLegHipThrust",
+//   "sitUp",
+//   "skullcrusher",
+//   "snatch",
+//   "snatchPull",
+//   "splitSquat",
+//   "splitJerk",
+//   "squat",
+//   "squatRow",
+//   "standingCalfRaise",
+//   "stepUp",
+//   "stiffLegDeadlift",
+//   "straightLegDeadlift",
+//   "sumoDeadlift",
+//   "sumoDeadliftHighPull",
+//   "superman",
+//   "tBarRow",
+//   "thruster",
+//   "toesToBar",
+//   "torsoRotation",
+//   "trapBarDeadlift",
+//   "tricepsDip",
+//   "tricepsExtension",
+//   "tricepsPushdown",
+//   "uprightRow",
+//   "vUp",
+//   "widePullUp",
+//   "wristCurl",
+//   "wristRoller",
+//   "zercherSquat",
+// ] as const;
 
 const availableMuscles = [
   "Adductor Brevis",
@@ -3481,7 +3481,7 @@ const TMuscle = t.keyof(
   ),
   "TMuscle",
 );
-type IMuscle = t.TypeOf<typeof TMuscle>;
+// type IMuscle = t.TypeOf<typeof TMuscle>;
 
 const availableBodyParts = [
   "Back",
@@ -3513,7 +3513,7 @@ const TExerciseKind = t.keyof(
   ),
   "TExerciseKind",
 );
-type IExerciseKind = t.TypeOf<typeof TExerciseKind>;
+// type IExerciseKind = t.TypeOf<typeof TExerciseKind>;
 
 const TBodyPart = t.keyof(
   availableBodyParts.reduce<
@@ -3527,7 +3527,7 @@ const TBodyPart = t.keyof(
   ),
   "TBodyPart",
 );
-type IBodyPart = t.TypeOf<typeof TBodyPart>;
+// type IBodyPart = t.TypeOf<typeof TBodyPart>;
 
 const graphExerciseSelectedTypes = ["weight", "volume"] as const;
 const TGraphExerciseSelectedType = t.keyof(
@@ -3542,7 +3542,7 @@ const TGraphExerciseSelectedType = t.keyof(
   ),
   "TGraphExerciseSelectedType",
 );
-type IGraphExerciseSelectedType = t.TypeOf<typeof TGraphExerciseSelectedType>;
+// type IGraphExerciseSelectedType = t.TypeOf<typeof TGraphExerciseSelectedType>;
 
 const graphMuscleGroupSelectedTypes = ["volume", "sets"] as const;
 const TGraphMuscleGroupSelectedType = t.keyof(
@@ -3557,18 +3557,18 @@ const TGraphMuscleGroupSelectedType = t.keyof(
   ),
   "TGraphMuscleGroupSelectedType",
 );
-type IGraphMuscleGroupSelectedType = t.TypeOf<
-  typeof TGraphMuscleGroupSelectedType
->;
-
-type IExerciseSelectedType = "weight" | "volume";
-type IVolumeSelectedType = "sets" | "volume";
+// type IGraphMuscleGroupSelectedType = t.TypeOf<
+//   typeof TGraphMuscleGroupSelectedType
+// >;
+//
+// type IExerciseSelectedType = "weight" | "volume";
+// type IVolumeSelectedType = "sets" | "volume";
 
 const TEquipment = t.string;
-type IEquipment = t.TypeOf<typeof TEquipment>;
+// type IEquipment = t.TypeOf<typeof TEquipment>;
 
 const TExerciseId = t.string;
-type IExerciseId = t.TypeOf<typeof TExerciseId>;
+// type IExerciseId = t.TypeOf<typeof TExerciseId>;
 
 const TMetaExercises = t.intersection(
   [
@@ -3583,7 +3583,7 @@ const TMetaExercises = t.intersection(
   ],
   "TMetaExercises",
 );
-type IMetaExercises = t.TypeOf<typeof TMetaExercises>;
+// type IMetaExercises = t.TypeOf<typeof TMetaExercises>;
 
 const TExerciseType = t.intersection(
   [
@@ -3633,7 +3633,7 @@ const TUnit = t.keyof(
   ),
   "TUnit",
 );
-type IUnit = t.TypeOf<typeof TUnit>;
+// type IUnit = t.TypeOf<typeof TUnit>;
 
 const TWeight = t.type(
   {
@@ -3651,7 +3651,7 @@ const TPlate = t.type(
   },
   "TPlate",
 );
-type IPlate = t.TypeOf<typeof TPlate>;
+// type IPlate = t.TypeOf<typeof TPlate>;
 
 const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
 
@@ -3665,10 +3665,10 @@ const TBarKey = t.keyof(
   ),
   "TBarKey",
 );
-type IBarKey = t.TypeOf<typeof TBarKey>;
+// type IBarKey = t.TypeOf<typeof TBarKey>;
 
 const TBars = t.record(TBarKey, TWeight, "TBars");
-type IBars = t.TypeOf<typeof TBars>;
+// type IBars = t.TypeOf<typeof TBars>;
 
 const percentageUnits = ["%"] as const;
 
@@ -3682,7 +3682,7 @@ const TPercentageUnit = t.keyof(
   ),
   "TPercentageUnit",
 );
-type IPercentageUnit = t.TypeOf<typeof TPercentageUnit>;
+// type IPercentageUnit = t.TypeOf<typeof TPercentageUnit>;
 
 const TPercentage = t.type(
   { value: t.number, unit: TPercentageUnit },
@@ -3760,10 +3760,10 @@ const TProgramStateMetadataValue = t.partial(
   },
   "TProgramStateMetadataValue",
 );
-type IProgramStateMetadataValue = t.TypeOf<typeof TProgramStateMetadataValue>;
+// type IProgramStateMetadataValue = t.TypeOf<typeof TProgramStateMetadataValue>;
 
 const TProgramStateMetadata = dictionary(t.string, TProgramStateMetadataValue);
-type IProgramStateMetadata = t.TypeOf<typeof TProgramStateMetadata>;
+// type IProgramStateMetadata = t.TypeOf<typeof TProgramStateMetadata>;
 
 const TProgramSet = t.intersection(
   [
@@ -3819,9 +3819,9 @@ const TProgramExerciseReuseLogic = t.type(
   },
   "TProgramExerciseReuseLogic",
 );
-type IProgramExerciseReuseLogic = Readonly<
-  t.TypeOf<typeof TProgramExerciseReuseLogic>
->;
+// type IProgramExerciseReuseLogic = Readonly<
+//   t.TypeOf<typeof TProgramExerciseReuseLogic>
+// >;
 
 const TProgramExercise = t.intersection(
   [
@@ -3854,7 +3854,7 @@ const TProgramExercise = t.intersection(
   ],
   "TProgramExercise",
 );
-type IProgramExercise = t.TypeOf<typeof TProgramExercise>;
+// type IProgramExercise = t.TypeOf<typeof TProgramExercise>;
 
 const exercisePickerScreens = [
   "exercisePicker",
@@ -3874,7 +3874,7 @@ const TExercisePickerScreen = t.keyof(
   ),
   "TExercisePickerScreen",
 );
-type IExercisePickerScreen = t.TypeOf<typeof TExercisePickerScreen>;
+// type IExercisePickerScreen = t.TypeOf<typeof TExercisePickerScreen>;
 
 const exercisePickerSorts = ["name_asc", "similar_muscles"] as const;
 const TExercisePickerSort = t.keyof(
@@ -3889,7 +3889,7 @@ const TExercisePickerSort = t.keyof(
   ),
   "TExercisePickerSort",
 );
-type IExercisePickerSort = t.TypeOf<typeof TExercisePickerSort>;
+// type IExercisePickerSort = t.TypeOf<typeof TExercisePickerSort>;
 
 const TExercisePickerFilters = t.partial(
   {
@@ -3900,7 +3900,7 @@ const TExercisePickerFilters = t.partial(
   },
   "TExercisePickerFilters",
 );
-type IExercisePickerFilters = t.TypeOf<typeof TExercisePickerFilters>;
+// type IExercisePickerFilters = t.TypeOf<typeof TExercisePickerFilters>;
 
 const TExercisePickerProgramExercise = t.type(
   {
@@ -3911,7 +3911,7 @@ const TExercisePickerProgramExercise = t.type(
   },
   "TExercisePickerProgramExercise",
 );
-type IExercisePickerProgramExercise = t.TypeOf<
+// type IExercisePickerProgramExercise = t.TypeOf<
   typeof TExercisePickerProgramExercise
 >;
 
@@ -3927,9 +3927,9 @@ const TExercisePickerAdhocExercise = t.intersection(
   ],
   "ExercisePickerAdhocExercise",
 );
-type IExercisePickerAdhocExercise = t.TypeOf<
-  typeof TExercisePickerAdhocExercise
->;
+// type IExercisePickerAdhocExercise = t.TypeOf<
+//   typeof TExercisePickerAdhocExercise
+// >;
 
 const TExercisePickerTemplate = t.intersection(
   [
@@ -3943,16 +3943,16 @@ const TExercisePickerTemplate = t.intersection(
   ],
   "ExercisePickerTemplate",
 );
-type IExercisePickerTemplate = t.TypeOf<typeof TExercisePickerTemplate>;
+// type IExercisePickerTemplate = t.TypeOf<typeof TExercisePickerTemplate>;
 
 const TExercisePickerSelectedExercise = t.union([
   TExercisePickerProgramExercise,
   TExercisePickerAdhocExercise,
   TExercisePickerTemplate,
 ]);
-type IExercisePickerSelectedExercise = t.TypeOf<
-  typeof TExercisePickerSelectedExercise
->;
+// type IExercisePickerSelectedExercise = t.TypeOf<
+//   typeof TExercisePickerSelectedExercise
+// >;
 
 const TExercisePickerState = t.intersection([
   t.interface({
@@ -3974,7 +3974,7 @@ const TExercisePickerState = t.intersection([
     entryIndex: t.number,
   }),
 ]);
-type IExercisePickerState = t.TypeOf<typeof TExercisePickerState>;
+// type IExercisePickerState = t.TypeOf<typeof TExercisePickerState>;
 
 const TProgressUi = t.partial(
   {
@@ -4031,7 +4031,7 @@ const TProgressUi = t.partial(
   "TProgressUi",
 );
 
-type IProgressUi = t.TypeOf<typeof TProgressUi>;
+// type IProgressUi = t.TypeOf<typeof TProgressUi>;
 
 const TProgressMode = t.keyof(
   {
@@ -4041,13 +4041,13 @@ const TProgressMode = t.keyof(
   "TProgressMode",
 );
 
-type IProgressMode = t.TypeOf<typeof TProgressMode>;
+// type IProgressMode = t.TypeOf<typeof TProgressMode>;
 
 const TIntervals = t.array(
   t.tuple([t.number, t.union([t.number, t.undefined, t.null])]),
   "TIntervals",
 );
-type IIntervals = t.TypeOf<typeof TIntervals>;
+// type IIntervals = t.TypeOf<typeof TIntervals>;
 
 const historyRecordChange = ["order"] as const;
 const THistoryRecordChange = t.keyof(
@@ -4062,7 +4062,7 @@ const THistoryRecordChange = t.keyof(
   ),
   "THistoryRecordChange",
 );
-type IHistoryRecordChange = t.TypeOf<typeof THistoryRecordChange>;
+// type IHistoryRecordChange = t.TypeOf<typeof THistoryRecordChange>;
 
 const historyRecordRequiredFields = {
   // ISO8601, like 2020-02-29T18:02:05+00:00
@@ -4112,7 +4112,7 @@ const TProgramDayEntry = t.type(
   },
   "TProgramDayEntry",
 );
-type IProgramDayEntry = Readonly<t.TypeOf<typeof TProgramDayEntry>>;
+// type IProgramDayEntry = Readonly<t.TypeOf<typeof TProgramDayEntry>>;
 
 const TProgramWeek = t.intersection(
   [
@@ -4131,7 +4131,7 @@ const TProgramWeek = t.intersection(
   ],
   "TProgramWeek",
 );
-type IProgramWeek = Readonly<t.TypeOf<typeof TProgramWeek>>;
+// type IProgramWeek = Readonly<t.TypeOf<typeof TProgramWeek>>;
 
 const TProgramDay = t.intersection(
   [
@@ -4148,7 +4148,7 @@ const TProgramDay = t.intersection(
   ],
   "TProgramDay",
 );
-type IProgramDay = Readonly<t.TypeOf<typeof TProgramDay>>;
+// type IProgramDay = Readonly<t.TypeOf<typeof TProgramDay>>;
 
 const tags = [
   "first-starter",
@@ -4171,7 +4171,7 @@ const TProgramTag = t.keyof(
   ),
   "TProgramTag",
 );
-type IProgramTag = Readonly<t.TypeOf<typeof TProgramTag>>;
+// type IProgramTag = Readonly<t.TypeOf<typeof TProgramTag>>;
 
 const TPlannerProgramDay = t.intersection(
   [
@@ -4186,7 +4186,7 @@ const TPlannerProgramDay = t.intersection(
   ],
   "TPlannerProgramDay",
 );
-type IPlannerProgramDay = t.TypeOf<typeof TPlannerProgramDay>;
+// type IPlannerProgramDay = t.TypeOf<typeof TPlannerProgramDay>;
 
 const TPlannerProgramWeek = t.intersection(
   [
@@ -4257,10 +4257,10 @@ const TLengthUnit = t.keyof(
   ),
   "TUnit",
 );
-type ILengthUnit = t.TypeOf<typeof TLengthUnit>;
+// type ILengthUnit = t.TypeOf<typeof TLengthUnit>;
 
 const TLength = t.type({ value: t.number, unit: TLengthUnit }, "TLength");
-type ILength = t.TypeOf<typeof TLength>;
+// type ILength = t.TypeOf<typeof TLength>;
 
 const TStatsWeightValue = t.intersection(
   [
@@ -4273,7 +4273,7 @@ const TStatsWeightValue = t.intersection(
   ],
   "TStatsWeightValue",
 );
-type IStatsWeightValue = t.TypeOf<typeof TStatsWeightValue>;
+// type IStatsWeightValue = t.TypeOf<typeof TStatsWeightValue>;
 
 const statsWeightDef = {
   weight: t.array(TStatsWeightValue),
@@ -4292,7 +4292,7 @@ const TStatsLengthValue = t.intersection(
   ],
   "TStatsLengthValue",
 );
-type IStatsLengthValue = t.TypeOf<typeof TStatsLengthValue>;
+// type IStatsLengthValue = t.TypeOf<typeof TStatsLengthValue>;
 
 const statsLengthDef = {
   neck: t.array(TStatsLengthValue),
@@ -4323,7 +4323,7 @@ const TStatsPercentageValue = t.intersection(
   ],
   "TStatsPercentageValue",
 );
-type IStatsPercentageValue = t.TypeOf<typeof TStatsPercentageValue>;
+// type IStatsPercentageValue = t.TypeOf<typeof TStatsPercentageValue>;
 
 const statsPercentageDef = {
   bodyfat: t.array(TStatsPercentageValue),
@@ -4348,7 +4348,7 @@ const TStatsWeightEnabled = t.partial(
   ),
   "TStatsWeightEnabled",
 );
-type IStatsWeightEnabled = t.TypeOf<typeof TStatsWeightEnabled>;
+// type IStatsWeightEnabled = t.TypeOf<typeof TStatsWeightEnabled>;
 
 const TStatsLengthEnabled = t.partial(
   ObjectUtils_keys(statsLengthDef).reduce<
@@ -4362,7 +4362,7 @@ const TStatsLengthEnabled = t.partial(
   ),
   "TStatsLengthEnabled",
 );
-type IStatsLengthEnabled = t.TypeOf<typeof TStatsLengthEnabled>;
+// type IStatsLengthEnabled = t.TypeOf<typeof TStatsLengthEnabled>;
 
 const TStatsPercentageEnabled = t.partial(
   ObjectUtils_keys(statsPercentageDef).reduce<
@@ -4385,7 +4385,7 @@ const TStatsEnabled = t.type(
   },
   "TStatsEnabled",
 );
-type IStatsEnabled = Readonly<t.TypeOf<typeof TStatsEnabled>>;
+// type IStatsEnabled = Readonly<t.TypeOf<typeof TStatsEnabled>>;
 
 const TSettingsTimers = t.intersection(
   [
@@ -4400,7 +4400,7 @@ const TSettingsTimers = t.intersection(
   ],
   "TSettingsTimers",
 );
-type ISettingsTimers = t.TypeOf<typeof TSettingsTimers>;
+// type ISettingsTimers = t.TypeOf<typeof TSettingsTimers>;
 
 const TGraph = t.union([
   t.type({
@@ -4429,7 +4429,7 @@ const TGraph = t.union([
     id: t.string,
   }),
 ]);
-type IGraph = t.TypeOf<typeof TGraph>;
+// type IGraph = t.TypeOf<typeof TGraph>;
 
 const TEquipmentData = t.intersection(
   [
@@ -4462,7 +4462,7 @@ type IAllEquipment = Partial<Record<string, IEquipmentData>>;
 const TGraphOptions = t.partial({
   movingAverageWindowSize: t.number,
 });
-type IGraphOptions = t.TypeOf<typeof TGraphOptions>;
+// type IGraphOptions = t.TypeOf<typeof TGraphOptions>;
 
 const TMuscleMultiplier = t.type(
   {
@@ -4471,7 +4471,7 @@ const TMuscleMultiplier = t.type(
   },
   "TMuscleMultiplier",
 );
-type IMuscleMultiplier = t.TypeOf<typeof TMuscleMultiplier>;
+// type IMuscleMultiplier = t.TypeOf<typeof TMuscleMultiplier>;
 
 const TExerciseDataValue = t.partial(
   {
@@ -4516,7 +4516,7 @@ const TScreenMuscle = t.union(
   ],
   "TScreenMuscle",
 );
-type IScreenMuscle = t.TypeOf<typeof TScreenMuscle>;
+// type IScreenMuscle = t.TypeOf<typeof TScreenMuscle>;
 
 const TPlannerSettings = t.type(
   {
@@ -4539,7 +4539,7 @@ const TGym = t.type(
   },
   "TGym",
 );
-type IGym = t.TypeOf<typeof TGym>;
+// type IGym = t.TypeOf<typeof TGym>;
 
 const targetTypes = ["target", "lasttime", "platescalculator", "e1rm"] as const;
 const TTargetType = t.keyof(
@@ -4552,7 +4552,7 @@ const TTargetType = t.keyof(
   ),
   "TTargetType",
 );
-type ITargetType = t.TypeOf<typeof TTargetType>;
+// type ITargetType = t.TypeOf<typeof TTargetType>;
 
 const TWorkoutSettings = t.intersection(
   [
@@ -4569,7 +4569,7 @@ const TWorkoutSettings = t.intersection(
   "TWorkoutSettings",
 );
 
-type IWorkoutSettings = t.TypeOf<typeof TWorkoutSettings>;
+// type IWorkoutSettings = t.TypeOf<typeof TWorkoutSettings>;
 
 const TGraphs = t.type({
   vtype: t.literal("graphs"),
@@ -4587,7 +4587,7 @@ const TMuscleGroupsSettings = t.type({
     }),
   ),
 });
-type IMuscleGroupsSettings = t.TypeOf<typeof TMuscleGroupsSettings>;
+// type IMuscleGroupsSettings = t.TypeOf<typeof TMuscleGroupsSettings>;
 
 const TSettings = t.intersection(
   [
@@ -4663,7 +4663,7 @@ const TSubscriptionReceipt = t.type({
   value: t.string,
   createdAt: t.number,
 });
-type ISubscriptionReceipt = t.TypeOf<typeof TSubscriptionReceipt>;
+// type ISubscriptionReceipt = t.TypeOf<typeof TSubscriptionReceipt>;
 
 const TSubscription = t.intersection([
   t.interface({
@@ -4674,7 +4674,7 @@ const TSubscription = t.intersection([
     key: t.union([t.string, t.undefined]),
   }),
 ]);
-type ISubscription = t.TypeOf<typeof TSubscription>;
+// type ISubscription = t.TypeOf<typeof TSubscription>;
 
 const TAffiliateData = t.type({
   id: t.string,
@@ -4682,7 +4682,7 @@ const TAffiliateData = t.type({
   type: t.union([t.literal("coupon"), t.literal("program")]),
   vtype: t.literal("affiliate"),
 });
-type IAffiliateData = t.TypeOf<typeof TAffiliateData>;
+// type IAffiliateData = t.TypeOf<typeof TAffiliateData>;
 
 const TStorage = t.intersection(
   [
@@ -4720,7 +4720,7 @@ type IStorage = Omit<t.TypeOf<typeof TStorage>, "_versions"> & {
   _versions?: IVersions<Omit<t.TypeOf<typeof TStorage>, "_versions">>;
 };
 
-type IPartialStorage = Omit<IStorage, "history" | "stats" | "programs"> &
+// type IPartialStorage = Omit<IStorage, "history" | "stats" | "programs"> &
   Partial<Pick<IStorage, "history" | "stats" | "programs">>;
 
 type IProgramContentSettings = Partial<
@@ -4740,7 +4740,7 @@ const TMuscleGeneratorResponse = t.type(
   },
   "TMusclesGeneratorResponse",
 );
-type IMuscleGeneratorResponse = t.TypeOf<typeof TMuscleGeneratorResponse>;
+// type IMuscleGeneratorResponse = t.TypeOf<typeof TMuscleGeneratorResponse>;
 
 type IDayData = {
   week?: number;
@@ -4748,17 +4748,17 @@ type IDayData = {
   dayInWeek?: number;
 };
 
-type IShortDayData = {
-  week: number;
-  dayInWeek: number;
-};
-
-type IDaySetData = {
-  week: number;
-  dayInWeek: number;
-  setVariation: number;
-  set: number;
-};
+// type IShortDayData = {
+//   week: number;
+//   dayInWeek: number;
+// };
+//
+// type IDaySetData = {
+//   week: number;
+//   dayInWeek: number;
+//   setVariation: number;
+//   set: number;
+// };
 
 // Atomic types - these are versioned as a whole unit
 const ATOMIC_TYPES = [
@@ -4852,7 +4852,7 @@ const DICTIONARY_FIELDS = [
   "affiliates",
 ] as const;
 
-type IDictionaryFieldPath = (typeof DICTIONARY_FIELDS)[number];
+// type IDictionaryFieldPath = (typeof DICTIONARY_FIELDS)[number];
 
 // Fields excluded from syncing (local-only UI state)
 const EXCLUDED_FIELDS: Partial<Record<IControlledType, readonly string[]>> = {
@@ -4860,21 +4860,21 @@ const EXCLUDED_FIELDS: Partial<Record<IControlledType, readonly string[]>> = {
 };
 
 // Storage-specific version configuration
-const STORAGE_VERSION_TYPES: IVersionTypes<IAtomicType, IControlledType> = {
-  atomicTypes: ATOMIC_TYPES,
-  controlledTypes: CONTROLLED_TYPES,
-  typeIdMapping: TYPE_ID_MAPPING,
-  controlledFields: CONTROLLED_FIELDS,
-  excludedFields: EXCLUDED_FIELDS,
-  dictionaryFields: DICTIONARY_FIELDS,
-  compactionThresholds: {
-    "subscription.apple": 14 * 24 * 60 * 60 * 1000, // 14 days
-    "subscription.google": 14 * 24 * 60 * 60 * 1000, // 14 days
-  },
-  typeValidators: {
-    progress: THistoryRecord,
-  },
-} as const;
+// const STORAGE_VERSION_TYPES: IVersionTypes<IAtomicType, IControlledType> = {
+//   atomicTypes: ATOMIC_TYPES,
+//   controlledTypes: CONTROLLED_TYPES,
+//   typeIdMapping: TYPE_ID_MAPPING,
+//   controlledFields: CONTROLLED_FIELDS,
+//   excludedFields: EXCLUDED_FIELDS,
+//   dictionaryFields: DICTIONARY_FIELDS,
+//   compactionThresholds: {
+//     "subscription.apple": 14 * 24 * 60 * 60 * 1000, // 14 days
+//     "subscription.google": 14 * 24 * 60 * 60 * 1000, // 14 days
+//   },
+//   typeValidators: {
+//     progress: THistoryRecord,
+//   },
+// } as const;
 
 //#endregion
 
@@ -4886,117 +4886,117 @@ export interface IWeightChange {
   current: boolean;
 }
 
-interface IProgramExerciseExample {
-  title: string;
-  description: string;
-  sets: IProgramSet[];
-  state: IProgramState;
-  finishDayExpr: string;
-  rules: {
-    sets: "keep" | "replace";
-    reps: "keep" | "keep_if_has_vars" | "replace";
-    weight: "keep" | "keep_if_has_vars" | "replace";
-  };
-}
+// interface IProgramExerciseExample {
+//   title: string;
+//   description: string;
+//   sets: IProgramSet[];
+//   state: IProgramState;
+//   finishDayExpr: string;
+//   rules: {
+//     sets: "keep" | "replace";
+//     reps: "keep" | "keep_if_has_vars" | "replace";
+//     weight: "keep" | "keep_if_has_vars" | "replace";
+//   };
+// }
 
-function ProgramExercise_hasUserPromptedVars(
-  programExercise: IPlannerProgramExercise,
-): boolean {
-  const stateMetadata =
-    PlannerProgramExercise_getStateMetadata(programExercise) || {};
-  return ObjectUtils_keys(stateMetadata).some(
-    (key) => stateMetadata[key]?.userPrompted,
-  );
-}
+// function ProgramExercise_hasUserPromptedVars(
+//   programExercise: IPlannerProgramExercise,
+// ): boolean {
+//   const stateMetadata =
+//     PlannerProgramExercise_getStateMetadata(programExercise) || {};
+//   return ObjectUtils_keys(stateMetadata).some(
+//     (key) => stateMetadata[key]?.userPrompted,
+//   );
+// }
+//
+// function ProgramExercise_getQuickAddSets(
+//   programExercise: IPlannerProgramExercise,
+// ): boolean {
+//   return PlannerProgramExercise_sets(programExercise).some(
+//     (set) => !!set.repRange?.isQuickAddSet,
+//   );
+// }
 
-function ProgramExercise_getQuickAddSets(
-  programExercise: IPlannerProgramExercise,
-): boolean {
-  return PlannerProgramExercise_sets(programExercise).some(
-    (set) => !!set.repRange?.isQuickAddSet,
-  );
-}
-
-function ProgramExercise_getEnableRpe(
-  programExercise: IPlannerProgramExercise,
-): boolean {
-  return PlannerProgramExercise_sets(programExercise).some(
-    (set) => set.rpe != null,
-  );
-}
+// function ProgramExercise_getEnableRpe(
+//   programExercise: IPlannerProgramExercise,
+// ): boolean {
+//   return PlannerProgramExercise_sets(programExercise).some(
+//     (set) => set.rpe != null,
+//   );
+// }
 
 function warmupSetToKey(set: IProgramExerciseWarmupSet): string {
   return `${set.reps}-${Weight_print(set.threshold)}-${Weight_printOrNumber(set.value)}`;
 }
 
-function ProgramExercise_groupWarmupsSets(
-  sets: IProgramExerciseWarmupSet[],
-): [IProgramExerciseWarmupSet, number][] {
-  let lastKey: string | undefined;
-  const groups: [IProgramExerciseWarmupSet, number][] = [];
-  for (const set of sets) {
-    const key = warmupSetToKey(set);
-    if (lastKey == null || lastKey !== key) {
-      groups.push([set, 0]);
-    }
-    groups[groups.length - 1][1] += 1;
-    lastKey = key;
-  }
-  return groups;
-}
+// function ProgramExercise_groupWarmupsSets(
+//   sets: IProgramExerciseWarmupSet[],
+// ): [IProgramExerciseWarmupSet, number][] {
+//   let lastKey: string | undefined;
+//   const groups: [IProgramExerciseWarmupSet, number][] = [];
+//   for (const set of sets) {
+//     const key = warmupSetToKey(set);
+//     if (lastKey == null || lastKey !== key) {
+//       groups.push([set, 0]);
+//     }
+//     groups[groups.length - 1][1] += 1;
+//     lastKey = key;
+//   }
+//   return groups;
+// }
+//
+// function ProgramExercise_approxTimeMs(
+//   programExercise: IPlannerProgramExercise,
+//   settings: ISettings,
+// ): number {
+//   return (
+//     PlannerProgramExercise_currentEvaluatedSetVariation(
+//       programExercise,
+//     )?.sets.reduce(
+//       (memo, set) => memo + ProgramSet_approxTimeMs(set, settings),
+//       0,
+//     ) || 0
+//   );
+// }
 
-function ProgramExercise_approxTimeMs(
-  programExercise: IPlannerProgramExercise,
-  settings: ISettings,
-): number {
-  return (
-    PlannerProgramExercise_currentEvaluatedSetVariation(
-      programExercise,
-    )?.sets.reduce(
-      (memo, set) => memo + ProgramSet_approxTimeMs(set, settings),
-      0,
-    ) || 0
-  );
-}
+// function ProgramExercise_doesUse1RM(
+//   programExercise: IPlannerProgramExercise,
+// ): boolean {
+//   const usesPercentageWeights = programExercise.evaluatedSetVariations.some(
+//     (v) => {
+//       return v.sets.some((set) => {
+//         return (
+//           Weight_isPct(set.weight) ||
+//           ProgramSet_isEligibleForInferredWeight(set)
+//         );
+//       });
+//     },
+//   );
+//   const usesRM1Var = ProgramExercise_isUsingVariable(programExercise, "rm1");
+//   return usesPercentageWeights || usesRM1Var;
+// }
 
-function ProgramExercise_doesUse1RM(
-  programExercise: IPlannerProgramExercise,
-): boolean {
-  const usesPercentageWeights = programExercise.evaluatedSetVariations.some(
-    (v) => {
-      return v.sets.some((set) => {
-        return (
-          Weight_isPct(set.weight) ||
-          ProgramSet_isEligibleForInferredWeight(set)
-        );
-      });
-    },
-  );
-  const usesRM1Var = ProgramExercise_isUsingVariable(programExercise, "rm1");
-  return usesPercentageWeights || usesRM1Var;
-}
+// function ProgramExercise_doesUseRPE(
+//   programExercise: IPlannerProgramExercise,
+// ): boolean {
+//   if (programExercise.globals.logRpe || programExercise.globals.rpe != null) {
+//     return true;
+//   }
+//   return programExercise.evaluatedSetVariations.some((v) => {
+//     return v.sets.some((set) => set.logRpe || set.rpe != null);
+//   });
+// }
 
-function ProgramExercise_doesUseRPE(
-  programExercise: IPlannerProgramExercise,
-): boolean {
-  if (programExercise.globals.logRpe || programExercise.globals.rpe != null) {
-    return true;
-  }
-  return programExercise.evaluatedSetVariations.some((v) => {
-    return v.sets.some((set) => set.logRpe || set.rpe != null);
-  });
-}
-
-function ProgramExercise_isUsingVariable(
-  programExercise: IPlannerProgramExercise,
-  name: string,
-): boolean {
-  const expressions = CollectionUtils_compact([
-    PlannerProgramExercise_getProgressScript(programExercise),
-    PlannerProgramExercise_getUpdateScript(programExercise),
-  ]);
-  return expressions.some((e) => ScriptRunner.hasKeyword(e, name));
-}
+// function ProgramExercise_isUsingVariable(
+//   programExercise: IPlannerProgramExercise,
+//   name: string,
+// ): boolean {
+//   const expressions = CollectionUtils_compact([
+//     PlannerProgramExercise_getProgressScript(programExercise),
+//     PlannerProgramExercise_getUpdateScript(programExercise),
+//   ]);
+//   return expressions.some((e) => ScriptRunner.hasKeyword(e, name));
+// }
 
 export function ProgramExercise_weightChanges(
   program: IEvaluatedProgram,
@@ -5306,22 +5306,22 @@ function operation(
 
 //#region Planner Key
 
-function PlannerKey_fromPlannerExercise(
-  plannerExercise: IPlannerProgramExercise,
-  settings: ISettings,
-): string {
-  if (plannerExercise.exerciseType) {
-    return PlannerKey_fromExerciseType(
-      plannerExercise.exerciseType,
-      plannerExercise.label,
-    );
-  } else {
-    return PlannerKey_fromFullName(
-      plannerExercise.fullName,
-      settings.exercises,
-    );
-  }
-}
+// function PlannerKey_fromPlannerExercise(
+//   plannerExercise: IPlannerProgramExercise,
+//   settings: ISettings,
+// ): string {
+//   if (plannerExercise.exerciseType) {
+//     return PlannerKey_fromExerciseType(
+//       plannerExercise.exerciseType,
+//       plannerExercise.label,
+//     );
+//   } else {
+//     return PlannerKey_fromFullName(
+//       plannerExercise.fullName,
+//       settings.exercises,
+//     );
+//   }
+// }
 
 function PlannerKey_fromExerciseType(
   exerciseType: IExerciseType,
@@ -5367,40 +5367,40 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
 
 //#region Stats
 
-function Stats_name(key: IStatsKey): string {
-  switch (key) {
-    case "bicepLeft":
-      return "Left Bicep";
-    case "bicepRight":
-      return "Right Bicep";
-    case "calfLeft":
-      return "Left Calf";
-    case "calfRight":
-      return "Right Calf";
-    case "chest":
-      return "Chest";
-    case "forearmLeft":
-      return "Left Forearm";
-    case "forearmRight":
-      return "Right Forearm";
-    case "hips":
-      return "Hips";
-    case "neck":
-      return "Neck";
-    case "shoulders":
-      return "Shoulders";
-    case "thighLeft":
-      return "Left Thigh";
-    case "thighRight":
-      return "Right Thigh";
-    case "waist":
-      return "Waist";
-    case "weight":
-      return "Bodyweight";
-    case "bodyfat":
-      return "Bodyfat";
-  }
-}
+// function Stats_name(key: IStatsKey): string {
+//   switch (key) {
+//     case "bicepLeft":
+//       return "Left Bicep";
+//     case "bicepRight":
+//       return "Right Bicep";
+//     case "calfLeft":
+//       return "Left Calf";
+//     case "calfRight":
+//       return "Right Calf";
+//     case "chest":
+//       return "Chest";
+//     case "forearmLeft":
+//       return "Left Forearm";
+//     case "forearmRight":
+//       return "Right Forearm";
+//     case "hips":
+//       return "Hips";
+//     case "neck":
+//       return "Neck";
+//     case "shoulders":
+//       return "Shoulders";
+//     case "thighLeft":
+//       return "Left Thigh";
+//     case "thighRight":
+//       return "Right Thigh";
+//     case "waist":
+//       return "Waist";
+//     case "weight":
+//       return "Bodyweight";
+//     case "bodyfat":
+//       return "Bodyfat";
+//   }
+// }
 
 function Stats_getCurrentBodyweight(stats: IStats): IWeight | undefined {
   const weights = CollectionUtils_sortBy(
@@ -5436,14 +5436,14 @@ function Stats_getCurrentMovingAverageBodyweight(
   return Weight_divide(totalWeight, recentWeights.length);
 }
 
-function Stats_getCurrentBodyfat(stats: IStats): IPercentage | undefined {
-  const weights = CollectionUtils_sortBy(
-    stats.percentage.bodyfat || [],
-    "timestamp",
-    true,
-  );
-  return weights[0]?.value;
-}
+// function Stats_getCurrentBodyfat(stats: IStats): IPercentage | undefined {
+//   const weights = CollectionUtils_sortBy(
+//     stats.percentage.bodyfat || [],
+//     "timestamp",
+//     true,
+//   );
+//   return weights[0]?.value;
+// }
 
 export function Stats_getEmpty(): IStats {
   return {
@@ -5452,21 +5452,21 @@ export function Stats_getEmpty(): IStats {
     length: {},
   };
 }
-
-function Stats_isEmpty(stats: IStats): boolean {
-  const statsKeys: IStatsKey[] = [
-    ...ObjectUtils_keys(stats.weight).filter(
-      (k) => (stats.weight[k] || []).length > 0,
-    ),
-    ...ObjectUtils_keys(stats.percentage).filter(
-      (k) => (stats.percentage[k] || []).length > 0,
-    ),
-    ...ObjectUtils_keys(stats.length).filter(
-      (k) => (stats.length[k] || []).length > 0,
-    ),
-  ];
-  return statsKeys.length === 0;
-}
+//
+// function Stats_isEmpty(stats: IStats): boolean {
+//   const statsKeys: IStatsKey[] = [
+//     ...ObjectUtils_keys(stats.weight).filter(
+//       (k) => (stats.weight[k] || []).length > 0,
+//     ),
+//     ...ObjectUtils_keys(stats.percentage).filter(
+//       (k) => (stats.percentage[k] || []).length > 0,
+//     ),
+//     ...ObjectUtils_keys(stats.length).filter(
+//       (k) => (stats.length[k] || []).length > 0,
+//     ),
+//   ];
+//   return statsKeys.length === 0;
+// }
 
 //#endregion
 
