@@ -8,6 +8,7 @@ import {
 import { UidFactory_generateUid } from "@/utils/generator";
 import { MathUtils_applyOp } from "@/utils/math";
 import type { IEither, IArrayElement } from "@/utils/types";
+import type { SyntaxNode } from "@lezer/common";
 
 //#region Program
 
@@ -5291,7 +5292,345 @@ export function Stats_getEmpty(): IStats {
 
 //#endregion
 
-//#region ________
+//#region Pages Planner Model Types
+interface IPlannerProgramExerciseDescription {
+  value: string;
+  isCurrent: boolean;
+}
+
+interface IPlannerProgramExerciseGlobals {
+  logRpe?: boolean;
+  rpe?: number;
+  timer?: number;
+  percentage?: number;
+  weight?: IWeight;
+  askWeight?: boolean;
+}
+
+type IPlannerProgramExerciseWithType = IPlannerProgramExercise &
+  Required<Pick<IPlannerProgramExercise, "exerciseType">>;
+
+type IPlannerProgramExercise = {
+  id: string;
+  key: string;
+  fullName: string;
+  shortName: string;
+  dayData: Required<IDayData>;
+  exerciseType?: IExerciseType;
+  label?: string;
+  exerciseIndex: number;
+  repeat: number[];
+  repeating: number[];
+  order: number;
+  isRepeat?: boolean;
+  text: string;
+  tags: number[];
+  equipment?: string;
+  name: string;
+  line: number;
+  reuse?: IPlannerProgramReuse;
+  superset?: IPlannerProgramExerciseSuperset;
+  notused?: boolean;
+  evaluatedSetVariations: IPlannerProgramExerciseEvaluatedSetVariation[];
+  setVariations: IPlannerProgramExerciseSetVariation[];
+  warmupSets?: IPlannerProgramExerciseWarmupSet[];
+  descriptions: IProgramExerciseDescriptions;
+  globals: IPlannerProgramExerciseGlobals;
+  progress?: IProgramExerciseProgress;
+  update?: IProgramExerciseUpdate;
+  points: {
+    fullName: IPlannerSyntaxPointer;
+    supersetPoint?: IPlannerSyntaxPointer;
+    reuseSetPoint?: IPlannerSyntaxPointer;
+    progressPoint?: IPlannerSyntaxPointer;
+    updatePoint?: IPlannerSyntaxPointer;
+    idPoint?: IPlannerSyntaxPointer;
+    warmupPoint?: IPlannerSyntaxPointer;
+  };
+};
+
+interface IPlannerProgramExerciseSetVariation {
+  sets: IPlannerProgramExerciseSet[];
+  isCurrent: boolean;
+}
+
+interface IPlannerProgramExerciseEvaluatedSetVariation {
+  sets: IPlannerProgramExerciseEvaluatedSet[];
+  isCurrent: boolean;
+}
+
+interface IPlannerProgramExerciseEvaluatedSet {
+  maxrep?: number;
+  weight?: IWeight | IPercentage;
+  minrep?: number;
+  timer?: number;
+  rpe?: number;
+  logRpe: boolean;
+  label?: string;
+  isAmrap: boolean;
+  isQuickAddSet: boolean;
+  askWeight: boolean;
+}
+
+interface IPlannerProgramExerciseSet {
+  repRange?: IPlannerProgramExerciseRepRange;
+  timer?: number;
+  rpe?: number;
+  logRpe?: boolean;
+  percentage?: number;
+  weight?: IWeight;
+  label?: string;
+  askWeight?: boolean;
+}
+
+interface IPlannerProgramExerciseWarmupSet {
+  type: "warmup";
+  numberOfSets: number;
+  reps: number;
+  percentage?: number;
+  weight?: IWeight;
+}
+
+interface IPlannerProgramExerciseSuperset {
+  name: string;
+}
+
+type IPlannerProgramReuseSource = "specific" | "overall";
+
+interface IPlannerProgramReuse {
+  fullName: string;
+  source: IPlannerProgramReuseSource;
+  week?: number;
+  day?: number;
+  exercise?: IPlannerProgramExercise;
+}
+
+type IProgramExerciseProgressType = "custom" | "lp" | "dp" | "sum" | "none";
+type IProgramExerciseUpdateType = "custom" | "lp" | "dp" | "sum";
+
+interface IProgramExerciseDescriptions {
+  values: IPlannerProgramExerciseDescription[];
+  reuse?: IPlannerProgramReuse;
+}
+
+interface IProgramExerciseProgress {
+  type: IProgramExerciseProgressType;
+  state: IProgramState;
+  stateMetadata: IProgramStateMetadata;
+  script?: string;
+  reuse?: IPlannerProgramReuse;
+  liftoscriptNode?: SyntaxNode;
+}
+
+interface IProgramExerciseUpdate {
+  type: IProgramExerciseUpdateType;
+  script?: string;
+  reuse?: IPlannerProgramReuse;
+  liftoscriptNode?: SyntaxNode;
+  meta?: {
+    stateKeys?: Set<string>;
+  };
+}
+
+interface IPlannerProgramProperty {
+  name: string;
+  fnName: string;
+  fnArgs: string[];
+  script?: string;
+  body?: string;
+  reuse?: IPlannerProgramProperty;
+  liftoscriptNode?: SyntaxNode;
+  exerciseType?: IExerciseType;
+  exerciseLabel?: string;
+  exerciseKey?: string;
+  label?: string;
+  meta?: {
+    stateKeys?: Set<string>;
+  };
+}
+
+interface IPlannerProgramExerciseRepRange {
+  numberOfSets: number;
+  maxrep?: number;
+  minrep?: number;
+  isAmrap: boolean;
+  isQuickAddSet: boolean;
+}
+//
+// interface IPlannerUiFocusedDay {
+//   weekIndex: number;
+//   dayInWeekIndex: number;
+// }
+//
+// interface IPlannerUiFocusedExercise {
+//   weekIndex: number;
+//   dayIndex: number;
+//   exerciseLine: number;
+// }
+
+// type IPlannerUiMode = "full" | "perday";
+//
+// interface IModalExerciseUi {
+//   focusedExercise: IPlannerUiFocusedExercise;
+//   types: IExerciseKind[];
+//   muscleGroups: IScreenMuscle[];
+//   exerciseType?: IExerciseType;
+//   exerciseKey?: string;
+//   fullName?: string;
+//   customExerciseName?: string;
+//   change?: "all" | "one" | "duplicate";
+// }
+//
+// interface IExercisePickerUi {
+//   state: IExercisePickerState;
+//   dayData: IShortDayData;
+//   exerciseKey?: string;
+//   change: "all" | "one" | "duplicate";
+// }
+
+// interface IPlannerUi {
+//   focusedExercise?: IPlannerUiFocusedExercise;
+//   modalExercise?: IModalExerciseUi;
+//   exercisePicker?: IExercisePickerUi;
+//   exerciseUi: {
+//     edit: Set<string>;
+//     collapsed: Set<string>;
+//   };
+//   dayUi: {
+//     collapsed: Set<string>;
+//   };
+//   weekUi: {
+//     collapsed: Set<string>;
+//   };
+//   editExerciseModal?: {
+//     plannerExercise: IPlannerProgramExercise;
+//   };
+//   previewExerciseModal?: {
+//     plannerExercise: IPlannerProgramExercise;
+//     day: number;
+//   };
+//   previewOneRepMaxModal?: {
+//     plannerExercise: IPlannerProgramExercise;
+//   };
+//   previewEquipmentModal?: {
+//     plannerExercise: IPlannerProgramExercise;
+//   };
+//   weekIndex: number;
+//   showPictureExport?: boolean;
+//   showWeekStats?: number;
+//   showDayStats?: number;
+//   showExerciseStats?: boolean;
+//   showEditMuscleGroups?: boolean;
+//   showMuscleGroupsOverride?: IExerciseType;
+//   showPreview?: boolean;
+//   fullTextError?: PlannerSyntaxError;
+//   focusedDay?: IDayData & { key?: string };
+//   showSettingsModal?: boolean;
+//   tabIndex?: number;
+//   mode?: "reorder" | "ui" | "perday" | "full";
+// }
+//
+// interface IPlannerExerciseUiEditSetBottomSheet {
+//   exerciseKey: string;
+//   dayInWeekIndex: number;
+//   setVariationIndex: number;
+//   setIndex: number;
+// }
+
+// interface IPlannerExerciseUi {
+//   modalExercise?: IModalExerciseUi;
+//   exercisePickerState?: IExercisePickerState;
+//   isProgressEnabled?: boolean;
+//   isUpdateEnabled?: boolean;
+//   showAddStateVariableModal?: boolean;
+//   showEditProgressScriptModal?: boolean;
+//   showEditUpdateScriptModal?: boolean;
+//   weekIndex: number;
+//   editSetBottomSheet?: IPlannerExerciseUiEditSetBottomSheet;
+//   modeTabIndex?: number;
+//   acrossWeeksTabIndex?: number;
+//   pendingNewKey?: string;
+//   fromWorkout?: boolean;
+// }
+
+// interface IPlannerFullText {
+//   text: string;
+//   currentLine?: number;
+// }
+
+// interface IPlannerState extends IUndoRedoState<{ program: IProgram }> {
+//   id: string;
+//   ui: IPlannerUi;
+//   fulltext?: IPlannerFullText;
+//   deviceId?: string;
+//   initialEncodedProgram?: string;
+//   encodedProgram?: string;
+// }
+//
+// interface IPlannerExerciseState extends IUndoRedoState<{ program: IProgram }> {
+//   ui: IPlannerExerciseUi;
+// }
+//
+// interface IReuseCandidate {
+//   exercise: IPlannerProgramExercise;
+//   weekAndDays: Record<number, Set<number>>;
+// }
+//
+// interface IExportedPlannerProgram {
+//   type: "v2";
+//   version: string;
+//   id: string;
+//   program: IPlannerProgram;
+//   plannerSettings?: IPlannerSettings;
+//   settings: IPlannerMainSettings;
+// }
+
+interface IPlannerMainSettings {
+  exercises: IAllCustomExercises;
+  timer: number;
+}
+
+type IMuscleGroupSetSplit = { [key in IScreenMuscle]: ISetSplit };
+
+// interface ISetResults {
+//   volume: IWeight;
+//   total: number;
+//   strength: number;
+//   hypertrophy: number;
+//   upper: ISetSplit;
+//   lower: ISetSplit;
+//   core: ISetSplit;
+//   push: ISetSplit;
+//   pull: ISetSplit;
+//   legs: ISetSplit;
+//   muscleGroup: IMuscleGroupSetSplit;
+// }
+
+interface ISetSplit {
+  strength: number;
+  hypertrophy: number;
+  exercises: {
+    dayIndex: number;
+    exerciseName: string;
+    isSynergist: boolean;
+    strengthSets: number;
+    hypertrophySets: number;
+  }[];
+  frequency: Partial<Record<number, true>>;
+}
+
+// function focusedToStr(focused: IPlannerUiFocusedExercise): string {
+//   return JSON.stringify(focused);
+// }
+//
+// function focusedDayToStr(focused: IPlannerUiFocusedDay): string {
+//   return JSON.stringify(focused);
+// }
+//
+// function strToFocused(str: string): IPlannerUiFocusedExercise {
+//   return JSON.parse(str);
+// }
+
 //#endregion
 
 //#region ________
