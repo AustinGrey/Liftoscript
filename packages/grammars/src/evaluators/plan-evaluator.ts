@@ -5,7 +5,6 @@ import { unsafeCoerce } from "fp-ts/lib/function";
 import {
   CollectionUtils_compact,
   CollectionUtils_sortBy,
-  CollectionUtils_groupByExpr,
   CollectionUtils_findIndexReverse,
   CollectionUtils_sort,
 } from "../utils/collection";
@@ -17,6 +16,7 @@ import {
   MathUtils_round,
   MathUtils_roundFloat,
   MathUtils_roundTo000005,
+  MathUtils_roundTo0005,
 } from "@/utils/math";
 import type { IEither, IArrayElement } from "@/utils/types";
 import {
@@ -32,7 +32,11 @@ import {
 import { StringUtils_unindent } from "@/utils/string";
 import type { ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/parsers/workout-plan.ts";
-import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
+import {
+  LiftoscriptEvaluator,
+  LiftoscriptSyntaxError,
+} from "@/evaluators/logic-evaluator.ts";
+import type { IAssignmentOp } from "@/logic/types";
 
 //#region Program
 
@@ -1226,18 +1230,18 @@ export function Program_applyEvaluatedProgram(
   return newProgram;
 }
 
-// function Program_getProgramExercise(
-//   day: number,
-//   program?: IEvaluatedProgram,
-//   key?: string,
-// ): IPlannerProgramExercise | undefined {
-//   if (key == null || program == null) {
-//     return undefined;
-//   }
-//   const programDay = Program_getProgramDay(program, day);
-//   return programDay?.exercises.find((e) => e.key === key);
-// }
-//
+function Program_getProgramExercise(
+  day: number,
+  program?: IEvaluatedProgram,
+  key?: string,
+): IPlannerProgramExercise | undefined {
+  if (key == null || program == null) {
+    return undefined;
+  }
+  const programDay = Program_getProgramDay(program, day);
+  return programDay?.exercises.find((e) => e.key === key);
+}
+
 // function Program_getFirstProgramExercise(
 //   program?: IEvaluatedProgram,
 //   key?: string,
@@ -3412,10 +3416,10 @@ const TGraphMuscleGroupSelectedType = t.keyof(
 // type IVolumeSelectedType = "sets" | "volume";
 
 const TEquipment = t.string;
-// type IEquipment = t.TypeOf<typeof TEquipment>;
+type IEquipment = t.TypeOf<typeof TEquipment>;
 
 const TExerciseId = t.string;
-// type IExerciseId = t.TypeOf<typeof TExerciseId>;
+type IExerciseId = t.TypeOf<typeof TExerciseId>;
 
 const TMetaExercises = t.intersection(
   [
@@ -3491,14 +3495,14 @@ const TWeight = t.type(
 );
 export type IWeight = t.TypeOf<typeof TWeight>;
 
-// const TPlate = t.type(
-//   {
-//     weight: TWeight,
-//     num: t.number,
-//   },
-//   "TPlate",
-// );
-// type IPlate = t.TypeOf<typeof TPlate>;
+const TPlate = t.type(
+  {
+    weight: TWeight,
+    num: t.number,
+  },
+  "TPlate",
+);
+type IPlate = t.TypeOf<typeof TPlate>;
 
 // const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
 //
@@ -3655,9 +3659,9 @@ const TProgramExerciseWarmupSet = t.type(
   },
   "TProgramExerciseWarmupSet",
 );
-// type IProgramExerciseWarmupSet = Readonly<
-//   t.TypeOf<typeof TProgramExerciseWarmupSet>
-// >;
+type IProgramExerciseWarmupSet = Readonly<
+  t.TypeOf<typeof TProgramExerciseWarmupSet>
+>;
 
 const TProgramExerciseReuseLogic = t.type(
   {
@@ -4033,7 +4037,7 @@ const TPlannerProgramDay = t.intersection(
   ],
   "TPlannerProgramDay",
 );
-// type IPlannerProgramDay = t.TypeOf<typeof TPlannerProgramDay>;
+type IPlannerProgramDay = t.TypeOf<typeof TPlannerProgramDay>;
 
 const TPlannerProgramWeek = t.intersection(
   [
@@ -4386,7 +4390,7 @@ const TGym = t.type(
   },
   "TGym",
 );
-// type IGym = t.TypeOf<typeof TGym>;
+type IGym = t.TypeOf<typeof TGym>;
 
 const targetTypes = ["target", "lasttime", "platescalculator", "e1rm"] as const;
 const TTargetType = t.keyof(
@@ -5153,22 +5157,22 @@ function operation(
 
 //#region Planner Key
 
-// function PlannerKey_fromPlannerExercise(
-//   plannerExercise: IPlannerProgramExercise,
-//   settings: ISettings,
-// ): string {
-//   if (plannerExercise.exerciseType) {
-//     return PlannerKey_fromExerciseType(
-//       plannerExercise.exerciseType,
-//       plannerExercise.label,
-//     );
-//   } else {
-//     return PlannerKey_fromFullName(
-//       plannerExercise.fullName,
-//       settings.exercises,
-//     );
-//   }
-// }
+function PlannerKey_fromPlannerExercise(
+  plannerExercise: IPlannerProgramExercise,
+  settings: ISettings,
+): string {
+  if (plannerExercise.exerciseType) {
+    return PlannerKey_fromExerciseType(
+      plannerExercise.exerciseType,
+      plannerExercise.label,
+    );
+  } else {
+    return PlannerKey_fromFullName(
+      plannerExercise.fullName,
+      settings.exercises,
+    );
+  }
+}
 
 function PlannerKey_fromExerciseType(
   exerciseType: IExerciseType,
@@ -8418,43 +8422,43 @@ const PlannerEvaluator_evaluate = memoize(PlannerEvaluator_forceEvaluate, {
 //#endregion
 
 //#region Planner Program Exercise
-type ILinearProgressionType = {
-  type: "linear";
-  increase: IWeight | IPercentage;
-  successesRequired?: number;
-  successesCounter?: number;
-  decrease?: IWeight | IPercentage;
-  failuresRequired?: number;
-  failuresCounter?: number;
-};
-type IDoubleProgressionType = {
-  type: "double";
-  increase: IWeight | IPercentage;
-  minReps: number;
-  maxReps: number;
-};
-type ISumRepsProgressionType = {
-  type: "sumreps";
-  increase: IWeight | IPercentage;
-  reps: number;
-};
-type ICustomProgressionType = {
-  type: "custom";
-};
-type IProgressionType =
-  | ILinearProgressionType
-  | IDoubleProgressionType
-  | ISumRepsProgressionType
-  | ICustomProgressionType;
-
-function PlannerProgramExercise_numberOfSets(
-  exercise: IPlannerProgramExercise,
-): number {
-  return PlannerProgramExercise_sets(exercise).reduce(
-    (acc, set) => acc + (set.repRange?.numberOfSets || 0),
-    0,
-  );
-}
+// type ILinearProgressionType = {
+//   type: "linear";
+//   increase: IWeight | IPercentage;
+//   successesRequired?: number;
+//   successesCounter?: number;
+//   decrease?: IWeight | IPercentage;
+//   failuresRequired?: number;
+//   failuresCounter?: number;
+// };
+// type IDoubleProgressionType = {
+//   type: "double";
+//   increase: IWeight | IPercentage;
+//   minReps: number;
+//   maxReps: number;
+// };
+// type ISumRepsProgressionType = {
+//   type: "sumreps";
+//   increase: IWeight | IPercentage;
+//   reps: number;
+// };
+// type ICustomProgressionType = {
+//   type: "custom";
+// };
+// type IProgressionType =
+//   | ILinearProgressionType
+//   | IDoubleProgressionType
+//   | ISumRepsProgressionType
+//   | ICustomProgressionType;
+//
+// function PlannerProgramExercise_numberOfSets(
+//   exercise: IPlannerProgramExercise,
+// ): number {
+//   return PlannerProgramExercise_sets(exercise).reduce(
+//     (acc, set) => acc + (set.repRange?.numberOfSets || 0),
+//     0,
+//   );
+// }
 
 function PlannerProgramExercise_getExercise(
   plannerExercise: IPlannerProgramExercise,
@@ -8524,15 +8528,15 @@ function PlannerProgramExercise_programWarmups(
   return sets;
 }
 
-function PlannerProgramExercise_toUsed(
-  exercise?: IPlannerProgramExercise,
-): IPlannerProgramExerciseWithType | undefined {
-  if (exercise?.exerciseType != null) {
-    return exercise as IPlannerProgramExerciseWithType;
-  } else {
-    return undefined;
-  }
-}
+// function PlannerProgramExercise_toUsed(
+//   exercise?: IPlannerProgramExercise,
+// ): IPlannerProgramExerciseWithType | undefined {
+//   if (exercise?.exerciseType != null) {
+//     return exercise as IPlannerProgramExerciseWithType;
+//   } else {
+//     return undefined;
+//   }
+// }
 
 function PlannerProgramExercise_evaluateSetVariations(
   exercise: IPlannerProgramExercise,
@@ -8627,165 +8631,165 @@ function PlannerProgramExercise_sets(
   });
 }
 
-function PlannerProgramExercise_defaultWarmups(
-  exercise: IExercise,
-  settings: ISettings,
-): IPlannerProgramExerciseWarmupSet[] {
-  const warmupSets =
-    (exercise?.defaultWarmup &&
-      warmupValues(settings.units)[exercise.defaultWarmup]) ||
-    [];
-  const result: IPlannerProgramExerciseWarmupSet[] = [];
-  if (warmupSets) {
-    const groups = ProgramExercise_groupWarmupsSets(warmupSets);
-    for (const group of groups) {
-      const first = group[0];
-      const length = group[1];
-      result.push({
-        type: "warmup",
-        numberOfSets: length,
-        reps: first.reps,
-        percentage:
-          typeof first.value === "number"
-            ? first.value * 100
-            : first.value.value,
-      });
-    }
-  }
-  return result;
-}
+// function PlannerProgramExercise_defaultWarmups(
+//   exercise: IExercise,
+//   settings: ISettings,
+// ): IPlannerProgramExerciseWarmupSet[] {
+//   const warmupSets =
+//     (exercise?.defaultWarmup &&
+//       warmupValues(settings.units)[exercise.defaultWarmup]) ||
+//     [];
+//   const result: IPlannerProgramExerciseWarmupSet[] = [];
+//   if (warmupSets) {
+//     const groups = ProgramExercise_groupWarmupsSets(warmupSets);
+//     for (const group of groups) {
+//       const first = group[0];
+//       const length = group[1];
+//       result.push({
+//         type: "warmup",
+//         numberOfSets: length,
+//         reps: first.reps,
+//         percentage:
+//           typeof first.value === "number"
+//             ? first.value * 100
+//             : first.value.value,
+//       });
+//     }
+//   }
+//   return result;
+// }
 
-function PlannerProgramExercise_repeatToRangeStr(
-  plannerExercise: IPlannerProgramExercise,
-): string {
-  const repeat = plannerExercise.repeating;
-  const ranges: [number, number][] = [];
-  for (const rep of repeat) {
-    if (ranges.length === 0) {
-      ranges.push([rep, rep]);
-    }
-    const lastRep = ranges[ranges.length - 1][1];
-    if (rep <= lastRep + 1) {
-      ranges[ranges.length - 1][1] = rep;
-    } else {
-      ranges.push([rep, rep]);
-    }
-  }
-  return ranges.map((r) => `${r[0]}-${r[1]}`).join(", ");
-}
+// function PlannerProgramExercise_repeatToRangeStr(
+//   plannerExercise: IPlannerProgramExercise,
+// ): string {
+//   const repeat = plannerExercise.repeating;
+//   const ranges: [number, number][] = [];
+//   for (const rep of repeat) {
+//     if (ranges.length === 0) {
+//       ranges.push([rep, rep]);
+//     }
+//     const lastRep = ranges[ranges.length - 1][1];
+//     if (rep <= lastRep + 1) {
+//       ranges[ranges.length - 1][1] = rep;
+//     } else {
+//       ranges.push([rep, rep]);
+//     }
+//   }
+//   return ranges.map((r) => `${r[0]}-${r[1]}`).join(", ");
+// }
 
-function PlannerProgramExercise_warmupSetsToDisplaySets(
-  sets: IPlannerProgramExerciseWarmupSet[],
-): IDisplaySet[][] {
-  const displaySets: IDisplaySet[] = [];
-  for (const set of sets) {
-    for (let setIndex = 0; setIndex < (set.numberOfSets || 0); setIndex++) {
-      const weight =
-        set.percentage != null
-          ? `${set.percentage}%`
-          : set.weight?.value != null
-            ? set.weight.value.toString()
-            : `${Math.round(Weight_rpeMultiplier(set.reps, 10) * 100)}%`;
-      displaySets.push({
-        reps: `${set.reps}`,
-        weight: weight,
-      });
-    }
-  }
+// function PlannerProgramExercise_warmupSetsToDisplaySets(
+//   sets: IPlannerProgramExerciseWarmupSet[],
+// ): IDisplaySet[][] {
+//   const displaySets: IDisplaySet[] = [];
+//   for (const set of sets) {
+//     for (let setIndex = 0; setIndex < (set.numberOfSets || 0); setIndex++) {
+//       const weight =
+//         set.percentage != null
+//           ? `${set.percentage}%`
+//           : set.weight?.value != null
+//             ? set.weight.value.toString()
+//             : `${Math.round(Weight_rpeMultiplier(set.reps, 10) * 100)}%`;
+//       displaySets.push({
+//         reps: `${set.reps}`,
+//         weight: weight,
+//       });
+//     }
+//   }
+//
+//   return groupDisplaySets(displaySets);
+// }
 
-  return groupDisplaySets(displaySets);
-}
+// function PlannerProgramExercise_uniqueKey(
+//   exercise: IPlannerProgramExercise,
+// ): string {
+//   return `${exercise.key}-${exercise.dayData.week}-${exercise.dayData.dayInWeek}`;
+// }
+//
+// function PlannerProgramExercise_uniqueSetKey(
+//   set: IPlannerProgramExerciseEvaluatedSet,
+// ): string {
+//   return `${set.minrep}-${set.maxrep}-${set.isAmrap}-${set.weight?.value}${set.weight?.unit}${set.askWeight}-${set.rpe}${set.logRpe}-${set.timer}`;
+// }
+//
+// function PlannerProgramExercise_evaluatedSetsToDisplaySets(
+//   sets: IPlannerProgramExerciseEvaluatedSet[],
+//   settings: ISettings,
+// ): IDisplaySet[][] {
+//   const displaySets: IDisplaySet[] = [];
+//   for (const set of sets) {
+//     const weight = set.weight ? Weight_display(set.weight, false) : undefined;
+//     const unit = set.weight?.unit || settings.units;
+//     displaySets.push({
+//       dimReps: false,
+//       dimRpe: !set.logRpe,
+//       dimWeight: !set.weight,
+//       dimTimer: set.timer == null,
+//       reps: `${set.minrep != null ? `${set.minrep}-${set.maxrep}` : `${set.maxrep}`}${set.isAmrap ? "+" : ""}`,
+//       rpe: set.rpe?.toString(),
+//       weight,
+//       unit,
+//       askWeight: set.askWeight,
+//       timer: set.timer,
+//     });
+//   }
+//   return groupDisplaySets(displaySets);
+// }
 
-function PlannerProgramExercise_uniqueKey(
-  exercise: IPlannerProgramExercise,
-): string {
-  return `${exercise.key}-${exercise.dayData.week}-${exercise.dayData.dayInWeek}`;
-}
+// function PlannerProgramExercise_setsToDisplaySets(
+//   sets: IPlannerProgramExerciseSet[],
+//   hasCurrentSets: boolean,
+//   globals: IPlannerProgramExerciseGlobals,
+//   settings: ISettings,
+// ): IDisplaySet[][] {
+//   const displaySets: IDisplaySet[] = [];
+//   for (const set of sets) {
+//     for (
+//       let setIndex = 0;
+//       setIndex < (set.repRange?.numberOfSets || 0);
+//       setIndex++
+//     ) {
+//       const minReps = set.repRange?.minrep;
+//       const maxReps = set.repRange?.maxrep || 0;
+//       const weight =
+//         set.percentage != null
+//           ? `${set.percentage}%`
+//           : set.weight?.value != null
+//             ? set.weight.value.toString()
+//             : undefined;
+//       const unit =
+//         set.percentage == null ? set.weight?.unit || settings.units : undefined;
+//       displaySets.push({
+//         dimReps: !hasCurrentSets,
+//         dimRpe: !hasCurrentSets && globals.rpe == null,
+//         dimWeight:
+//           !hasCurrentSets &&
+//           globals.weight == null &&
+//           globals.percentage == null,
+//         dimTimer: !hasCurrentSets && globals.timer == null,
+//         reps: `${minReps != null ? `${minReps}-` : ""}${maxReps}${set.repRange?.isAmrap ? "+" : ""}`,
+//         rpe: set.rpe?.toString(),
+//         weight: weight,
+//         unit,
+//         askWeight: set.askWeight,
+//         timer: set.timer,
+//       });
+//     }
+//   }
+//
+//   return groupDisplaySets(displaySets);
+// }
 
-function PlannerProgramExercise_uniqueSetKey(
-  set: IPlannerProgramExerciseEvaluatedSet,
-): string {
-  return `${set.minrep}-${set.maxrep}-${set.isAmrap}-${set.weight?.value}${set.weight?.unit}${set.askWeight}-${set.rpe}${set.logRpe}-${set.timer}`;
-}
-
-function PlannerProgramExercise_evaluatedSetsToDisplaySets(
-  sets: IPlannerProgramExerciseEvaluatedSet[],
-  settings: ISettings,
-): IDisplaySet[][] {
-  const displaySets: IDisplaySet[] = [];
-  for (const set of sets) {
-    const weight = set.weight ? Weight_display(set.weight, false) : undefined;
-    const unit = set.weight?.unit || settings.units;
-    displaySets.push({
-      dimReps: false,
-      dimRpe: !set.logRpe,
-      dimWeight: !set.weight,
-      dimTimer: set.timer == null,
-      reps: `${set.minrep != null ? `${set.minrep}-${set.maxrep}` : `${set.maxrep}`}${set.isAmrap ? "+" : ""}`,
-      rpe: set.rpe?.toString(),
-      weight,
-      unit,
-      askWeight: set.askWeight,
-      timer: set.timer,
-    });
-  }
-  return groupDisplaySets(displaySets);
-}
-
-function PlannerProgramExercise_setsToDisplaySets(
-  sets: IPlannerProgramExerciseSet[],
-  hasCurrentSets: boolean,
-  globals: IPlannerProgramExerciseGlobals,
-  settings: ISettings,
-): IDisplaySet[][] {
-  const displaySets: IDisplaySet[] = [];
-  for (const set of sets) {
-    for (
-      let setIndex = 0;
-      setIndex < (set.repRange?.numberOfSets || 0);
-      setIndex++
-    ) {
-      const minReps = set.repRange?.minrep;
-      const maxReps = set.repRange?.maxrep || 0;
-      const weight =
-        set.percentage != null
-          ? `${set.percentage}%`
-          : set.weight?.value != null
-            ? set.weight.value.toString()
-            : undefined;
-      const unit =
-        set.percentage == null ? set.weight?.unit || settings.units : undefined;
-      displaySets.push({
-        dimReps: !hasCurrentSets,
-        dimRpe: !hasCurrentSets && globals.rpe == null,
-        dimWeight:
-          !hasCurrentSets &&
-          globals.weight == null &&
-          globals.percentage == null,
-        dimTimer: !hasCurrentSets && globals.timer == null,
-        reps: `${minReps != null ? `${minReps}-` : ""}${maxReps}${set.repRange?.isAmrap ? "+" : ""}`,
-        rpe: set.rpe?.toString(),
-        weight: weight,
-        unit,
-        askWeight: set.askWeight,
-        timer: set.timer,
-      });
-    }
-  }
-
-  return groupDisplaySets(displaySets);
-}
-
-function PlannerProgramExercise_degroupWarmupSets(
-  warmupSets: IPlannerProgramExerciseWarmupSet[],
-): IPlannerProgramExerciseWarmupSet[] {
-  return warmupSets.reduce<IPlannerProgramExerciseWarmupSet[]>((acc, set) => {
-    for (let i = 0; i < set.numberOfSets; i++) {
-      acc.push({ ...set, numberOfSets: 1 });
-    }
-    return acc;
-  }, []);
-}
+// function PlannerProgramExercise_degroupWarmupSets(
+//   warmupSets: IPlannerProgramExerciseWarmupSet[],
+// ): IPlannerProgramExerciseWarmupSet[] {
+//   return warmupSets.reduce<IPlannerProgramExerciseWarmupSet[]>((acc, set) => {
+//     for (let i = 0; i < set.numberOfSets; i++) {
+//       acc.push({ ...set, numberOfSets: 1 });
+//     }
+//     return acc;
+//   }, []);
+// }
 
 function PlannerProgramExercise_currentSetVariationIndex(
   exercise: IPlannerProgramExercise,
@@ -8808,63 +8812,63 @@ function PlannerProgramExercise_currentEvaluatedSetVariation(
     PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise);
   return exercise.evaluatedSetVariations[index];
 }
-
-function PlannerProgramExercise_currentDescription(
-  exercise: IPlannerProgramExercise,
-): string | undefined {
-  const index = PlannerProgramExercise_currentDescriptionIndex(exercise);
-  return exercise.descriptions.values[index]?.value;
-}
-
-function PlannerProgramExercise_addSet(
-  ex: IPlannerProgramExercise,
-  setVariationIndex: number,
-  settings: ISettings,
-): IPlannerProgramExercise {
-  const evaluatedSetVariation = ex.evaluatedSetVariations[setVariationIndex];
-  let lastEvaluatedSet =
-    evaluatedSetVariation.sets[evaluatedSetVariation.sets.length - 1];
-  if (lastEvaluatedSet) {
-    evaluatedSetVariation.sets = [
-      ...evaluatedSetVariation.sets,
-      ObjectUtils_clone(lastEvaluatedSet),
-    ];
-  } else {
-    const originalSets = PlannerProgramExercise_sets(ex, setVariationIndex);
-    const lastSet = originalSets[originalSets.length - 1];
-    if (lastSet) {
-      lastEvaluatedSet = {
-        maxrep: lastSet.repRange?.maxrep || 1,
-        minrep: lastSet.repRange?.minrep,
-        weight: lastSet.weight || Weight_zero,
-        logRpe: lastSet.logRpe || false,
-        isAmrap: lastSet.repRange?.isAmrap || false,
-        isQuickAddSet: lastSet.repRange?.isQuickAddSet || false,
-        askWeight: lastSet.askWeight || false,
-        rpe: lastSet.rpe,
-        timer: lastSet.timer,
-        label: lastSet.label,
-      };
-      evaluatedSetVariation.sets = [
-        ...evaluatedSetVariation.sets,
-        ObjectUtils_clone(lastEvaluatedSet),
-      ];
-    } else {
-      evaluatedSetVariation.sets = [
-        ...evaluatedSetVariation.sets,
-        {
-          maxrep: 5,
-          weight: Weight_build(100, settings.units),
-          isAmrap: false,
-          logRpe: false,
-          askWeight: false,
-          isQuickAddSet: false,
-        },
-      ];
-    }
-  }
-  return ex;
-}
+//
+// function PlannerProgramExercise_currentDescription(
+//   exercise: IPlannerProgramExercise,
+// ): string | undefined {
+//   const index = PlannerProgramExercise_currentDescriptionIndex(exercise);
+//   return exercise.descriptions.values[index]?.value;
+// }
+//
+// function PlannerProgramExercise_addSet(
+//   ex: IPlannerProgramExercise,
+//   setVariationIndex: number,
+//   settings: ISettings,
+// ): IPlannerProgramExercise {
+//   const evaluatedSetVariation = ex.evaluatedSetVariations[setVariationIndex];
+//   let lastEvaluatedSet =
+//     evaluatedSetVariation.sets[evaluatedSetVariation.sets.length - 1];
+//   if (lastEvaluatedSet) {
+//     evaluatedSetVariation.sets = [
+//       ...evaluatedSetVariation.sets,
+//       ObjectUtils_clone(lastEvaluatedSet),
+//     ];
+//   } else {
+//     const originalSets = PlannerProgramExercise_sets(ex, setVariationIndex);
+//     const lastSet = originalSets[originalSets.length - 1];
+//     if (lastSet) {
+//       lastEvaluatedSet = {
+//         maxrep: lastSet.repRange?.maxrep || 1,
+//         minrep: lastSet.repRange?.minrep,
+//         weight: lastSet.weight || Weight_zero,
+//         logRpe: lastSet.logRpe || false,
+//         isAmrap: lastSet.repRange?.isAmrap || false,
+//         isQuickAddSet: lastSet.repRange?.isQuickAddSet || false,
+//         askWeight: lastSet.askWeight || false,
+//         rpe: lastSet.rpe,
+//         timer: lastSet.timer,
+//         label: lastSet.label,
+//       };
+//       evaluatedSetVariation.sets = [
+//         ...evaluatedSetVariation.sets,
+//         ObjectUtils_clone(lastEvaluatedSet),
+//       ];
+//     } else {
+//       evaluatedSetVariation.sets = [
+//         ...evaluatedSetVariation.sets,
+//         {
+//           maxrep: 5,
+//           weight: Weight_build(100, settings.units),
+//           isAmrap: false,
+//           logRpe: false,
+//           askWeight: false,
+//           isQuickAddSet: false,
+//         },
+//       ];
+//     }
+//   }
+//   return ex;
+// }
 
 function PlannerProgramExercise_currentDescriptionIndex(
   exercise: IPlannerProgramExercise,
@@ -8873,21 +8877,21 @@ function PlannerProgramExercise_currentDescriptionIndex(
   return index === -1 ? 0 : index;
 }
 
-function PlannerProgramExercise_numberOfSetsThisWeek(
-  exerciseName: string,
-  week: IPlannerEvalResult[],
-): number {
-  return week.reduce((acc, days) => {
-    if (days.success) {
-      const numberOfSetsThisDay = days.data
-        .filter((e) => e.name === exerciseName)
-        .reduce((acc2, e) => acc2 + PlannerProgramExercise_numberOfSets(e), 0);
-      return acc + numberOfSetsThisDay;
-    } else {
-      return acc;
-    }
-  }, 0);
-}
+// function PlannerProgramExercise_numberOfSetsThisWeek(
+//   exerciseName: string,
+//   week: IPlannerEvalResult[],
+// ): number {
+//   return week.reduce((acc, days) => {
+//     if (days.success) {
+//       const numberOfSetsThisDay = days.data
+//         .filter((e) => e.name === exerciseName)
+//         .reduce((acc2, e) => acc2 + PlannerProgramExercise_numberOfSets(e), 0);
+//       return acc + numberOfSetsThisDay;
+//     } else {
+//       return acc;
+//     }
+//   }, 0);
+// }
 
 function PlannerProgramExercise_getProgressScript(
   exercise: IPlannerProgramExercise,
@@ -8902,20 +8906,20 @@ function PlannerProgramExercise_getProgressScript(
   );
 }
 
-function PlannerProgramExercise_isReusingSetsProgress(
-  exercise: IPlannerProgramExercise,
-): boolean {
-  const reuseExercise = exercise.reuse?.exercise;
-  return (
-    reuseExercise?.progress != null &&
-    exercise.progress != null &&
-    exercise.progress.type === reuseExercise.progress?.type &&
-    (exercise.progress.reuse?.fullName === reuseExercise.fullName ||
-      exercise.progress.script === reuseExercise.progress.script) &&
-    Object.keys(PlannerProgramExercise_getOnlyChangedState(exercise)).length ===
-      0
-  );
-}
+// function PlannerProgramExercise_isReusingSetsProgress(
+//   exercise: IPlannerProgramExercise,
+// ): boolean {
+//   const reuseExercise = exercise.reuse?.exercise;
+//   return (
+//     reuseExercise?.progress != null &&
+//     exercise.progress != null &&
+//     exercise.progress.type === reuseExercise.progress?.type &&
+//     (exercise.progress.reuse?.fullName === reuseExercise.fullName ||
+//       exercise.progress.script === reuseExercise.progress.script) &&
+//     Object.keys(PlannerProgramExercise_getOnlyChangedState(exercise)).length ===
+//       0
+//   );
+// }
 
 function PlannerProgramExercise_getState(
   exercise: IPlannerProgramExercise,
@@ -8988,40 +8992,40 @@ function PlannerProgramExercise_getUpdateScript(
   );
 }
 
-function PlannerProgramExercise_getEnableRpe(
-  exercise: IPlannerProgramExercise,
-): boolean {
-  return exercise.setVariations.some((sv, i) =>
-    PlannerProgramExercise_sets(exercise, i).some((s) => s.rpe != null),
-  );
-}
-
-function PlannerProgramExercise_getEnableRepRanges(
-  exercise: IPlannerProgramExercise,
-): boolean {
-  return exercise.setVariations.some((sv, i) =>
-    PlannerProgramExercise_sets(exercise, i).some(
-      (s) => s.repRange != null && s.repRange.minrep === s.repRange.maxrep,
-    ),
-  );
-}
-
-function PlannerProgramExercise_getProgressDefaultArgs(
-  type: IProgramExerciseProgressType,
-): string[] {
-  switch (type) {
-    case "none":
-      return [];
-    case "lp":
-      return ["5lb"];
-    case "dp":
-      return ["5lb", "8", "12"];
-    case "sum":
-      return ["30", "5lb"];
-    case "custom":
-      return [];
-  }
-}
+// function PlannerProgramExercise_getEnableRpe(
+//   exercise: IPlannerProgramExercise,
+// ): boolean {
+//   return exercise.setVariations.some((sv, i) =>
+//     PlannerProgramExercise_sets(exercise, i).some((s) => s.rpe != null),
+//   );
+// }
+//
+// function PlannerProgramExercise_getEnableRepRanges(
+//   exercise: IPlannerProgramExercise,
+// ): boolean {
+//   return exercise.setVariations.some((sv, i) =>
+//     PlannerProgramExercise_sets(exercise, i).some(
+//       (s) => s.repRange != null && s.repRange.minrep === s.repRange.maxrep,
+//     ),
+//   );
+// }
+//
+// function PlannerProgramExercise_getProgressDefaultArgs(
+//   type: IProgramExerciseProgressType,
+// ): string[] {
+//   switch (type) {
+//     case "none":
+//       return [];
+//     case "lp":
+//       return ["5lb"];
+//     case "dp":
+//       return ["5lb", "8", "12"];
+//     case "sum":
+//       return ["30", "5lb"];
+//     case "custom":
+//       return [];
+//   }
+// }
 
 function buildDpScript(): string {
   return `for (var.i in completedReps) {
@@ -9230,43 +9234,43 @@ for (var.i in completedReps) {
   }
 }
 
-function PlannerProgramExercise_progressionType(
-  exercise: IPlannerProgramExercise,
-): IProgressionType | undefined {
-  const progress = exercise.progress;
-  if (!progress) {
-    return undefined;
-  }
-  const name = progress.type;
-  const state = PlannerProgramExercise_getState(exercise);
-  if (name === "lp") {
-    return {
-      type: "linear",
-      increase: state.increment as IWeight,
-      successesRequired: state.successes as number,
-      successesCounter: state.successCounter as number,
-      decrease: state.decrement as IWeight,
-      failuresRequired: state.failures as number,
-      failuresCounter: state.failureCounter as number,
-    };
-  } else if (name === "dp") {
-    return {
-      type: "double",
-      increase: state.increment as IWeight,
-      minReps: state.minReps as number,
-      maxReps: state.maxReps as number,
-    };
-  } else if (name === "sum") {
-    return {
-      type: "sumreps",
-      increase: state.increment as IWeight,
-      reps: state.reps as number,
-    };
-  } else if (name === "custom") {
-    return { type: "custom" };
-  }
-  return undefined;
-}
+// function PlannerProgramExercise_progressionType(
+//   exercise: IPlannerProgramExercise,
+// ): IProgressionType | undefined {
+//   const progress = exercise.progress;
+//   if (!progress) {
+//     return undefined;
+//   }
+//   const name = progress.type;
+//   const state = PlannerProgramExercise_getState(exercise);
+//   if (name === "lp") {
+//     return {
+//       type: "linear",
+//       increase: state.increment as IWeight,
+//       successesRequired: state.successes as number,
+//       successesCounter: state.successCounter as number,
+//       decrease: state.decrement as IWeight,
+//       failuresRequired: state.failures as number,
+//       failuresCounter: state.failureCounter as number,
+//     };
+//   } else if (name === "dp") {
+//     return {
+//       type: "double",
+//       increase: state.increment as IWeight,
+//       minReps: state.minReps as number,
+//       maxReps: state.maxReps as number,
+//     };
+//   } else if (name === "sum") {
+//     return {
+//       type: "sumreps",
+//       increase: state.increment as IWeight,
+//       reps: state.reps as number,
+//     };
+//   } else if (name === "custom") {
+//     return { type: "custom" };
+//   }
+//   return undefined;
+// }
 
 function PlannerProgramExercise_shortNameFromFullName(
   fullName: string,
@@ -9280,91 +9284,91 @@ function PlannerProgramExercise_shortNameFromFullName(
   return shortName;
 }
 
-function PlannerProgramExercise_createExerciseFromEntry(
-  entry: IHistoryEntry,
-  dayData: Required<IDayData>,
-  settings: ISettings,
-  index: number,
-): IPlannerProgramExercise {
-  const exerciseType = entry.exercise;
-  const exercise = Exercise_get(exerciseType, settings.exercises);
-  const fullName = Exercise_fullName(exercise, settings);
-  const shortName = PlannerProgramExercise_shortNameFromFullName(
-    fullName,
-    settings,
-  );
-  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(
-    fullName,
-    settings.exercises,
-  );
-  const setVariations: IPlannerProgramExerciseSetVariation[] = [
-    {
-      isCurrent: false,
-      sets: entry.sets.map((set) => ({
-        repRange: {
-          numberOfSets: 1,
-          maxrep: set.completedReps ?? set.reps,
-          minrep: set.minReps,
-          isAmrap: !!set.isAmrap,
-          isQuickAddSet: false,
-        },
-        timer: set.timer,
-        rpe: set.rpe,
-        logRpe: set.logRpe,
-        percentage: Weight_isPct(set.originalWeight)
-          ? set.originalWeight.value
-          : undefined,
-        weight: !Weight_isPct(set.originalWeight)
-          ? (set.completedWeight ?? set.weight)
-          : undefined,
-        askWeight: set.askWeight,
-      })),
-    },
-  ];
-  const groupedWarmupSets = CollectionUtils_compact(
-    ObjectUtils_values(
-      CollectionUtils_groupByExpr(entry.warmupSets, (set) => {
-        return `${set.completedReps ?? set.reps}-${(set.completedWeight ?? set.weight ?? { value: "" }).value}`;
-      }),
-    ),
-  );
-  const plannerExercise: IPlannerProgramExercise = {
-    id: UidFactory_generateUid(8),
-    key: PlannerKey_fromExerciseType(exercise),
-    fullName,
-    shortName,
-    dayData,
-    exerciseType,
-    repeat: [],
-    repeating: [],
-    exerciseIndex: index,
-    order: 0,
-    text: "",
-    tags: [],
-    equipment,
-    name,
-    line: 1,
-    evaluatedSetVariations: [],
-    setVariations: setVariations,
-    warmupSets: groupedWarmupSets.map((group) => ({
-      type: "warmup",
-      numberOfSets: group.length,
-      reps: group[0]?.completedReps ?? group[0]?.reps ?? 1,
-      weight: group[0]?.completedWeight ?? group[0]?.weight,
-    })),
-    descriptions: { values: [] },
-    globals: {},
-    points: {
-      fullName: { line: 1, offset: 0, from: 0, to: 0 },
-    },
-  };
-  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(
-    plannerExercise,
-    setVariations,
-  );
-  plannerExercise.evaluatedSetVariations = evaluatedSetVariations;
-  return plannerExercise;
-}
+// function PlannerProgramExercise_createExerciseFromEntry(
+//   entry: IHistoryEntry,
+//   dayData: Required<IDayData>,
+//   settings: ISettings,
+//   index: number,
+// ): IPlannerProgramExercise {
+//   const exerciseType = entry.exercise;
+//   const exercise = Exercise_get(exerciseType, settings.exercises);
+//   const fullName = Exercise_fullName(exercise, settings);
+//   const shortName = PlannerProgramExercise_shortNameFromFullName(
+//     fullName,
+//     settings,
+//   );
+//   const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(
+//     fullName,
+//     settings.exercises,
+//   );
+//   const setVariations: IPlannerProgramExerciseSetVariation[] = [
+//     {
+//       isCurrent: false,
+//       sets: entry.sets.map((set) => ({
+//         repRange: {
+//           numberOfSets: 1,
+//           maxrep: set.completedReps ?? set.reps,
+//           minrep: set.minReps,
+//           isAmrap: !!set.isAmrap,
+//           isQuickAddSet: false,
+//         },
+//         timer: set.timer,
+//         rpe: set.rpe,
+//         logRpe: set.logRpe,
+//         percentage: Weight_isPct(set.originalWeight)
+//           ? set.originalWeight.value
+//           : undefined,
+//         weight: !Weight_isPct(set.originalWeight)
+//           ? (set.completedWeight ?? set.weight)
+//           : undefined,
+//         askWeight: set.askWeight,
+//       })),
+//     },
+//   ];
+//   const groupedWarmupSets = CollectionUtils_compact(
+//     ObjectUtils_values(
+//       CollectionUtils_groupByExpr(entry.warmupSets, (set) => {
+//         return `${set.completedReps ?? set.reps}-${(set.completedWeight ?? set.weight ?? { value: "" }).value}`;
+//       }),
+//     ),
+//   );
+//   const plannerExercise: IPlannerProgramExercise = {
+//     id: UidFactory_generateUid(8),
+//     key: PlannerKey_fromExerciseType(exercise),
+//     fullName,
+//     shortName,
+//     dayData,
+//     exerciseType,
+//     repeat: [],
+//     repeating: [],
+//     exerciseIndex: index,
+//     order: 0,
+//     text: "",
+//     tags: [],
+//     equipment,
+//     name,
+//     line: 1,
+//     evaluatedSetVariations: [],
+//     setVariations: setVariations,
+//     warmupSets: groupedWarmupSets.map((group) => ({
+//       type: "warmup",
+//       numberOfSets: group.length,
+//       reps: group[0]?.completedReps ?? group[0]?.reps ?? 1,
+//       weight: group[0]?.completedWeight ?? group[0]?.weight,
+//     })),
+//     descriptions: { values: [] },
+//     globals: {},
+//     points: {
+//       fullName: { line: 1, offset: 0, from: 0, to: 0 },
+//     },
+//   };
+//   const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(
+//     plannerExercise,
+//     setVariations,
+//   );
+//   plannerExercise.evaluatedSetVariations = evaluatedSetVariations;
+//   return plannerExercise;
+// }
 
 //#endregion
 
@@ -13232,11 +13236,18 @@ function Exercise_onerm(type: IExerciseType, settings: ISettings): IWeight {
     : exercise.startingWeightLb;
 }
 
-// function Exercise_defaultRounding(type: IExerciseType, settings: ISettings): number {
-//   const units = Equipment_getUnitOrDefaultForExerciseType(settings, type);
-//   return Math.max(0.1, settings.exerciseData[Exercise_toKey(type)]?.rounding ?? (units === "kg" ? 2.5 : 5));
-// }
-//
+function Exercise_defaultRounding(
+  type: IExerciseType,
+  settings: ISettings,
+): number {
+  const units = Equipment_getUnitOrDefaultForExerciseType(settings, type);
+  return Math.max(
+    0.1,
+    settings.exerciseData[Exercise_toKey(type)]?.rounding ??
+      (units === "kg" ? 2.5 : 5),
+  );
+}
+
 // function Exercise_find(type: IExerciseType, customExercises: IAllCustomExercises): IExercise | undefined {
 //   const exercise = maybeGetExercise(type.id, customExercises);
 //   return exercise ? { ...exercise, equipment: type.equipment } : undefined;
@@ -14494,10 +14505,10 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
   };
   return fns;
 }
-
-function Progress_isCurrent(progress: IHistoryRecord | undefined): boolean {
-  return progress?.id === 0;
-}
+//
+// function Progress_isCurrent(progress: IHistoryRecord | undefined): boolean {
+//   return progress?.id === 0;
+// }
 
 // function Progress_startTimer(
 //   progress: IHistoryRecord,
@@ -14622,71 +14633,71 @@ function Progress_isCurrent(progress: IHistoryRecord | undefined): boolean {
 //   }
 //   return supersetGroup[(supersetIndex + 1) % supersetGroup.length];
 // }
-
-function Progress_getNextEntry(
-  progress: IHistoryRecord,
-  entry: IHistoryEntry,
-  mode: "workout" | "warmup",
-  shouldGoToNextEntry: boolean,
-): IHistoryEntry | undefined {
-  if (Progress_isFullyEmptyOrFinishedSet(progress)) {
-    return undefined;
-  }
-  const visitedAndFinished = new Set<IHistoryEntry>();
-  let currentEntry: IHistoryEntry | undefined = entry;
-  let isInitial = true;
-  const supersetGroups = Progress_getSupersetGroups(progress.entries);
-  while (currentEntry != null) {
-    let index = progress.entries.findIndex(
-      (e) => e.id != null && e.id === currentEntry?.id,
-    );
-    if (index === -1) {
-      index = progress.entries.findIndex((e) => e === currentEntry);
-    }
-    const superset: string | undefined = currentEntry.superset;
-    if (
-      mode === "workout" &&
-      superset != null &&
-      !visitedAndFinished.has(currentEntry)
-    ) {
-      const supersetGroup: IHistoryEntry[] = supersetGroups?.[superset] ?? [];
-      if (supersetGroup.length > 1) {
-        const supersetIndex = supersetGroup?.findIndex(
-          (e) => e.id === currentEntry?.id,
-        );
-        currentEntry =
-          supersetGroup[(supersetIndex + 1) % supersetGroup.length];
-      } else {
-        if (shouldGoToNextEntry) {
-          currentEntry =
-            progress.entries[(index + 1) % progress.entries.length];
-        } else {
-          return currentEntry;
-        }
-      }
-    } else if (Reps_isEmptyOrFinished(currentEntry.sets)) {
-      if (shouldGoToNextEntry) {
-        const prevEntry: IHistoryEntry = currentEntry;
-        currentEntry = progress.entries[(index + 1) % progress.entries.length];
-        if (currentEntry === prevEntry) {
-          return undefined;
-        }
-      } else {
-        return undefined;
-      }
-    }
-    if (currentEntry == null) {
-      return undefined;
-    }
-    if (!Reps_isEmptyOrFinished(currentEntry.sets)) {
-      return currentEntry;
-    } else if (!isInitial) {
-      visitedAndFinished.add(currentEntry);
-    }
-    isInitial = false;
-  }
-  return undefined;
-}
+//
+// function Progress_getNextEntry(
+//   progress: IHistoryRecord,
+//   entry: IHistoryEntry,
+//   mode: "workout" | "warmup",
+//   shouldGoToNextEntry: boolean,
+// ): IHistoryEntry | undefined {
+//   if (Progress_isFullyEmptyOrFinishedSet(progress)) {
+//     return undefined;
+//   }
+//   const visitedAndFinished = new Set<IHistoryEntry>();
+//   let currentEntry: IHistoryEntry | undefined = entry;
+//   let isInitial = true;
+//   const supersetGroups = Progress_getSupersetGroups(progress.entries);
+//   while (currentEntry != null) {
+//     let index = progress.entries.findIndex(
+//       (e) => e.id != null && e.id === currentEntry?.id,
+//     );
+//     if (index === -1) {
+//       index = progress.entries.findIndex((e) => e === currentEntry);
+//     }
+//     const superset: string | undefined = currentEntry.superset;
+//     if (
+//       mode === "workout" &&
+//       superset != null &&
+//       !visitedAndFinished.has(currentEntry)
+//     ) {
+//       const supersetGroup: IHistoryEntry[] = supersetGroups?.[superset] ?? [];
+//       if (supersetGroup.length > 1) {
+//         const supersetIndex = supersetGroup?.findIndex(
+//           (e) => e.id === currentEntry?.id,
+//         );
+//         currentEntry =
+//           supersetGroup[(supersetIndex + 1) % supersetGroup.length];
+//       } else {
+//         if (shouldGoToNextEntry) {
+//           currentEntry =
+//             progress.entries[(index + 1) % progress.entries.length];
+//         } else {
+//           return currentEntry;
+//         }
+//       }
+//     } else if (Reps_isEmptyOrFinished(currentEntry.sets)) {
+//       if (shouldGoToNextEntry) {
+//         const prevEntry: IHistoryEntry = currentEntry;
+//         currentEntry = progress.entries[(index + 1) % progress.entries.length];
+//         if (currentEntry === prevEntry) {
+//           return undefined;
+//         }
+//       } else {
+//         return undefined;
+//       }
+//     }
+//     if (currentEntry == null) {
+//       return undefined;
+//     }
+//     if (!Reps_isEmptyOrFinished(currentEntry.sets)) {
+//       return currentEntry;
+//     } else if (!isInitial) {
+//       visitedAndFinished.add(currentEntry);
+//     }
+//     isInitial = false;
+//   }
+//   return undefined;
+// }
 
 // function Progress_getNextEntryIndex(
 //   progress: IHistoryRecord,
@@ -14838,19 +14849,19 @@ function Progress_getNextEntry(
 //   return Reps_isFinished(entry.sets);
 // }
 
-function Progress_isFullyEmptyOrFinishedSet(progress: IHistoryRecord): boolean {
-  return progress.entries.every((entry) =>
-    Progress_isEmptyOrFinishedSet(entry),
-  );
-}
+// function Progress_isFullyEmptyOrFinishedSet(progress: IHistoryRecord): boolean {
+//   return progress.entries.every((entry) =>
+//     Progress_isEmptyOrFinishedSet(entry),
+//   );
+// }
 
-function Progress_isEmptyOrFinishedSet(entry: IHistoryEntry): boolean {
-  return Reps_isEmptyOrFinished(entry.sets);
-}
+// function Progress_isEmptyOrFinishedSet(entry: IHistoryEntry): boolean {
+//   return Reps_isEmptyOrFinished(entry.sets);
+// }
 
-function Progress_hasLastUnfinishedSet(entry: IHistoryEntry): boolean {
-  return entry.sets.filter((s) => !s.isCompleted).length === 1;
-}
+// function Progress_hasLastUnfinishedSet(entry: IHistoryEntry): boolean {
+//   return entry.sets.filter((s) => !s.isCompleted).length === 1;
+// }
 
 // function Progress_isChanged(aProgress?: IHistoryRecord, bProgress?: IHistoryRecord): boolean {
 //   if (aProgress != null && bProgress == null) {
@@ -14886,21 +14897,21 @@ function Progress_hasLastUnfinishedSet(entry: IHistoryEntry): boolean {
 //     return memo;
 //   }, {});
 // }
-
-function Progress_getSupersetGroups(
-  entries: IHistoryEntry[],
-): Partial<Record<string, IHistoryEntry[]>> {
-  const groups: Partial<Record<string, IHistoryEntry[]>> = {};
-  for (const entry of entries) {
-    if (entry.superset != null) {
-      if (!groups[entry.superset]) {
-        groups[entry.superset] = [];
-      }
-      groups[entry.superset]!.push(entry);
-    }
-  }
-  return groups;
-}
+//
+// function Progress_getSupersetGroups(
+//   entries: IHistoryEntry[],
+// ): Partial<Record<string, IHistoryEntry[]>> {
+//   const groups: Partial<Record<string, IHistoryEntry[]>> = {};
+//   for (const entry of entries) {
+//     if (entry.superset != null) {
+//       if (!groups[entry.superset]) {
+//         groups[entry.superset] = [];
+//       }
+//       groups[entry.superset]!.push(entry);
+//     }
+//   }
+//   return groups;
+// }
 
 // function Progress_stop(
 //   progresses: Record<number, IHistoryRecord | undefined>,
@@ -15356,44 +15367,44 @@ function Progress_applyBindings(
 //     "add-exercise"
 //   );
 // }
-
-function Progress_isEligibleForInferredWeight(set: ISet): boolean {
-  return set.originalWeight == null && set.reps != null && set.rpe != null;
-}
-
-function Progress_updateSetWeights(
-  entry: IHistoryEntry,
-  exerciseType: IExerciseType,
-  settings: ISettings,
-): IHistoryEntry {
-  const newSets = entry.sets.map((set) => {
-    if (
-      (Progress_isEligibleForInferredWeight(set) ||
-        Weight_isPct(set.originalWeight)) &&
-      !set.isCompleted
-    ) {
-      const originalWeight =
-        set.originalWeight ?? Weight_rpePct(set.reps ?? 1, set.rpe ?? 10);
-      const evaluatedWeight = Weight_evaluateWeight(
-        originalWeight,
-        exerciseType,
-        settings,
-      );
-      const unit =
-        Equipment_getUnitForExerciseType(settings, exerciseType) ??
-        settings.units;
-      const weight = Weight_roundConvertTo(
-        evaluatedWeight,
-        settings,
-        unit,
-        exerciseType,
-      );
-      return { ...set, weight };
-    }
-    return set;
-  });
-  return { ...entry, sets: newSets };
-}
+//
+// function Progress_isEligibleForInferredWeight(set: ISet): boolean {
+//   return set.originalWeight == null && set.reps != null && set.rpe != null;
+// }
+//
+// function Progress_updateSetWeights(
+//   entry: IHistoryEntry,
+//   exerciseType: IExerciseType,
+//   settings: ISettings,
+// ): IHistoryEntry {
+//   const newSets = entry.sets.map((set) => {
+//     if (
+//       (Progress_isEligibleForInferredWeight(set) ||
+//         Weight_isPct(set.originalWeight)) &&
+//       !set.isCompleted
+//     ) {
+//       const originalWeight =
+//         set.originalWeight ?? Weight_rpePct(set.reps ?? 1, set.rpe ?? 10);
+//       const evaluatedWeight = Weight_evaluateWeight(
+//         originalWeight,
+//         exerciseType,
+//         settings,
+//       );
+//       const unit =
+//         Equipment_getUnitForExerciseType(settings, exerciseType) ??
+//         settings.units;
+//       const weight = Weight_roundConvertTo(
+//         evaluatedWeight,
+//         settings,
+//         unit,
+//         exerciseType,
+//       );
+//       return { ...set, weight };
+//     }
+//     return set;
+//   });
+//   return { ...entry, sets: newSets };
+// }
 //
 // function Progress_doesUse1RM(entry: IHistoryEntry): boolean {
 //   return entry.sets.some((set) => (set.originalWeight == null ? set.rpe != null : Weight_isPct(set.originalWeight)));
@@ -15792,18 +15803,18 @@ function Progress_getEntryId(
 //#region Weight
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
-function Weight_display(
-  weight: IWeight | IPercentage | number,
-  withUnit: boolean = true,
-): string {
-  if (typeof weight === "number") {
-    return `${weight}`;
-  } else if (Weight_isPct(weight)) {
-    return `${weight.value}${withUnit ? "%" : ""}`;
-  } else {
-    return `${parseFloat(weight.value.toFixed(2)).toString()}${withUnit ? ` ${weight.unit}` : ""}`;
-  }
-}
+// function Weight_display(
+//   weight: IWeight | IPercentage | number,
+//   withUnit: boolean = true,
+// ): string {
+//   if (typeof weight === "number") {
+//     return `${weight}`;
+//   } else if (Weight_isPct(weight)) {
+//     return `${weight.value}${withUnit ? "%" : ""}`;
+//   } else {
+//     return `${parseFloat(weight.value.toFixed(2)).toString()}${withUnit ? ` ${weight.unit}` : ""}`;
+//   }
+// }
 
 function Weight_rpePct(reps: number, rpe: number): IPercentage {
   return Weight_buildPct(
@@ -17069,9 +17080,10 @@ class ProgramToPlanner {
       const error = this.program.errors[0];
       const msg = `There's an error during evaluating a program, week ${error.dayData.week}, day: ${error.dayData.dayInWeek}. Please fix it to proceed.\n\n${error.error.toString()}`;
       console.log(PlannerProgram_generateFullText(plannerProgram.weeks));
-      if (typeof window !== "undefined" && window.alert != null) {
-        window.alert(msg);
-      }
+      //@todo browser code in non-browser aware function, should have been bubbled up
+      // if (typeof window !== "undefined" && window.alert != null) {
+      //   window.alert(msg);
+      // }
       throw error.error;
     }
     const topLineMap = PlannerProgram_topLineItems(
@@ -18560,7 +18572,369 @@ function Equipment_smallestPlate(
 
 //#endregion
 
-//#region ________
+//#region Set
+// type IProgramReps = number;
+
+// type ISetsStatus = "success" | "in-range" | "failed" | "not-finished";
+//
+// interface IDisplaySet {
+//   dimReps?: boolean;
+//   dimRpe?: boolean;
+//   dimWeight?: boolean;
+//   dimTimer?: boolean;
+//   reps: string;
+//   weight?: string;
+//   rpe?: string;
+//   askWeight?: boolean;
+//   unit?: string;
+//   isCompleted?: boolean;
+//   isRpeFailed?: boolean;
+//   isInRange?: boolean;
+//   timer?: number;
+// }
+
+// function Reps_display(sets: ISet[], isNext: boolean = false): string {
+//   if (Reps_areSameReps(sets, isNext)) {
+//     return `${sets.length}x${sets[0].completedReps || sets[0].reps}`;
+//   } else {
+//     const arr = sets.map((s) => (isNext ? Reps_displayReps(s) : Reps_displayCompletedReps(s)));
+//     const groups = CollectionUtils_inGroupsOf(5, arr);
+//     return groups.map((g) => g.join("/")).join("/ ");
+//   }
+// }
+//
+// function Reps_setToDisplaySet(set: ISet, isNext: boolean, settings: ISettings): IDisplaySet {
+//   const completedOrRequiredWeight = set.completedWeight ?? set.weight;
+//   return {
+//     reps: isNext ? Reps_displayReps(set) : Reps_displayCompletedReps(set),
+//     rpe: set.completedRpe?.toString() ?? set.rpe?.toString(),
+//     weight: isNext
+//       ? set.weight && set.originalWeight
+//         ? Weight_display(set.weight, false)
+//         : undefined
+//       : completedOrRequiredWeight
+//         ? Weight_display(completedOrRequiredWeight, false)
+//         : undefined,
+//     unit: completedOrRequiredWeight?.unit ?? settings.units,
+//     askWeight: set.askWeight,
+//     isCompleted: Reps_isCompletedSet(set),
+//     isRpeFailed: set.completedRpe != null && set.completedRpe > (set.rpe ?? 0),
+//     isInRange: set.minReps != null ? set.completedReps != null && set.completedReps >= set.minReps : undefined,
+//   };
+// }
+//
+// function Reps_addSet(sets: ISet[], isUnilateral: boolean, lastSet?: ISet, isWarmup?: boolean): ISet[] {
+//   lastSet = sets[sets.length - 1] || lastSet;
+//   if (lastSet == null) {
+//     lastSet = Reps_newSet(isUnilateral, 0);
+//   } else {
+//     if (isWarmup) {
+//       lastSet = {
+//         ...ObjectUtils_clone(lastSet),
+//         reps: lastSet.completedReps ?? lastSet.reps,
+//         weight: lastSet.completedWeight ?? lastSet.weight,
+//       };
+//     } else {
+//       lastSet = {
+//         ...ObjectUtils_clone(lastSet),
+//         reps: lastSet.reps ?? lastSet.completedReps,
+//         weight: lastSet.weight ?? lastSet.completedWeight,
+//         originalWeight: lastSet.originalWeight ?? lastSet.weight ?? lastSet.completedWeight,
+//         completedReps: undefined,
+//         completedRepsLeft: undefined,
+//         completedWeight: undefined,
+//         completedRpe: undefined,
+//       };
+//     }
+//   }
+//   const maxIndex = Math.max(-1, ...sets.map((s) => s.index || 0));
+//
+//   return [
+//     ...sets,
+//     { ...ObjectUtils_clone(lastSet), id: UidFactory_generateUid(6), isCompleted: false, index: maxIndex + 1 },
+//   ];
+// }
+//
+// function Reps_isSameSet(set1: ISet, set2: ISet): boolean {
+//   return Weight_eqNull(set1.weight, set2.weight) && set1.completedReps === set2.completedReps && set1.rpe === set2.rpe;
+// }
+//
+// function Reps_displayReps(set: ISet): string {
+//   const reps = set.minReps != null ? `${set.minReps}-${set.reps ?? 0}` : `${set.reps ?? 0}`;
+//   return set.isAmrap ? `${reps}+` : `${reps}`;
+// }
+//
+// function Reps_displayCompletedReps(set: ISet): string {
+//   return set.completedReps != null
+//     ? `${set.completedRepsLeft != null ? `${set.completedRepsLeft}/` : ""}${set.completedReps}`
+//     : "-";
+// }
+//
+// function Reps_areSameReps(sets: ISet[], isNext: boolean): boolean {
+//   const firstRep = sets[0]?.reps;
+//   if (sets.length > 0) {
+//     return sets.every(
+//       (s) => (isNext ? s.reps : s.completedReps) != null && (isNext ? s.reps : s.completedReps) === firstRep
+//     );
+//   } else {
+//     return false;
+//   }
+// }
+//
+// function Reps_isEmpty(sets: ISet[]): boolean {
+//   return sets.every((s) => !s.isCompleted);
+// }
+//
+// function Reps_newSet(isUnilateral: boolean, index: number): ISet {
+//   return {
+//     vtype: "set",
+//     index,
+//     id: UidFactory_generateUid(6),
+//     originalWeight: undefined,
+//     weight: undefined,
+//     isUnilateral,
+//     reps: undefined,
+//     isAmrap: false,
+//     askWeight: false,
+//     isCompleted: false,
+//   };
+// }
+
+// function Reps_isCompleted(sets: ISet[]): boolean {
+//   return sets.length > 0 && sets.every((set) => Reps_isCompletedSet(set));
+// }
+//
+// function Reps_setWarmupStatus(sets: ISet[]): ISetsStatus {
+//   if (sets.length === 0) {
+//     return "not-finished";
+//   }
+//   if (Reps_isFinished(sets)) {
+//     return "success";
+//   } else {
+//     return "not-finished";
+//   }
+// }
+//
+// function Reps_setsStatus(sets: ISet[]): ISetsStatus {
+//   if (Reps_isCompleted(sets)) {
+//     return "success";
+//   } else if (Reps_isInRangeCompleted(sets)) {
+//     return "in-range";
+//   } else if (!Reps_isFinished(sets)) {
+//     return "not-finished";
+//   } else {
+//     return "failed";
+//   }
+// }
+
+// function Reps_isCompletedSet(set: ISet): boolean {
+//   if (set.completedReps != null && set.completedWeight != null) {
+//     return (
+//       !!set.isCompleted &&
+//       (set.reps == null || set.completedReps >= set.reps) &&
+//       (set.weight == null || Weight_gte(set.completedWeight, set.weight))
+//     );
+//   } else {
+//     return false;
+//   }
+// }
+//
+// function Reps_isInRangeCompletedSet(set: ISet): boolean {
+//   if (set.completedReps != null && set.completedWeight != null) {
+//     return (
+//       (set.weight == null || Weight_gte(set.completedWeight, set.weight)) &&
+//       (set.minReps != null ? set.completedReps >= set.minReps : set.reps == null || set.completedReps >= set.reps)
+//     );
+//   } else {
+//     return false;
+//   }
+// }
+
+// function Reps_isStarted(sets: ISet[]): boolean {
+//   return sets.length > 0 && sets.some((s) => Reps_isFinishedSet(s));
+// }
+
+function Reps_isFinished(sets: ISet[]): boolean {
+  return sets.length > 0 && sets.every((s) => Reps_isFinishedSet(s));
+}
+
+// function Reps_isEmptyOrFinished(sets: ISet[]): boolean {
+//   return sets.length === 0 || Reps_isFinished(sets);
+// }
+
+function Reps_isFinishedSet(s: ISet): boolean {
+  return !!s.isCompleted;
+}
+
+// function Reps_toKey(set: ISet): string {
+//   return `${Weight_printNull(set.weight)}-${Weight_printNull(set.completedWeight)}-${set.reps}-${set.minReps}-${set.isAmrap}-${set.rpe}-${set.askWeight}-${set.completedReps}-${set.completedRepsLeft}-${set.completedRpe}-${set.isCompleted}`;
+// }
+
+// function Reps_isInRangeCompleted(sets: ISet[]): boolean {
+//   return sets.some((s) => s.minReps != null) && sets.every((s) => Reps_isInRangeCompletedSet(s));
+// }
+
+// function Reps_enforceCompletedSet(set: ISet): ISet {
+//   return {
+//     ...set,
+//     isCompleted: set.completedReps == null || set.completedWeight == null ? false : !!set.isCompleted,
+//   };
+// }
+//
+// function Reps_maxUnilateralCompletedReps(set: ISet): number | undefined {
+//   if (set.isUnilateral) {
+//     return Math.max(set.completedReps ?? 0, set.completedRepsLeft ?? 0);
+//   } else {
+//     return set.completedReps;
+//   }
+// }
+//
+// function Reps_avgUnilateralCompletedReps(set: ISet): number | undefined {
+//   if (set.isUnilateral) {
+//     return Math.round(((set.completedReps ?? 0) + (set.completedRepsLeft ?? 0)) / 2);
+//   } else {
+//     return set.completedReps;
+//   }
+// }
+
+// function Reps_setVolume(set: ISet, unit: IUnit): IWeight {
+//   const totalReps =
+//     set.isUnilateral || set.completedRepsLeft != null
+//       ? (set.completedReps ?? 0) + (set.completedRepsLeft ?? 0)
+//       : (set.completedReps ?? 0);
+//   return Weight_multiply(set.completedWeight ?? set.weight ?? Weight_build(0, unit), totalReps);
+// }
+
+// function Reps_group(sets: ISet[], isNext?: boolean): ISet[][] {
+//   return sets.reduce<ISet[][]>(
+//     (memo, set) => {
+//       let lastGroup = memo[memo.length - 1];
+//       const last = lastGroup[lastGroup.length - 1];
+//       if (
+//         last != null &&
+//         (!Weight_eqNull(last.weight, set.weight) ||
+//           last.reps !== set.reps ||
+//           last.minReps !== set.minReps ||
+//           last.completedReps !== set.completedReps ||
+//           last.completedRepsLeft !== set.completedRepsLeft ||
+//           !Weight_eqNull(last.completedWeight, set.completedWeight) ||
+//           last.askWeight !== set.askWeight ||
+//           (isNext && last.isAmrap !== set.isAmrap) ||
+//           last.rpe !== set.rpe ||
+//           last.completedRpe !== set.completedRpe)
+//       ) {
+//         memo.push([]);
+//         lastGroup = memo[memo.length - 1];
+//       }
+//       lastGroup.push(set);
+//       return memo;
+//     },
+//     [[]]
+//   );
+// }
+
+// function Reps_findNextSet(entry: IHistoryEntry): ISet | undefined {
+//   return [...entry.warmupSets, ...entry.sets].filter((s) => !s.isCompleted)[0];
+// }
+
+// function Reps_findNextSetIndex(entry: IHistoryEntry): number {
+//   return [...entry.warmupSets, ...entry.sets].findIndex((s) => !s.isCompleted);
+// }
+//
+// function Reps_findNextEntryAndSet(
+//   historyRecord: IHistoryRecord,
+//   entryIndex: number,
+//   mode: "workout" | "warmup"
+// ):
+//   | {
+//   entry: IHistoryEntry;
+//   set: ISet;
+// }
+//   | undefined {
+//   const entry = historyRecord.entries[entryIndex];
+//   if (entry == null) {
+//     return undefined;
+//   }
+//   const nextEntry = Progress_getNextEntry(historyRecord, entry, mode, true);
+//   if (nextEntry == null) {
+//     return undefined;
+//   }
+//
+//   const nextSet = Reps_findNextSet(nextEntry);
+//   if (nextSet != null) {
+//     return { entry: nextEntry, set: nextSet };
+//   }
+//
+//   return undefined;
+// }
+//
+// function Reps_findNextEntryAndSetIndex(
+//   historyRecord: IHistoryRecord,
+//   entryIndex: number,
+//   mode: "workout" | "warmup"
+// ):
+//   | {
+//   entryIndex: number;
+//   setIndex: number;
+// }
+//   | undefined {
+//   const entry = historyRecord.entries[entryIndex];
+//   if (entry == null) {
+//     return undefined;
+//   }
+//   const nextEntry = Progress_getNextEntry(historyRecord, entry, mode, true);
+//   if (nextEntry == null) {
+//     return undefined;
+//   }
+//
+//   const nextSet = Reps_findNextSetIndex(nextEntry);
+//
+//   return { entryIndex: historyRecord.entries.indexOf(nextEntry), setIndex: nextSet };
+// }
+//
+// function Reps_groupConsecutive<T>(items: T[], keyFn: (item: T) => string): [T, number][] {
+//   const groups: [T, number][] = [];
+//   let lastKey: string | undefined;
+//   for (const item of items) {
+//     const key = keyFn(item);
+//     if (lastKey == null || lastKey !== key) {
+//       groups.push([item, 0]);
+//     }
+//     groups[groups.length - 1][1] += 1;
+//     lastKey = key;
+//   }
+//   return groups;
+// }
+//
+// function Reps_completedSetKey(set: ISet): string {
+//   const reps = set.completedReps ?? 0;
+//   const repsLeft = set.isUnilateral ? (set.completedRepsLeft ?? 0) : -1;
+//   const w = set.completedWeight ? Weight_print(set.completedWeight) : "none";
+//   const rpe = set.completedRpe ?? -1;
+//   const label = set.label ?? "";
+//   return `${reps}-${repsLeft}-${w}-${rpe}-${label}`;
+// }
+//
+// function Reps_targetSetKey(set: ISet): string {
+//   const reps = set.reps ?? 0;
+//   const minReps = set.minReps ?? -1;
+//   const w = set.weight ? Weight_print(set.weight) : "none";
+//   const rpe = set.rpe ?? -1;
+//   const logRpe = set.logRpe ? 1 : 0;
+//   const timer = set.timer ?? -1;
+//   const amrap = set.isAmrap ? 1 : 0;
+//   const label = set.label ?? "";
+//   const askWeight = set.askWeight ? 1 : 0;
+//   return `${reps}-${minReps}-${w}-${askWeight}-${rpe}-${logRpe}-${timer}-${amrap}-${label}`;
+// }
+//
+// function Reps_volume(sets: ISet[], unit: IUnit): IWeight {
+//   return Weight_convertTo(
+//     sets.reduce((memo, set) => Weight_add(memo, Reps_setVolume(set, unit)), Weight_build(0, unit)),
+//     unit
+//   );
+// }
+
 //#endregion
 
 //#region ________
