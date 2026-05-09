@@ -1787,7 +1787,7 @@ function Settings_programContentBuild(): Pick<
   };
 }
 
-function Settings_defaultEquipment(): IAllEquipment {
+export function Settings_defaultEquipment(): IAllEquipment {
   return {
     barbell: {
       vtype: "equipment_data",
@@ -2535,25 +2535,25 @@ export function PlannerProgram_replaceAndValidateExercise(
 //   return str;
 // }
 //
-// function PlannerProgram_switchToUnit(
-//   plannerProgram: IPlannerProgram,
-//   settings: ISettings,
-// ): IPlannerProgram {
-//   const newPlannerProgram = ObjectUtils_clone(plannerProgram);
-//   for (const week of newPlannerProgram.weeks) {
-//     for (const day of week.days) {
-//       const evaluator = new PlannerExerciseEvaluator(
-//         day.exerciseText,
-//         settings,
-//         "perday",
-//       );
-//       const tree = plannerExerciseParser.parse(day.exerciseText);
-//       day.exerciseText = evaluator.switchWeightsToUnit(tree.topNode, settings);
-//     }
-//   }
-//   return newPlannerProgram;
-// }
-//
+export function PlannerProgram_switchToUnit(
+  plannerProgram: IPlannerProgram,
+  settings: ISettings,
+): IPlannerProgram {
+  const newPlannerProgram = ObjectUtils_clone(plannerProgram);
+  for (const week of newPlannerProgram.weeks) {
+    for (const day of week.days) {
+      const evaluator = new PlannerExerciseEvaluator(
+        day.exerciseText,
+        settings,
+        "perday",
+      );
+      const tree = plannerExerciseParser.parse(day.exerciseText);
+      day.exerciseText = evaluator.switchWeightsToUnit(tree.topNode, settings);
+    }
+  }
+  return newPlannerProgram;
+}
+
 // function PlannerProgram_hasNonSelectedWeightUnit(
 //   plannerProgram: IPlannerProgram,
 //   settings: ISettings,
@@ -2861,7 +2861,7 @@ function PlannerProgram_topLineItems(
   return mapping;
 }
 
-function PlannerProgram_evaluate(
+export function PlannerProgram_evaluate(
   plannerProgram: IPlannerProgram,
   settings: ISettings,
 ): { evaluatedWeeks: IPlannerEvalResult[][]; exerciseFullNames: string[] } {
@@ -3485,7 +3485,7 @@ const TUnit = t.keyof(
   ),
   "TUnit",
 );
-type IUnit = t.TypeOf<typeof TUnit>;
+export type IUnit = t.TypeOf<typeof TUnit>;
 
 const TWeight = t.type(
   {
@@ -5686,7 +5686,7 @@ type IPlannerSyntaxPointer = {
   to: number;
 };
 
-class PlannerSyntaxError extends SyntaxError {
+export class PlannerSyntaxError extends SyntaxError {
   public readonly line: number;
   public readonly offset: number;
   public readonly from: number;
@@ -5764,7 +5764,7 @@ interface IPlannerExerciseEvaluatorWeek {
 
 type IPlannerExerciseEvaluatorMode = "perday" | "full" | "onset";
 
-class PlannerExerciseEvaluator {
+export class PlannerExerciseEvaluator {
   private readonly script: string;
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -15928,7 +15928,7 @@ function Weight_buildPct(value: number): IPercentage {
 //   }
 // }
 
-function Weight_build(value: number, unit: IUnit): IWeight {
+export function Weight_build(value: number, unit: IUnit): IWeight {
   const key = `${value}_${unit}`;
   const prebuiltWeight = prebuiltWeights[key];
   if (prebuiltWeight != null) {
