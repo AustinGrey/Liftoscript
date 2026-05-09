@@ -18,8 +18,8 @@ import {
   type IWeightChange,
   ProgramExercise_weightChanges,
   PlannerKey_fromFullName,
+  Stats_getEmpty,
 } from "@/evaluators/plan-evaluator.ts";
-import { Stats_getEmpty } from "@/evaluators/old/models/stats";
 
 export interface ICompletedEntries {
   completedReps: number[][];
