@@ -112,10 +112,7 @@ import {
   PlannerProgramExercise_sets,
 } from "../pages/planner/models/plannerProgramExercise";
 
-import {
-  PlannerKey_fromExerciseType,
-  PlannerKey_fromLabelNameAndEquipment,
-} from "../plannerKey";
+import { PlannerKey_fromExerciseType } from "../plannerKey";
 
 import {
   allExercisesList,
@@ -149,12 +146,8 @@ import {
 import {
   IEvaluatedProgram,
   IExportedProgram,
-  Program_create,
-  Program_evaluate,
-  Program_exportedPlannerProgramToExportedProgram,
   Program_getAllProgramExercises,
   Program_getAllUsedProgramExercises,
-  Program_getProgramDayExercises,
 } from "./program";
 import {
   ProgramSet_approxTimeMs,
@@ -201,7 +194,7 @@ declare let __HOST__: string;
 
 const encodedProgramHashToShortUrl: Partial<Record<string, string>> = {};
 
-export interface IProgramIndexEntry {
+interface IProgramIndexEntry {
   id: string;
   name: string;
   author: string;
@@ -223,32 +216,32 @@ export interface IProgramIndexEntry {
   dateModified?: string;
 }
 
-export interface IExportedProgram {
+interface IExportedProgram {
   program: IProgram;
   customExercises: Partial<Record<string, ICustomExercise>>;
   version: string;
   settings: IProgramContentSettings;
 }
 
-export interface IEvaluatedProgramWeek {
+interface IEvaluatedProgramWeek {
   name: string;
   description?: string;
   days: IEvaluatedProgramDay[];
 }
 
-export interface IEvaluatedProgramDay {
+interface IEvaluatedProgramDay {
   name: string;
   dayData: Required<IDayData>;
   description?: string;
   exercises: IPlannerProgramExercise[];
 }
 
-export interface IEvaluatedProgramError {
+interface IEvaluatedProgramError {
   error: PlannerSyntaxError;
   dayData: Required<IDayData>;
 }
 
-export interface IEvaluatedProgram {
+interface IEvaluatedProgram {
   type: "evaluatedProgram";
   id: string;
   planner: IPlannerProgram;
@@ -258,16 +251,16 @@ export interface IEvaluatedProgram {
   weeks: IEvaluatedProgramWeek[];
   states: IByTag<IProgramState>;
 }
-export type IEProgram = IProgram | IEvaluatedProgram;
+type IEProgram = IProgram | IEvaluatedProgram;
 
-export type IProgramMode = "planner" | "update";
-export const emptyProgramId = "emptyprogram";
+type IProgramMode = "planner" | "update";
+const emptyProgramId = "emptyprogram";
 
 function isEvaluatedProgram(program: IEProgram): program is IEvaluatedProgram {
   return "type" in program && program.type === "evaluatedProgram";
 }
 
-export function ev(program: IEProgram, settings: ISettings): IEvaluatedProgram {
+function ev(program: IEProgram, settings: ISettings): IEvaluatedProgram {
   if (isEvaluatedProgram(program)) {
     return program;
   } else {
@@ -275,10 +268,7 @@ export function ev(program: IEProgram, settings: ISettings): IEvaluatedProgram {
   }
 }
 
-export function Program_getProgram(
-  state: IState,
-  id?: string,
-): IProgram | undefined {
+function Program_getProgram(state: IState, id?: string): IProgram | undefined {
   if (id === emptyProgramId) {
     return Program_createEmptyProgram();
   } else {
@@ -286,7 +276,7 @@ export function Program_getProgram(
   }
 }
 
-export function Program_getFullProgram(
+function Program_getFullProgram(
   state: IState,
   id?: string,
 ): IProgram | undefined {
@@ -298,7 +288,7 @@ export function Program_getFullProgram(
   }
 }
 
-export function Program_cleanPlannerProgram(program: IProgram): IProgram {
+function Program_cleanPlannerProgram(program: IProgram): IProgram {
   const planner = program.planner;
   if (planner != null) {
     const newPlanner = {
@@ -325,23 +315,21 @@ export function Program_cleanPlannerProgram(program: IProgram): IProgram {
   }
 }
 
-export function Program_isEmpty(
-  program?: IProgram | IEvaluatedProgram,
-): boolean {
+function Program_isEmpty(program?: IProgram | IEvaluatedProgram): boolean {
   return program?.id === emptyProgramId;
 }
 
-export function Program_uses1RM(program: IEvaluatedProgram): boolean {
+function Program_uses1RM(program: IEvaluatedProgram): boolean {
   const allExercises = Program_getAllProgramExercises(program);
   return allExercises.some((e) => ProgramExercise_doesUse1RM(e));
 }
 
-export function Program_usesRPE(program: IEvaluatedProgram): boolean {
+function Program_usesRPE(program: IEvaluatedProgram): boolean {
   const allExercises = Program_getAllProgramExercises(program);
   return allExercises.some((e) => ProgramExercise_doesUseRPE(e));
 }
 
-export function Program_getProgramExercisesFromExerciseType(
+function Program_getProgramExercisesFromExerciseType(
   program: IEvaluatedProgram,
   exerciseType: IExerciseType,
 ): IPlannerProgramExercise[] {
@@ -350,17 +338,15 @@ export function Program_getProgramExercisesFromExerciseType(
   );
 }
 
-export function Program_getProgramIndex(state: IState, id: string): number {
+function Program_getProgramIndex(state: IState, id: string): number {
   return state.storage.programs.findIndex((p) => p.id === id);
 }
 
-export function Program_getCurrentProgram(
-  storage: IStorage,
-): IProgram | undefined {
+function Program_getCurrentProgram(storage: IStorage): IProgram | undefined {
   return storage.programs.filter((p) => p.id === storage.currentProgramId)[0];
 }
 
-export function Program_storageToExportedProgram(
+function Program_storageToExportedProgram(
   storage: IStorage,
   programId: string,
 ): IExportedProgram | undefined {
@@ -377,7 +363,7 @@ export function Program_storageToExportedProgram(
   };
 }
 
-export function Program_nextHistoryEntry(
+function Program_nextHistoryEntry(
   program: IEvaluatedProgram,
   dayData: IDayData,
   index: number,
@@ -451,7 +437,7 @@ export function Program_nextHistoryEntry(
   return newEntry;
 }
 
-export function Program_stateValue(
+function Program_stateValue(
   state: IProgramState,
   key: string,
   value?: string,
@@ -487,7 +473,7 @@ export function Program_nextHistoryRecord(
   );
 }
 
-export function Program_nextHistoryRecordFromEvaluated(
+function Program_nextHistoryRecordFromEvaluated(
   program: IEvaluatedProgram,
   settings: ISettings,
   stats: IStats,
@@ -538,7 +524,7 @@ export function Program_nextHistoryRecordFromEvaluated(
   };
 }
 
-export function Program_getSupersetGroups(
+function Program_getSupersetGroups(
   evaluatedProgram: IEvaluatedProgram,
   dayData: IShortDayData,
   excludeExercise?: IPlannerProgramExercise,
@@ -564,7 +550,7 @@ export function Program_getSupersetGroups(
   return groups;
 }
 
-export function Program_getSupersetExercises(
+function Program_getSupersetExercises(
   evalutedProgram: IEvaluatedProgram,
   plannerExercise: IPlannerProgramExercise,
 ): IPlannerProgramExerciseWithType[] {
@@ -582,7 +568,7 @@ export function Program_getSupersetExercises(
   return result;
 }
 
-export function Program_runExerciseFinishDayScript(
+function Program_runExerciseFinishDayScript(
   entry: IHistoryEntry,
   dayData: IDayData,
   settings: ISettings,
@@ -657,7 +643,7 @@ export function Program_runExerciseFinishDayScript(
   };
 }
 
-export function Program_runFinishDayScript(
+function Program_runFinishDayScript(
   programExercise: IPlannerProgramExercise,
   program: IEvaluatedProgram,
   dayData: IDayData,
@@ -749,7 +735,7 @@ export function Program_runFinishDayScript(
   };
 }
 
-export function Program_dayAverageTimeMs(
+function Program_dayAverageTimeMs(
   program: IEvaluatedProgram,
   settings: ISettings,
 ): number {
@@ -762,7 +748,7 @@ export function Program_dayAverageTimeMs(
   return dayApproxTimes.reduce((acc, t) => acc + t, 0) / dayApproxTimes.length;
 }
 
-export function Program_dayApproxTimeMs(
+function Program_dayApproxTimeMs(
   programDay: IEvaluatedProgramDay,
   settings: ISettings,
 ): number {
@@ -771,7 +757,7 @@ export function Program_dayApproxTimeMs(
   }, 0);
 }
 
-export function Program_getProgramExerciseForKeyAndShortDayData(
+function Program_getProgramExerciseForKeyAndShortDayData(
   program: IEvaluatedProgram,
   dayData: IShortDayData,
   key: string,
@@ -780,7 +766,7 @@ export function Program_getProgramExerciseForKeyAndShortDayData(
   return Program_getProgramExerciseForKeyAndDay(program, day, key);
 }
 
-export function Program_getProgramExerciseForKeyAndDay(
+function Program_getProgramExerciseForKeyAndDay(
   program: IEvaluatedProgram,
   day: number,
   key: string,
@@ -899,7 +885,7 @@ export function Program_runAllFinishDayScripts(
   };
 }
 
-export function Program_createVariation(
+function Program_createVariation(
   useStateWeight?: boolean,
 ): IProgramExerciseVariation {
   return {
@@ -913,7 +899,7 @@ export function Program_createVariation(
   };
 }
 
-export function Program_createExercise(units: IUnit): IProgramExercise {
+function Program_createExercise(units: IUnit): IProgramExercise {
   const defaultWarmup = warmupValues(units)[45];
   return {
     name: "Squat",
@@ -938,7 +924,7 @@ export function Program_createExercise(units: IUnit): IProgramExercise {
   };
 }
 
-export function Program_previewProgram(
+function Program_previewProgram(
   dispatch: IDispatch,
   programId: string,
   showCustomPrograms: boolean,
@@ -956,7 +942,7 @@ export function Program_previewProgram(
   dispatch(Thunk_pushScreen("programPreview"));
 }
 
-export function Program_createEmptyProgram(): IProgram {
+function Program_createEmptyProgram(): IProgram {
   return {
     vtype: "program",
     exercises: [],
@@ -978,7 +964,7 @@ export function Program_createEmptyProgram(): IProgram {
   };
 }
 
-export function Program_cloneProgram(
+function Program_cloneProgram(
   dispatch: IDispatch,
   program: IProgram,
   settings: ISettings,
@@ -1010,10 +996,7 @@ export function Program_cloneProgram(
   );
 }
 
-export function Program_selectProgram(
-  dispatch: IDispatch,
-  programId: string,
-): void {
+function Program_selectProgram(dispatch: IDispatch, programId: string): void {
   updateState(
     dispatch,
     [lb<IState>().p("storage").p("currentProgramId").record(programId)],
@@ -1022,7 +1005,7 @@ export function Program_selectProgram(
   dispatch(Thunk_pushScreen("main", undefined, { tab: "home" }));
 }
 
-export function Program_getAllProgramExercises(
+function Program_getAllProgramExercises(
   evaluatedProgram: IEvaluatedProgram,
 ): IPlannerProgramExercise[] {
   return evaluatedProgram.weeks.flatMap((w) =>
@@ -1030,7 +1013,7 @@ export function Program_getAllProgramExercises(
   );
 }
 
-export function Program_getAllUsedProgramExercises(
+function Program_getAllUsedProgramExercises(
   evaluatedProgram: IEvaluatedProgram,
 ): IPlannerProgramExerciseWithType[] {
   const used = Program_getAllProgramExercises(evaluatedProgram).filter(
@@ -1039,7 +1022,7 @@ export function Program_getAllUsedProgramExercises(
   return used as IPlannerProgramExerciseWithType[];
 }
 
-export function Program_getAllProgramExercisesWithType(
+function Program_getAllProgramExercisesWithType(
   evaluatedProgram: IEvaluatedProgram,
 ): IPlannerProgramExerciseWithType[] {
   const used = Program_getAllProgramExercises(evaluatedProgram).filter(
@@ -1048,7 +1031,7 @@ export function Program_getAllProgramExercisesWithType(
   return used as IPlannerProgramExerciseWithType[];
 }
 
-export function Program_getProgramExerciseByTypeWeekAndDay(
+function Program_getProgramExerciseByTypeWeekAndDay(
   evaluatedProgram: IEvaluatedProgram,
   exerciseType: IExerciseType,
   week: number,
@@ -1070,7 +1053,7 @@ export function Program_getProgramExerciseByTypeWeekAndDay(
   return exercise;
 }
 
-export function Program_forceEvaluate(
+function Program_forceEvaluate(
   program: IProgram,
   settings: ISettings,
 ): IEvaluatedProgram {
@@ -1159,7 +1142,7 @@ export function Program_forceEvaluate(
   return result;
 }
 
-export function Program_getNumberOfExerciseInstances(
+function Program_getNumberOfExerciseInstances(
   program: IEvaluatedProgram,
   exerciseKey: string,
 ): number {
@@ -1172,7 +1155,7 @@ export function Program_getNumberOfExerciseInstances(
   return count;
 }
 
-export function Program_changeExerciseName(
+function Program_changeExerciseName(
   from: string,
   to: string,
   program: IProgram,
@@ -1206,19 +1189,17 @@ export function Program_changeExerciseName(
   };
 }
 
-export function Program_numberOfDays(program: IEvaluatedProgram): number {
+function Program_numberOfDays(program: IEvaluatedProgram): number {
   return program.weeks.reduce((memo, week) => memo + week.days.length, 0);
 }
 
-export function Program_weeksRange(
-  program: IEvaluatedProgram,
-): string | undefined {
+function Program_weeksRange(program: IEvaluatedProgram): string | undefined {
   return program.weeks.length > 1
     ? `${program.weeks.length} ${StringUtils_pluralize("week", program.weeks.length)}`
     : "";
 }
 
-export function Program_daysRange(program: IEvaluatedProgram): string {
+function Program_daysRange(program: IEvaluatedProgram): string {
   const minDays = Math.min(...program.weeks.map((w) => w.days.length));
   const maxDays = Math.max(...program.weeks.map((w) => w.days.length));
   if (minDays === maxDays) {
@@ -1228,7 +1209,7 @@ export function Program_daysRange(program: IEvaluatedProgram): string {
   }
 }
 
-export function Program_exerciseRange(program: IEvaluatedProgram): string {
+function Program_exerciseRange(program: IEvaluatedProgram): string {
   const days = program.weeks.flatMap((w) => w.days);
   const minExs = Math.min(
     ...days.map((d) => Program_getProgramDayUsedExercises(d).length),
@@ -1239,10 +1220,7 @@ export function Program_exerciseRange(program: IEvaluatedProgram): string {
   return Program_exerciseRangeFormat(minExs, maxExs);
 }
 
-export function Program_exerciseRangeFormat(
-  minExs: number,
-  maxExs: number,
-): string {
+function Program_exerciseRangeFormat(minExs: number, maxExs: number): string {
   if (minExs === maxExs) {
     return `${minExs} ${StringUtils_pluralize("exercise", minExs)} per day`;
   } else {
@@ -1250,7 +1228,7 @@ export function Program_exerciseRangeFormat(
   }
 }
 
-export function Program_getWeekFromDay(
+function Program_getWeekFromDay(
   program: IEvaluatedProgram,
   day: number,
 ): number {
@@ -1265,7 +1243,7 @@ export function Program_getWeekFromDay(
   return 1;
 }
 
-export function Program_getDayNumber(
+function Program_getDayNumber(
   program: IPlannerProgram | IEvaluatedProgram,
   week: number,
   dayInWeek: number,
@@ -1282,7 +1260,7 @@ export function Program_getDayNumber(
   return -1;
 }
 
-export function Program_getExerciseTypesForWeekDay(
+function Program_getExerciseTypesForWeekDay(
   program: IEvaluatedProgram,
   week: number,
   day: number,
@@ -1299,7 +1277,7 @@ export function Program_getExerciseTypesForWeekDay(
   return exerciseTypes;
 }
 
-export function Program_getDayData(
+function Program_getDayData(
   program: IEvaluatedProgram,
   day: number,
 ): Required<IDayData> {
@@ -1310,10 +1288,7 @@ export function Program_getDayData(
   };
 }
 
-export function Program_getDayInWeek(
-  program: IEvaluatedProgram,
-  day: number,
-): number {
+function Program_getDayInWeek(program: IEvaluatedProgram, day: number): number {
   let daysTotal = 0;
   for (const week of program.weeks) {
     daysTotal += week.days.length;
@@ -1324,10 +1299,7 @@ export function Program_getDayInWeek(
   return 1;
 }
 
-export function Program_getDayName(
-  program: IEvaluatedProgram,
-  day: number,
-): string {
+function Program_getDayName(program: IEvaluatedProgram, day: number): string {
   const dayData = Program_getDayData(program, day);
   const programDay = Program_getProgramDay(program, day);
   const week = program.weeks[(dayData.week || 1) - 1];
@@ -1335,9 +1307,7 @@ export function Program_getDayName(
   return `${isMultiweek ? `${week.name} - ` : ""}${programDay?.name}`;
 }
 
-export function Program_getListOfDays(
-  program: IEvaluatedProgram,
-): [string, string][] {
+function Program_getListOfDays(program: IEvaluatedProgram): [string, string][] {
   const days: [string, string][] = [];
   const isReallyMultiweek = program.weeks.length > 1;
   let dayIndex = 0;
@@ -1353,7 +1323,7 @@ export function Program_getListOfDays(
   return days;
 }
 
-export function Program_getProgramWeek(
+function Program_getProgramWeek(
   program: IEvaluatedProgram,
   day?: number,
 ): IEvaluatedProgramWeek {
@@ -1363,7 +1333,7 @@ export function Program_getProgramWeek(
   );
 }
 
-export function Program_getProgramDay(
+function Program_getProgramDay(
   program: IEvaluatedProgram,
   day: number,
 ): IEvaluatedProgramDay | undefined {
@@ -1379,14 +1349,14 @@ export function Program_getProgramDay(
   return undefined;
 }
 
-export function Program_getProgramDayExercises(
+function Program_getProgramDayExercises(
   programDay: IEvaluatedProgramDay,
 ): IPlannerProgramExerciseWithType[] {
   const list = programDay.exercises.filter((e) => e.exerciseType != null);
   return list as IPlannerProgramExerciseWithType[];
 }
 
-export function Program_getProgramDayUsedExercises(
+function Program_getProgramDayUsedExercises(
   programDay: IEvaluatedProgramDay,
 ): IPlannerProgramExerciseWithType[] {
   const list = programDay.exercises.filter(
@@ -1409,7 +1379,7 @@ export function Program_applyEvaluatedProgram(
   return newProgram;
 }
 
-export function Program_getProgramExercise(
+function Program_getProgramExercise(
   day: number,
   program?: IEvaluatedProgram,
   key?: string,
@@ -1421,7 +1391,7 @@ export function Program_getProgramExercise(
   return programDay?.exercises.find((e) => e.key === key);
 }
 
-export function Program_getFirstProgramExercise(
+function Program_getFirstProgramExercise(
   program?: IEvaluatedProgram,
   key?: string,
 ): IPlannerProgramExercise | undefined {
@@ -1433,7 +1403,7 @@ export function Program_getFirstProgramExercise(
   );
 }
 
-export function Program_getProgramExerciseFromDay(
+function Program_getProgramExerciseFromDay(
   programDay?: IEvaluatedProgramDay,
   key?: string,
 ): IPlannerProgramExercise | undefined {
@@ -1443,7 +1413,7 @@ export function Program_getProgramExerciseFromDay(
   return programDay?.exercises.find((e) => e.key === key);
 }
 
-export function Program_getEvaluatedExercise(
+function Program_getEvaluatedExercise(
   program: IProgram,
   day: number,
   key: string,
@@ -1465,15 +1435,12 @@ export function Program_getEvaluatedExercise(
   return plannerProgramExercise;
 }
 
-export function Program_nextDay(
-  program: IEvaluatedProgram,
-  day?: number,
-): number {
+function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
   const nd = (day != null ? day % Program_numberOfDays(program) : 0) + 1;
   return isNaN(nd) ? 1 : nd;
 }
 
-export function Program_editAction(
+function Program_editAction(
   dispatch: IDispatch,
   program: IProgram,
   dayData?: IDayData,
@@ -1494,7 +1461,7 @@ export function Program_editAction(
   dispatch(Thunk_pushScreen("editProgram", { programId: program.id }, opts));
 }
 
-export function Program_exportProgramToFile(
+function Program_exportProgramToFile(
   program: IProgram,
   settings: ISettings,
   version: string,
@@ -1506,7 +1473,7 @@ export function Program_exportProgramToFile(
   );
 }
 
-export async function Program_exportProgramToLink(
+async function Program_exportProgramToLink(
   program: IProgram,
   settings: ISettings,
   version: string,
@@ -1517,7 +1484,7 @@ export async function Program_exportProgramToLink(
   return url.toString();
 }
 
-export function Program_exportProgram(
+function Program_exportProgram(
   program: IProgram,
   settings: ISettings,
   version?: string,
@@ -1548,7 +1515,7 @@ export function Program_exportProgram(
   };
 }
 
-export function Program_exportedPlannerProgramToExportedProgram(
+function Program_exportedPlannerProgramToExportedProgram(
   exportedPlannerProgram: IExportedPlannerProgram,
   aNextDay?: number,
 ): IExportedProgram {
@@ -1598,10 +1565,7 @@ export function Program_create(name: string, id?: string): IProgram {
   };
 }
 
-export function Program_isChanged(
-  aProgram: IProgram,
-  bProgram: IProgram,
-): boolean {
+function Program_isChanged(aProgram: IProgram, bProgram: IProgram): boolean {
   const { ...cleanedAProgram } = aProgram;
   const { ...cleanedBProgram } = bProgram;
   const changed = !ObjectUtils_isEqual(cleanedAProgram, cleanedBProgram);
@@ -1618,7 +1582,7 @@ export function Program_isChanged(
   return false;
 }
 
-export function Program_mergePrograms(
+function Program_mergePrograms(
   oldProgram: IProgram,
   newProgram: IProgram,
   enforceNew: boolean = false,
@@ -1657,7 +1621,7 @@ export function Program_mergePrograms(
   };
 }
 
-export async function Program_toUrl(
+async function Program_toUrl(
   program: IProgram,
   settings: ISettings,
   client: Window["fetch"],
@@ -1688,7 +1652,7 @@ export async function Program_toUrl(
   }
 }
 
-export function Program_createFromHistoryRecord(
+function Program_createFromHistoryRecord(
   programName: string,
   record: IHistoryRecord,
   settings: ISettings,
@@ -1734,7 +1698,7 @@ export function Program_createFromHistoryRecord(
   return newProgram;
 }
 
-export function Program_addDayFromHistoryRecord(
+function Program_addDayFromHistoryRecord(
   program: IProgram,
   afterDay: number,
   record: IHistoryRecord,
@@ -1783,7 +1747,7 @@ export function Program_addDayFromHistoryRecord(
   return { program: newProgram, dayData: newDayData };
 }
 
-export function Program_getReusingSetsExercises(
+function Program_getReusingSetsExercises(
   evaluatedProgram: IEvaluatedProgram,
   programExercise: IPlannerProgramExercise,
 ): IPlannerProgramExercise[] {
@@ -1800,7 +1764,7 @@ export function Program_getReusingSetsExercises(
   return exercises;
 }
 
-export function Program_getReusingDescriptionsExercises(
+function Program_getReusingDescriptionsExercises(
   evaluatedProgram: IEvaluatedProgram,
   programExercise: IPlannerProgramExercise,
 ): IPlannerProgramExercise[] {
@@ -1819,7 +1783,7 @@ export function Program_getReusingDescriptionsExercises(
   return exercises;
 }
 
-export function Program_getReusingCustomProgressExercises(
+function Program_getReusingCustomProgressExercises(
   evaluatedProgram: IEvaluatedProgram,
   programExercise: IPlannerProgramExercise,
 ): IPlannerProgramExercise[] {
@@ -1835,7 +1799,7 @@ export function Program_getReusingCustomProgressExercises(
   return exercises;
 }
 
-export function Program_getReusingSetProgressExercises(
+function Program_getReusingSetProgressExercises(
   evaluatedProgram: IEvaluatedProgram,
   programExercise: IPlannerProgramExercise,
 ): IPlannerProgramExercise[] {
@@ -1848,7 +1812,7 @@ export function Program_getReusingSetProgressExercises(
   return exercises;
 }
 
-export function Program_getReusingProgressExercises(
+function Program_getReusingProgressExercises(
   evaluatedProgram: IEvaluatedProgram,
   programExercise: IPlannerProgramExercise,
 ): IPlannerProgramExercise[] {
@@ -1868,7 +1832,7 @@ export function Program_getReusingProgressExercises(
   return exercises;
 }
 
-export function Program_getReusingUpdateExercises(
+function Program_getReusingUpdateExercises(
   evaluatedProgram: IEvaluatedProgram,
   programExercise: IPlannerProgramExercise,
 ): IPlannerProgramExercise[] {
@@ -1881,7 +1845,7 @@ export function Program_getReusingUpdateExercises(
   return exercises;
 }
 
-export const Program_fullProgram = memoize(
+const Program_fullProgram = memoize(
   (program: IProgram, settings: ISettings): IProgram => {
     return program;
   },
@@ -1890,7 +1854,7 @@ export const Program_fullProgram = memoize(
 
 export const Program_evaluate = memoize(Program_forceEvaluate, { maxSize: 10 });
 
-export function Program_getDiffState(
+function Program_getDiffState(
   state: IProgramState,
   newState: IProgramState,
   units: IUnit,
@@ -1914,7 +1878,7 @@ export function Program_getDiffState(
   );
 }
 
-export function Program_getDiffVars(
+function Program_getDiffVars(
   entry: IHistoryEntry,
   updates: ILiftoscriptEvaluatorUpdate[],
   bindings: IScriptBindings,
@@ -1944,7 +1908,7 @@ export function Program_getDiffVars(
   return diffVars;
 }
 
-export function Program_getEvaluatedProgramFromState(
+function Program_getEvaluatedProgramFromState(
   state: IState,
 ): IEvaluatedProgram | undefined {
   const program = Program_getCurrentProgram(state.storage);
@@ -1956,7 +1920,7 @@ export function Program_getEvaluatedProgramFromState(
 //#endregion
 
 //#region Settings
-export function Settings_programContentBuild(): Pick<
+function Settings_programContentBuild(): Pick<
   ISettings,
   "timers" | "units" | "planner"
 > {
@@ -1971,7 +1935,7 @@ export function Settings_programContentBuild(): Pick<
   };
 }
 
-export function Settings_defaultEquipment(): IAllEquipment {
+function Settings_defaultEquipment(): IAllEquipment {
   return {
     barbell: {
       vtype: "equipment_data",
@@ -2223,7 +2187,7 @@ export function Settings_build(): ISettings {
   };
 }
 
-export function Settings_buildPlannerSettings(): IPlannerSettings {
+function Settings_buildPlannerSettings(): IPlannerSettings {
   return {
     strengthSetsPct: 30,
     hypertrophySetsPct: 70,
@@ -2257,7 +2221,7 @@ export function Settings_buildPlannerSettings(): IPlannerSettings {
   };
 }
 
-export function Settings_applyExportedProgram(
+function Settings_applyExportedProgram(
   settings: ISettings,
   exportedProgram: IExportedProgram,
 ): ISettings {
@@ -2289,13 +2253,13 @@ export function Settings_applyExportedProgram(
   return result;
 }
 
-export function Settings_activeCustomExercises(
+function Settings_activeCustomExercises(
   settings: ISettings,
 ): IAllCustomExercises {
   return ObjectUtils_filter(settings.exercises, (k, v) => !v?.isDeleted);
 }
 
-export function Settings_getNextTargetType(
+function Settings_getNextTargetType(
   type: ITargetType,
   skipPlatesCalculator: boolean,
 ): ITargetType {
@@ -2317,7 +2281,7 @@ export function Settings_getNextTargetType(
   return nextTargetType;
 }
 
-export function Settings_toggleStarredExercise(
+function Settings_toggleStarredExercise(
   dispatch: IDispatch,
   key: string,
 ): void {
@@ -2338,7 +2302,7 @@ export function Settings_toggleStarredExercise(
   );
 }
 
-export function Settings_changePickerSettings(
+function Settings_changePickerSettings(
   dispatch: IDispatch,
   settings: IExercisePickerSettings,
 ): void {
@@ -2353,14 +2317,14 @@ export function Settings_changePickerSettings(
   );
 }
 
-export function Settings_doesProgramHaveUnset1RMs(
+function Settings_doesProgramHaveUnset1RMs(
   program: IProgram,
   settings: ISettings,
 ): boolean {
   return Settings_getExercisesWithUnset1RMs(program, settings).length > 0;
 }
 
-export function Settings_getExercisesWithUnset1RMs(
+function Settings_getExercisesWithUnset1RMs(
   program: IProgram,
   settings: ISettings,
 ): IExercise[] {
@@ -2391,7 +2355,7 @@ export function Settings_getExercisesWithUnset1RMs(
   });
 }
 
-export function Settings_setOneRM(
+function Settings_setOneRM(
   dispatch: IDispatch,
   exerciseType: IExerciseType,
   value: IWeight,
@@ -2409,7 +2373,7 @@ export function Settings_setOneRM(
   );
 }
 
-export function Settings_getTheme(settings: ISettings): "dark" | "light" {
+function Settings_getTheme(settings: ISettings): "dark" | "light" {
   return settings.theme
     ? settings.theme
     : window.lftSystemDarkMode
@@ -2417,7 +2381,7 @@ export function Settings_getTheme(settings: ISettings): "dark" | "light" {
       : "light";
 }
 
-export function Settings_applyTheme(theme?: "dark" | "light"): void {
+function Settings_applyTheme(theme?: "dark" | "light"): void {
   if (theme === "dark") {
     document.body.classList.add("dark");
     SendMessage_toIosAndAndroid({ type: "theme", value: "dark" });
@@ -2429,16 +2393,16 @@ export function Settings_applyTheme(theme?: "dark" | "light"): void {
 //#endregion
 
 //#region Planner Program
-export type IExerciseTypeToProperties = Record<
+type IExerciseTypeToProperties = Record<
   string,
   (IPlannerProgramProperty & { dayData: Required<IDayData> })[]
 >;
-export type IExerciseTypeToWarmupSets = Record<
+type IExerciseTypeToWarmupSets = Record<
   string,
   IPlannerProgramExerciseWarmupSet[] | undefined
 >;
 
-export class PlannerDayDataError extends Error {
+class PlannerDayDataError extends Error {
   constructor(
     message: string,
     public readonly dayData: Required<IDayData>,
@@ -2447,9 +2411,9 @@ export class PlannerDayDataError extends Error {
   }
 }
 
-export type IDereuseDecision = "all" | "weight" | "rpe" | "timer";
+type IDereuseDecision = "all" | "weight" | "rpe" | "timer";
 
-export function PlannerProgram_isValid(
+function PlannerProgram_isValid(
   program: IPlannerProgram | undefined,
   settings: ISettings,
 ): boolean {
@@ -2490,7 +2454,7 @@ export function PlannerProgram_replaceWeight(
   return newEvalutedProgram;
 }
 
-export function PlannerProgram_replaceExercise(
+function PlannerProgram_replaceExercise(
   planner: IPlannerProgram,
   key: string,
   newLabel: string | undefined,
@@ -2611,7 +2575,7 @@ export function PlannerProgram_replaceAndValidateExercise(
   }
 }
 
-export function PlannerProgram_modifyTopLineItems(
+function PlannerProgram_modifyTopLineItems(
   aPlannerProgram: IPlannerProgram,
   settings: ISettings,
   firstPass: (
@@ -2688,9 +2652,7 @@ export function PlannerProgram_modifyTopLineItems(
   return plannerProgram;
 }
 
-export function PlannerProgram_topLineItemToText(
-  line: IPlannerTopLineItem,
-): string {
+function PlannerProgram_topLineItemToText(line: IPlannerTopLineItem): string {
   let str = "";
   if (line.type === "description") {
     //
@@ -2721,7 +2683,7 @@ export function PlannerProgram_topLineItemToText(
   return str;
 }
 
-export function PlannerProgram_switchToUnit(
+function PlannerProgram_switchToUnit(
   plannerProgram: IPlannerProgram,
   settings: ISettings,
 ): IPlannerProgram {
@@ -2740,7 +2702,7 @@ export function PlannerProgram_switchToUnit(
   return newPlannerProgram;
 }
 
-export function PlannerProgram_hasNonSelectedWeightUnit(
+function PlannerProgram_hasNonSelectedWeightUnit(
   plannerProgram: IPlannerProgram,
   settings: ISettings,
 ): boolean {
@@ -2765,7 +2727,7 @@ export function PlannerProgram_hasNonSelectedWeightUnit(
   return false;
 }
 
-export function PlannerProgram_compact(
+function PlannerProgram_compact(
   oldPlannerProgram: IPlannerProgram,
   plannerProgram: IPlannerProgram,
   settings: ISettings,
@@ -2941,7 +2903,7 @@ export function PlannerProgram_compact(
   return plannerProgram;
 }
 
-export function PlannerProgram_groupedTopLines(
+function PlannerProgram_groupedTopLines(
   topLine: IPlannerTopLineItem[][][],
 ): IPlannerTopLineItem[][][][] {
   const groupedTopLine: IPlannerTopLineItem[][][][] = [];
@@ -2990,7 +2952,7 @@ export function PlannerProgram_groupedTopLines(
   return groupedTopLine;
 }
 
-export function PlannerProgram_topLineItems(
+function PlannerProgram_topLineItems(
   plannerProgram: IPlannerProgram,
   settings: ISettings,
 ): IPlannerTopLineItem[][][] {
@@ -3047,14 +3009,14 @@ export function PlannerProgram_topLineItems(
   return mapping;
 }
 
-export function PlannerProgram_evaluate(
+function PlannerProgram_evaluate(
   plannerProgram: IPlannerProgram,
   settings: ISettings,
 ): { evaluatedWeeks: IPlannerEvalResult[][]; exerciseFullNames: string[] } {
   return PlannerEvaluator_evaluate(plannerProgram, settings);
 }
 
-export function PlannerProgram_evaluateFull(
+function PlannerProgram_evaluateFull(
   fullProgramText: string,
   settings: ISettings,
 ): { evaluatedWeeks: IPlannerEvalFullResult; exerciseFullNames: string[] } {
@@ -3086,7 +3048,7 @@ export function PlannerProgram_evaluateText(
   return weeks;
 }
 
-export function PlannerProgram_fullToWeekEvalResult(
+function PlannerProgram_fullToWeekEvalResult(
   fullResult: IPlannerEvalFullResult,
 ): IPlannerEvalResult[][] {
   return fullResult.success
@@ -3125,7 +3087,7 @@ export function PlannerProgram_generateFullText(
   return fullText;
 }
 
-export function PlannerProgram_usedExercises(
+function PlannerProgram_usedExercises(
   exercises: IAllCustomExercises,
   evaluatedWeeks: IPlannerEvalResult[][],
 ): IAllCustomExercises {
@@ -3145,7 +3107,7 @@ export function PlannerProgram_usedExercises(
   });
 }
 
-export function PlannerProgram_usedEquipment(
+function PlannerProgram_usedEquipment(
   equipment: IAllEquipment,
   evaluatedWeeks: IPlannerEvalResult[][],
 ): IAllEquipment {
@@ -3161,7 +3123,7 @@ export function PlannerProgram_usedEquipment(
   });
 }
 
-export function PlannerProgram_convertExportedPlannerToProgram(
+function PlannerProgram_convertExportedPlannerToProgram(
   planner: IExportedPlannerProgram,
   settings: ISettings,
 ): IExportedProgram {
@@ -3183,7 +3145,7 @@ export function PlannerProgram_convertExportedPlannerToProgram(
   };
 }
 
-export function PlannerProgram_buildExportedProgram(
+function PlannerProgram_buildExportedProgram(
   id: string,
   program: IPlannerProgram,
   settings: ISettings,
@@ -3211,7 +3173,7 @@ export function PlannerProgram_buildExportedProgram(
   );
 }
 
-export async function PlannerProgram_getExportedPlannerProgram(
+async function PlannerProgram_getExportedPlannerProgram(
   program: IExportedPlannerProgram,
   settings: ISettings,
 ): Promise<IEither<IExportedPlannerProgram, string[]>> {
@@ -3255,10 +3217,7 @@ export async function PlannerProgram_getExportedPlannerProgram(
 
 //#region Types
 
-export type IDictionaryC<
-  D extends t.Mixed,
-  C extends t.Mixed,
-> = t.DictionaryType<
+type IDictionaryC<D extends t.Mixed, C extends t.Mixed> = t.DictionaryType<
   D,
   C,
   {
@@ -3270,7 +3229,7 @@ export type IDictionaryC<
   unknown
 >;
 
-export const dictionary = <D extends t.Mixed, C extends t.Mixed>(
+const dictionary = <D extends t.Mixed, C extends t.Mixed>(
   domain: D,
   codomain: C,
   name?: string,
@@ -3278,7 +3237,7 @@ export const dictionary = <D extends t.Mixed, C extends t.Mixed>(
   return unsafeCoerce(t.record(t.union([domain, t.undefined]), codomain, name));
 };
 
-export const equipments = [
+const equipments = [
   "barbell",
   "cable",
   "dumbbell",
@@ -3291,7 +3250,7 @@ export const equipments = [
   "ezbar",
   "trapbar",
 ] as const;
-export const TBuiltinEquipment = t.keyof(
+const TBuiltinEquipment = t.keyof(
   equipments.reduce<Record<IArrayElement<typeof equipments>, null>>(
     (memo, muscle) => {
       memo[muscle] = null;
@@ -3301,9 +3260,9 @@ export const TBuiltinEquipment = t.keyof(
   ),
   "TBuiltinEquipment",
 );
-export type IBuiltinEquipment = t.TypeOf<typeof TBuiltinEquipment>;
+type IBuiltinEquipment = t.TypeOf<typeof TBuiltinEquipment>;
 
-export const exerciseTypes = [
+const exerciseTypes = [
   "abWheel",
   "arnoldPress",
   "aroundTheWorld",
@@ -3470,7 +3429,7 @@ export const exerciseTypes = [
   "zercherSquat",
 ] as const;
 
-export const availableMuscles = [
+const availableMuscles = [
   "Adductor Brevis",
   "Adductor Longus",
   "Adductor Magnus",
@@ -3512,7 +3471,7 @@ export const availableMuscles = [
   "Wrist Flexors",
 ] as const;
 
-export const TMuscle = t.keyof(
+const TMuscle = t.keyof(
   availableMuscles.reduce<Record<IArrayElement<typeof availableMuscles>, null>>(
     (memo, muscle) => {
       memo[muscle] = null;
@@ -3522,9 +3481,9 @@ export const TMuscle = t.keyof(
   ),
   "TMuscle",
 );
-export type IMuscle = t.TypeOf<typeof TMuscle>;
+type IMuscle = t.TypeOf<typeof TMuscle>;
 
-export const availableBodyParts = [
+const availableBodyParts = [
   "Back",
   "Calves",
   "Chest",
@@ -3536,7 +3495,7 @@ export const availableBodyParts = [
   "Waist",
 ];
 
-export const exerciseKinds = [
+const exerciseKinds = [
   "core",
   "pull",
   "push",
@@ -3544,7 +3503,7 @@ export const exerciseKinds = [
   "upper",
   "lower",
 ] as const;
-export const TExerciseKind = t.keyof(
+const TExerciseKind = t.keyof(
   exerciseKinds.reduce<Record<IArrayElement<typeof exerciseKinds>, null>>(
     (memo, kind) => {
       memo[kind] = null;
@@ -3554,9 +3513,9 @@ export const TExerciseKind = t.keyof(
   ),
   "TExerciseKind",
 );
-export type IExerciseKind = t.TypeOf<typeof TExerciseKind>;
+type IExerciseKind = t.TypeOf<typeof TExerciseKind>;
 
-export const TBodyPart = t.keyof(
+const TBodyPart = t.keyof(
   availableBodyParts.reduce<
     Record<IArrayElement<typeof availableBodyParts>, null>
   >(
@@ -3568,10 +3527,10 @@ export const TBodyPart = t.keyof(
   ),
   "TBodyPart",
 );
-export type IBodyPart = t.TypeOf<typeof TBodyPart>;
+type IBodyPart = t.TypeOf<typeof TBodyPart>;
 
-export const graphExerciseSelectedTypes = ["weight", "volume"] as const;
-export const TGraphExerciseSelectedType = t.keyof(
+const graphExerciseSelectedTypes = ["weight", "volume"] as const;
+const TGraphExerciseSelectedType = t.keyof(
   graphExerciseSelectedTypes.reduce<
     Record<IArrayElement<typeof graphExerciseSelectedTypes>, null>
   >(
@@ -3583,12 +3542,10 @@ export const TGraphExerciseSelectedType = t.keyof(
   ),
   "TGraphExerciseSelectedType",
 );
-export type IGraphExerciseSelectedType = t.TypeOf<
-  typeof TGraphExerciseSelectedType
->;
+type IGraphExerciseSelectedType = t.TypeOf<typeof TGraphExerciseSelectedType>;
 
-export const graphMuscleGroupSelectedTypes = ["volume", "sets"] as const;
-export const TGraphMuscleGroupSelectedType = t.keyof(
+const graphMuscleGroupSelectedTypes = ["volume", "sets"] as const;
+const TGraphMuscleGroupSelectedType = t.keyof(
   graphMuscleGroupSelectedTypes.reduce<
     Record<IArrayElement<typeof graphMuscleGroupSelectedTypes>, null>
   >(
@@ -3600,20 +3557,20 @@ export const TGraphMuscleGroupSelectedType = t.keyof(
   ),
   "TGraphMuscleGroupSelectedType",
 );
-export type IGraphMuscleGroupSelectedType = t.TypeOf<
+type IGraphMuscleGroupSelectedType = t.TypeOf<
   typeof TGraphMuscleGroupSelectedType
 >;
 
-export type IExerciseSelectedType = "weight" | "volume";
-export type IVolumeSelectedType = "sets" | "volume";
+type IExerciseSelectedType = "weight" | "volume";
+type IVolumeSelectedType = "sets" | "volume";
 
-export const TEquipment = t.string;
-export type IEquipment = t.TypeOf<typeof TEquipment>;
+const TEquipment = t.string;
+type IEquipment = t.TypeOf<typeof TEquipment>;
 
-export const TExerciseId = t.string;
-export type IExerciseId = t.TypeOf<typeof TExerciseId>;
+const TExerciseId = t.string;
+type IExerciseId = t.TypeOf<typeof TExerciseId>;
 
-export const TMetaExercises = t.intersection(
+const TMetaExercises = t.intersection(
   [
     t.interface({
       bodyParts: t.array(TBodyPart),
@@ -3626,9 +3583,9 @@ export const TMetaExercises = t.intersection(
   ],
   "TMetaExercises",
 );
-export type IMetaExercises = t.TypeOf<typeof TMetaExercises>;
+type IMetaExercises = t.TypeOf<typeof TMetaExercises>;
 
-export const TExerciseType = t.intersection(
+const TExerciseType = t.intersection(
   [
     t.interface({
       id: TExerciseId,
@@ -3641,7 +3598,7 @@ export const TExerciseType = t.intersection(
 );
 export type IExerciseType = t.TypeOf<typeof TExerciseType>;
 
-export const TCustomExercise = t.intersection(
+const TCustomExercise = t.intersection(
   [
     t.interface({
       vtype: t.literal("custom_exercise"),
@@ -3661,12 +3618,12 @@ export const TCustomExercise = t.intersection(
   ],
   "TCustomExercise",
 );
-export type ICustomExercise = t.TypeOf<typeof TCustomExercise>;
-export type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
+type ICustomExercise = t.TypeOf<typeof TCustomExercise>;
+type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
 
-export const units = ["kg", "lb"] as const;
+const units = ["kg", "lb"] as const;
 
-export const TUnit = t.keyof(
+const TUnit = t.keyof(
   units.reduce<Record<IArrayElement<typeof units>, null>>(
     (memo, exerciseType) => {
       memo[exerciseType] = null;
@@ -3676,9 +3633,9 @@ export const TUnit = t.keyof(
   ),
   "TUnit",
 );
-export type IUnit = t.TypeOf<typeof TUnit>;
+type IUnit = t.TypeOf<typeof TUnit>;
 
-export const TWeight = t.type(
+const TWeight = t.type(
   {
     value: t.number,
     unit: TUnit,
@@ -3687,18 +3644,18 @@ export const TWeight = t.type(
 );
 export type IWeight = t.TypeOf<typeof TWeight>;
 
-export const TPlate = t.type(
+const TPlate = t.type(
   {
     weight: TWeight,
     num: t.number,
   },
   "TPlate",
 );
-export type IPlate = t.TypeOf<typeof TPlate>;
+type IPlate = t.TypeOf<typeof TPlate>;
 
 const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
 
-export const TBarKey = t.keyof(
+const TBarKey = t.keyof(
   barKeys.reduce<Record<IArrayElement<typeof barKeys>, null>>(
     (memo, barKey) => {
       memo[barKey] = null;
@@ -3708,14 +3665,14 @@ export const TBarKey = t.keyof(
   ),
   "TBarKey",
 );
-export type IBarKey = t.TypeOf<typeof TBarKey>;
+type IBarKey = t.TypeOf<typeof TBarKey>;
 
-export const TBars = t.record(TBarKey, TWeight, "TBars");
-export type IBars = t.TypeOf<typeof TBars>;
+const TBars = t.record(TBarKey, TWeight, "TBars");
+type IBars = t.TypeOf<typeof TBars>;
 
-export const percentageUnits = ["%"] as const;
+const percentageUnits = ["%"] as const;
 
-export const TPercentageUnit = t.keyof(
+const TPercentageUnit = t.keyof(
   percentageUnits.reduce<Record<IArrayElement<typeof percentageUnits>, null>>(
     (memo, exerciseType) => {
       memo[exerciseType] = null;
@@ -3725,15 +3682,15 @@ export const TPercentageUnit = t.keyof(
   ),
   "TPercentageUnit",
 );
-export type IPercentageUnit = t.TypeOf<typeof TPercentageUnit>;
+type IPercentageUnit = t.TypeOf<typeof TPercentageUnit>;
 
-export const TPercentage = t.type(
+const TPercentage = t.type(
   { value: t.number, unit: TPercentageUnit },
   "TPercentage",
 );
-export type IPercentage = t.TypeOf<typeof TPercentage>;
+type IPercentage = t.TypeOf<typeof TPercentage>;
 
-export const TSet = t.intersection(
+const TSet = t.intersection(
   [
     t.interface({
       vtype: t.literal("set"),
@@ -3763,16 +3720,16 @@ export const TSet = t.intersection(
   ],
   "TSet",
 );
-export type ISet = t.TypeOf<typeof TSet>;
+type ISet = t.TypeOf<typeof TSet>;
 
-export const TProgramState = t.dictionary(
+const TProgramState = t.dictionary(
   t.string,
   t.union([t.number, TWeight, TPercentage]),
   "TProgramState",
 );
-export type IProgramState = t.TypeOf<typeof TProgramState>;
+type IProgramState = t.TypeOf<typeof TProgramState>;
 
-export const THistoryEntry = t.intersection(
+const THistoryEntry = t.intersection(
   [
     t.interface({
       vtype: t.literal("history_entry"),
@@ -3795,25 +3752,20 @@ export const THistoryEntry = t.intersection(
   ],
   "THistoryEntry",
 );
-export type IHistoryEntry = t.TypeOf<typeof THistoryEntry>;
+type IHistoryEntry = t.TypeOf<typeof THistoryEntry>;
 
-export const TProgramStateMetadataValue = t.partial(
+const TProgramStateMetadataValue = t.partial(
   {
     userPrompted: t.boolean,
   },
   "TProgramStateMetadataValue",
 );
-export type IProgramStateMetadataValue = t.TypeOf<
-  typeof TProgramStateMetadataValue
->;
+type IProgramStateMetadataValue = t.TypeOf<typeof TProgramStateMetadataValue>;
 
-export const TProgramStateMetadata = dictionary(
-  t.string,
-  TProgramStateMetadataValue,
-);
-export type IProgramStateMetadata = t.TypeOf<typeof TProgramStateMetadata>;
+const TProgramStateMetadata = dictionary(t.string, TProgramStateMetadataValue);
+type IProgramStateMetadata = t.TypeOf<typeof TProgramStateMetadata>;
 
-export const TProgramSet = t.intersection(
+const TProgramSet = t.intersection(
   [
     t.interface({
       repsExpr: t.string,
@@ -3831,9 +3783,9 @@ export const TProgramSet = t.intersection(
   ],
   "TProgramSet",
 );
-export type IProgramSet = t.TypeOf<typeof TProgramSet>;
+type IProgramSet = t.TypeOf<typeof TProgramSet>;
 
-export const TProgramExerciseVariation = t.intersection(
+const TProgramExerciseVariation = t.intersection(
   [
     t.interface({
       sets: t.array(TProgramSet),
@@ -3844,11 +3796,11 @@ export const TProgramExerciseVariation = t.intersection(
   ],
   "TProgramExerciseVariation",
 );
-export type IProgramExerciseVariation = Readonly<
+type IProgramExerciseVariation = Readonly<
   t.TypeOf<typeof TProgramExerciseVariation>
 >;
 
-export const TProgramExerciseWarmupSet = t.type(
+const TProgramExerciseWarmupSet = t.type(
   {
     reps: t.number,
     value: t.union([TWeight, t.number]),
@@ -3856,22 +3808,22 @@ export const TProgramExerciseWarmupSet = t.type(
   },
   "TProgramExerciseWarmupSet",
 );
-export type IProgramExerciseWarmupSet = Readonly<
+type IProgramExerciseWarmupSet = Readonly<
   t.TypeOf<typeof TProgramExerciseWarmupSet>
 >;
 
-export const TProgramExerciseReuseLogic = t.type(
+const TProgramExerciseReuseLogic = t.type(
   {
     selected: t.union([t.string, t.undefined]),
     states: t.record(t.string, TProgramState),
   },
   "TProgramExerciseReuseLogic",
 );
-export type IProgramExerciseReuseLogic = Readonly<
+type IProgramExerciseReuseLogic = Readonly<
   t.TypeOf<typeof TProgramExerciseReuseLogic>
 >;
 
-export const TProgramExercise = t.intersection(
+const TProgramExercise = t.intersection(
   [
     t.interface({
       exerciseType: TExerciseType,
@@ -3902,7 +3854,7 @@ export const TProgramExercise = t.intersection(
   ],
   "TProgramExercise",
 );
-export type IProgramExercise = t.TypeOf<typeof TProgramExercise>;
+type IProgramExercise = t.TypeOf<typeof TProgramExercise>;
 
 const exercisePickerScreens = [
   "exercisePicker",
@@ -3910,7 +3862,7 @@ const exercisePickerScreens = [
   "filter",
   "settings",
 ] as const;
-export const TExercisePickerScreen = t.keyof(
+const TExercisePickerScreen = t.keyof(
   exercisePickerScreens.reduce<
     Record<IArrayElement<typeof exercisePickerScreens>, null>
   >(
@@ -3922,10 +3874,10 @@ export const TExercisePickerScreen = t.keyof(
   ),
   "TExercisePickerScreen",
 );
-export type IExercisePickerScreen = t.TypeOf<typeof TExercisePickerScreen>;
+type IExercisePickerScreen = t.TypeOf<typeof TExercisePickerScreen>;
 
-export const exercisePickerSorts = ["name_asc", "similar_muscles"] as const;
-export const TExercisePickerSort = t.keyof(
+const exercisePickerSorts = ["name_asc", "similar_muscles"] as const;
+const TExercisePickerSort = t.keyof(
   exercisePickerSorts.reduce<
     Record<IArrayElement<typeof exercisePickerSorts>, null>
   >(
@@ -3937,9 +3889,9 @@ export const TExercisePickerSort = t.keyof(
   ),
   "TExercisePickerSort",
 );
-export type IExercisePickerSort = t.TypeOf<typeof TExercisePickerSort>;
+type IExercisePickerSort = t.TypeOf<typeof TExercisePickerSort>;
 
-export const TExercisePickerFilters = t.partial(
+const TExercisePickerFilters = t.partial(
   {
     equipment: t.array(TBuiltinEquipment),
     type: t.array(TExerciseKind),
@@ -3948,9 +3900,9 @@ export const TExercisePickerFilters = t.partial(
   },
   "TExercisePickerFilters",
 );
-export type IExercisePickerFilters = t.TypeOf<typeof TExercisePickerFilters>;
+type IExercisePickerFilters = t.TypeOf<typeof TExercisePickerFilters>;
 
-export const TExercisePickerProgramExercise = t.type(
+const TExercisePickerProgramExercise = t.type(
   {
     type: t.literal("program"),
     exerciseType: TExerciseType,
@@ -3959,11 +3911,11 @@ export const TExercisePickerProgramExercise = t.type(
   },
   "TExercisePickerProgramExercise",
 );
-export type IExercisePickerProgramExercise = t.TypeOf<
+type IExercisePickerProgramExercise = t.TypeOf<
   typeof TExercisePickerProgramExercise
 >;
 
-export const TExercisePickerAdhocExercise = t.intersection(
+const TExercisePickerAdhocExercise = t.intersection(
   [
     t.interface({
       type: t.literal("adhoc"),
@@ -3975,11 +3927,11 @@ export const TExercisePickerAdhocExercise = t.intersection(
   ],
   "ExercisePickerAdhocExercise",
 );
-export type IExercisePickerAdhocExercise = t.TypeOf<
+type IExercisePickerAdhocExercise = t.TypeOf<
   typeof TExercisePickerAdhocExercise
 >;
 
-export const TExercisePickerTemplate = t.intersection(
+const TExercisePickerTemplate = t.intersection(
   [
     t.interface({
       type: t.literal("template"),
@@ -3991,18 +3943,18 @@ export const TExercisePickerTemplate = t.intersection(
   ],
   "ExercisePickerTemplate",
 );
-export type IExercisePickerTemplate = t.TypeOf<typeof TExercisePickerTemplate>;
+type IExercisePickerTemplate = t.TypeOf<typeof TExercisePickerTemplate>;
 
-export const TExercisePickerSelectedExercise = t.union([
+const TExercisePickerSelectedExercise = t.union([
   TExercisePickerProgramExercise,
   TExercisePickerAdhocExercise,
   TExercisePickerTemplate,
 ]);
-export type IExercisePickerSelectedExercise = t.TypeOf<
+type IExercisePickerSelectedExercise = t.TypeOf<
   typeof TExercisePickerSelectedExercise
 >;
 
-export const TExercisePickerState = t.intersection([
+const TExercisePickerState = t.intersection([
   t.interface({
     screenStack: t.array(TExercisePickerScreen),
     sort: TExercisePickerSort,
@@ -4022,9 +3974,9 @@ export const TExercisePickerState = t.intersection([
     entryIndex: t.number,
   }),
 ]);
-export type IExercisePickerState = t.TypeOf<typeof TExercisePickerState>;
+type IExercisePickerState = t.TypeOf<typeof TExercisePickerState>;
 
-export const TProgressUi = t.partial(
+const TProgressUi = t.partial(
   {
     vtype: t.literal("progress_ui"),
     id: t.string,
@@ -4079,9 +4031,9 @@ export const TProgressUi = t.partial(
   "TProgressUi",
 );
 
-export type IProgressUi = t.TypeOf<typeof TProgressUi>;
+type IProgressUi = t.TypeOf<typeof TProgressUi>;
 
-export const TProgressMode = t.keyof(
+const TProgressMode = t.keyof(
   {
     warmup: null,
     workout: null,
@@ -4089,16 +4041,16 @@ export const TProgressMode = t.keyof(
   "TProgressMode",
 );
 
-export type IProgressMode = t.TypeOf<typeof TProgressMode>;
+type IProgressMode = t.TypeOf<typeof TProgressMode>;
 
-export const TIntervals = t.array(
+const TIntervals = t.array(
   t.tuple([t.number, t.union([t.number, t.undefined, t.null])]),
   "TIntervals",
 );
-export type IIntervals = t.TypeOf<typeof TIntervals>;
+type IIntervals = t.TypeOf<typeof TIntervals>;
 
-export const historyRecordChange = ["order"] as const;
-export const THistoryRecordChange = t.keyof(
+const historyRecordChange = ["order"] as const;
+const THistoryRecordChange = t.keyof(
   historyRecordChange.reduce<
     Record<IArrayElement<typeof historyRecordChange>, null>
   >(
@@ -4110,7 +4062,7 @@ export const THistoryRecordChange = t.keyof(
   ),
   "THistoryRecordChange",
 );
-export type IHistoryRecordChange = t.TypeOf<typeof THistoryRecordChange>;
+type IHistoryRecordChange = t.TypeOf<typeof THistoryRecordChange>;
 
 const historyRecordRequiredFields = {
   // ISO8601, like 2020-02-29T18:02:05+00:00
@@ -4141,7 +4093,7 @@ const historyRecordOptionalFields = {
   updatedAt: t.number,
 };
 
-export const THistoryRecord = t.intersection(
+const THistoryRecord = t.intersection(
   [
     t.interface({
       vtype: t.union([t.literal("history_record"), t.literal("progress")]),
@@ -4151,18 +4103,18 @@ export const THistoryRecord = t.intersection(
   ],
   "THistoryRecord",
 );
-export type IHistoryRecord = t.TypeOf<typeof THistoryRecord>;
+type IHistoryRecord = t.TypeOf<typeof THistoryRecord>;
 
-export const TProgramDayEntry = t.type(
+const TProgramDayEntry = t.type(
   {
     exercise: TExerciseType,
     sets: t.array(TProgramSet),
   },
   "TProgramDayEntry",
 );
-export type IProgramDayEntry = Readonly<t.TypeOf<typeof TProgramDayEntry>>;
+type IProgramDayEntry = Readonly<t.TypeOf<typeof TProgramDayEntry>>;
 
-export const TProgramWeek = t.intersection(
+const TProgramWeek = t.intersection(
   [
     t.interface({
       id: t.string,
@@ -4179,9 +4131,9 @@ export const TProgramWeek = t.intersection(
   ],
   "TProgramWeek",
 );
-export type IProgramWeek = Readonly<t.TypeOf<typeof TProgramWeek>>;
+type IProgramWeek = Readonly<t.TypeOf<typeof TProgramWeek>>;
 
-export const TProgramDay = t.intersection(
+const TProgramDay = t.intersection(
   [
     t.interface({
       id: t.string,
@@ -4196,7 +4148,7 @@ export const TProgramDay = t.intersection(
   ],
   "TProgramDay",
 );
-export type IProgramDay = Readonly<t.TypeOf<typeof TProgramDay>>;
+type IProgramDay = Readonly<t.TypeOf<typeof TProgramDay>>;
 
 const tags = [
   "first-starter",
@@ -4209,7 +4161,7 @@ const tags = [
   "hypertrophy",
 ] as const;
 
-export const TProgramTag = t.keyof(
+const TProgramTag = t.keyof(
   tags.reduce<Record<IArrayElement<typeof tags>, null>>(
     (memo, barKey) => {
       memo[barKey] = null;
@@ -4219,9 +4171,9 @@ export const TProgramTag = t.keyof(
   ),
   "TProgramTag",
 );
-export type IProgramTag = Readonly<t.TypeOf<typeof TProgramTag>>;
+type IProgramTag = Readonly<t.TypeOf<typeof TProgramTag>>;
 
-export const TPlannerProgramDay = t.intersection(
+const TPlannerProgramDay = t.intersection(
   [
     t.interface({
       name: t.string,
@@ -4234,9 +4186,9 @@ export const TPlannerProgramDay = t.intersection(
   ],
   "TPlannerProgramDay",
 );
-export type IPlannerProgramDay = t.TypeOf<typeof TPlannerProgramDay>;
+type IPlannerProgramDay = t.TypeOf<typeof TPlannerProgramDay>;
 
-export const TPlannerProgramWeek = t.intersection(
+const TPlannerProgramWeek = t.intersection(
   [
     t.interface({
       name: t.string,
@@ -4249,11 +4201,9 @@ export const TPlannerProgramWeek = t.intersection(
   ],
   "TPlannerProgramWeek",
 );
-export type IPlannerProgramWeek = Readonly<
-  t.TypeOf<typeof TPlannerProgramWeek>
->;
+type IPlannerProgramWeek = Readonly<t.TypeOf<typeof TPlannerProgramWeek>>;
 
-export const TPlannerProgram = t.type(
+const TPlannerProgram = t.type(
   {
     vtype: t.literal("planner"),
     name: t.string,
@@ -4263,7 +4213,7 @@ export const TPlannerProgram = t.type(
 );
 export type IPlannerProgram = Readonly<t.TypeOf<typeof TPlannerProgram>>;
 
-export const TProgram = t.intersection(
+const TProgram = t.intersection(
   [
     t.interface({
       vtype: t.literal("program"),
@@ -4295,9 +4245,9 @@ export const TProgram = t.intersection(
 );
 export type IProgram = t.TypeOf<typeof TProgram>;
 
-export const lengthUnits = ["in", "cm"] as const;
+const lengthUnits = ["in", "cm"] as const;
 
-export const TLengthUnit = t.keyof(
+const TLengthUnit = t.keyof(
   lengthUnits.reduce<Record<IArrayElement<typeof lengthUnits>, null>>(
     (memo, exerciseType) => {
       memo[exerciseType] = null;
@@ -4307,15 +4257,12 @@ export const TLengthUnit = t.keyof(
   ),
   "TUnit",
 );
-export type ILengthUnit = t.TypeOf<typeof TLengthUnit>;
+type ILengthUnit = t.TypeOf<typeof TLengthUnit>;
 
-export const TLength = t.type(
-  { value: t.number, unit: TLengthUnit },
-  "TLength",
-);
-export type ILength = t.TypeOf<typeof TLength>;
+const TLength = t.type({ value: t.number, unit: TLengthUnit }, "TLength");
+type ILength = t.TypeOf<typeof TLength>;
 
-export const TStatsWeightValue = t.intersection(
+const TStatsWeightValue = t.intersection(
   [
     t.interface({
       vtype: t.literal("stat"),
@@ -4326,15 +4273,15 @@ export const TStatsWeightValue = t.intersection(
   ],
   "TStatsWeightValue",
 );
-export type IStatsWeightValue = t.TypeOf<typeof TStatsWeightValue>;
+type IStatsWeightValue = t.TypeOf<typeof TStatsWeightValue>;
 
-export const statsWeightDef = {
+const statsWeightDef = {
   weight: t.array(TStatsWeightValue),
 };
-export const TStatsWeight = t.partial(statsWeightDef, "TStatsWeight");
-export type IStatsWeight = t.TypeOf<typeof TStatsWeight>;
+const TStatsWeight = t.partial(statsWeightDef, "TStatsWeight");
+type IStatsWeight = t.TypeOf<typeof TStatsWeight>;
 
-export const TStatsLengthValue = t.intersection(
+const TStatsLengthValue = t.intersection(
   [
     t.interface({
       vtype: t.literal("stat"),
@@ -4345,9 +4292,9 @@ export const TStatsLengthValue = t.intersection(
   ],
   "TStatsLengthValue",
 );
-export type IStatsLengthValue = t.TypeOf<typeof TStatsLengthValue>;
+type IStatsLengthValue = t.TypeOf<typeof TStatsLengthValue>;
 
-export const statsLengthDef = {
+const statsLengthDef = {
   neck: t.array(TStatsLengthValue),
   shoulders: t.array(TStatsLengthValue),
   bicepLeft: t.array(TStatsLengthValue),
@@ -4362,10 +4309,10 @@ export const statsLengthDef = {
   calfLeft: t.array(TStatsLengthValue),
   calfRight: t.array(TStatsLengthValue),
 };
-export const TStatsLength = t.partial(statsLengthDef, "TStatsLength");
-export type IStatsLength = t.TypeOf<typeof TStatsLength>;
+const TStatsLength = t.partial(statsLengthDef, "TStatsLength");
+type IStatsLength = t.TypeOf<typeof TStatsLength>;
 
-export const TStatsPercentageValue = t.intersection(
+const TStatsPercentageValue = t.intersection(
   [
     t.interface({
       vtype: t.literal("stat"),
@@ -4376,23 +4323,20 @@ export const TStatsPercentageValue = t.intersection(
   ],
   "TStatsPercentageValue",
 );
-export type IStatsPercentageValue = t.TypeOf<typeof TStatsPercentageValue>;
+type IStatsPercentageValue = t.TypeOf<typeof TStatsPercentageValue>;
 
-export const statsPercentageDef = {
+const statsPercentageDef = {
   bodyfat: t.array(TStatsPercentageValue),
 };
-export const TStatsPercentage = t.partial(
-  statsPercentageDef,
-  "TStatsPercentage",
-);
-export type IStatsPercentage = t.TypeOf<typeof TStatsPercentage>;
+const TStatsPercentage = t.partial(statsPercentageDef, "TStatsPercentage");
+type IStatsPercentage = t.TypeOf<typeof TStatsPercentage>;
 
-export type IStatsKey =
+type IStatsKey =
   | keyof IStatsLength
   | keyof IStatsWeight
   | keyof IStatsPercentage;
 
-export const TStatsWeightEnabled = t.partial(
+const TStatsWeightEnabled = t.partial(
   ObjectUtils_keys(statsWeightDef).reduce<
     Record<keyof IStatsWeight, t.BooleanC>
   >(
@@ -4404,9 +4348,9 @@ export const TStatsWeightEnabled = t.partial(
   ),
   "TStatsWeightEnabled",
 );
-export type IStatsWeightEnabled = t.TypeOf<typeof TStatsWeightEnabled>;
+type IStatsWeightEnabled = t.TypeOf<typeof TStatsWeightEnabled>;
 
-export const TStatsLengthEnabled = t.partial(
+const TStatsLengthEnabled = t.partial(
   ObjectUtils_keys(statsLengthDef).reduce<
     Record<keyof IStatsLength, t.BooleanC>
   >(
@@ -4418,9 +4362,9 @@ export const TStatsLengthEnabled = t.partial(
   ),
   "TStatsLengthEnabled",
 );
-export type IStatsLengthEnabled = t.TypeOf<typeof TStatsLengthEnabled>;
+type IStatsLengthEnabled = t.TypeOf<typeof TStatsLengthEnabled>;
 
-export const TStatsPercentageEnabled = t.partial(
+const TStatsPercentageEnabled = t.partial(
   ObjectUtils_keys(statsPercentageDef).reduce<
     Record<keyof IStatsPercentage, t.BooleanC>
   >(
@@ -4433,7 +4377,7 @@ export const TStatsPercentageEnabled = t.partial(
   "TStatsPercentageEnabled",
 );
 
-export const TStatsEnabled = t.type(
+const TStatsEnabled = t.type(
   {
     weight: TStatsWeightEnabled,
     length: TStatsLengthEnabled,
@@ -4441,9 +4385,9 @@ export const TStatsEnabled = t.type(
   },
   "TStatsEnabled",
 );
-export type IStatsEnabled = Readonly<t.TypeOf<typeof TStatsEnabled>>;
+type IStatsEnabled = Readonly<t.TypeOf<typeof TStatsEnabled>>;
 
-export const TSettingsTimers = t.intersection(
+const TSettingsTimers = t.intersection(
   [
     t.interface({
       warmup: t.union([t.number, t.undefined, t.null]),
@@ -4456,9 +4400,9 @@ export const TSettingsTimers = t.intersection(
   ],
   "TSettingsTimers",
 );
-export type ISettingsTimers = t.TypeOf<typeof TSettingsTimers>;
+type ISettingsTimers = t.TypeOf<typeof TSettingsTimers>;
 
-export const TGraph = t.union([
+const TGraph = t.union([
   t.type({
     vtype: t.literal("graph"),
     type: t.literal("exercise"),
@@ -4485,9 +4429,9 @@ export const TGraph = t.union([
     id: t.string,
   }),
 ]);
-export type IGraph = t.TypeOf<typeof TGraph>;
+type IGraph = t.TypeOf<typeof TGraph>;
 
-export const TEquipmentData = t.intersection(
+const TEquipmentData = t.intersection(
   [
     t.interface({
       vtype: t.literal("equipment_data"),
@@ -4512,24 +4456,24 @@ export const TEquipmentData = t.intersection(
   ],
   "TEquipmentData",
 );
-export type IEquipmentData = t.TypeOf<typeof TEquipmentData>;
-export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
+type IEquipmentData = t.TypeOf<typeof TEquipmentData>;
+type IAllEquipment = Partial<Record<string, IEquipmentData>>;
 
-export const TGraphOptions = t.partial({
+const TGraphOptions = t.partial({
   movingAverageWindowSize: t.number,
 });
-export type IGraphOptions = t.TypeOf<typeof TGraphOptions>;
+type IGraphOptions = t.TypeOf<typeof TGraphOptions>;
 
-export const TMuscleMultiplier = t.type(
+const TMuscleMultiplier = t.type(
   {
     muscle: TMuscle,
     multiplier: t.number,
   },
   "TMuscleMultiplier",
 );
-export type IMuscleMultiplier = t.TypeOf<typeof TMuscleMultiplier>;
+type IMuscleMultiplier = t.TypeOf<typeof TMuscleMultiplier>;
 
-export const TExerciseDataValue = t.partial(
+const TExerciseDataValue = t.partial(
   {
     rm1: TWeight,
     rounding: t.number,
@@ -4540,10 +4484,10 @@ export const TExerciseDataValue = t.partial(
   },
   "TExerciseDataValue",
 );
-export type IExerciseDataValue = t.TypeOf<typeof TExerciseDataValue>;
-export type IExerciseData = Partial<Record<string, IExerciseDataValue>>;
+type IExerciseDataValue = t.TypeOf<typeof TExerciseDataValue>;
+type IExerciseData = Partial<Record<string, IExerciseDataValue>>;
 
-export const screenMuscles: string[] = [
+const screenMuscles: string[] = [
   "shoulders",
   "triceps",
   "back",
@@ -4557,7 +4501,7 @@ export const screenMuscles: string[] = [
   "forearms",
 ];
 
-export const TScreenMuscle = t.union(
+const TScreenMuscle = t.union(
   [
     t.keyof(
       screenMuscles.reduce<Record<IArrayElement<typeof screenMuscles>, null>>(
@@ -4572,9 +4516,9 @@ export const TScreenMuscle = t.union(
   ],
   "TScreenMuscle",
 );
-export type IScreenMuscle = t.TypeOf<typeof TScreenMuscle>;
+type IScreenMuscle = t.TypeOf<typeof TScreenMuscle>;
 
-export const TPlannerSettings = t.type(
+const TPlannerSettings = t.type(
   {
     synergistMultiplier: t.number,
     strengthSetsPct: t.number,
@@ -4584,9 +4528,9 @@ export const TPlannerSettings = t.type(
   },
   "TPlannerSettings",
 );
-export type IPlannerSettings = t.TypeOf<typeof TPlannerSettings>;
+type IPlannerSettings = t.TypeOf<typeof TPlannerSettings>;
 
-export const TGym = t.type(
+const TGym = t.type(
   {
     vtype: t.literal("gym"),
     id: t.string,
@@ -4595,15 +4539,10 @@ export const TGym = t.type(
   },
   "TGym",
 );
-export type IGym = t.TypeOf<typeof TGym>;
+type IGym = t.TypeOf<typeof TGym>;
 
-export const targetTypes = [
-  "target",
-  "lasttime",
-  "platescalculator",
-  "e1rm",
-] as const;
-export const TTargetType = t.keyof(
+const targetTypes = ["target", "lasttime", "platescalculator", "e1rm"] as const;
+const TTargetType = t.keyof(
   targetTypes.reduce<Record<IArrayElement<typeof targetTypes>, null>>(
     (memo, exerciseType) => {
       memo[exerciseType] = null;
@@ -4613,9 +4552,9 @@ export const TTargetType = t.keyof(
   ),
   "TTargetType",
 );
-export type ITargetType = t.TypeOf<typeof TTargetType>;
+type ITargetType = t.TypeOf<typeof TTargetType>;
 
-export const TWorkoutSettings = t.intersection(
+const TWorkoutSettings = t.intersection(
   [
     t.interface({
       targetType: TTargetType,
@@ -4630,14 +4569,14 @@ export const TWorkoutSettings = t.intersection(
   "TWorkoutSettings",
 );
 
-export type IWorkoutSettings = t.TypeOf<typeof TWorkoutSettings>;
+type IWorkoutSettings = t.TypeOf<typeof TWorkoutSettings>;
 
-export const TGraphs = t.type({
+const TGraphs = t.type({
   vtype: t.literal("graphs"),
   graphs: t.array(TGraph),
 });
 
-export const TMuscleGroupsSettings = t.type({
+const TMuscleGroupsSettings = t.type({
   vtype: t.literal("muscle_groups_settings"),
   data: t.dictionary(
     t.string,
@@ -4648,9 +4587,9 @@ export const TMuscleGroupsSettings = t.type({
     }),
   ),
 });
-export type IMuscleGroupsSettings = t.TypeOf<typeof TMuscleGroupsSettings>;
+type IMuscleGroupsSettings = t.TypeOf<typeof TMuscleGroupsSettings>;
 
-export const TSettings = t.intersection(
+const TSettings = t.intersection(
   [
     t.interface({
       timers: TSettingsTimers,
@@ -4708,7 +4647,7 @@ export const TSettings = t.intersection(
 
 export type ISettings = t.TypeOf<typeof TSettings>;
 
-export const TStats = t.type(
+const TStats = t.type(
   {
     weight: TStatsWeight,
     length: TStatsLength,
@@ -4718,15 +4657,15 @@ export const TStats = t.type(
 );
 export type IStats = t.TypeOf<typeof TStats>;
 
-export const TSubscriptionReceipt = t.type({
+const TSubscriptionReceipt = t.type({
   vtype: t.literal("subscription_receipt"),
   id: t.string,
   value: t.string,
   createdAt: t.number,
 });
-export type ISubscriptionReceipt = t.TypeOf<typeof TSubscriptionReceipt>;
+type ISubscriptionReceipt = t.TypeOf<typeof TSubscriptionReceipt>;
 
-export const TSubscription = t.intersection([
+const TSubscription = t.intersection([
   t.interface({
     apple: t.array(TSubscriptionReceipt),
     google: t.array(TSubscriptionReceipt),
@@ -4735,17 +4674,17 @@ export const TSubscription = t.intersection([
     key: t.union([t.string, t.undefined]),
   }),
 ]);
-export type ISubscription = t.TypeOf<typeof TSubscription>;
+type ISubscription = t.TypeOf<typeof TSubscription>;
 
-export const TAffiliateData = t.type({
+const TAffiliateData = t.type({
   id: t.string,
   timestamp: t.number,
   type: t.union([t.literal("coupon"), t.literal("program")]),
   vtype: t.literal("affiliate"),
 });
-export type IAffiliateData = t.TypeOf<typeof TAffiliateData>;
+type IAffiliateData = t.TypeOf<typeof TAffiliateData>;
 
-export const TStorage = t.intersection(
+const TStorage = t.intersection(
   [
     t.interface({
       history: t.array(THistoryRecord),
@@ -4777,14 +4716,14 @@ export const TStorage = t.intersection(
   ],
   "TStorage",
 );
-export type IStorage = Omit<t.TypeOf<typeof TStorage>, "_versions"> & {
+type IStorage = Omit<t.TypeOf<typeof TStorage>, "_versions"> & {
   _versions?: IVersions<Omit<t.TypeOf<typeof TStorage>, "_versions">>;
 };
 
-export type IPartialStorage = Omit<IStorage, "history" | "stats" | "programs"> &
+type IPartialStorage = Omit<IStorage, "history" | "stats" | "programs"> &
   Partial<Pick<IStorage, "history" | "stats" | "programs">>;
 
-export type IProgramContentSettings = Partial<
+type IProgramContentSettings = Partial<
   Pick<
     ISettings,
     "units" | "planner" | "muscleGroups" | "exerciseData" | "workoutSettings"
@@ -4793,7 +4732,7 @@ export type IProgramContentSettings = Partial<
   }
 >;
 
-export const TMuscleGeneratorResponse = t.type(
+const TMuscleGeneratorResponse = t.type(
   {
     targetMuscles: t.array(TMuscle),
     synergistMuscles: t.array(TMuscle),
@@ -4801,22 +4740,20 @@ export const TMuscleGeneratorResponse = t.type(
   },
   "TMusclesGeneratorResponse",
 );
-export type IMuscleGeneratorResponse = t.TypeOf<
-  typeof TMuscleGeneratorResponse
->;
+type IMuscleGeneratorResponse = t.TypeOf<typeof TMuscleGeneratorResponse>;
 
-export type IDayData = {
+type IDayData = {
   week?: number;
   day: number;
   dayInWeek?: number;
 };
 
-export type IShortDayData = {
+type IShortDayData = {
   week: number;
   dayInWeek: number;
 };
 
-export type IDaySetData = {
+type IDaySetData = {
   week: number;
   dayInWeek: number;
   setVariation: number;
@@ -4824,7 +4761,7 @@ export type IDaySetData = {
 };
 
 // Atomic types - these are versioned as a whole unit
-export const ATOMIC_TYPES = [
+const ATOMIC_TYPES = [
   "history_record",
   "progress_ui",
   "set",
@@ -4839,20 +4776,20 @@ export const ATOMIC_TYPES = [
   "muscle_groups_settings",
 ] as const;
 
-export type IAtomicType = (typeof ATOMIC_TYPES)[number];
+type IAtomicType = (typeof ATOMIC_TYPES)[number];
 
 // Controlled types - these have specific fields that are versioned
-export const CONTROLLED_TYPES = [
+const CONTROLLED_TYPES = [
   "program",
   "gym",
   "progress",
   "history_entry",
 ] as const;
 
-export type IControlledType = (typeof CONTROLLED_TYPES)[number];
+type IControlledType = (typeof CONTROLLED_TYPES)[number];
 
 // Define which fields to version for each controlled type
-export const CONTROLLED_FIELDS: Record<IControlledType, readonly string[]> = {
+const CONTROLLED_FIELDS: Record<IControlledType, readonly string[]> = {
   program: ["name", "nextDay", "planner"] as const,
   gym: ["name", "equipment"] as const,
   progress: [
@@ -4887,7 +4824,7 @@ export const CONTROLLED_FIELDS: Record<IControlledType, readonly string[]> = {
 };
 
 // Define id field for each type
-export const TYPE_ID_MAPPING: Record<IAtomicType | IControlledType, string> = {
+const TYPE_ID_MAPPING: Record<IAtomicType | IControlledType, string> = {
   affiliate: "id",
   program: "clonedAt",
   history_record: "id",
@@ -4908,27 +4845,22 @@ export const TYPE_ID_MAPPING: Record<IAtomicType | IControlledType, string> = {
 
 // Dictionary fields - these are free-form key-value mappings that should use collection versioning
 // Full path from storage root
-export const DICTIONARY_FIELDS = [
+const DICTIONARY_FIELDS = [
   "settings.exercises",
   "settings.exerciseData",
   "settings.gyms.equipment",
   "affiliates",
 ] as const;
 
-export type IDictionaryFieldPath = (typeof DICTIONARY_FIELDS)[number];
+type IDictionaryFieldPath = (typeof DICTIONARY_FIELDS)[number];
 
 // Fields excluded from syncing (local-only UI state)
-export const EXCLUDED_FIELDS: Partial<
-  Record<IControlledType, readonly string[]>
-> = {
+const EXCLUDED_FIELDS: Partial<Record<IControlledType, readonly string[]>> = {
   progress: ["ui"] as const,
 };
 
 // Storage-specific version configuration
-export const STORAGE_VERSION_TYPES: IVersionTypes<
-  IAtomicType,
-  IControlledType
-> = {
+const STORAGE_VERSION_TYPES: IVersionTypes<IAtomicType, IControlledType> = {
   atomicTypes: ATOMIC_TYPES,
   controlledTypes: CONTROLLED_TYPES,
   typeIdMapping: TYPE_ID_MAPPING,
@@ -4954,7 +4886,7 @@ export interface IWeightChange {
   current: boolean;
 }
 
-export interface IProgramExerciseExample {
+interface IProgramExerciseExample {
   title: string;
   description: string;
   sets: IProgramSet[];
@@ -4967,7 +4899,7 @@ export interface IProgramExerciseExample {
   };
 }
 
-export function ProgramExercise_hasUserPromptedVars(
+function ProgramExercise_hasUserPromptedVars(
   programExercise: IPlannerProgramExercise,
 ): boolean {
   const stateMetadata =
@@ -4977,7 +4909,7 @@ export function ProgramExercise_hasUserPromptedVars(
   );
 }
 
-export function ProgramExercise_getQuickAddSets(
+function ProgramExercise_getQuickAddSets(
   programExercise: IPlannerProgramExercise,
 ): boolean {
   return PlannerProgramExercise_sets(programExercise).some(
@@ -4985,7 +4917,7 @@ export function ProgramExercise_getQuickAddSets(
   );
 }
 
-export function ProgramExercise_getEnableRpe(
+function ProgramExercise_getEnableRpe(
   programExercise: IPlannerProgramExercise,
 ): boolean {
   return PlannerProgramExercise_sets(programExercise).some(
@@ -4997,7 +4929,7 @@ function warmupSetToKey(set: IProgramExerciseWarmupSet): string {
   return `${set.reps}-${Weight_print(set.threshold)}-${Weight_printOrNumber(set.value)}`;
 }
 
-export function ProgramExercise_groupWarmupsSets(
+function ProgramExercise_groupWarmupsSets(
   sets: IProgramExerciseWarmupSet[],
 ): [IProgramExerciseWarmupSet, number][] {
   let lastKey: string | undefined;
@@ -5013,7 +4945,7 @@ export function ProgramExercise_groupWarmupsSets(
   return groups;
 }
 
-export function ProgramExercise_approxTimeMs(
+function ProgramExercise_approxTimeMs(
   programExercise: IPlannerProgramExercise,
   settings: ISettings,
 ): number {
@@ -5027,7 +4959,7 @@ export function ProgramExercise_approxTimeMs(
   );
 }
 
-export function ProgramExercise_doesUse1RM(
+function ProgramExercise_doesUse1RM(
   programExercise: IPlannerProgramExercise,
 ): boolean {
   const usesPercentageWeights = programExercise.evaluatedSetVariations.some(
@@ -5044,7 +4976,7 @@ export function ProgramExercise_doesUse1RM(
   return usesPercentageWeights || usesRM1Var;
 }
 
-export function ProgramExercise_doesUseRPE(
+function ProgramExercise_doesUseRPE(
   programExercise: IPlannerProgramExercise,
 ): boolean {
   if (programExercise.globals.logRpe || programExercise.globals.rpe != null) {
@@ -5055,7 +4987,7 @@ export function ProgramExercise_doesUseRPE(
   });
 }
 
-export function ProgramExercise_isUsingVariable(
+function ProgramExercise_isUsingVariable(
   programExercise: IPlannerProgramExercise,
   name: string,
 ): boolean {
@@ -5104,7 +5036,7 @@ export function ProgramExercise_weightChanges(
   return CollectionUtils_sortBy(ObjectUtils_values(results), "current", true);
 }
 
-export function ProgramExercise_applyVariables(
+function ProgramExercise_applyVariables(
   programExerciseKey: string,
   program: IEvaluatedProgram,
   updates: ILiftoscriptEvaluatorUpdate[],
@@ -5374,7 +5306,7 @@ function operation(
 
 //#region Planner Key
 
-export function PlannerKey_fromPlannerExercise(
+function PlannerKey_fromPlannerExercise(
   plannerExercise: IPlannerProgramExercise,
   settings: ISettings,
 ): string {
@@ -5391,7 +5323,7 @@ export function PlannerKey_fromPlannerExercise(
   }
 }
 
-export function PlannerKey_fromExerciseType(
+function PlannerKey_fromExerciseType(
   exerciseType: IExerciseType,
   label?: string,
 ): string {
@@ -5414,7 +5346,7 @@ export const PlannerKey_fromFullName = memoize(
   { maxSize: 1000 },
 );
 
-export const PlannerKey_fromLabelNameAndEquipment = memoize(
+const PlannerKey_fromLabelNameAndEquipment = memoize(
   (
     label: string | undefined,
     name: string,
@@ -5435,7 +5367,7 @@ export const PlannerKey_fromLabelNameAndEquipment = memoize(
 
 //#region Stats
 
-export function Stats_name(key: IStatsKey): string {
+function Stats_name(key: IStatsKey): string {
   switch (key) {
     case "bicepLeft":
       return "Left Bicep";
@@ -5470,7 +5402,7 @@ export function Stats_name(key: IStatsKey): string {
   }
 }
 
-export function Stats_getCurrentBodyweight(stats: IStats): IWeight | undefined {
+function Stats_getCurrentBodyweight(stats: IStats): IWeight | undefined {
   const weights = CollectionUtils_sortBy(
     stats.weight.weight || [],
     "timestamp",
@@ -5479,7 +5411,7 @@ export function Stats_getCurrentBodyweight(stats: IStats): IWeight | undefined {
   return weights[0]?.value;
 }
 
-export function Stats_getCurrentMovingAverageBodyweight(
+function Stats_getCurrentMovingAverageBodyweight(
   stats: IStats,
   settings: ISettings,
 ): IWeight | undefined {
@@ -5504,9 +5436,7 @@ export function Stats_getCurrentMovingAverageBodyweight(
   return Weight_divide(totalWeight, recentWeights.length);
 }
 
-export function Stats_getCurrentBodyfat(
-  stats: IStats,
-): IPercentage | undefined {
+function Stats_getCurrentBodyfat(stats: IStats): IPercentage | undefined {
   const weights = CollectionUtils_sortBy(
     stats.percentage.bodyfat || [],
     "timestamp",
@@ -5523,7 +5453,7 @@ export function Stats_getEmpty(): IStats {
   };
 }
 
-export function Stats_isEmpty(stats: IStats): boolean {
+function Stats_isEmpty(stats: IStats): boolean {
   const statsKeys: IStatsKey[] = [
     ...ObjectUtils_keys(stats.weight).filter(
       (k) => (stats.weight[k] || []).length > 0,
