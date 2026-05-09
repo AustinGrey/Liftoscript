@@ -18059,7 +18059,7 @@ class ScriptRunner {
 //#endregion
 
 //#region PlannerExerciseEvaluatorText
-function getChildren(node: SyntaxNode): SyntaxNode[] {
+function PEET_getChildren(node: SyntaxNode): SyntaxNode[] {
   const cur = node.cursor();
   const result: SyntaxNode[] = [];
   if (!cur.firstChild()) {
@@ -18227,7 +18227,7 @@ class PlannerExerciseEvaluatorText {
     if (expr.type.name === PlannerNodeName.Program) {
       this.ongoingLines = [];
       this.weeks = [];
-      for (const child of CollectionUtils_compact(getChildren(expr))) {
+      for (const child of CollectionUtils_compact(PEET_getChildren(expr))) {
         this.evaluateLine(child);
       }
       return this.weeks;
