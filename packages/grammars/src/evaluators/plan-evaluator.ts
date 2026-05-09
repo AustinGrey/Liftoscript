@@ -4,7 +4,7 @@ import type { SyntaxNode } from "@lezer/common";
 import { unsafeCoerce } from "fp-ts/lib/function";
 import {
   CollectionUtils_compact,
-  CollectionUtils_sortBy,CollectionUtils_groupByExpr, CollectionUtils_findIndexReverse, CollectionUtils_sort, CollectionUtils_compressArray
+  CollectionUtils_sortBy,CollectionUtils_groupByExpr, CollectionUtils_findIndexReverse, CollectionUtils_sort
 } from "../utils/collection";
 import { UidFactory_generateUid } from "@/utils/generator";
 import { MathUtils_applyOp, n, MathUtils_roundTo005, MathUtils_round, MathUtils_roundFloat, MathUtils_roundTo000005 } from "@/utils/math";
@@ -15542,6 +15542,83 @@ function Weight_rpeMultiplier(reps: number, rpe: number): number {
 }
 
 const Weight_zero: IWeight = { value: 0, unit: "lb" } as const;
+//#endregion
+
+//#region PP
+function PP_iterate2(
+  evaluatedWeeks: IEvaluatedProgramWeek[],
+  cb: (
+    exercise: IPlannerProgramExercise,
+    weekIndex: number,
+    dayInWeekIndex: number,
+    dayIndex: number,
+    exerciseIndex: number
+  ) => boolean | void
+): void {
+  let dayIndex = 0;
+  for (let weekIndex = 0; weekIndex < evaluatedWeeks.length; weekIndex++) {
+    const week = evaluatedWeeks[weekIndex];
+    for (let dayInWeekIndex = 0; dayInWeekIndex < week.days.length; dayInWeekIndex++) {
+      const day = week.days[dayInWeekIndex];
+      for (let exerciseIndex = 0; exerciseIndex < day.exercises.length; exerciseIndex++) {
+        const exercise = day.exercises[exerciseIndex];
+        const shouldReturn = cb(exercise, weekIndex, dayInWeekIndex, dayIndex, exerciseIndex);
+        if (!!shouldReturn) {
+          return;
+        }
+      }
+      dayIndex += 1;
+    }
+  }
+}
+
+function PP_iterate(
+  evaluatedWeeks: IPlannerEvalResult[][],
+  cb: (
+    exercise: IPlannerProgramExercise,
+    weekIndex: number,
+    dayInWeekIndex: number,
+    dayIndex: number,
+    exerciseIndex: number
+  ) => boolean | void
+): void {
+  let dayIndex = 0;
+  for (let weekIndex = 0; weekIndex < evaluatedWeeks.length; weekIndex++) {
+    const week = evaluatedWeeks[weekIndex];
+    for (let dayInWeekIndex = 0; dayInWeekIndex < week.length; dayInWeekIndex++) {
+      const day = week[dayInWeekIndex];
+      if (day.success) {
+        for (let exerciseIndex = 0; exerciseIndex < day.data.length; exerciseIndex++) {
+          const exercise = day.data[exerciseIndex];
+          const shouldReturn = cb(exercise, weekIndex, dayInWeekIndex, dayIndex, exerciseIndex);
+          if (!!shouldReturn) {
+            return;
+          }
+        }
+      }
+      dayIndex += 1;
+    }
+  }
+}
+
+//#endregion
+
+//#region ________
+//#endregion
+
+//#region ________
+//#endregion
+
+//#region ________
+//#endregion
+
+//#region ________
+//#endregion
+
+//#region ________
+//#endregion
+
+//#region ________
 //#endregion
 
 //#region ________
