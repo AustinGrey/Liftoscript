@@ -4,20 +4,21 @@ import {
   Program_applyEvaluatedProgram,
   Program_nextHistoryRecord,
   Program_runAllFinishDayScripts,
-} from "@/evaluators/old/models/program";
-import { Settings_build } from "@/evaluators/old/models/settings";
-import {
+  Settings_build,
   PlannerProgram_evaluateText,
   PlannerProgram_replaceWeight,
   PlannerProgram_generateFullText,
   PlannerProgram_replaceAndValidateExercise,
-} from "@/evaluators/old/pages/planner/models/plannerProgram";
-// import { IProgram, ISettings, IPlannerProgram, IExerciseType, IStats, IWeight } from "../../src/types";
-import {
-  // IWeightChange,
+  type IProgram,
+  type ISettings,
+  type IPlannerProgram,
+  type IExerciseType,
+  type IStats,
+  type IWeight,
+  type IWeightChange,
   ProgramExercise_weightChanges,
-} from "@/evaluators/old/models/programExercise";
-import { PlannerKey_fromFullName } from "@/evaluators/old/pages/planner/plannerKey";
+  PlannerKey_fromFullName,
+} from "@/evaluators/plan-evaluator.ts";
 import { Stats_getEmpty } from "@/evaluators/old/models/stats";
 
 export interface ICompletedEntries {
