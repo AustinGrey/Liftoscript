@@ -1,119 +1,13 @@
 import memoize from "micro-memoize";
 import * as t from "io-ts";
 import { unsafeCoerce } from "fp-ts/lib/function";
-import { ScriptRunner } from "../parser";
-import {
-  IAllCustomExercises,
-  IAllEquipment,
-  ICustomExercise,
-  IDayData,
-  IExerciseData,
-  IExerciseType,
-  IHistoryEntry,
-  IHistoryRecord,
-  IPercentage,
-  IPlannerProgram,
-  IPlannerSettings,
-  IProgram,
-  IProgramState,
-  ISet,
-  ISettings,
-  IStats,
-  IWeight,
-} from "../types";
-import { IPlannerProgramWeek } from "../../../types";
-
-import { IWeightChange } from "../../../models/programExercise";
-
 import {
   CollectionUtils_compact,
   CollectionUtils_sortBy,
 } from "../utils/collection";
-import { UidFactory_generateUid } from "../utils/generator";
-import { MathUtils_applyOp } from "../utils/math";
-import {
-  ObjectUtils_clone,
-  ObjectUtils_diff,
-  ObjectUtils_isEqual,
-  ObjectUtils_keys,
-  ObjectUtils_values,
-} from "./utils/object";
-import { IEither, IArrayElement } from "./utils/types";
-
-import {
-  IAssignmentOp,
-  ILiftoscriptEvaluatorUpdate,
-} from "../liftoscriptEvaluator";
-import {
-  PlannerSyntaxError,
-} from "../plannerExerciseEvaluator";
-import { PlannerExerciseEvaluator } from "./plannerExerciseEvaluator";
-import { PlannerExerciseEvaluatorText } from "../plannerExerciseEvaluatorText";
-import { parser as plannerExerciseParser } from "../plannerExerciseParser";
-
-import {
-  IByTag,
-  PlannerEvaluator_forceEvaluate,
-} from "../pages/planner/plannerEvaluator";
-import {
-  PlannerEvaluator_evaluate,
-} from "../plannerEvaluator";
-import {
-  PlannerProgramExercise_currentDescriptionIndex,
-  PlannerProgramExercise_currentEvaluatedSetVariation,
-  PlannerProgramExercise_currentEvaluatedSetVariationIndex,
-  PlannerProgramExercise_getProgressScript,
-  PlannerProgramExercise_getState,
-  PlannerProgramExercise_programWarmups,
-} from "../pages/planner/models/plannerProgramExercise";
-
-import { PlannerKey_fromExerciseType } from "../plannerKey";
-
-import {
-  Exercise_findByNameEquipment,
-  Exercise_getIsUnilateral,
-  Exercise_getWarmupSets,
-  Exercise_onerm,
-  Exercise_toKey,
-} from "./exercise";
-import {
-  IScriptBindings,
-  Progress_createScriptBindings,
-  Progress_createScriptFunctions,
-  Progress_getDayData,
-  Progress_getEntryId,
-  Progress_runUpdateScriptForEntry,
-} from "./progress";
-import {
-  ProgramExercise_applyVariables,
-} from "./programExercise";
-import {
-  IEvaluatedProgram,
-} from "./program";
-import {
-  ProgramSet_getEvaluatedWeight,
-  ProgramSet_isEligibleForInferredWeight,
-} from "./programSet";
-import { ProgramToPlanner } from "./programToPlanner";
-import { PP_iterate, PP_iterate2 } from "./pp";
-import {
-  IPlannerProgramExercise,
-  IPlannerProgramExerciseEvaluatedSet,
-  IPlannerProgramExerciseWithType,
-} from "./models/types";
-import {
-  Weight_add,
-  Weight_applyOp,
-  Weight_build,
-  Weight_divide,
-  Weight_eq,
-  Weight_eqNull,
-  Weight_is,
-  Weight_isPct,
-  Weight_print,
-  Weight_roundTo005,
-} from "./weight";
-import { Stats_getCurrentMovingAverageBodyweight } from "./stats";
+import { UidFactory_generateUid } from "@/utils/generator";
+import { MathUtils_applyOp } from "@/utils/math";
+import type { IEither, IArrayElement } from "@/utils/types";
 
 //#region Program
 
