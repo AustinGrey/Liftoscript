@@ -190,9 +190,9 @@ import { IState, updateSettings, updateState } from "./state";
 
 //#region Program
 
-declare let __HOST__: string;
-
-const encodedProgramHashToShortUrl: Partial<Record<string, string>> = {};
+// declare let __HOST__: string;
+//
+// const encodedProgramHashToShortUrl: Partial<Record<string, string>> = {};
 
 // interface IProgramIndexEntry {
 //   id: string;
@@ -254,7 +254,7 @@ interface IEvaluatedProgram {
 // type IEProgram = IProgram | IEvaluatedProgram;
 
 // type IProgramMode = "planner" | "update";
-const emptyProgramId = "emptyprogram";
+// const emptyProgramId = "emptyprogram";
 
 // function isEvaluatedProgram(program: IEProgram): program is IEvaluatedProgram {
 //   return "type" in program && program.type === "evaluatedProgram";
@@ -342,9 +342,9 @@ const emptyProgramId = "emptyprogram";
 //   return state.storage.programs.findIndex((p) => p.id === id);
 // }
 
-function Program_getCurrentProgram(storage: IStorage): IProgram | undefined {
-  return storage.programs.filter((p) => p.id === storage.currentProgramId)[0];
-}
+// function Program_getCurrentProgram(storage: IStorage): IProgram | undefined {
+//   return storage.programs.filter((p) => p.id === storage.currentProgramId)[0];
+// }
 
 // function Program_storageToExportedProgram(
 //   storage: IStorage,
@@ -885,19 +885,19 @@ export function Program_runAllFinishDayScripts(
   };
 }
 
-function Program_createVariation(
-  useStateWeight?: boolean,
-): IProgramExerciseVariation {
-  return {
-    sets: [
-      {
-        repsExpr: "5",
-        weightExpr: useStateWeight ? "state.weight" : "0lb",
-        isAmrap: false,
-      },
-    ],
-  };
-}
+// function Program_createVariation(
+//   useStateWeight?: boolean,
+// ): IProgramExerciseVariation {
+//   return {
+//     sets: [
+//       {
+//         repsExpr: "5",
+//         weightExpr: useStateWeight ? "state.weight" : "0lb",
+//         isAmrap: false,
+//       },
+//     ],
+//   };
+// }
 
 // function Program_createExercise(units: IUnit): IProgramExercise {
 //   const defaultWarmup = warmupValues(units)[45];
@@ -1013,14 +1013,14 @@ function Program_getAllProgramExercises(
   );
 }
 
-function Program_getAllUsedProgramExercises(
-  evaluatedProgram: IEvaluatedProgram,
-): IPlannerProgramExerciseWithType[] {
-  const used = Program_getAllProgramExercises(evaluatedProgram).filter(
-    (e) => !e.notused && e.exerciseType != null,
-  );
-  return used as IPlannerProgramExerciseWithType[];
-}
+// function Program_getAllUsedProgramExercises(
+//   evaluatedProgram: IEvaluatedProgram,
+// ): IPlannerProgramExerciseWithType[] {
+//   const used = Program_getAllProgramExercises(evaluatedProgram).filter(
+//     (e) => !e.notused && e.exerciseType != null,
+//   );
+//   return used as IPlannerProgramExerciseWithType[];
+// }
 
 function Program_getAllProgramExercisesWithType(
   evaluatedProgram: IEvaluatedProgram,
@@ -1220,13 +1220,13 @@ function Program_numberOfDays(program: IEvaluatedProgram): number {
 //   return Program_exerciseRangeFormat(minExs, maxExs);
 // }
 
-function Program_exerciseRangeFormat(minExs: number, maxExs: number): string {
-  if (minExs === maxExs) {
-    return `${minExs} ${StringUtils_pluralize("exercise", minExs)} per day`;
-  } else {
-    return `${minExs}-${maxExs} exercises per day`;
-  }
-}
+// function Program_exerciseRangeFormat(minExs: number, maxExs: number): string {
+//   if (minExs === maxExs) {
+//     return `${minExs} ${StringUtils_pluralize("exercise", minExs)} per day`;
+//   } else {
+//     return `${minExs}-${maxExs} exercises per day`;
+//   }
+// }
 
 function Program_getWeekFromDay(
   program: IEvaluatedProgram,
@@ -1484,64 +1484,64 @@ function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
 //   return url.toString();
 // }
 
-function Program_exportProgram(
-  program: IProgram,
-  settings: ISettings,
-  version?: string,
-): IExportedProgram {
-  const aFullProgram = Program_evaluate(program, settings);
-  const customExerciseIds = Program_getAllProgramExercises(aFullProgram).reduce<
-    string[]
-  >((memo, programExercise) => {
-    const id = programExercise.exerciseType?.id;
-    if (id) {
-      const isBuiltIn = !!Exercise_findById(id, {});
-      if (!isBuiltIn) {
-        memo.push(id);
-      }
-    }
-    return memo;
-  }, []);
-
-  const customExercises = ObjectUtils_pick(
-    settings.exercises,
-    customExerciseIds,
-  );
-  return {
-    customExercises,
-    program,
-    version: version || getLatestMigrationVersion(),
-    settings: ObjectUtils_pick(settings, ["units", "timers", "planner"]),
-  };
-}
-
-function Program_exportedPlannerProgramToExportedProgram(
-  exportedPlannerProgram: IExportedPlannerProgram,
-  aNextDay?: number,
-): IExportedProgram {
-  const program = {
-    ...Program_create(
-      exportedPlannerProgram.program.name,
-      exportedPlannerProgram.id,
-    ),
-    planner: exportedPlannerProgram.program,
-  };
-  if (aNextDay != null) {
-    program.nextDay = aNextDay;
-  }
-  const exportedProgram: IExportedProgram = {
-    customExercises: exportedPlannerProgram.settings.exercises,
-    program,
-    version: exportedPlannerProgram.version,
-    settings: {
-      timers: {
-        workout: exportedPlannerProgram.settings.timer,
-      },
-      planner: exportedPlannerProgram.plannerSettings,
-    },
-  };
-  return exportedProgram;
-}
+// function Program_exportProgram(
+//   program: IProgram,
+//   settings: ISettings,
+//   version?: string,
+// ): IExportedProgram {
+//   const aFullProgram = Program_evaluate(program, settings);
+//   const customExerciseIds = Program_getAllProgramExercises(aFullProgram).reduce<
+//     string[]
+//   >((memo, programExercise) => {
+//     const id = programExercise.exerciseType?.id;
+//     if (id) {
+//       const isBuiltIn = !!Exercise_findById(id, {});
+//       if (!isBuiltIn) {
+//         memo.push(id);
+//       }
+//     }
+//     return memo;
+//   }, []);
+//
+//   const customExercises = ObjectUtils_pick(
+//     settings.exercises,
+//     customExerciseIds,
+//   );
+//   return {
+//     customExercises,
+//     program,
+//     version: version || getLatestMigrationVersion(),
+//     settings: ObjectUtils_pick(settings, ["units", "timers", "planner"]),
+//   };
+// }
+//
+// function Program_exportedPlannerProgramToExportedProgram(
+//   exportedPlannerProgram: IExportedPlannerProgram,
+//   aNextDay?: number,
+// ): IExportedProgram {
+//   const program = {
+//     ...Program_create(
+//       exportedPlannerProgram.program.name,
+//       exportedPlannerProgram.id,
+//     ),
+//     planner: exportedPlannerProgram.program,
+//   };
+//   if (aNextDay != null) {
+//     program.nextDay = aNextDay;
+//   }
+//   const exportedProgram: IExportedProgram = {
+//     customExercises: exportedPlannerProgram.settings.exercises,
+//     program,
+//     version: exportedPlannerProgram.version,
+//     settings: {
+//       timers: {
+//         workout: exportedPlannerProgram.settings.timer,
+//       },
+//       planner: exportedPlannerProgram.plannerSettings,
+//     },
+//   };
+//   return exportedProgram;
+// }
 
 export function Program_create(name: string, id?: string): IProgram {
   return {
@@ -1783,34 +1783,34 @@ export function Program_create(name: string, id?: string): IProgram {
 //   return exercises;
 // }
 
-function Program_getReusingCustomProgressExercises(
-  evaluatedProgram: IEvaluatedProgram,
-  programExercise: IPlannerProgramExercise,
-): IPlannerProgramExercise[] {
-  const exercises: IPlannerProgramExercise[] = [];
-  PP_iterate2(evaluatedProgram.weeks, (e) => {
-    if (
-      e.progress?.type === "custom" &&
-      e.progress?.reuse?.fullName === programExercise.fullName
-    ) {
-      exercises.push(e);
-    }
-  });
-  return exercises;
-}
-
-function Program_getReusingSetProgressExercises(
-  evaluatedProgram: IEvaluatedProgram,
-  programExercise: IPlannerProgramExercise,
-): IPlannerProgramExercise[] {
-  const exercises: IPlannerProgramExercise[] = [];
-  PP_iterate2(evaluatedProgram.weeks, (e) => {
-    if (e.reuse?.fullName === programExercise.fullName && e.progress) {
-      exercises.push(e);
-    }
-  });
-  return exercises;
-}
+// function Program_getReusingCustomProgressExercises(
+//   evaluatedProgram: IEvaluatedProgram,
+//   programExercise: IPlannerProgramExercise,
+// ): IPlannerProgramExercise[] {
+//   const exercises: IPlannerProgramExercise[] = [];
+//   PP_iterate2(evaluatedProgram.weeks, (e) => {
+//     if (
+//       e.progress?.type === "custom" &&
+//       e.progress?.reuse?.fullName === programExercise.fullName
+//     ) {
+//       exercises.push(e);
+//     }
+//   });
+//   return exercises;
+// }
+//
+// function Program_getReusingSetProgressExercises(
+//   evaluatedProgram: IEvaluatedProgram,
+//   programExercise: IPlannerProgramExercise,
+// ): IPlannerProgramExercise[] {
+//   const exercises: IPlannerProgramExercise[] = [];
+//   PP_iterate2(evaluatedProgram.weeks, (e) => {
+//     if (e.reuse?.fullName === programExercise.fullName && e.progress) {
+//       exercises.push(e);
+//     }
+//   });
+//   return exercises;
+// }
 
 // function Program_getReusingProgressExercises(
 //   evaluatedProgram: IEvaluatedProgram,
@@ -3009,12 +3009,12 @@ export function PlannerProgram_replaceAndValidateExercise(
 //   return mapping;
 // }
 
-function PlannerProgram_evaluate(
-  plannerProgram: IPlannerProgram,
-  settings: ISettings,
-): { evaluatedWeeks: IPlannerEvalResult[][]; exerciseFullNames: string[] } {
-  return PlannerEvaluator_evaluate(plannerProgram, settings);
-}
+// function PlannerProgram_evaluate(
+//   plannerProgram: IPlannerProgram,
+//   settings: ISettings,
+// ): { evaluatedWeeks: IPlannerEvalResult[][]; exerciseFullNames: string[] } {
+//   return PlannerEvaluator_evaluate(plannerProgram, settings);
+// }
 //
 // function PlannerProgram_evaluateFull(
 //   fullProgramText: string,
@@ -3087,25 +3087,25 @@ export function PlannerProgram_generateFullText(
   return fullText;
 }
 
-function PlannerProgram_usedExercises(
-  exercises: IAllCustomExercises,
-  evaluatedWeeks: IPlannerEvalResult[][],
-): IAllCustomExercises {
-  return ObjectUtils_filter(exercises, (_id, ex) => {
-    if (!ex) {
-      return false;
-    }
-
-    return evaluatedWeeks.some((week) => {
-      return week.some((day) => {
-        return (
-          day.success &&
-          day.data.some((d) => d.name.toLowerCase() === ex.name.toLowerCase())
-        );
-      });
-    });
-  });
-}
+// function PlannerProgram_usedExercises(
+//   exercises: IAllCustomExercises,
+//   evaluatedWeeks: IPlannerEvalResult[][],
+// ): IAllCustomExercises {
+//   return ObjectUtils_filter(exercises, (_id, ex) => {
+//     if (!ex) {
+//       return false;
+//     }
+//
+//     return evaluatedWeeks.some((week) => {
+//       return week.some((day) => {
+//         return (
+//           day.success &&
+//           day.data.some((d) => d.name.toLowerCase() === ex.name.toLowerCase())
+//         );
+//       });
+//     });
+//   });
+// }
 //
 // function PlannerProgram_usedEquipment(
 //   equipment: IAllEquipment,
@@ -4105,13 +4105,13 @@ const THistoryRecord = t.intersection(
 );
 type IHistoryRecord = t.TypeOf<typeof THistoryRecord>;
 
-const TProgramDayEntry = t.type(
-  {
-    exercise: TExerciseType,
-    sets: t.array(TProgramSet),
-  },
-  "TProgramDayEntry",
-);
+// const TProgramDayEntry = t.type(
+//   {
+//     exercise: TExerciseType,
+//     sets: t.array(TProgramSet),
+//   },
+//   "TProgramDayEntry",
+// );
 // type IProgramDayEntry = Readonly<t.TypeOf<typeof TProgramDayEntry>>;
 
 const TProgramWeek = t.intersection(
@@ -4331,10 +4331,10 @@ const statsPercentageDef = {
 const TStatsPercentage = t.partial(statsPercentageDef, "TStatsPercentage");
 type IStatsPercentage = t.TypeOf<typeof TStatsPercentage>;
 
-type IStatsKey =
-  | keyof IStatsLength
-  | keyof IStatsWeight
-  | keyof IStatsPercentage;
+// type IStatsKey =
+//   | keyof IStatsLength
+//   | keyof IStatsWeight
+//   | keyof IStatsPercentage;
 
 const TStatsWeightEnabled = t.partial(
   ObjectUtils_keys(statsWeightDef).reduce<
@@ -4464,13 +4464,13 @@ const TGraphOptions = t.partial({
 });
 // type IGraphOptions = t.TypeOf<typeof TGraphOptions>;
 
-const TMuscleMultiplier = t.type(
-  {
-    muscle: TMuscle,
-    multiplier: t.number,
-  },
-  "TMuscleMultiplier",
-);
+// const TMuscleMultiplier = t.type(
+//   {
+//     muscle: TMuscle,
+//     multiplier: t.number,
+//   },
+//   "TMuscleMultiplier",
+// );
 // type IMuscleMultiplier = t.TypeOf<typeof TMuscleMultiplier>;
 
 const TExerciseDataValue = t.partial(
@@ -4657,71 +4657,71 @@ const TStats = t.type(
 );
 export type IStats = t.TypeOf<typeof TStats>;
 
-const TSubscriptionReceipt = t.type({
-  vtype: t.literal("subscription_receipt"),
-  id: t.string,
-  value: t.string,
-  createdAt: t.number,
-});
+// const TSubscriptionReceipt = t.type({
+//   vtype: t.literal("subscription_receipt"),
+//   id: t.string,
+//   value: t.string,
+//   createdAt: t.number,
+// });
 // type ISubscriptionReceipt = t.TypeOf<typeof TSubscriptionReceipt>;
 
-const TSubscription = t.intersection([
-  t.interface({
-    apple: t.array(TSubscriptionReceipt),
-    google: t.array(TSubscriptionReceipt),
-  }),
-  t.partial({
-    key: t.union([t.string, t.undefined]),
-  }),
-]);
+// const TSubscription = t.intersection([
+//   t.interface({
+//     apple: t.array(TSubscriptionReceipt),
+//     google: t.array(TSubscriptionReceipt),
+//   }),
+//   t.partial({
+//     key: t.union([t.string, t.undefined]),
+//   }),
+// ]);
 // type ISubscription = t.TypeOf<typeof TSubscription>;
 
-const TAffiliateData = t.type({
-  id: t.string,
-  timestamp: t.number,
-  type: t.union([t.literal("coupon"), t.literal("program")]),
-  vtype: t.literal("affiliate"),
-});
+// const TAffiliateData = t.type({
+//   id: t.string,
+//   timestamp: t.number,
+//   type: t.union([t.literal("coupon"), t.literal("program")]),
+//   vtype: t.literal("affiliate"),
+// });
 // type IAffiliateData = t.TypeOf<typeof TAffiliateData>;
 
-const TStorage = t.intersection(
-  [
-    t.interface({
-      history: t.array(THistoryRecord),
-      deletedHistory: t.array(t.number),
-      stats: TStats,
-      deletedStats: t.array(t.number),
-      settings: TSettings,
-      currentProgramId: t.union([t.string, t.undefined]),
-      version: t.string,
-      programs: t.array(TProgram),
-      deletedPrograms: t.array(t.number),
-      reviewRequests: t.array(t.number),
-      signupRequests: t.array(t.number),
-      helps: t.array(t.string),
-      tempUserId: t.string,
-      email: t.union([t.string, t.undefined]),
-      affiliates: dictionary(t.string, TAffiliateData),
-      subscription: TSubscription,
-      whatsNew: t.union([t.string, t.undefined]),
-      progress: t.array(THistoryRecord),
-    }),
-    t.partial({
-      originalId: t.number,
-      id: t.number,
-      referrer: t.string,
-      attribution: t.string,
-      _versions: t.unknown, // We use unknown because io-ts doesn't support recursive types well
-    }),
-  ],
-  "TStorage",
-);
-type IStorage = Omit<t.TypeOf<typeof TStorage>, "_versions"> & {
-  _versions?: IVersions<Omit<t.TypeOf<typeof TStorage>, "_versions">>;
-};
-
+// const TStorage = t.intersection(
+//   [
+//     t.interface({
+//       history: t.array(THistoryRecord),
+//       deletedHistory: t.array(t.number),
+//       stats: TStats,
+//       deletedStats: t.array(t.number),
+//       settings: TSettings,
+//       currentProgramId: t.union([t.string, t.undefined]),
+//       version: t.string,
+//       programs: t.array(TProgram),
+//       deletedPrograms: t.array(t.number),
+//       reviewRequests: t.array(t.number),
+//       signupRequests: t.array(t.number),
+//       helps: t.array(t.string),
+//       tempUserId: t.string,
+//       email: t.union([t.string, t.undefined]),
+//       affiliates: dictionary(t.string, TAffiliateData),
+//       subscription: TSubscription,
+//       whatsNew: t.union([t.string, t.undefined]),
+//       progress: t.array(THistoryRecord),
+//     }),
+//     t.partial({
+//       originalId: t.number,
+//       id: t.number,
+//       referrer: t.string,
+//       attribution: t.string,
+//       _versions: t.unknown, // We use unknown because io-ts doesn't support recursive types well
+//     }),
+//   ],
+//   "TStorage",
+// );
+// type IStorage = Omit<t.TypeOf<typeof TStorage>, "_versions"> & {
+//   _versions?: IVersions<Omit<t.TypeOf<typeof TStorage>, "_versions">>;
+// };
+//
 // type IPartialStorage = Omit<IStorage, "history" | "stats" | "programs"> &
-  Partial<Pick<IStorage, "history" | "stats" | "programs">>;
+//   Partial<Pick<IStorage, "history" | "stats" | "programs">>;
 
 type IProgramContentSettings = Partial<
   Pick<
@@ -4732,14 +4732,14 @@ type IProgramContentSettings = Partial<
   }
 >;
 
-const TMuscleGeneratorResponse = t.type(
-  {
-    targetMuscles: t.array(TMuscle),
-    synergistMuscles: t.array(TMuscle),
-    types: t.array(TExerciseKind),
-  },
-  "TMusclesGeneratorResponse",
-);
+// const TMuscleGeneratorResponse = t.type(
+//   {
+//     targetMuscles: t.array(TMuscle),
+//     synergistMuscles: t.array(TMuscle),
+//     types: t.array(TExerciseKind),
+//   },
+//   "TMusclesGeneratorResponse",
+// );
 // type IMuscleGeneratorResponse = t.TypeOf<typeof TMuscleGeneratorResponse>;
 
 type IDayData = {
@@ -4789,75 +4789,75 @@ const CONTROLLED_TYPES = [
 type IControlledType = (typeof CONTROLLED_TYPES)[number];
 
 // Define which fields to version for each controlled type
-const CONTROLLED_FIELDS: Record<IControlledType, readonly string[]> = {
-  program: ["name", "nextDay", "planner"] as const,
-  gym: ["name", "equipment"] as const,
-  progress: [
-    "entries",
-    "endTime",
-    "intervals",
-    "notes",
-    "deletedProgramExercises",
-    "userPromptedStateVars",
-    "updatedAt",
-    "changes",
-    "timerSince",
-    "timerMode",
-    "timer",
-    "timerEntryIndex",
-    "timerSetIndex",
-  ] as const,
-  history_entry: [
-    "exercise",
-    "sets",
-    "warmupSets",
-    "index",
-    "isSuppressed",
-    "programExerciseId",
-    "state",
-    "vars",
-    "notes",
-    "changed",
-    "superset",
-    "updatePrints",
-  ] as const,
-};
+// const CONTROLLED_FIELDS: Record<IControlledType, readonly string[]> = {
+//   program: ["name", "nextDay", "planner"] as const,
+//   gym: ["name", "equipment"] as const,
+//   progress: [
+//     "entries",
+//     "endTime",
+//     "intervals",
+//     "notes",
+//     "deletedProgramExercises",
+//     "userPromptedStateVars",
+//     "updatedAt",
+//     "changes",
+//     "timerSince",
+//     "timerMode",
+//     "timer",
+//     "timerEntryIndex",
+//     "timerSetIndex",
+//   ] as const,
+//   history_entry: [
+//     "exercise",
+//     "sets",
+//     "warmupSets",
+//     "index",
+//     "isSuppressed",
+//     "programExerciseId",
+//     "state",
+//     "vars",
+//     "notes",
+//     "changed",
+//     "superset",
+//     "updatePrints",
+//   ] as const,
+// };
 
 // Define id field for each type
-const TYPE_ID_MAPPING: Record<IAtomicType | IControlledType, string> = {
-  affiliate: "id",
-  program: "clonedAt",
-  history_record: "id",
-  set: "id",
-  progress_ui: "id",
-  history_entry: "id",
-  progress: "startTime",
-  gym: "id",
-  custom_exercise: "id",
-  stat: "timestamp",
-  equipment_data: "id",
-  planner: "name",
-  subscription_receipt: "id",
-  graph: "id",
-  graphs: "id",
-  muscle_groups_settings: "vtype",
-};
+// const TYPE_ID_MAPPING: Record<IAtomicType | IControlledType, string> = {
+//   affiliate: "id",
+//   program: "clonedAt",
+//   history_record: "id",
+//   set: "id",
+//   progress_ui: "id",
+//   history_entry: "id",
+//   progress: "startTime",
+//   gym: "id",
+//   custom_exercise: "id",
+//   stat: "timestamp",
+//   equipment_data: "id",
+//   planner: "name",
+//   subscription_receipt: "id",
+//   graph: "id",
+//   graphs: "id",
+//   muscle_groups_settings: "vtype",
+// };
 
 // Dictionary fields - these are free-form key-value mappings that should use collection versioning
 // Full path from storage root
-const DICTIONARY_FIELDS = [
-  "settings.exercises",
-  "settings.exerciseData",
-  "settings.gyms.equipment",
-  "affiliates",
-] as const;
+// const DICTIONARY_FIELDS = [
+//   "settings.exercises",
+//   "settings.exerciseData",
+//   "settings.gyms.equipment",
+//   "affiliates",
+// ] as const;
 
 // type IDictionaryFieldPath = (typeof DICTIONARY_FIELDS)[number];
 
 // Fields excluded from syncing (local-only UI state)
-const EXCLUDED_FIELDS: Partial<Record<IControlledType, readonly string[]>> = {
-  progress: ["ui"] as const,
-};
+// const EXCLUDED_FIELDS: Partial<Record<IControlledType, readonly string[]>> = {
+//   progress: ["ui"] as const,
+// };
 
 // Storage-specific version configuration
 // const STORAGE_VERSION_TYPES: IVersionTypes<IAtomicType, IControlledType> = {
@@ -4925,9 +4925,9 @@ export interface IWeightChange {
 //   );
 // }
 
-function warmupSetToKey(set: IProgramExerciseWarmupSet): string {
-  return `${set.reps}-${Weight_print(set.threshold)}-${Weight_printOrNumber(set.value)}`;
-}
+// function warmupSetToKey(set: IProgramExerciseWarmupSet): string {
+//   return `${set.reps}-${Weight_print(set.threshold)}-${Weight_printOrNumber(set.value)}`;
+// }
 
 // function ProgramExercise_groupWarmupsSets(
 //   sets: IProgramExerciseWarmupSet[],
