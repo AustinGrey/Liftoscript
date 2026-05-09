@@ -216,12 +216,12 @@ import { IState, updateSettings, updateState } from "./state";
 //   dateModified?: string;
 // }
 
-interface IExportedProgram {
-  program: IProgram;
-  customExercises: Partial<Record<string, ICustomExercise>>;
-  version: string;
-  settings: IProgramContentSettings;
-}
+// interface IExportedProgram {
+//   program: IProgram;
+//   customExercises: Partial<Record<string, ICustomExercise>>;
+//   version: string;
+//   settings: IProgramContentSettings;
+// }
 
 interface IEvaluatedProgramWeek {
   name: string;
@@ -3653,21 +3653,21 @@ const TPlate = t.type(
 );
 // type IPlate = t.TypeOf<typeof TPlate>;
 
-const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
-
-const TBarKey = t.keyof(
-  barKeys.reduce<Record<IArrayElement<typeof barKeys>, null>>(
-    (memo, barKey) => {
-      memo[barKey] = null;
-      return memo;
-    },
-    {} as Record<IArrayElement<typeof barKeys>, null>,
-  ),
-  "TBarKey",
-);
+// const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
+//
+// const TBarKey = t.keyof(
+//   barKeys.reduce<Record<IArrayElement<typeof barKeys>, null>>(
+//     (memo, barKey) => {
+//       memo[barKey] = null;
+//       return memo;
+//     },
+//     {} as Record<IArrayElement<typeof barKeys>, null>,
+//   ),
+//   "TBarKey",
+// );
 // type IBarKey = t.TypeOf<typeof TBarKey>;
-
-const TBars = t.record(TBarKey, TWeight, "TBars");
+//
+// const TBars = t.record(TBarKey, TWeight, "TBars");
 // type IBars = t.TypeOf<typeof TBars>;
 
 const percentageUnits = ["%"] as const;
@@ -3783,7 +3783,7 @@ const TProgramSet = t.intersection(
   ],
   "TProgramSet",
 );
-type IProgramSet = t.TypeOf<typeof TProgramSet>;
+// type IProgramSet = t.TypeOf<typeof TProgramSet>;
 
 const TProgramExerciseVariation = t.intersection(
   [
@@ -3796,9 +3796,9 @@ const TProgramExerciseVariation = t.intersection(
   ],
   "TProgramExerciseVariation",
 );
-type IProgramExerciseVariation = Readonly<
-  t.TypeOf<typeof TProgramExerciseVariation>
->;
+// type IProgramExerciseVariation = Readonly<
+//   t.TypeOf<typeof TProgramExerciseVariation>
+// >;
 
 const TProgramExerciseWarmupSet = t.type(
   {
@@ -3808,9 +3808,9 @@ const TProgramExerciseWarmupSet = t.type(
   },
   "TProgramExerciseWarmupSet",
 );
-type IProgramExerciseWarmupSet = Readonly<
-  t.TypeOf<typeof TProgramExerciseWarmupSet>
->;
+// type IProgramExerciseWarmupSet = Readonly<
+//   t.TypeOf<typeof TProgramExerciseWarmupSet>
+// >;
 
 const TProgramExerciseReuseLogic = t.type(
   {
@@ -4723,14 +4723,14 @@ export type IStats = t.TypeOf<typeof TStats>;
 // type IPartialStorage = Omit<IStorage, "history" | "stats" | "programs"> &
 //   Partial<Pick<IStorage, "history" | "stats" | "programs">>;
 
-type IProgramContentSettings = Partial<
-  Pick<
-    ISettings,
-    "units" | "planner" | "muscleGroups" | "exerciseData" | "workoutSettings"
-  > & {
-    timers: Partial<ISettings["timers"]>;
-  }
->;
+// type IProgramContentSettings = Partial<
+//   Pick<
+//     ISettings,
+//     "units" | "planner" | "muscleGroups" | "exerciseData" | "workoutSettings"
+//   > & {
+//     timers: Partial<ISettings["timers"]>;
+//   }
+// >;
 
 // const TMuscleGeneratorResponse = t.type(
 //   {
@@ -4761,32 +4761,32 @@ type IDayData = {
 // };
 
 // Atomic types - these are versioned as a whole unit
-const ATOMIC_TYPES = [
-  "history_record",
-  "progress_ui",
-  "set",
-  "equipment_data",
-  "custom_exercise",
-  "planner",
-  "stat",
-  "graph",
-  "graphs",
-  "subscription_receipt",
-  "affiliate",
-  "muscle_groups_settings",
-] as const;
+// const ATOMIC_TYPES = [
+//   "history_record",
+//   "progress_ui",
+//   "set",
+//   "equipment_data",
+//   "custom_exercise",
+//   "planner",
+//   "stat",
+//   "graph",
+//   "graphs",
+//   "subscription_receipt",
+//   "affiliate",
+//   "muscle_groups_settings",
+// ] as const;
 
-type IAtomicType = (typeof ATOMIC_TYPES)[number];
+// type IAtomicType = (typeof ATOMIC_TYPES)[number];
 
 // Controlled types - these have specific fields that are versioned
-const CONTROLLED_TYPES = [
-  "program",
-  "gym",
-  "progress",
-  "history_entry",
-] as const;
+// const CONTROLLED_TYPES = [
+//   "program",
+//   "gym",
+//   "progress",
+//   "history_entry",
+// ] as const;
 
-type IControlledType = (typeof CONTROLLED_TYPES)[number];
+// type IControlledType = (typeof CONTROLLED_TYPES)[number];
 
 // Define which fields to version for each controlled type
 // const CONTROLLED_FIELDS: Record<IControlledType, readonly string[]> = {
