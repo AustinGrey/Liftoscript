@@ -8,7 +8,6 @@ import {
   CollectionUtils_groupByExpr,
   CollectionUtils_findIndexReverse,
   CollectionUtils_sort,
-  CollectionUtils_concatBy,
 } from "../utils/collection";
 import { UidFactory_generateUid } from "@/utils/generator";
 import {
@@ -33,6 +32,7 @@ import {
 import { StringUtils_unindent } from "@/utils/string";
 import type { ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/parsers/workout-plan.ts";
+import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 
 //#region Program
 
@@ -5940,7 +5940,7 @@ class PlannerExerciseEvaluator {
     ) {
       const value = this.getValue(expr).replace("+", "");
       const unit = value.indexOf("kg") !== -1 ? "kg" : "lb";
-      return W.Weight_build(parseFloat(value), unit);
+      return Weight_build(parseFloat(value), unit);
     } else {
       return undefined;
     }
