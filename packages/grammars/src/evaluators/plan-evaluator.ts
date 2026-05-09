@@ -1,17 +1,37 @@
-import memoize from "micro-memoize";
+import { memoize } from "micro-memoize";
 import * as t from "io-ts";
-import type { SyntaxNode } from "@lezer/common";
+import type { SyntaxNode, Tree } from "@lezer/common";
 import { unsafeCoerce } from "fp-ts/lib/function";
 import {
   CollectionUtils_compact,
-  CollectionUtils_sortBy,CollectionUtils_groupByExpr, CollectionUtils_findIndexReverse, CollectionUtils_sort,
+  CollectionUtils_sortBy,
+  CollectionUtils_groupByExpr,
+  CollectionUtils_findIndexReverse,
+  CollectionUtils_sort,
 } from "../utils/collection";
 import { UidFactory_generateUid } from "@/utils/generator";
-import { MathUtils_applyOp, n, MathUtils_roundTo005, MathUtils_round, MathUtils_roundFloat, MathUtils_roundTo000005 } from "@/utils/math";
+import {
+  MathUtils_applyOp,
+  n,
+  MathUtils_roundTo005,
+  MathUtils_round,
+  MathUtils_roundFloat,
+  MathUtils_roundTo000005,
+} from "@/utils/math";
 import type { IEither, IArrayElement } from "@/utils/types";
-import { ObjectUtils_pick, ObjectUtils_isEqual, ObjectUtils_clone, ObjectUtils_keys, ObjectUtils_values, ObjectUtils_filter, ObjectUtils_diff, ObjectUtils_entries } from "@/utils/object";
+import {
+  ObjectUtils_pick,
+  ObjectUtils_isEqual,
+  ObjectUtils_clone,
+  ObjectUtils_keys,
+  ObjectUtils_values,
+  ObjectUtils_filter,
+  ObjectUtils_diff,
+  ObjectUtils_entries,
+} from "@/utils/object";
 import { StringUtils_unindent } from "@/utils/string";
 import type { ILiftoscriptEvaluatorUpdate } from "@/logic/types";
+import { parser as plannerExerciseParser } from "@/parsers/workout-plan.ts";
 
 //#region Program
 
@@ -2835,13 +2855,13 @@ function PlannerProgram_topLineItems(
   return mapping;
 }
 
-// function PlannerProgram_evaluate(
-//   plannerProgram: IPlannerProgram,
-//   settings: ISettings,
-// ): { evaluatedWeeks: IPlannerEvalResult[][]; exerciseFullNames: string[] } {
-//   return PlannerEvaluator_evaluate(plannerProgram, settings);
-// }
-//
+function PlannerProgram_evaluate(
+  plannerProgram: IPlannerProgram,
+  settings: ISettings,
+): { evaluatedWeeks: IPlannerEvalResult[][]; exerciseFullNames: string[] } {
+  return PlannerEvaluator_evaluate(plannerProgram, settings);
+}
+
 // function PlannerProgram_evaluateFull(
 //   fullProgramText: string,
 //   settings: ISettings,
@@ -3459,7 +3479,7 @@ const TUnit = t.keyof(
   ),
   "TUnit",
 );
-// type IUnit = t.TypeOf<typeof TUnit>;
+type IUnit = t.TypeOf<typeof TUnit>;
 
 const TWeight = t.type(
   {
@@ -3470,13 +3490,13 @@ const TWeight = t.type(
 );
 export type IWeight = t.TypeOf<typeof TWeight>;
 
-const TPlate = t.type(
-  {
-    weight: TWeight,
-    num: t.number,
-  },
-  "TPlate",
-);
+// const TPlate = t.type(
+//   {
+//     weight: TWeight,
+//     num: t.number,
+//   },
+//   "TPlate",
+// );
 // type IPlate = t.TypeOf<typeof TPlate>;
 
 // const barKeys = ["barbell", "ezbar", "dumbbell"] as const;
@@ -3589,7 +3609,7 @@ const TProgramStateMetadataValue = t.partial(
 // type IProgramStateMetadataValue = t.TypeOf<typeof TProgramStateMetadataValue>;
 
 const TProgramStateMetadata = dictionary(t.string, TProgramStateMetadataValue);
-// type IProgramStateMetadata = t.TypeOf<typeof TProgramStateMetadata>;
+type IProgramStateMetadata = t.TypeOf<typeof TProgramStateMetadata>;
 
 const TProgramSet = t.intersection(
   [
@@ -3738,8 +3758,8 @@ const TExercisePickerProgramExercise = t.type(
   "TExercisePickerProgramExercise",
 );
 // type IExercisePickerProgramExercise = t.TypeOf<
-  typeof TExercisePickerProgramExercise
->;
+//   typeof TExercisePickerProgramExercise
+// >;
 
 const TExercisePickerAdhocExercise = t.intersection(
   [
@@ -5653,7 +5673,12 @@ interface IPlannerTopLineItem {
   used?: boolean;
 }
 
-type IPlannerSyntaxPointer = { line: number; offset: number; from: number; to: number };
+type IPlannerSyntaxPointer = {
+  line: number;
+  offset: number;
+  from: number;
+  to: number;
+};
 
 class PlannerSyntaxError extends SyntaxError {
   public readonly line: number;
@@ -5664,18 +5689,24 @@ class PlannerSyntaxError extends SyntaxError {
   public static fromPoint(
     fullName: string | undefined,
     message: string,
-    point: IPlannerSyntaxPointer
+    point: IPlannerSyntaxPointer,
   ): PlannerSyntaxError {
     return new PlannerSyntaxError(
       `${fullName ? `${fullName}: ` : ""}${message} (${point.line}:${point.offset})`,
       point.line,
       point.offset,
       point.from,
-      point.to
+      point.to,
     );
   }
 
-  constructor(message: string, line: number, offset: number, from: number, to: number) {
+  constructor(
+    message: string,
+    line: number,
+    offset: number,
+    from: number,
+    to: number,
+  ) {
     super(message);
     this.line = line;
     this.offset = offset;
@@ -5688,8 +5719,14 @@ class PlannerSyntaxError extends SyntaxError {
   }
 }
 
-type IPlannerEvalResult = IEither<IPlannerProgramExercise[], PlannerSyntaxError>;
-type IPlannerEvalFullResult = IEither<IPlannerExerciseEvaluatorWeek[], PlannerSyntaxError>;
+type IPlannerEvalResult = IEither<
+  IPlannerProgramExercise[],
+  PlannerSyntaxError
+>;
+type IPlannerEvalFullResult = IEither<
+  IPlannerExerciseEvaluatorWeek[],
+  PlannerSyntaxError
+>;
 
 function getChildren(node: SyntaxNode): SyntaxNode[] {
   const cur = node.cursor();
@@ -5704,7 +5741,13 @@ function getChildren(node: SyntaxNode): SyntaxNode[] {
 }
 
 function assert(name: string): never {
-  throw new PlannerSyntaxError(`Missing required nodes for ${name}, this should never happen`, 0, 0, 0, 1);
+  throw new PlannerSyntaxError(
+    `Missing required nodes for ${name}, this should never happen`,
+    0,
+    0,
+    0,
+    1,
+  );
 }
 
 interface IPlannerExerciseEvaluatorWeek {
@@ -5725,7 +5768,12 @@ class PlannerExerciseEvaluator {
 
   private latestDescriptions: string[][] = [];
 
-  constructor(script: string, settings: ISettings, mode: IPlannerExerciseEvaluatorMode, dayData?: Required<IDayData>) {
+  constructor(
+    script: string,
+    settings: ISettings,
+    mode: IPlannerExerciseEvaluatorMode,
+    dayData?: Required<IDayData>,
+  ) {
     this.script = script;
     this.settings = settings;
     this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
@@ -5740,21 +5788,38 @@ class PlannerExerciseEvaluator {
     return this.script.slice(node.from, node.to);
   }
 
-  public static applyChangesToScript(script: string, ranges: [number, number, string][]): string {
+  public static applyChangesToScript(
+    script: string,
+    ranges: [number, number, string][],
+  ): string {
     let offset = 0;
     while (ranges.length > 0) {
       const [from, to, replacement] = ranges.shift()!;
-      script = script.slice(0, from + offset) + replacement + script.slice(to + offset);
+      script =
+        script.slice(0, from + offset) +
+        replacement +
+        script.slice(to + offset);
       offset += replacement.length - (to - from);
     }
     return script;
   }
 
-  public static isEqualProperty(a: IPlannerProgramProperty, b: IPlannerProgramProperty): boolean {
-    return a.fnName === b.fnName && a.fnArgs.join() === b.fnArgs.join() && a.script === b.script && a.body === b.body;
+  public static isEqualProperty(
+    a: IPlannerProgramProperty,
+    b: IPlannerProgramProperty,
+  ): boolean {
+    return (
+      a.fnName === b.fnName &&
+      a.fnArgs.join() === b.fnArgs.join() &&
+      a.script === b.script &&
+      a.body === b.body
+    );
   }
 
-  public static isEqualProgress(a: IProgramExerciseProgress, b: IProgramExerciseProgress): boolean {
+  public static isEqualProgress(
+    a: IProgramExerciseProgress,
+    b: IProgramExerciseProgress,
+  ): boolean {
     const pickA = {
       ...ObjectUtils_pick(a, ["type", "state", "stateMetadata", "script"]),
       reuse: a.reuse?.fullName,
@@ -5766,9 +5831,18 @@ class PlannerExerciseEvaluator {
     return ObjectUtils_isEqual(pickA, pickB);
   }
 
-  public static isEqualUpdate(a: IProgramExerciseUpdate, b: IProgramExerciseUpdate): boolean {
-    const pickA = { ...ObjectUtils_pick(a, ["type", "script"]), reuse: a.reuse?.fullName };
-    const pickB = { ...ObjectUtils_pick(b, ["type", "script"]), reuse: b.reuse?.fullName };
+  public static isEqualUpdate(
+    a: IProgramExerciseUpdate,
+    b: IProgramExerciseUpdate,
+  ): boolean {
+    const pickA = {
+      ...ObjectUtils_pick(a, ["type", "script"]),
+      reuse: a.reuse?.fullName,
+    };
+    const pickB = {
+      ...ObjectUtils_pick(b, ["type", "script"]),
+      reuse: b.reuse?.fullName,
+    };
     return ObjectUtils_isEqual(pickA, pickB);
   }
 
@@ -5782,7 +5856,10 @@ class PlannerExerciseEvaluator {
     throw PlannerSyntaxError.fromPoint(undefined, message, point);
   }
 
-  public static getLineAndOffset(script: string, node: SyntaxNode): [number, number] {
+  public static getLineAndOffset(
+    script: string,
+    node: SyntaxNode,
+  ): [number, number] {
     const linesLengths = script.split("\n").map((l) => l.length + 1);
     let offset = 0;
     for (let i = 0; i < linesLengths.length; i++) {
@@ -5808,7 +5885,10 @@ class PlannerExerciseEvaluator {
     } while (cursor.next());
   }
 
-  private getWarmupReps(setParts: string): { numberOfSets: number; reps: number } {
+  private getWarmupReps(setParts: string): {
+    numberOfSets: number;
+    reps: number;
+  } {
     let [numberOfSetsStr, repsStr] = setParts.split("x", 2);
     if (!numberOfSetsStr) {
       return { numberOfSets: 1, reps: 1 };
@@ -5823,7 +5903,9 @@ class PlannerExerciseEvaluator {
     };
   }
 
-  private getRepRange(setParts: string): IPlannerProgramExerciseRepRange | undefined {
+  private getRepRange(
+    setParts: string,
+  ): IPlannerProgramExerciseRepRange | undefined {
     if (!setParts) {
       return undefined;
     }
@@ -5851,7 +5933,10 @@ class PlannerExerciseEvaluator {
   }
 
   private getWeight(expr?: SyntaxNode | null): IWeight | undefined {
-    if (expr?.type.name === PlannerNodeName.WeightWithPlus || expr?.type.name === PlannerNodeName.Weight) {
+    if (
+      expr?.type.name === PlannerNodeName.WeightWithPlus ||
+      expr?.type.name === PlannerNodeName.Weight
+    ) {
       const value = this.getValue(expr).replace("+", "");
       const unit = value.indexOf("kg") !== -1 ? "kg" : "lb";
       return W.Weight_build(parseFloat(value), unit);
@@ -5860,15 +5945,21 @@ class PlannerExerciseEvaluator {
     }
   }
 
-  private evaluateWarmupSet(expr: SyntaxNode): IPlannerProgramExerciseWarmupSet {
+  private evaluateWarmupSet(
+    expr: SyntaxNode,
+  ): IPlannerProgramExerciseWarmupSet {
     if (expr.type.name === PlannerNodeName.WarmupExerciseSet) {
       const setPartNodes = expr.getChildren(PlannerNodeName.WarmupSetPart);
-      const setParts = setPartNodes.map((setPartNode) => this.getValue(setPartNode)).join("");
+      const setParts = setPartNodes
+        .map((setPartNode) => this.getValue(setPartNode))
+        .join("");
       const { numberOfSets, reps } = this.getWarmupReps(setParts);
       const percentageNode = expr.getChild(PlannerNodeName.Percentage);
       const weightNode = expr.getChild(PlannerNodeName.Weight);
       const percentage =
-        percentageNode == null ? undefined : parseFloat(this.getValue(percentageNode).replace("%", ""));
+        percentageNode == null
+          ? undefined
+          : parseFloat(this.getValue(percentageNode).replace("%", ""));
       const weight = this.getWeight(weightNode);
       if (percentage) {
         return {
@@ -5892,7 +5983,7 @@ class PlannerExerciseEvaluator {
 
   public static fnArgsToStateVars(
     fnArgs: string[],
-    onError?: (message: string) => void
+    onError?: (message: string) => void,
   ): {
     state: IProgramState;
     stateMetadata: IProgramStateMetadata;
@@ -5932,7 +6023,9 @@ class PlannerExerciseEvaluator {
   private evaluateSet(expr: SyntaxNode): IPlannerProgramExerciseSet {
     if (expr.type.name === PlannerNodeName.ExerciseSet) {
       const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
-      const setParts = setPartNodes.map((setPartNode) => this.getValue(setPartNode)).join("");
+      const setParts = setPartNodes
+        .map((setPartNode) => this.getValue(setPartNode))
+        .join("");
       const repRange = this.getRepRange(setParts);
       const rpeNode = expr.getChild(PlannerNodeName.Rpe);
       const timerNode = expr.getChild(PlannerNodeName.Timer);
@@ -5943,20 +6036,34 @@ class PlannerExerciseEvaluator {
       const askWeight =
         askWeightNode != null ||
         (weightNode != null && this.getValue(weightNode).indexOf("+") !== -1) ||
-        (percentageNode != null && this.getValue(percentageNode).indexOf("+") !== -1);
-      const logRpe = rpeNode == null ? undefined : this.getValue(rpeNode).indexOf("+") !== -1;
-      let rpe = rpeNode == null ? undefined : parseFloat(this.getValue(rpeNode).replace("@", "").replace("+", ""));
+        (percentageNode != null &&
+          this.getValue(percentageNode).indexOf("+") !== -1);
+      const logRpe =
+        rpeNode == null
+          ? undefined
+          : this.getValue(rpeNode).indexOf("+") !== -1;
+      let rpe =
+        rpeNode == null
+          ? undefined
+          : parseFloat(
+              this.getValue(rpeNode).replace("@", "").replace("+", ""),
+            );
       if (rpe != null && isNaN(rpe)) {
         rpe = undefined;
       }
-      const timer = timerNode == null ? undefined : parseInt(this.getValue(timerNode).replace("s", ""), 10);
+      const timer =
+        timerNode == null
+          ? undefined
+          : parseInt(this.getValue(timerNode).replace("s", ""), 10);
       const percentage =
-        percentageNode == null ? undefined : parseFloat(this.getValue(percentageNode).replace(/[%\+]/, ""));
+        percentageNode == null
+          ? undefined
+          : parseFloat(this.getValue(percentageNode).replace(/[%\+]/, ""));
       const weight = this.getWeight(weightNode);
       const label = labelNode
         ? getChildren(labelNode)
-          .map((n) => this.getValue(n))
-          .join(" ")
+            .map((n) => this.getValue(n))
+            .join(" ")
         : undefined;
       if (labelNode && label && label.length > 8) {
         this.error("Label length should be 8 chars max", labelNode);
@@ -5990,10 +6097,15 @@ class PlannerExerciseEvaluator {
       if (["tags"].indexOf(fnName) === -1) {
         this.error(`There's no such id type - '${fnName}'`, fnNameNode);
       }
-      const fnArgs = valueNode.getChildren(PlannerNodeName.FunctionArgument).map((argNode) => this.getValue(argNode));
+      const fnArgs = valueNode
+        .getChildren(PlannerNodeName.FunctionArgument)
+        .map((argNode) => this.getValue(argNode));
       if (fnName === "tags") {
         if (fnArgs.length === 0) {
-          this.error(`You should provide the list of numbers in "tags"`, fnNameNode);
+          this.error(
+            `You should provide the list of numbers in "tags"`,
+            fnNameNode,
+          );
         }
       }
       return fnArgs.map((t) => parseInt(t, 10)).filter((t) => !isNaN(t));
@@ -6002,7 +6114,10 @@ class PlannerExerciseEvaluator {
     }
   }
 
-  private evaluateUpdate(expr: SyntaxNode, exerciseType?: IExerciseType): IProgramExerciseUpdate {
+  private evaluateUpdate(
+    expr: SyntaxNode,
+    exerciseType?: IExerciseType,
+  ): IProgramExerciseUpdate {
     if (expr.type.name === PlannerNodeName.ExerciseProperty) {
       const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
       if (valueNode == null) {
@@ -6013,22 +6128,32 @@ class PlannerExerciseEvaluator {
         assert(PlannerNodeName.FunctionName);
       }
       const fnName = this.getValue(fnNameNode);
-      const fnArgs = valueNode.getChildren(PlannerNodeName.FunctionArgument).map((argNode) => this.getValue(argNode));
+      const fnArgs = valueNode
+        .getChildren(PlannerNodeName.FunctionArgument)
+        .map((argNode) => this.getValue(argNode));
       let script: string | undefined;
       let body: string | undefined;
       let meta: { stateKeys: Set<string> } | undefined;
       let liftoscriptNode: SyntaxNode | undefined;
       if (fnName === "custom") {
-        liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript) || undefined;
-        script = liftoscriptNode ? this.getValueTrim(liftoscriptNode) : undefined;
+        liftoscriptNode =
+          valueNode.getChild(PlannerNodeName.Liftoscript) || undefined;
+        script = liftoscriptNode
+          ? this.getValueTrim(liftoscriptNode)
+          : undefined;
         if (fnArgs.length > 0) {
-          this.error(`State variables for the update script are taken from "progress" block`, fnNameNode);
+          this.error(
+            `State variables for the update script are taken from "progress" block`,
+            fnNameNode,
+          );
         }
         const reuseLiftoscriptNode = valueNode
           .getChild(PlannerNodeName.ReuseLiftoscript)
           ?.getChild(PlannerNodeName.ReuseSection)
           ?.getChild(PlannerNodeName.ExerciseName);
-        body = reuseLiftoscriptNode ? this.getValue(reuseLiftoscriptNode) : undefined;
+        body = reuseLiftoscriptNode
+          ? this.getValue(reuseLiftoscriptNode)
+          : undefined;
         if (script) {
           const liftoscriptEvaluator = new ScriptRunner(
             script,
@@ -6038,7 +6163,7 @@ class PlannerExerciseEvaluator {
             Progress_createScriptFunctions(this.settings),
             this.settings.units,
             { exerciseType, unit: this.settings.units, prints: [] },
-            "update"
+            "update",
           );
           const stateKeys = liftoscriptEvaluator.getStateVariableKeys();
           meta = { stateKeys };
@@ -6046,7 +6171,7 @@ class PlannerExerciseEvaluator {
         if (!script && !body) {
           this.error(
             `'custom' update requires either to specify Liftoscript block or specify which one to reuse`,
-            valueNode
+            valueNode,
           );
         }
         return {
@@ -6057,31 +6182,53 @@ class PlannerExerciseEvaluator {
           reuse: body ? { fullName: body, source: "specific" } : undefined,
         };
       } else {
-        this.error(`There's no such update progression exists - '${fnName}'`, fnNameNode);
+        this.error(
+          `There's no such update progression exists - '${fnName}'`,
+          fnNameNode,
+        );
       }
     } else {
       assert(PlannerNodeName.ExerciseProperty);
     }
   }
 
-  private validateProgress(fnName: string, fnArgs: string[], fnNameNode: SyntaxNode, valueNode: SyntaxNode): void {
+  private validateProgress(
+    fnName: string,
+    fnArgs: string[],
+    fnNameNode: SyntaxNode,
+    valueNode: SyntaxNode,
+  ): void {
     if (["lp", "sum", "dp", "custom", "none"].indexOf(fnName) === -1) {
-      this.error(`There's no such progression exists - '${fnName}'`, fnNameNode);
+      this.error(
+        `There's no such progression exists - '${fnName}'`,
+        fnNameNode,
+      );
     }
     if (fnName === "lp") {
       if (fnArgs.length > 6) {
-        this.error(`Linear Progression 'lp' only has 6 arguments max`, valueNode);
-      } else if (fnArgs[0] && !fnArgs[0].endsWith("lb") && !fnArgs[0].endsWith("kg") && !fnArgs[0].endsWith("%")) {
+        this.error(
+          `Linear Progression 'lp' only has 6 arguments max`,
+          valueNode,
+        );
+      } else if (
+        fnArgs[0] &&
+        !fnArgs[0].endsWith("lb") &&
+        !fnArgs[0].endsWith("kg") &&
+        !fnArgs[0].endsWith("%")
+      ) {
         this.error(
           `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode
+          valueNode,
         );
       } else if (fnArgs[1] != null && isNaN(parseInt(fnArgs[1], 10))) {
-        this.error(`2nd argument of 'lp' should be a number of attempts - i.e. a number`, valueNode);
+        this.error(
+          `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
+          valueNode,
+        );
       } else if (fnArgs[2] != null && isNaN(parseInt(fnArgs[2], 10))) {
         this.error(
           `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
-          valueNode
+          valueNode,
         );
       } else if (
         fnArgs[3] != null &&
@@ -6091,64 +6238,93 @@ class PlannerExerciseEvaluator {
       ) {
         this.error(
           `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode
+          valueNode,
         );
       } else if (fnArgs[4] != null && isNaN(parseInt(fnArgs[4], 10))) {
-        this.error(`5th argument of 'lp' should be a number of failed attempts - i.e. a number`, valueNode);
+        this.error(
+          `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
+          valueNode,
+        );
       } else if (fnArgs[5] != null && isNaN(parseInt(fnArgs[5], 10))) {
         this.error(
           `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
-          valueNode
+          valueNode,
         );
       }
     } else if (fnName === "sum") {
       if (fnArgs.length > 2) {
-        this.error(`Reps Sum Progression 'sum' only has 2 arguments max`, valueNode);
+        this.error(
+          `Reps Sum Progression 'sum' only has 2 arguments max`,
+          valueNode,
+        );
       } else if (fnArgs[0] == null || isNaN(parseInt(fnArgs[0], 10))) {
-        this.error(`1st argument of 'sum' should be a number of reps - i.e. a number`, valueNode);
+        this.error(
+          `1st argument of 'sum' should be a number of reps - i.e. a number`,
+          valueNode,
+        );
       } else if (
         fnArgs[1] == null ||
-        (!fnArgs[1].endsWith("lb") && !fnArgs[1].endsWith("kg") && !fnArgs[1].endsWith("%"))
+        (!fnArgs[1].endsWith("lb") &&
+          !fnArgs[1].endsWith("kg") &&
+          !fnArgs[1].endsWith("%"))
       ) {
         this.error(
           `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode
+          valueNode,
         );
       }
     } else if (fnName === "dp") {
       if (fnArgs.length !== 3) {
-        this.error(`Double Progression 'dp' should have 3 arguments`, valueNode);
+        this.error(
+          `Double Progression 'dp' should have 3 arguments`,
+          valueNode,
+        );
       } else if (
         fnArgs[0] == null ||
-        (!fnArgs[0].endsWith("lb") && !fnArgs[0].endsWith("kg") && !fnArgs[0].endsWith("%"))
+        (!fnArgs[0].endsWith("lb") &&
+          !fnArgs[0].endsWith("kg") &&
+          !fnArgs[0].endsWith("%"))
       ) {
         this.error(
           `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode
+          valueNode,
         );
       } else if (fnArgs[1] == null || isNaN(parseInt(fnArgs[1], 10))) {
-        this.error(`2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`, valueNode);
+        this.error(
+          `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
+          valueNode,
+        );
       } else if (fnArgs[2] == null || isNaN(parseInt(fnArgs[2], 10))) {
-        this.error(`3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`, valueNode);
+        this.error(
+          `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
+          valueNode,
+        );
       }
     } else if (fnName === "custom") {
       const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-      const script = liftoscriptNode ? this.getValueTrim(liftoscriptNode) : undefined;
+      const script = liftoscriptNode
+        ? this.getValueTrim(liftoscriptNode)
+        : undefined;
       const reuseLiftoscriptNode = valueNode
         .getChild(PlannerNodeName.ReuseLiftoscript)
         ?.getChild(PlannerNodeName.ReuseSection)
         ?.getChild(PlannerNodeName.ExerciseName);
-      const body = reuseLiftoscriptNode ? this.getValue(reuseLiftoscriptNode) : undefined;
+      const body = reuseLiftoscriptNode
+        ? this.getValue(reuseLiftoscriptNode)
+        : undefined;
       if (!script && !body) {
         this.error(
           `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
-          valueNode
+          valueNode,
         );
       }
     }
   }
 
-  private evaluateProgress(expr: SyntaxNode, exerciseType?: IExerciseType): IProgramExerciseProgress {
+  private evaluateProgress(
+    expr: SyntaxNode,
+    exerciseType?: IExerciseType,
+  ): IProgramExerciseProgress {
     const result = this.evaluateProgressImpl(expr, exerciseType);
     if (result.success) {
       return result.data;
@@ -6159,7 +6335,7 @@ class PlannerExerciseEvaluator {
 
   private evaluateProgressImpl(
     expr: SyntaxNode,
-    exerciseType?: IExerciseType
+    exerciseType?: IExerciseType,
   ): IEither<IProgramExerciseProgress, string> {
     if (expr.type.name === PlannerNodeName.ExerciseProperty) {
       const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
@@ -6176,15 +6352,20 @@ class PlannerExerciseEvaluator {
         assert(PlannerNodeName.FunctionName);
       }
       const fnName = this.getValue(fnNameNode);
-      const fnArgs = valueNode.getChildren(PlannerNodeName.FunctionArgument).map((argNode) => this.getValue(argNode));
+      const fnArgs = valueNode
+        .getChildren(PlannerNodeName.FunctionArgument)
+        .map((argNode) => this.getValue(argNode));
       this.validateProgress(fnName, fnArgs, fnNameNode, valueNode);
 
       const type = fnName as IProgramExerciseProgressType;
       if (type === "custom") {
         const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-        const script = liftoscriptNode ? this.getValueTrim(liftoscriptNode) : undefined;
-        const { state } = PlannerExerciseEvaluator.fnArgsToStateVars(fnArgs, (message) =>
-          this.error(message, fnNameNode)
+        const script = liftoscriptNode
+          ? this.getValueTrim(liftoscriptNode)
+          : undefined;
+        const { state } = PlannerExerciseEvaluator.fnArgsToStateVars(
+          fnArgs,
+          (message) => this.error(message, fnNameNode),
         );
         if (script) {
           const liftoscriptEvaluator = new ScriptRunner(
@@ -6195,7 +6376,7 @@ class PlannerExerciseEvaluator {
             Progress_createScriptFunctions(this.settings),
             this.settings.units,
             { exerciseType, unit: this.settings.units, prints: [] },
-            "planner"
+            "planner",
           );
           try {
             liftoscriptEvaluator.parse();
@@ -6207,7 +6388,7 @@ class PlannerExerciseEvaluator {
                 line + e.line,
                 e.offset,
                 liftoscriptNode.from + e.from,
-                liftoscriptNode.from + e.to
+                liftoscriptNode.from + e.to,
               );
             } else {
               throw e;
@@ -6218,7 +6399,9 @@ class PlannerExerciseEvaluator {
           .getChild(PlannerNodeName.ReuseLiftoscript)
           ?.getChild(PlannerNodeName.ReuseSection)
           ?.getChild(PlannerNodeName.ExerciseName);
-        const body = reuseLiftoscriptNode ? this.getValue(reuseLiftoscriptNode) : undefined;
+        const body = reuseLiftoscriptNode
+          ? this.getValue(reuseLiftoscriptNode)
+          : undefined;
         return PlannerProgramExercise_buildProgress(type, fnArgs, {
           script,
           reuseFullname: body,
@@ -6250,7 +6433,10 @@ class PlannerExerciseEvaluator {
     }
   }
 
-  private evaluateSuperset(expr: SyntaxNode): { type: "superset"; data: IPlannerProgramExerciseSuperset } {
+  private evaluateSuperset(expr: SyntaxNode): {
+    type: "superset";
+    data: IPlannerProgramExerciseSuperset;
+  } {
     if (expr.type.name === PlannerNodeName.Superset) {
       const exerciseNameNode = expr.getChild(PlannerNodeName.ExerciseName);
       if (exerciseNameNode != null) {
@@ -6269,7 +6455,7 @@ class PlannerExerciseEvaluator {
 
   private evaluateProperty(
     expr: SyntaxNode,
-    exerciseType?: IExerciseType
+    exerciseType?: IExerciseType,
   ):
     | { type: "progress"; data: IProgramExerciseProgress }
     | { type: "update"; data: IProgramExerciseUpdate }
@@ -6283,9 +6469,15 @@ class PlannerExerciseEvaluator {
       }
       const name = this.getValue(nameNode);
       if (name === "progress") {
-        return { type: "progress", data: this.evaluateProgress(expr, exerciseType) };
+        return {
+          type: "progress",
+          data: this.evaluateProgress(expr, exerciseType),
+        };
       } else if (name === "update") {
-        return { type: "update", data: this.evaluateUpdate(expr, exerciseType) };
+        return {
+          type: "update",
+          data: this.evaluateUpdate(expr, exerciseType),
+        };
       } else if (name === "warmup") {
         return { type: "warmup", data: this.evaluateWarmup(expr) };
       } else if (name === "id") {
@@ -6300,18 +6492,23 @@ class PlannerExerciseEvaluator {
     }
   }
 
-  private getReuseWeekDay(weekDayNode: SyntaxNode | null): { week?: number; day?: number } {
+  private getReuseWeekDay(weekDayNode: SyntaxNode | null): {
+    week?: number;
+    day?: number;
+  } {
     let week: number | undefined;
     let day: number | undefined;
     if (weekDayNode != null) {
-      const result = weekDayNode.getChildren(PlannerNodeName.WeekOrDay).map((n) => {
-        const child = getChildren(n)[0];
-        if (child.type.name === PlannerNodeName.Int) {
-          return parseInt(this.getValue(child), 10);
-        } else {
-          return undefined;
-        }
-      });
+      const result = weekDayNode
+        .getChildren(PlannerNodeName.WeekOrDay)
+        .map((n) => {
+          const child = getChildren(n)[0];
+          if (child.type.name === PlannerNodeName.Int) {
+            return parseInt(this.getValue(child), 10);
+          } else {
+            return undefined;
+          }
+        });
       if (result.length === 1) {
         day = result[0];
       } else {
@@ -6322,15 +6519,25 @@ class PlannerExerciseEvaluator {
     return { week, day };
   }
 
-  private evaluateReuseNode(expr: SyntaxNode): { type: "reuse"; data: IPlannerProgramReuse } {
+  private evaluateReuseNode(expr: SyntaxNode): {
+    type: "reuse";
+    data: IPlannerProgramReuse;
+  } {
     if (expr.type.name === PlannerNodeName.ReuseSectionWithWeekDay) {
-      const nameNode = expr.getChild(PlannerNodeName.ReuseSection)?.getChild(PlannerNodeName.ExerciseName);
+      const nameNode = expr
+        .getChild(PlannerNodeName.ReuseSection)
+        ?.getChild(PlannerNodeName.ExerciseName);
       if (nameNode == null) {
         assert(PlannerNodeName.ExerciseName);
       }
       const name = this.getValue(nameNode);
-      const { week, day } = this.getReuseWeekDay(expr.getChild(PlannerNodeName.WeekDay));
-      return { type: "reuse", data: { fullName: name, week, day, source: "overall" } };
+      const { week, day } = this.getReuseWeekDay(
+        expr.getChild(PlannerNodeName.WeekDay),
+      );
+      return {
+        type: "reuse",
+        data: { fullName: name, week, day, source: "overall" },
+      };
     } else {
       assert(PlannerNodeName.ReuseSectionWithWeekDay);
     }
@@ -6338,7 +6545,7 @@ class PlannerExerciseEvaluator {
 
   private evaluateSection(
     expr: SyntaxNode,
-    exerciseType?: IExerciseType
+    exerciseType?: IExerciseType,
   ):
     | { type: "sets"; data: IPlannerProgramExerciseSet[]; isCurrent: boolean }
     | { type: "progress"; data: IProgramExerciseProgress }
@@ -6356,9 +6563,14 @@ class PlannerExerciseEvaluator {
       const setsNode = expr.getChild(PlannerNodeName.ExerciseSets);
       if (setsNode != null) {
         const sets = setsNode.getChildren(PlannerNodeName.ExerciseSet);
-        const isCurrent = setsNode.getChild(PlannerNodeName.CurrentVariation) != null;
+        const isCurrent =
+          setsNode.getChild(PlannerNodeName.CurrentVariation) != null;
         if (sets.length > 0) {
-          return { type: "sets", data: sets.map((set) => this.evaluateSet(set)), isCurrent };
+          return {
+            type: "sets",
+            data: sets.map((set) => this.evaluateSet(set)),
+            isCurrent,
+          };
         }
       }
       const superset = expr.getChild(PlannerNodeName.Superset);
@@ -6377,7 +6589,10 @@ class PlannerExerciseEvaluator {
   }
 
   public static extractNameParts = memoize(
-    (str: string, exercises: IAllCustomExercises): { name: string; label?: string; equipment?: string } => {
+    (
+      str: string,
+      exercises: IAllCustomExercises,
+    ): { name: string; label?: string; equipment?: string } => {
       let [label, ...nameEquipmentItems] = str.split(":");
       if (nameEquipmentItems.length === 0) {
         nameEquipmentItems = [label];
@@ -6386,13 +6601,20 @@ class PlannerExerciseEvaluator {
         label = label.trim();
       }
       const nameEquipment = nameEquipmentItems.join(":").trim();
-      const matchingExercise = Exercise_findByNameAndEquipment(nameEquipment, exercises);
+      const matchingExercise = Exercise_findByNameAndEquipment(
+        nameEquipment,
+        exercises,
+      );
       if (matchingExercise) {
-        return { name: matchingExercise.name, label: label ? label : undefined, equipment: matchingExercise.equipment };
+        return {
+          name: matchingExercise.name,
+          label: label ? label : undefined,
+          equipment: matchingExercise.equipment,
+        };
       }
       return { name: nameEquipment, label: label ? label : undefined };
     },
-    { maxSize: 1000 }
+    { maxSize: 1000 },
   );
 
   private addDescription(value: string): void {
@@ -6431,7 +6653,9 @@ class PlannerExerciseEvaluator {
       const children = getChildren(repeatNode);
       for (const childNode of children) {
         if (childNode.type.name === PlannerNodeName.RepRange) {
-          const [from, to] = getChildren(childNode).map((n) => parseInt(this.getValue(n), 10));
+          const [from, to] = getChildren(childNode).map((n) =>
+            parseInt(this.getValue(n), 10),
+          );
           for (let i = from; i <= to; i += 1) {
             result.add(i);
           }
@@ -6476,9 +6700,13 @@ class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.ExerciseExpression) {
       const sections = expr.getChildren(PlannerNodeName.ExerciseSection);
       for (const section of sections) {
-        const properties = section.getChildren(PlannerNodeName.ExerciseProperty);
+        const properties = section.getChildren(
+          PlannerNodeName.ExerciseProperty,
+        );
         for (const property of properties) {
-          const nameNode = property.getChild(PlannerNodeName.ExercisePropertyName);
+          const nameNode = property.getChild(
+            PlannerNodeName.ExercisePropertyName,
+          );
           const name = nameNode ? this.getValueTrim(nameNode) : undefined;
           const valueNode = property.getChild(PlannerNodeName.None);
           if (name === "used" && valueNode != null) {
@@ -6493,7 +6721,10 @@ class PlannerExerciseEvaluator {
   }
 
   private evaluateExercise(expr: SyntaxNode): void {
-    if (expr.type.name === PlannerNodeName.EmptyExpression || expr.type.name === PlannerNodeName.TripleLineComment) {
+    if (
+      expr.type.name === PlannerNodeName.EmptyExpression ||
+      expr.type.name === PlannerNodeName.TripleLineComment
+    ) {
       if (this.latestDescriptions.length > 0) {
         this.latestDescriptions.push([]);
       }
@@ -6502,18 +6733,22 @@ class PlannerExerciseEvaluator {
       if (this.mode === "perday") {
         this.error(
           `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
-          expr
+          expr,
         );
       }
       const weekName = this.getValueTrim(expr).replace(/^#+/, "").trim();
       const [line] = this.getLineAndOffset(expr);
       this.weeks.push({ name: weekName, line, days: [] });
-      this.dayData = { day: this.dayData.day, week: this.weeks.length + 1, dayInWeek: 0 };
+      this.dayData = {
+        day: this.dayData.day,
+        week: this.weeks.length + 1,
+        dayInWeek: 0,
+      };
     } else if (expr.type.name === PlannerNodeName.Day) {
       if (this.mode === "perday") {
         this.error(
           `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
-          expr
+          expr,
         );
       }
       if (this.weeks.length === 0) {
@@ -6521,7 +6756,11 @@ class PlannerExerciseEvaluator {
       }
       const dayName = this.getValueTrim(expr).replace(/^#+/, "").trim();
       const [line] = this.getLineAndOffset(expr);
-      this.weeks[this.weeks.length - 1].days.push({ name: dayName, line, exercises: [] });
+      this.weeks[this.weeks.length - 1].days.push({
+        name: dayName,
+        line,
+        exercises: [],
+      });
       this.dayData = {
         day: this.dayData.day + 1,
         week: this.dayData.week,
@@ -6533,10 +6772,21 @@ class PlannerExerciseEvaluator {
       this.addDescription(value);
       return undefined;
     } else if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-      if (this.mode === "full" && (this.weeks.length === 0 || this.weeks[this.weeks.length - 1].days.length === 0)) {
-        this.error(`You should first define a week and a day before listing exercises.`, expr);
+      if (
+        this.mode === "full" &&
+        (this.weeks.length === 0 ||
+          this.weeks[this.weeks.length - 1].days.length === 0)
+      ) {
+        this.error(
+          `You should first define a week and a day before listing exercises.`,
+          expr,
+        );
       } else if (this.weeks.length === 0) {
-        this.weeks.push({ name: "Week 1", line: 1, days: [{ name: "Day 1", line: 1, exercises: [] }] });
+        this.weeks.push({
+          name: "Week 1",
+          line: 1,
+          days: [{ name: "Day 1", line: 1, exercises: [] }],
+        });
       }
       const nameNode = expr.getChild(PlannerNodeName.ExerciseName);
       if (nameNode == null) {
@@ -6545,10 +6795,20 @@ class PlannerExerciseEvaluator {
 
       const fullName = this.getValue(nameNode);
       // eslint-disable-next-line prefer-const
-      let { label, name, equipment } = PlannerExerciseEvaluator.extractNameParts(fullName, this.settings.exercises);
+      let { label, name, equipment } =
+        PlannerExerciseEvaluator.extractNameParts(
+          fullName,
+          this.settings.exercises,
+        );
       const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
-      const shortName = PlannerProgramExercise_shortNameFromFullName(fullName, this.settings);
-      const exercise = Exercise_findByNameAndEquipment(shortName, this.settings.exercises);
+      const shortName = PlannerProgramExercise_shortNameFromFullName(
+        fullName,
+        this.settings,
+      );
+      const exercise = Exercise_findByNameAndEquipment(
+        shortName,
+        this.settings.exercises,
+      );
       let notused = this.getIsNotUsed(expr);
       const sectionNodes = expr.getChildren(PlannerNodeName.ExerciseSection);
       const setVariations: IPlannerProgramExerciseSetVariation[] = [];
@@ -6563,11 +6823,17 @@ class PlannerExerciseEvaluator {
       let update: IProgramExerciseUpdate | undefined;
       let superset: IPlannerProgramExerciseSuperset | undefined;
       for (const sectionNode of sectionNodes) {
-        const section = this.evaluateSection(sectionNode, exercise ? { id: exercise.id, equipment } : undefined);
+        const section = this.evaluateSection(
+          sectionNode,
+          exercise ? { id: exercise.id, equipment } : undefined,
+        );
         if (section.type === "sets") {
           allSets.push(...section.data);
           if (section.data.some((set) => set.repRange != null)) {
-            setVariations.push({ sets: section.data, isCurrent: section.isCurrent });
+            setVariations.push({
+              sets: section.data,
+              isCurrent: section.isCurrent,
+            });
           }
         } else if (section.type === "warmup") {
           allWarmupSets = allWarmupSets || [];
@@ -6588,15 +6854,31 @@ class PlannerExerciseEvaluator {
           throw new Error(`Unexpected section type`);
         }
       }
-      const rpe = allSets.find((set) => set.repRange == null && set.rpe != null)?.rpe;
-      const timer = allSets.find((set) => set.repRange == null && set.timer != null)?.timer;
-      const percentage = allSets.find((set) => set.repRange == null && set.percentage != null)?.percentage;
-      const weight = allSets.find((set) => set.repRange == null && set.weight != null)?.weight;
-      const logRpe = allSets.find((set) => set.repRange == null && set.logRpe != null)?.logRpe;
-      const askWeight = allSets.find((set) => set.repRange == null && set.askWeight != null)?.askWeight;
+      const rpe = allSets.find(
+        (set) => set.repRange == null && set.rpe != null,
+      )?.rpe;
+      const timer = allSets.find(
+        (set) => set.repRange == null && set.timer != null,
+      )?.timer;
+      const percentage = allSets.find(
+        (set) => set.repRange == null && set.percentage != null,
+      )?.percentage;
+      const weight = allSets.find(
+        (set) => set.repRange == null && set.weight != null,
+      )?.weight;
+      const logRpe = allSets.find(
+        (set) => set.repRange == null && set.logRpe != null,
+      )?.logRpe;
+      const askWeight = allSets.find(
+        (set) => set.repRange == null && set.askWeight != null,
+      )?.askWeight;
       const [line] = this.getLineAndOffset(expr);
-      const rawDescriptions: string[] = this.latestDescriptions.map((d) => d.join("\n"));
-      const currentDescriptionIndex = rawDescriptions.findIndex((d) => /^\s*!/.test(d));
+      const rawDescriptions: string[] = this.latestDescriptions.map((d) =>
+        d.join("\n"),
+      );
+      const currentDescriptionIndex = rawDescriptions.findIndex((d) =>
+        /^\s*!/.test(d),
+      );
       let descriptions = rawDescriptions.map((d, i) => ({
         value: d.replace(/^\s*!/, ""),
         isCurrent: i === currentDescriptionIndex,
@@ -6604,7 +6886,10 @@ class PlannerExerciseEvaluator {
       if (descriptions.length > 1) {
         descriptions = descriptions.filter((d) => d.value);
       }
-      descriptions = descriptions.map((d) => ({ ...d, value: StringUtils_unindent(d.value) }));
+      descriptions = descriptions.map((d) => ({
+        ...d,
+        value: StringUtils_unindent(d.value),
+      }));
       this.latestDescriptions = [];
       const fullNamePoint = this.getPoint(nameNode);
 
@@ -6612,23 +6897,35 @@ class PlannerExerciseEvaluator {
         .getChildren(PlannerNodeName.ExerciseSection)
         .map((n) => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
         .filter((n) => n)[0];
-      const reuseSetPoint = reuseSetsNode ? this.getPoint(reuseSetsNode) : undefined;
+      const reuseSetPoint = reuseSetsNode
+        ? this.getPoint(reuseSetsNode)
+        : undefined;
 
       const progressNode = expr
         .getChildren(PlannerNodeName.ExerciseSection)
         .map((n) => {
-          const node = n.getChild(PlannerNodeName.ExerciseProperty)?.getChild(PlannerNodeName.ExercisePropertyName);
-          return node != null && this.getValueTrim(node) === "progress" ? node : undefined;
+          const node = n
+            .getChild(PlannerNodeName.ExerciseProperty)
+            ?.getChild(PlannerNodeName.ExercisePropertyName);
+          return node != null && this.getValueTrim(node) === "progress"
+            ? node
+            : undefined;
         })
         .flat(2)
         .filter((n) => n)[0];
-      const progressPoint = progressNode ? this.getPoint(progressNode) : undefined;
+      const progressPoint = progressNode
+        ? this.getPoint(progressNode)
+        : undefined;
 
       const updateNode = expr
         .getChildren(PlannerNodeName.ExerciseSection)
         .map((n) => {
-          const node = n.getChild(PlannerNodeName.ExerciseProperty)?.getChild(PlannerNodeName.ExercisePropertyName);
-          return node != null && this.getValueTrim(node) === "update" ? node : undefined;
+          const node = n
+            .getChild(PlannerNodeName.ExerciseProperty)
+            ?.getChild(PlannerNodeName.ExercisePropertyName);
+          return node != null && this.getValueTrim(node) === "update"
+            ? node
+            : undefined;
         })
         .flat(2)
         .filter((n) => n)[0];
@@ -6637,8 +6934,12 @@ class PlannerExerciseEvaluator {
       const idNode = expr
         .getChildren(PlannerNodeName.ExerciseSection)
         .map((n) => {
-          const node = n.getChild(PlannerNodeName.ExerciseProperty)?.getChild(PlannerNodeName.ExercisePropertyName);
-          return node != null && this.getValueTrim(node) === "id" ? node : undefined;
+          const node = n
+            .getChild(PlannerNodeName.ExerciseProperty)
+            ?.getChild(PlannerNodeName.ExercisePropertyName);
+          return node != null && this.getValueTrim(node) === "id"
+            ? node
+            : undefined;
         })
         .flat(2)
         .filter((n) => n)[0];
@@ -6646,7 +6947,11 @@ class PlannerExerciseEvaluator {
 
       const warmupNode = expr
         .getChildren(PlannerNodeName.ExerciseSection)
-        .map((n) => n.getChild(PlannerNodeName.ExerciseProperty)?.getChild(PlannerNodeName.WarmupExerciseSets))
+        .map((n) =>
+          n
+            .getChild(PlannerNodeName.ExerciseProperty)
+            ?.getChild(PlannerNodeName.WarmupExerciseSets),
+        )
         .flat(2)
         .filter((n) => n)[0];
       const warmupPoint = warmupNode ? this.getPoint(warmupNode) : undefined;
@@ -6655,7 +6960,9 @@ class PlannerExerciseEvaluator {
         .getChildren(PlannerNodeName.ExerciseSection)
         .map((n) => n.getChild(PlannerNodeName.Superset))
         .filter((n) => n)[0];
-      const supersetPoint = supersetNode ? this.getPoint(supersetNode) : undefined;
+      const supersetPoint = supersetNode
+        ? this.getPoint(supersetNode)
+        : undefined;
 
       const plannerExercise: IPlannerProgramExercise = {
         id: UidFactory_generateUid(8),
@@ -6703,9 +7010,9 @@ class PlannerExerciseEvaluator {
           warmupPoint,
         },
       };
-      this.weeks[this.weeks.length - 1].days[this.weeks[this.weeks.length - 1].days.length - 1].exercises.push(
-        plannerExercise
-      );
+      this.weeks[this.weeks.length - 1].days[
+        this.weeks[this.weeks.length - 1].days.length - 1
+      ].exercises.push(plannerExercise);
       if (!notused) {
         this.exerciseIndex += 1;
       }
@@ -6754,7 +7061,10 @@ class PlannerExerciseEvaluator {
     return false;
   }
 
-  public switchWeightsToUnit(programNode: SyntaxNode, settings: ISettings): string {
+  public switchWeightsToUnit(
+    programNode: SyntaxNode,
+    settings: ISettings,
+  ): string {
     const cursor = programNode.cursor();
     let script = this.script;
     let shift = 0;
@@ -6766,8 +7076,13 @@ class PlannerExerciseEvaluator {
             const from = cursor.node.from;
             const to = cursor.node.to;
             const oldWeightStr = Weight_print(weight);
-            const newWeightStr = Weight_print(Weight_smartConvert(weight, settings.units));
-            script = script.substring(0, from + shift) + newWeightStr + script.substring(to + shift);
+            const newWeightStr = Weight_print(
+              Weight_smartConvert(weight, settings.units),
+            );
+            script =
+              script.substring(0, from + shift) +
+              newWeightStr +
+              script.substring(to + shift);
             shift = shift + newWeightStr.length - oldWeightStr.length;
           }
         }
@@ -6777,22 +7092,33 @@ class PlannerExerciseEvaluator {
           oldLiftoscript,
           {},
           {},
-          Progress_createEmptyScriptBindings({ day: 1, week: 1, dayInWeek: 1 }, settings),
+          Progress_createEmptyScriptBindings(
+            { day: 1, week: 1, dayInWeek: 1 },
+            settings,
+          ),
           Progress_createScriptFunctions(settings),
           settings.units,
           { unit: settings.units, prints: [] },
-          "planner"
+          "planner",
         );
-        const newLiftoscript = liftoscriptEvaluator.switchWeightsToUnit(settings.units);
+        const newLiftoscript = liftoscriptEvaluator.switchWeightsToUnit(
+          settings.units,
+        );
         script =
-          script.substring(0, cursor.node.from + shift) + newLiftoscript + script.substring(cursor.node.to + shift);
+          script.substring(0, cursor.node.from + shift) +
+          newLiftoscript +
+          script.substring(cursor.node.to + shift);
         shift = shift + newLiftoscript.length - oldLiftoscript.length;
       }
     } while (cursor.next());
     return script;
   }
 
-  public changeExerciseName(node: SyntaxNode, from: string, to: string): string {
+  public changeExerciseName(
+    node: SyntaxNode,
+    from: string,
+    to: string,
+  ): string {
     const cursor = node.cursor();
     let script = this.script;
     let shift = 0;
@@ -6802,7 +7128,10 @@ class PlannerExerciseEvaluator {
         if (name === from) {
           const fromNode = cursor.node.from;
           const toNode = cursor.node.to;
-          script = script.substring(0, fromNode + shift) + to + script.substring(toNode + shift);
+          script =
+            script.substring(0, fromNode + shift) +
+            to +
+            script.substring(toNode + shift);
           shift = shift + to.length - name.length;
         }
       }
@@ -6820,8 +7149,12 @@ class PlannerExerciseEvaluator {
         const value = LiftoscriptEvaluator.getValueRaw(oldScript, cursor.node);
         const from = cursor.node.from;
         const to = cursor.node.to;
-        const newValue = LiftoscriptEvaluator.changeWeightsToCompleteWeights(value);
-        script = script.substring(0, from + shift) + newValue + script.substring(to + shift);
+        const newValue =
+          LiftoscriptEvaluator.changeWeightsToCompleteWeights(value);
+        script =
+          script.substring(0, from + shift) +
+          newValue +
+          script.substring(to + shift);
         shift = shift + newValue.length - value.length;
       }
     } while (cursor.next());
@@ -6830,7 +7163,10 @@ class PlannerExerciseEvaluator {
 
   public topLineMap(programNode: SyntaxNode): IPlannerTopLineItem[] {
     if (programNode.type.name !== PlannerNodeName.Program) {
-      this.error(`Unexpected node type ${programNode.type.name} - should be Program`, programNode);
+      this.error(
+        `Unexpected node type ${programNode.type.name} - should be Program`,
+        programNode,
+      );
     }
     const children = getChildren(programNode);
     const result: IPlannerTopLineItem[] = [];
@@ -6848,15 +7184,23 @@ class PlannerExerciseEvaluator {
         const order = this.getOrder(child);
         const isUsed = !this.getIsNotUsed(child);
         const sectionsNode = child.getChildren(PlannerNodeName.ExerciseSection);
-        const sections = sectionsNode.map((section) => this.getValueTrim(section).trim()).join(" / ");
+        const sections = sectionsNode
+          .map((section) => this.getValueTrim(section).trim())
+          .join(" / ");
         const sectionsToReuse = sectionsNode
           .filter((section) => {
-            const properties = section.getChild(PlannerNodeName.ExerciseProperty);
+            const properties = section.getChild(
+              PlannerNodeName.ExerciseProperty,
+            );
             if (properties == null) {
               return true;
             }
-            const propertyNameNode = properties.getChild(PlannerNodeName.ExercisePropertyName);
-            const propertyName = propertyNameNode ? this.getValue(propertyNameNode) : undefined;
+            const propertyNameNode = properties.getChild(
+              PlannerNodeName.ExercisePropertyName,
+            );
+            const propertyName = propertyNameNode
+              ? this.getValue(propertyNameNode)
+              : undefined;
             if (propertyName === "progress") {
               const none = properties.getChild(PlannerNodeName.None);
               return none != null;
@@ -6891,7 +7235,10 @@ class PlannerExerciseEvaluator {
         lastDescriptions[lastDescriptions.length - 1].push(description);
         result.push({ type: "description", value: description });
       } else if (child.type.name === PlannerNodeName.TripleLineComment) {
-        result.push({ type: "comment", value: this.getValueTrim(child).trim() });
+        result.push({
+          type: "comment",
+          value: this.getValueTrim(child).trim(),
+        });
       } else if (child.type.name === PlannerNodeName.EmptyExpression) {
         result.push({ type: "empty", value: "" });
         if (ongoingDescriptions) {
@@ -6900,7 +7247,7 @@ class PlannerExerciseEvaluator {
       } else {
         this.error(
           `Unexpected node type ${child.type.name}, should be only exercise, comment, description or empty line`,
-          child
+          child,
         );
       }
     }
@@ -6923,9 +7270,18 @@ interface IPlannerEvalMetadata {
   notused: Set<string>;
   properties: {
     id: IByExercise<{ property: number[]; dayData: Required<IDayData> }>;
-    progress: IByExercise<{ property: IProgramExerciseProgress; dayData: Required<IDayData> }>;
-    update: IByExercise<{ property: IProgramExerciseUpdate; dayData: Required<IDayData> }>;
-    warmup: IByExercise<{ warmupSets: IPlannerProgramExerciseWarmupSet[]; dayData: Required<IDayData> }>;
+    progress: IByExercise<{
+      property: IProgramExerciseProgress;
+      dayData: Required<IDayData>;
+    }>;
+    update: IByExercise<{
+      property: IProgramExerciseUpdate;
+      dayData: Required<IDayData>;
+    }>;
+    warmup: IByExercise<{
+      warmupSets: IPlannerProgramExerciseWarmupSet[];
+      dayData: Required<IDayData>;
+    }>;
   };
 }
 
@@ -6944,32 +7300,44 @@ interface IPlannerEvalMetadata {
 function PlannerEvaluator_fillInMetadata(
   exercise: IPlannerProgramExercise,
   metadata: IPlannerEvalMetadata,
-  dayData: Required<IDayData>
+  dayData: Required<IDayData>,
 ): void {
   if (exercise.progress?.type === "dp") {
-    const hasRange = exercise.setVariations.some((sv) => sv.sets.some((s) => s.repRange?.minrep != null));
+    const hasRange = exercise.setVariations.some((sv) =>
+      sv.sets.some((s) => s.repRange?.minrep != null),
+    );
     if (hasRange) {
-      exercise.progress = { ...exercise.progress, script: PlannerProgramExercise_buildDpRangeScript() };
+      exercise.progress = {
+        ...exercise.progress,
+        script: PlannerProgramExercise_buildDpRangeScript(),
+      };
     }
   }
-  if (metadata.byWeekDayExercise[dayData.week - 1]?.[dayData.dayInWeek - 1]?.[exercise.key] != null) {
+  if (
+    metadata.byWeekDayExercise[dayData.week - 1]?.[dayData.dayInWeek - 1]?.[
+      exercise.key
+    ] != null
+  ) {
     throw PlannerSyntaxError.fromPoint(
       exercise.fullName,
       `Exercise ${exercise.key} is already used in this day. Combine them together, or add a label to separate out.`,
-      exercise.points.fullName
+      exercise.points.fullName,
     );
   }
   const tagsProp = exercise.tags;
   if (tagsProp != null && tagsProp.length > 0) {
     const existingTags = metadata.properties.id[exercise.key];
-    if (existingTags != null && !ObjectUtils_isEqual(existingTags.property, tagsProp)) {
+    if (
+      existingTags != null &&
+      !ObjectUtils_isEqual(existingTags.property, tagsProp)
+    ) {
       const point = exercise.points.idPoint || exercise.points.fullName;
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `Same property 'id' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-        `week ${existingTags.dayData.week + 1}, day ${existingTags.dayData.dayInWeek + 1} ` +
-        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        point
+          `week ${existingTags.dayData.week + 1}, day ${existingTags.dayData.dayInWeek + 1} ` +
+          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        point,
       );
     }
     metadata.properties.id[exercise.key] = {
@@ -6983,15 +7351,18 @@ function PlannerEvaluator_fillInMetadata(
     const existingProgress = metadata.properties.progress[exercise.key];
     if (
       existingProgress != null &&
-      !PlannerExerciseEvaluator.isEqualProgress(progressProp, existingProgress.property)
+      !PlannerExerciseEvaluator.isEqualProgress(
+        progressProp,
+        existingProgress.property,
+      )
     ) {
       const point = exercise.points.progressPoint || exercise.points.fullName;
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-        `week ${existingProgress.dayData.week + 1}, day ${existingProgress.dayData.dayInWeek + 1} ` +
-        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        point
+          `week ${existingProgress.dayData.week + 1}, day ${existingProgress.dayData.dayInWeek + 1} ` +
+          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        point,
       );
     }
     metadata.properties.progress[exercise.key] = {
@@ -7003,14 +7374,20 @@ function PlannerEvaluator_fillInMetadata(
   const updateProp = exercise.update;
   if (updateProp != null) {
     const existingUpdate = metadata.properties.update[exercise.key];
-    if (existingUpdate != null && !PlannerExerciseEvaluator.isEqualUpdate(updateProp, existingUpdate.property)) {
+    if (
+      existingUpdate != null &&
+      !PlannerExerciseEvaluator.isEqualUpdate(
+        updateProp,
+        existingUpdate.property,
+      )
+    ) {
       const point = exercise.points.updatePoint || exercise.points.fullName;
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `Same property 'update' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-        `week ${existingUpdate.dayData.week + 1}, day ${existingUpdate.dayData.dayInWeek + 1} ` +
-        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        point
+          `week ${existingUpdate.dayData.week + 1}, day ${existingUpdate.dayData.dayInWeek + 1} ` +
+          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        point,
       );
     }
     metadata.properties.update[exercise.key] = {
@@ -7028,9 +7405,9 @@ function PlannerEvaluator_fillInMetadata(
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `Different warmup sets are specified in multiple weeks/days for exercise '${exercise.name}': both in ` +
-        `week ${ws.dayData.week + 1}, day ${ws.dayData.dayInWeek + 1} ` +
-        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        exercise.points.warmupPoint || exercise.points.fullName
+          `week ${ws.dayData.week + 1}, day ${ws.dayData.dayInWeek + 1} ` +
+          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        exercise.points.warmupPoint || exercise.points.fullName,
       );
     }
     metadata.properties.warmup[exercise.key] = {
@@ -7043,14 +7420,14 @@ function PlannerEvaluator_fillInMetadata(
     exercise.key,
     dayData.week - 1,
     dayData.dayInWeek - 1,
-    exercise
+    exercise,
   );
   PlannerEvaluator_setByExerciseWeekDay(
     metadata.byExerciseWeekDay,
     exercise.key,
     dayData.week - 1,
     dayData.dayInWeek - 1,
-    exercise
+    exercise,
   );
   metadata.fullNames.add(exercise.fullName);
 }
@@ -7058,10 +7435,15 @@ function PlannerEvaluator_fillInMetadata(
 function PlannerEvaluator_evaluateDay(
   day: IPlannerProgramDay,
   dayData: Required<IDayData>,
-  settings: ISettings
+  settings: ISettings,
 ): IPlannerEvalResult {
   const tree = plannerExerciseParser.parse(day.exerciseText);
-  const evaluator = new PlannerExerciseEvaluator(day.exerciseText, settings, "perday", dayData);
+  const evaluator = new PlannerExerciseEvaluator(
+    day.exerciseText,
+    settings,
+    "perday",
+    dayData,
+  );
   const result = evaluator.evaluate(tree.topNode);
   if (result.success) {
     const exercises = result.data[0]?.days[0]?.exercises || [];
@@ -7073,7 +7455,7 @@ function PlannerEvaluator_evaluateDay(
 
 function PlannerEvaluator_getPerDayEvaluatedWeeks(
   plannerProgram: IPlannerProgram,
-  settings: ISettings
+  settings: ISettings,
 ): {
   evaluatedWeeks: IPlannerEvalResult[][];
   metadata: IPlannerEvalMetadata;
@@ -7086,38 +7468,44 @@ function PlannerEvaluator_getPerDayEvaluatedWeeks(
     notused: new Set(),
     properties: { progress: {}, update: {}, warmup: {}, id: {} },
   };
-  const evaluatedWeeks: IPlannerEvalResult[][] = plannerProgram.weeks.map((week, weekIndex) => {
-    return week.days.map((day, dayInWeekIndex) => {
-      const dayData = {
-        week: weekIndex + 1,
-        dayInWeek: dayInWeekIndex + 1,
-        day: dayIndex + 1,
-      };
-      const result = PlannerEvaluator_evaluateDay(
-        day,
-        { week: weekIndex + 1, dayInWeek: dayInWeekIndex + 1, day: dayIndex + 1 },
-        settings
-      );
-      dayIndex += 1;
-      if (result.success) {
-        const exercises = result.data;
-        for (const exercise of exercises) {
-          try {
-            PlannerEvaluator_fillInMetadata(exercise, metadata, dayData);
-          } catch (e) {
-            if (e instanceof PlannerSyntaxError) {
-              return { success: false, error: e };
-            } else {
-              throw e;
+  const evaluatedWeeks: IPlannerEvalResult[][] = plannerProgram.weeks.map(
+    (week, weekIndex) => {
+      return week.days.map((day, dayInWeekIndex) => {
+        const dayData = {
+          week: weekIndex + 1,
+          dayInWeek: dayInWeekIndex + 1,
+          day: dayIndex + 1,
+        };
+        const result = PlannerEvaluator_evaluateDay(
+          day,
+          {
+            week: weekIndex + 1,
+            dayInWeek: dayInWeekIndex + 1,
+            day: dayIndex + 1,
+          },
+          settings,
+        );
+        dayIndex += 1;
+        if (result.success) {
+          const exercises = result.data;
+          for (const exercise of exercises) {
+            try {
+              PlannerEvaluator_fillInMetadata(exercise, metadata, dayData);
+            } catch (e) {
+              if (e instanceof PlannerSyntaxError) {
+                return { success: false, error: e };
+              } else {
+                throw e;
+              }
             }
           }
+          return { success: true, data: exercises };
+        } else {
+          return result;
         }
-        return { success: true, data: exercises };
-      } else {
-        return result;
-      }
-    });
-  });
+      });
+    },
+  );
   return { evaluatedWeeks, metadata };
 }
 
@@ -7181,7 +7569,7 @@ function PlannerEvaluator_getPerDayEvaluatedWeeks(
 function PlannerEvaluator_getDayIndexFromWeekAndDayInWeekIndex(
   evaluatedWeeks: IPlannerEvalResult[][],
   weekIndex: number,
-  dayInWeekIndex: number
+  dayInWeekIndex: number,
 ): number | undefined {
   let dayIndex = 0;
   for (let i = 0; i < evaluatedWeeks.length; i += 1) {
@@ -7200,26 +7588,42 @@ function PlannerEvaluator_fillRepeats(
   exercise: IPlannerProgramExercise,
   evaluatedWeeks: IPlannerEvalResult[][],
   dayInWeekIndex: number,
-  byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>
+  byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>,
 ): void {
   for (const repeatWeek of exercise.repeat ?? []) {
     const repeatWeekIndex = repeatWeek - 1;
-    if (byExerciseWeekDay[exercise.key]?.[repeatWeekIndex]?.[dayInWeekIndex] == null) {
+    if (
+      byExerciseWeekDay[exercise.key]?.[repeatWeekIndex]?.[dayInWeekIndex] ==
+      null
+    ) {
       const dayData = {
         week: repeatWeek,
         dayInWeek: dayInWeekIndex + 1,
         day:
-          (PlannerEvaluator_getDayIndexFromWeekAndDayInWeekIndex(evaluatedWeeks, repeatWeekIndex, dayInWeekIndex) ??
-            0) + 1,
+          (PlannerEvaluator_getDayIndexFromWeekAndDayInWeekIndex(
+            evaluatedWeeks,
+            repeatWeekIndex,
+            dayInWeekIndex,
+          ) ?? 0) + 1,
       };
       const repeatedExercise: IPlannerProgramExercise = {
         ...exercise,
         reuse: exercise.reuse ? { ...exercise.reuse } : undefined,
         progress: exercise.progress
-          ? { ...exercise.progress, reuse: exercise.progress.reuse ? { ...exercise.progress.reuse } : undefined }
+          ? {
+              ...exercise.progress,
+              reuse: exercise.progress.reuse
+                ? { ...exercise.progress.reuse }
+                : undefined,
+            }
           : undefined,
         update: exercise.update
-          ? { ...exercise.update, reuse: exercise.update.reuse ? { ...exercise.update.reuse } : undefined }
+          ? {
+              ...exercise.update,
+              reuse: exercise.update.reuse
+                ? { ...exercise.update.reuse }
+                : undefined,
+            }
           : undefined,
         repeat: [],
         dayData,
@@ -7230,7 +7634,7 @@ function PlannerEvaluator_fillRepeats(
         exercise.key,
         repeatWeekIndex,
         dayInWeekIndex,
-        repeatedExercise
+        repeatedExercise,
       );
       const day = evaluatedWeeks[repeatWeekIndex]?.[dayInWeekIndex];
       if (day?.success) {
@@ -7245,7 +7649,7 @@ function PlannerEvaluator_fillSetReuses(
   evaluatedWeeks: IPlannerEvalResult[][],
   weekIndex: number,
   settings: ISettings,
-  metadata: IPlannerEvalMetadata
+  metadata: IPlannerEvalMetadata,
 ): void {
   if (exercise.reuse && exercise.points.reuseSetPoint) {
     const reuse = exercise.reuse;
@@ -7254,13 +7658,13 @@ function PlannerEvaluator_fillSetReuses(
       reuse.fullName,
       evaluatedWeeks,
       reuse.week ?? weekIndex + 1 ?? 1,
-      reuse.day
+      reuse.day,
     );
     if (originalExercises.length > 1) {
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `There're several exercises matching, please be more specific with [week:day] syntax`,
-        exercise.points.reuseSetPoint
+        exercise.points.reuseSetPoint,
       );
     }
     const originalExercise = originalExercises[0];
@@ -7270,14 +7674,14 @@ function PlannerEvaluator_fillSetReuses(
         `No such exercise ${reuse.fullName} at week: ${reuse.week ?? weekIndex + 1}${
           reuse.day != null ? `, day: ${reuse.day}` : ""
         }`,
-        exercise.points.reuseSetPoint
+        exercise.points.reuseSetPoint,
       );
     }
     if (originalExercise.exercise.reuse?.fullName != null) {
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `Original exercise cannot reuse another exercise's sets x reps`,
-        exercise.points.reuseSetPoint
+        exercise.points.reuseSetPoint,
       );
     }
     if (
@@ -7288,7 +7692,7 @@ function PlannerEvaluator_fillSetReuses(
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `This exercise doesn't specify progress - so the original USED exercise's progress cannot reuse another exercise's progress`,
-        exercise.points.reuseSetPoint
+        exercise.points.reuseSetPoint,
       );
     }
     if (
@@ -7299,10 +7703,13 @@ function PlannerEvaluator_fillSetReuses(
       throw PlannerSyntaxError.fromPoint(
         exercise.fullName,
         `This exercise doesn't specify 'update' - so the original exercise's 'update' cannot reuse another exercise's 'update'`,
-        exercise.points.reuseSetPoint
+        exercise.points.reuseSetPoint,
       );
     }
-    if (originalExercise.exercise.progress != null && exercise.progress == null) {
+    if (
+      originalExercise.exercise.progress != null &&
+      exercise.progress == null
+    ) {
       const sharedProgressReuse: IPlannerProgramReuse = {
         fullName: originalExercise.exercise.fullName,
         source: "overall",
@@ -7342,7 +7749,7 @@ function PlannerEvaluator_fillSetReuses(
 function PlannerEvaluator_forEachSiblingInstance(
   exercise: IPlannerProgramExercise,
   metadata: IPlannerEvalMetadata,
-  cb: (other: IPlannerProgramExercise) => void
+  cb: (other: IPlannerProgramExercise) => void,
 ): void {
   const byKey = metadata.byExerciseWeekDay[exercise.key];
   if (byKey == null) {
@@ -7356,9 +7763,14 @@ function PlannerEvaluator_forEachSiblingInstance(
   }
 }
 
-function PlannerEvaluator_fillEvaluatedSetVariations(exercise: IPlannerProgramExercise): void {
+function PlannerEvaluator_fillEvaluatedSetVariations(
+  exercise: IPlannerProgramExercise,
+): void {
   const setVariations = PlannerProgramExercise_setVariations(exercise);
-  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(exercise, setVariations);
+  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(
+    exercise,
+    setVariations,
+  );
   exercise.evaluatedSetVariations = evaluatedSetVariations;
 }
 
@@ -7366,15 +7778,18 @@ function PlannerEvaluator_fillDescriptions(
   exercise: IPlannerProgramExercise,
   evaluatedWeeks: IPlannerEvalResult[][],
   weekIndex: number,
-  dayIndex: number
+  dayIndex: number,
 ): void {
-  if (exercise.descriptions == null || exercise.descriptions.values.length === 0) {
+  if (
+    exercise.descriptions == null ||
+    exercise.descriptions.values.length === 0
+  ) {
     const lastWeekExercise = PlannerEvaluator_findLastWeekExercise(
       evaluatedWeeks,
       weekIndex,
       dayIndex,
       exercise,
-      (ex) => ex.descriptions != null
+      (ex) => ex.descriptions != null,
     );
     if (lastWeekExercise && lastWeekExercise.descriptions) {
       exercise.descriptions = ObjectUtils_clone(lastWeekExercise.descriptions);
@@ -7386,7 +7801,7 @@ function PlannerEvaluator_fillDescriptionReuses(
   exercise: IPlannerProgramExercise,
   weekIndex: number,
   byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>,
-  settings: ISettings
+  settings: ISettings,
 ): void {
   if (
     exercise.descriptions != null &&
@@ -7394,12 +7809,21 @@ function PlannerEvaluator_fillDescriptionReuses(
     exercise.descriptions.values[0].value?.startsWith("...")
   ) {
     const reusingName = exercise.descriptions.values[0].value.slice(3).trim();
-    const result = PlannerEvaluator_findReusedDescriptions(reusingName, weekIndex, byExerciseWeekDay, settings);
+    const result = PlannerEvaluator_findReusedDescriptions(
+      reusingName,
+      weekIndex,
+      byExerciseWeekDay,
+      settings,
+    );
     if (result != null) {
       const { descriptions, exercise: originalExercise } = result;
       exercise.descriptions = {
         values: [...ObjectUtils_clone(descriptions.values)],
-        reuse: { fullName: originalExercise.fullName, exercise: originalExercise, source: "specific" },
+        reuse: {
+          fullName: originalExercise.fullName,
+          exercise: originalExercise,
+          source: "specific",
+        },
       };
     }
   }
@@ -7407,7 +7831,7 @@ function PlannerEvaluator_fillDescriptionReuses(
 
 function PlannerEvaluator_fillSingleProperties(
   exercise: IPlannerProgramExercise,
-  metadata: IPlannerEvalMetadata
+  metadata: IPlannerEvalMetadata,
 ): void {
   if (metadata.notused.has(exercise.key)) {
     exercise.notused = true;
@@ -7433,7 +7857,7 @@ function PlannerEvaluator_fillProgressReuses(
   evaluatedWeeks: IPlannerEvalResult[][],
   exercise: IPlannerProgramExercise,
   settings: ISettings,
-  metadata: IPlannerEvalMetadata
+  metadata: IPlannerEvalMetadata,
 ): void {
   const progress = exercise.progress;
   if (progress?.type === "custom") {
@@ -7442,30 +7866,52 @@ function PlannerEvaluator_fillProgressReuses(
       const key = PlannerKey_fromFullName(fullName, settings.exercises);
       const point = exercise.points.progressPoint || exercise.points.fullName;
       if (metadata.byExerciseWeekDay[key] == null) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, `No such exercise ${fullName}`, point);
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          `No such exercise ${fullName}`,
+          point,
+        );
       }
       const originalProperty = metadata.properties.progress[key];
       const dayData = originalProperty?.dayData;
       const originalProgress = originalProperty?.property;
       if (!originalProgress || !dayData) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify progress", point);
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          "Original exercise should specify progress",
+          point,
+        );
       }
-      if (originalProgress.reuse?.fullName != null && !originalProgress.reuse?.exercise?.notused) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, `Original exercise cannot reuse another progress`, point);
+      if (
+        originalProgress.reuse?.fullName != null &&
+        !originalProgress.reuse?.exercise?.notused
+      ) {
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          `Original exercise cannot reuse another progress`,
+          point,
+        );
       }
       if (originalProgress.type !== "custom") {
         throw PlannerSyntaxError.fromPoint(
           exercise.fullName,
           "Original exercise should specify custom progress",
-          point
+          point,
         );
       }
       const originalState = originalProgress.state;
       const state = progress.state;
       for (const stateKey of ObjectUtils_keys(originalState)) {
         const value = originalState[stateKey];
-        if (state[key] != null && Weight_type(value) !== Weight_type(state[stateKey])) {
-          throw PlannerSyntaxError.fromPoint(exercise.fullName, `Wrong type of state variable ${stateKey}`, point);
+        if (
+          state[key] != null &&
+          Weight_type(value) !== Weight_type(state[stateKey])
+        ) {
+          throw PlannerSyntaxError.fromPoint(
+            exercise.fullName,
+            `Wrong type of state variable ${stateKey}`,
+            point,
+          );
         }
       }
       const originalExercises = PlannerEvaluator_findOriginalExercisesAtWeekDay(
@@ -7473,17 +7919,18 @@ function PlannerEvaluator_fillProgressReuses(
         fullName,
         evaluatedWeeks,
         dayData.week,
-        dayData.dayInWeek
+        dayData.dayInWeek,
       );
       const originalExercise = originalExercises[0]?.exercise;
       if (
         originalExercise?.reuse != null &&
-        (originalExercise.progress == null || originalExercise.progress.reuse != null)
+        (originalExercise.progress == null ||
+          originalExercise.progress.reuse != null)
       ) {
         throw PlannerSyntaxError.fromPoint(
           exercise.fullName,
           `Original exercise '${originalExercise.fullName}' should not reuse other exercise`,
-          point
+          point,
         );
       }
       progress.reuse.exercise = originalExercise;
@@ -7494,13 +7941,16 @@ function PlannerEvaluator_fillProgressReuses(
 function PlannerEvaluator_checkUpdateScript(
   exercise: IPlannerProgramExercise,
   settings: ISettings,
-  dayData: IDayData
+  dayData: IDayData,
 ): void {
   const update = exercise.update;
   if (update?.type === "custom") {
     const { script, liftoscriptNode } = update;
     if (script && liftoscriptNode) {
-      const exerciseType = PlannerProgramExercise_getExercise(exercise, settings);
+      const exerciseType = PlannerProgramExercise_getExercise(
+        exercise,
+        settings,
+      );
       const state = PlannerProgramExercise_getState(exercise);
       const liftoscriptEvaluator = new ScriptRunner(
         script,
@@ -7510,19 +7960,22 @@ function PlannerEvaluator_checkUpdateScript(
         Progress_createScriptFunctions(settings),
         settings.units,
         { exerciseType, unit: settings.units, prints: [] },
-        "update"
+        "update",
       );
       try {
         liftoscriptEvaluator.parse();
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-          const [line] = PlannerExerciseEvaluator.getLineAndOffset(script, liftoscriptNode);
+          const [line] = PlannerExerciseEvaluator.getLineAndOffset(
+            script,
+            liftoscriptNode,
+          );
           throw new PlannerSyntaxError(
             e.message,
             line + e.line,
             e.offset,
             liftoscriptNode.from + e.from,
-            liftoscriptNode.from + e.to
+            liftoscriptNode.from + e.to,
           );
         } else {
           throw e;
@@ -7536,7 +7989,7 @@ function PlannerEvaluator_fillUpdateReuses(
   evaluatedWeeks: IPlannerEvalResult[][],
   exercise: IPlannerProgramExercise,
   settings: ISettings,
-  metadata: IPlannerEvalMetadata
+  metadata: IPlannerEvalMetadata,
 ): void {
   const update = exercise.update;
   if (update?.type === "custom") {
@@ -7546,19 +7999,38 @@ function PlannerEvaluator_fillUpdateReuses(
       const point = exercise.points.updatePoint || exercise.points.fullName;
 
       if (metadata.byExerciseWeekDay[key] == null) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, `No such exercise ${fullName}`, point);
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          `No such exercise ${fullName}`,
+          point,
+        );
       }
       const originalProperty = metadata.properties.update[key];
       const originalUpdate = originalProperty?.property;
       const dayData = originalProperty?.dayData;
       if (!originalUpdate || !dayData) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify update", point);
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          "Original exercise should specify update",
+          point,
+        );
       }
-      if (originalUpdate.reuse?.fullName != null && !originalUpdate.reuse?.exercise?.notused) {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, `Original exercise cannot reuse another update`, point);
+      if (
+        originalUpdate.reuse?.fullName != null &&
+        !originalUpdate.reuse?.exercise?.notused
+      ) {
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          `Original exercise cannot reuse another update`,
+          point,
+        );
       }
       if (originalUpdate.type !== "custom") {
-        throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify custom update", point);
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          "Original exercise should specify custom update",
+          point,
+        );
       }
       const stateKeys = originalUpdate.meta?.stateKeys || new Set();
       if (stateKeys.size !== 0) {
@@ -7567,7 +8039,7 @@ function PlannerEvaluator_fillUpdateReuses(
           throw PlannerSyntaxError.fromPoint(
             exercise.fullName,
             "If 'update' block uses state variables, exercise should define them in 'progress' block",
-            point
+            point,
           );
         }
         const state = PlannerProgramExercise_getState(exercise);
@@ -7576,7 +8048,7 @@ function PlannerEvaluator_fillUpdateReuses(
             throw PlannerSyntaxError.fromPoint(
               exercise.fullName,
               `Missing state variable ${stateKey} that's used in the original update block`,
-              point
+              point,
             );
           }
         }
@@ -7586,17 +8058,18 @@ function PlannerEvaluator_fillUpdateReuses(
         fullName,
         evaluatedWeeks,
         dayData.week,
-        dayData.dayInWeek
+        dayData.dayInWeek,
       );
       const originalExercise = originalExercises[0]?.exercise;
       if (
         originalExercise?.reuse != null &&
-        (originalExercise.update == null || originalExercise.update.reuse != null)
+        (originalExercise.update == null ||
+          originalExercise.update.reuse != null)
       ) {
         throw PlannerSyntaxError.fromPoint(
           exercise.fullName,
           `Original exercise '${originalExercise.fullName}' should not reuse other exercise`,
-          point
+          point,
         );
       }
       update.reuse.exercise = originalExercise;
@@ -7607,31 +8080,62 @@ function PlannerEvaluator_fillUpdateReuses(
 function PlannerEvaluator_postProcess(
   evaluatedWeeks: IPlannerEvalResult[][],
   settings: ISettings,
-  metadata: IPlannerEvalMetadata
+  metadata: IPlannerEvalMetadata,
 ): void {
   PlannerEvaluator_iterateOverExercises(
     evaluatedWeeks,
     (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
-      PlannerEvaluator_fillDescriptions(exercise, evaluatedWeeks, weekIndex, dayInWeekIndex);
-      PlannerEvaluator_fillRepeats(exercise, evaluatedWeeks, dayInWeekIndex, metadata.byExerciseWeekDay);
+      PlannerEvaluator_fillDescriptions(
+        exercise,
+        evaluatedWeeks,
+        weekIndex,
+        dayInWeekIndex,
+      );
+      PlannerEvaluator_fillRepeats(
+        exercise,
+        evaluatedWeeks,
+        dayInWeekIndex,
+        metadata.byExerciseWeekDay,
+      );
       PlannerEvaluator_fillSingleProperties(exercise, metadata);
       PlannerEvaluator_checkUnknownExercises(exercise, metadata);
-    }
+    },
   );
 
   PlannerEvaluator_iterateOverExercises(
     evaluatedWeeks,
     (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
-      PlannerEvaluator_fillSetReuses(exercise, evaluatedWeeks, weekIndex, settings, metadata);
-      PlannerEvaluator_fillDescriptionReuses(exercise, weekIndex, metadata.byExerciseWeekDay, settings);
-      PlannerEvaluator_fillProgressReuses(evaluatedWeeks, exercise, settings, metadata);
-      PlannerEvaluator_fillUpdateReuses(evaluatedWeeks, exercise, settings, metadata);
+      PlannerEvaluator_fillSetReuses(
+        exercise,
+        evaluatedWeeks,
+        weekIndex,
+        settings,
+        metadata,
+      );
+      PlannerEvaluator_fillDescriptionReuses(
+        exercise,
+        weekIndex,
+        metadata.byExerciseWeekDay,
+        settings,
+      );
+      PlannerEvaluator_fillProgressReuses(
+        evaluatedWeeks,
+        exercise,
+        settings,
+        metadata,
+      );
+      PlannerEvaluator_fillUpdateReuses(
+        evaluatedWeeks,
+        exercise,
+        settings,
+        metadata,
+      );
       PlannerEvaluator_checkUpdateScript(exercise, settings, {
         week: weekIndex + 1,
         dayInWeek: dayInWeekIndex + 1,
         day: dayInWeekIndex + 1,
       });
-    }
+    },
   );
   for (const week of evaluatedWeeks) {
     for (const day of week) {
@@ -7651,19 +8155,19 @@ function PlannerEvaluator_postProcess(
     evaluatedWeeks,
     (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
       PlannerEvaluator_fillEvaluatedSetVariations(exercise);
-    }
+    },
   );
 }
 
 function PlannerEvaluator_checkUnknownExercises(
   exercise: IPlannerProgramExercise,
-  metadata: IPlannerEvalMetadata
+  metadata: IPlannerEvalMetadata,
 ): void {
   if (exercise.exerciseType == null && !metadata.notused.has(exercise.key)) {
     throw PlannerSyntaxError.fromPoint(
       exercise.fullName,
       `Unknown exercise ${exercise.name}`,
-      exercise.points.fullName
+      exercise.points.fullName,
     );
   }
 }
@@ -7672,8 +8176,13 @@ function PlannerEvaluator_findReusedDescriptions(
   reusingName: string,
   currentWeekIndex: number,
   byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>,
-  settings: ISettings
-): { descriptions: IProgramExerciseDescriptions; exercise: IPlannerProgramExercise } | undefined {
+  settings: ISettings,
+):
+  | {
+      descriptions: IProgramExerciseDescriptions;
+      exercise: IPlannerProgramExercise;
+    }
+  | undefined {
   const weekDayMatch = reusingName.match(/\[([^]+)\]/);
   let weekIndex: number | undefined;
   let dayIndex: number | undefined;
@@ -7691,11 +8200,16 @@ function PlannerEvaluator_findReusedDescriptions(
   }
   reusingName = reusingName.replace(/\[([^]+)\]/, "").trim();
   const key = PlannerKey_fromFullName(reusingName, settings.exercises);
-  const weekExercises = ObjectUtils_values(byExerciseWeekDay[key]?.[weekIndex ?? currentWeekIndex] || []);
+  const weekExercises = ObjectUtils_values(
+    byExerciseWeekDay[key]?.[weekIndex ?? currentWeekIndex] || [],
+  );
   const weekDescriptions = weekExercises.map((d) => d.descriptions);
   const index = dayIndex ?? 0;
   if (weekDescriptions[index]) {
-    return { descriptions: weekDescriptions[index], exercise: weekExercises[index] };
+    return {
+      descriptions: weekDescriptions[index],
+      exercise: weekExercises[index],
+    };
   } else {
     return undefined;
   }
@@ -7706,12 +8220,19 @@ function PlannerEvaluator_findOriginalExercisesAtWeekDay(
   fullName: string,
   program: IPlannerEvalResult[][],
   atWeek: number,
-  atDay?: number
+  atDay?: number,
 ): { exercise: IPlannerProgramExercise; dayData: Required<IDayData> }[] {
-  const originalExercises: { exercise: IPlannerProgramExercise; dayData: Required<IDayData> }[] = [];
+  const originalExercises: {
+    exercise: IPlannerProgramExercise;
+    dayData: Required<IDayData>;
+  }[] = [];
   const week = program[atWeek - 1];
   const candidateDays = atDay != null ? [week[atDay - 1]] : week;
-  for (let dayInWeekIndex = 0; dayInWeekIndex < candidateDays.length; dayInWeekIndex += 1) {
+  for (
+    let dayInWeekIndex = 0;
+    dayInWeekIndex < candidateDays.length;
+    dayInWeekIndex += 1
+  ) {
     const day = candidateDays[dayInWeekIndex];
     if (day == null || !day.success) {
       continue;
@@ -7761,7 +8282,7 @@ function PlannerEvaluator_findLastWeekExercise(
   weekIndex: number,
   dayIndex: number,
   exercise: IPlannerProgramExercise,
-  cond?: (ex: IPlannerProgramExercise) => boolean
+  cond?: (ex: IPlannerProgramExercise) => boolean,
 ): IPlannerProgramExercise | undefined {
   for (
     let i = weekIndex - 1, lastWeekDay = program[i]?.[dayIndex];
@@ -7769,8 +8290,13 @@ function PlannerEvaluator_findLastWeekExercise(
     i -= 1, lastWeekDay = program[i]?.[dayIndex]
   ) {
     if (lastWeekDay.success) {
-      const lastWeekExercise = lastWeekDay.data.find((ex) => ex.key === exercise.key);
-      if (lastWeekExercise != null && (cond == null || cond(lastWeekExercise))) {
+      const lastWeekExercise = lastWeekDay.data.find(
+        (ex) => ex.key === exercise.key,
+      );
+      if (
+        lastWeekExercise != null &&
+        (cond == null || cond(lastWeekExercise))
+      ) {
         return lastWeekExercise;
       }
     }
@@ -7778,24 +8304,31 @@ function PlannerEvaluator_findLastWeekExercise(
   return undefined;
 }
 
-function PlannerEvaluator_setByExerciseWeekDay<T, U extends Record<string, Record<number, Record<number, T>>>>(
+function PlannerEvaluator_setByExerciseWeekDay<
+  T,
+  U extends Record<string, Record<number, Record<number, T>>>,
+>(
   coll: U,
   exercise: string,
   weekIndex: number,
   dayIndex: number,
-  val: T
+  val: T,
 ): void {
   coll[exercise as keyof U] = coll[exercise as keyof U] || {};
-  coll[exercise as keyof U][weekIndex] = coll[exercise as keyof U][weekIndex] || {};
+  coll[exercise as keyof U][weekIndex] =
+    coll[exercise as keyof U][weekIndex] || {};
   coll[exercise as keyof U][weekIndex][dayIndex] = val;
 }
 
-function PlannerEvaluator_setByWeekDayExercise<T, U extends Record<number, Record<number, Record<string, T>>>>(
+function PlannerEvaluator_setByWeekDayExercise<
+  T,
+  U extends Record<number, Record<number, Record<string, T>>>,
+>(
   coll: U,
   exercise: string,
   weekIndex: number,
   dayIndex: number,
-  val: T
+  val: T,
 ): void {
   coll[weekIndex] = coll[weekIndex] || {};
   coll[weekIndex][dayIndex] = coll[weekIndex][dayIndex] || {};
@@ -7809,19 +8342,33 @@ function PlannerEvaluator_iterateOverExercises(
     dayInWeekIndex: number,
     dayIndex: number,
     exerciseIndex: number,
-    exercise: IPlannerProgramExercise
-  ) => void
+    exercise: IPlannerProgramExercise,
+  ) => void,
 ): void {
   let dayIndex = 0;
   for (let weekIndex = 0; weekIndex < program.length; weekIndex += 1) {
     const week = program[weekIndex];
-    for (let dayInWeekIndex = 0; dayInWeekIndex < week.length; dayInWeekIndex += 1) {
+    for (
+      let dayInWeekIndex = 0;
+      dayInWeekIndex < week.length;
+      dayInWeekIndex += 1
+    ) {
       const day = week[dayInWeekIndex];
       try {
         if (day?.success) {
           const exercises = day.data;
-          for (let exerciseIndex = 0; exerciseIndex < exercises.length; exerciseIndex += 1) {
-            cb(weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercises[exerciseIndex]);
+          for (
+            let exerciseIndex = 0;
+            exerciseIndex < exercises.length;
+            exerciseIndex += 1
+          ) {
+            cb(
+              weekIndex,
+              dayInWeekIndex,
+              dayIndex,
+              exerciseIndex,
+              exercises[exerciseIndex],
+            );
           }
         }
       } catch (e) {
@@ -7838,12 +8385,15 @@ function PlannerEvaluator_iterateOverExercises(
 
 const PlannerEvaluator_forceEvaluate = (
   plannerProgram: IPlannerProgram,
-  settings: ISettings
+  settings: ISettings,
 ): {
   evaluatedWeeks: IPlannerEvalResult[][];
   exerciseFullNames: string[];
 } => {
-  const { evaluatedWeeks, metadata } = PlannerEvaluator_getPerDayEvaluatedWeeks(plannerProgram, settings);
+  const { evaluatedWeeks, metadata } = PlannerEvaluator_getPerDayEvaluatedWeeks(
+    plannerProgram,
+    settings,
+  );
   PlannerEvaluator_postProcess(evaluatedWeeks, settings, metadata);
   return { evaluatedWeeks, exerciseFullNames: Array.from(metadata.fullNames) };
 };
@@ -7896,42 +8446,56 @@ type IProgressionType =
   | ISumRepsProgressionType
   | ICustomProgressionType;
 
-function PlannerProgramExercise_numberOfSets(exercise: IPlannerProgramExercise): number {
-  return PlannerProgramExercise_sets(exercise).reduce((acc, set) => acc + (set.repRange?.numberOfSets || 0), 0);
+function PlannerProgramExercise_numberOfSets(
+  exercise: IPlannerProgramExercise,
+): number {
+  return PlannerProgramExercise_sets(exercise).reduce(
+    (acc, set) => acc + (set.repRange?.numberOfSets || 0),
+    0,
+  );
 }
 
 function PlannerProgramExercise_getExercise(
   plannerExercise: IPlannerProgramExercise,
-  settings: ISettings
+  settings: ISettings,
 ): IExercise | undefined {
-  const exercise = Exercise_findByName(plannerExercise.name, settings.exercises);
+  const exercise = Exercise_findByName(
+    plannerExercise.name,
+    settings.exercises,
+  );
   if (exercise == null) {
     return undefined;
   }
-  exercise.equipment = plannerExercise.equipment || exercise?.equipment || exercise?.defaultEquipment;
+  exercise.equipment =
+    plannerExercise.equipment ||
+    exercise?.equipment ||
+    exercise?.defaultEquipment;
   return exercise;
 }
 
 function PlannerProgramExercise_setVariations(
-  exercise: IPlannerProgramExercise
+  exercise: IPlannerProgramExercise,
 ): IPlannerProgramExerciseSetVariation[] {
   const originalSetVariations = exercise.setVariations;
   const reuseSetVariations = exercise.reuse?.exercise?.setVariations;
-  const setVariations = (originalSetVariations?.length > 0 ? originalSetVariations : reuseSetVariations) || [];
+  const setVariations =
+    (originalSetVariations?.length > 0
+      ? originalSetVariations
+      : reuseSetVariations) || [];
   return setVariations.length === 0
     ? [{ sets: PlannerProgramExercise_sets(exercise), isCurrent: true }]
     : setVariations;
 }
 
 function PlannerProgramExercise_warmups(
-  exercise: IPlannerProgramExercise
+  exercise: IPlannerProgramExercise,
 ): IPlannerProgramExerciseWarmupSet[] | undefined {
   return exercise.warmupSets || exercise.reuse?.exercise?.warmupSets;
 }
 
 function PlannerProgramExercise_programWarmups(
   exercise: IPlannerProgramExercise,
-  settings: ISettings
+  settings: ISettings,
 ): IProgramExerciseWarmupSet[] | undefined {
   const exerciseWarmups = PlannerProgramExercise_warmups(exercise);
   if (exerciseWarmups == null) {
@@ -7940,7 +8504,9 @@ function PlannerProgramExercise_programWarmups(
   const sets: IProgramExerciseWarmupSet[] = [];
   for (const ws of exerciseWarmups) {
     for (let i = 0; i < ws.numberOfSets; i += 1) {
-      let value: IWeight | number | undefined = ws.percentage ? ws.percentage / 100 : undefined;
+      let value: IWeight | number | undefined = ws.percentage
+        ? ws.percentage / 100
+        : undefined;
       if (value == null) {
         value = ws.weight;
       }
@@ -7958,7 +8524,7 @@ function PlannerProgramExercise_programWarmups(
 }
 
 function PlannerProgramExercise_toUsed(
-  exercise?: IPlannerProgramExercise
+  exercise?: IPlannerProgramExercise,
 ): IPlannerProgramExerciseWithType | undefined {
   if (exercise?.exerciseType != null) {
     return exercise as IPlannerProgramExerciseWithType;
@@ -7969,9 +8535,10 @@ function PlannerProgramExercise_toUsed(
 
 function PlannerProgramExercise_evaluateSetVariations(
   exercise: IPlannerProgramExercise,
-  setVariations: IPlannerProgramExerciseSetVariation[]
+  setVariations: IPlannerProgramExerciseSetVariation[],
 ): IPlannerProgramExerciseEvaluatedSetVariation[] {
-  const evaluatedSetVariations: IPlannerProgramExerciseEvaluatedSetVariation[] = [];
+  const evaluatedSetVariations: IPlannerProgramExerciseEvaluatedSetVariation[] =
+    [];
   for (let i = 0; i < setVariations.length; i++) {
     const sets = PlannerProgramExercise_sets(exercise, i);
     const evaluatedSets: IPlannerProgramExerciseEvaluatedSet[] = [];
@@ -7983,7 +8550,11 @@ function PlannerProgramExercise_evaluateSetVariations(
         evaluatedSets.push({
           maxrep: aSet.repRange.maxrep,
           minrep: aSet.repRange.minrep,
-          weight: aSet.weight ? aSet.weight : aSet.percentage ? Weight_buildPct(aSet.percentage) : undefined,
+          weight: aSet.weight
+            ? aSet.weight
+            : aSet.percentage
+              ? Weight_buildPct(aSet.percentage)
+              : undefined,
           timer: aSet.timer,
           rpe: aSet.rpe,
           logRpe: !!aSet.logRpe,
@@ -7994,29 +8565,42 @@ function PlannerProgramExercise_evaluateSetVariations(
         });
       }
     }
-    evaluatedSetVariations.push({ sets: evaluatedSets, isCurrent: setVariations[i].isCurrent });
+    evaluatedSetVariations.push({
+      sets: evaluatedSets,
+      isCurrent: setVariations[i].isCurrent,
+    });
   }
   return evaluatedSetVariations;
 }
 
 function PlannerProgramExercise_sets(
   exercise: IPlannerProgramExercise,
-  variationIndex?: number
+  variationIndex?: number,
 ): IPlannerProgramExerciseSet[] {
   const reusedSets = exercise.reuse?.exercise
     ? exercise.reuse?.exercise?.setVariations[
-    variationIndex ?? PlannerProgramExercise_currentSetVariationIndex(exercise.reuse?.exercise)
+        variationIndex ??
+          PlannerProgramExercise_currentSetVariationIndex(
+            exercise.reuse?.exercise,
+          )
       ]?.sets
     : undefined;
   const reusedGlobals = exercise.reuse?.exercise?.globals || {};
-  variationIndex = variationIndex ?? PlannerProgramExercise_currentSetVariationIndex(exercise);
+  variationIndex =
+    variationIndex ?? PlannerProgramExercise_currentSetVariationIndex(exercise);
   const currentSets = exercise.setVariations[variationIndex]?.sets;
   const currentGlobals = exercise.globals;
   const sets = currentSets || reusedSets || [];
   return sets.map((aSet) => {
     const set: IPlannerProgramExerciseSet = ObjectUtils_clone(aSet);
-    set.rpe = currentGlobals.rpe != null ? currentGlobals.rpe : (set.rpe ?? reusedGlobals.rpe);
-    set.timer = currentGlobals.timer != null ? currentGlobals.timer : (set.timer ?? reusedGlobals.timer);
+    set.rpe =
+      currentGlobals.rpe != null
+        ? currentGlobals.rpe
+        : (set.rpe ?? reusedGlobals.rpe);
+    set.timer =
+      currentGlobals.timer != null
+        ? currentGlobals.timer
+        : (set.timer ?? reusedGlobals.timer);
     if (currentGlobals.weight != null || currentGlobals.percentage != null) {
       if (currentGlobals.weight != null) {
         set.weight = currentGlobals.weight;
@@ -8033,7 +8617,8 @@ function PlannerProgramExercise_sets(
     set.logRpe = !!(currentGlobals.rpe != null && currentGlobals.logRpe != null
       ? currentGlobals.logRpe
       : (set.logRpe ?? reusedGlobals.logRpe));
-    set.askWeight = !!((currentGlobals.weight != null || currentGlobals.percentage != null) &&
+    set.askWeight = !!((currentGlobals.weight != null ||
+      currentGlobals.percentage != null) &&
     currentGlobals.askWeight != null
       ? currentGlobals.askWeight
       : (set.askWeight ?? reusedGlobals.askWeight));
@@ -8043,9 +8628,12 @@ function PlannerProgramExercise_sets(
 
 function PlannerProgramExercise_defaultWarmups(
   exercise: IExercise,
-  settings: ISettings
+  settings: ISettings,
 ): IPlannerProgramExerciseWarmupSet[] {
-  const warmupSets = (exercise?.defaultWarmup && warmupValues(settings.units)[exercise.defaultWarmup]) || [];
+  const warmupSets =
+    (exercise?.defaultWarmup &&
+      warmupValues(settings.units)[exercise.defaultWarmup]) ||
+    [];
   const result: IPlannerProgramExerciseWarmupSet[] = [];
   if (warmupSets) {
     const groups = ProgramExercise_groupWarmupsSets(warmupSets);
@@ -8056,14 +8644,19 @@ function PlannerProgramExercise_defaultWarmups(
         type: "warmup",
         numberOfSets: length,
         reps: first.reps,
-        percentage: typeof first.value === "number" ? first.value * 100 : first.value.value,
+        percentage:
+          typeof first.value === "number"
+            ? first.value * 100
+            : first.value.value,
       });
     }
   }
   return result;
 }
 
-function PlannerProgramExercise_repeatToRangeStr(plannerExercise: IPlannerProgramExercise): string {
+function PlannerProgramExercise_repeatToRangeStr(
+  plannerExercise: IPlannerProgramExercise,
+): string {
   const repeat = plannerExercise.repeating;
   const ranges: [number, number][] = [];
   for (const rep of repeat) {
@@ -8081,7 +8674,7 @@ function PlannerProgramExercise_repeatToRangeStr(plannerExercise: IPlannerProgra
 }
 
 function PlannerProgramExercise_warmupSetsToDisplaySets(
-  sets: IPlannerProgramExerciseWarmupSet[]
+  sets: IPlannerProgramExerciseWarmupSet[],
 ): IDisplaySet[][] {
   const displaySets: IDisplaySet[] = [];
   for (const set of sets) {
@@ -8102,17 +8695,21 @@ function PlannerProgramExercise_warmupSetsToDisplaySets(
   return groupDisplaySets(displaySets);
 }
 
-function PlannerProgramExercise_uniqueKey(exercise: IPlannerProgramExercise): string {
+function PlannerProgramExercise_uniqueKey(
+  exercise: IPlannerProgramExercise,
+): string {
   return `${exercise.key}-${exercise.dayData.week}-${exercise.dayData.dayInWeek}`;
 }
 
-function PlannerProgramExercise_uniqueSetKey(set: IPlannerProgramExerciseEvaluatedSet): string {
+function PlannerProgramExercise_uniqueSetKey(
+  set: IPlannerProgramExerciseEvaluatedSet,
+): string {
   return `${set.minrep}-${set.maxrep}-${set.isAmrap}-${set.weight?.value}${set.weight?.unit}${set.askWeight}-${set.rpe}${set.logRpe}-${set.timer}`;
 }
 
 function PlannerProgramExercise_evaluatedSetsToDisplaySets(
   sets: IPlannerProgramExerciseEvaluatedSet[],
-  settings: ISettings
+  settings: ISettings,
 ): IDisplaySet[][] {
   const displaySets: IDisplaySet[] = [];
   for (const set of sets) {
@@ -8138,11 +8735,15 @@ function PlannerProgramExercise_setsToDisplaySets(
   sets: IPlannerProgramExerciseSet[],
   hasCurrentSets: boolean,
   globals: IPlannerProgramExerciseGlobals,
-  settings: ISettings
+  settings: ISettings,
 ): IDisplaySet[][] {
   const displaySets: IDisplaySet[] = [];
   for (const set of sets) {
-    for (let setIndex = 0; setIndex < (set.repRange?.numberOfSets || 0); setIndex++) {
+    for (
+      let setIndex = 0;
+      setIndex < (set.repRange?.numberOfSets || 0);
+      setIndex++
+    ) {
       const minReps = set.repRange?.minrep;
       const maxReps = set.repRange?.maxrep || 0;
       const weight =
@@ -8151,11 +8752,15 @@ function PlannerProgramExercise_setsToDisplaySets(
           : set.weight?.value != null
             ? set.weight.value.toString()
             : undefined;
-      const unit = set.percentage == null ? set.weight?.unit || settings.units : undefined;
+      const unit =
+        set.percentage == null ? set.weight?.unit || settings.units : undefined;
       displaySets.push({
         dimReps: !hasCurrentSets,
         dimRpe: !hasCurrentSets && globals.rpe == null,
-        dimWeight: !hasCurrentSets && globals.weight == null && globals.percentage == null,
+        dimWeight:
+          !hasCurrentSets &&
+          globals.weight == null &&
+          globals.percentage == null,
         dimTimer: !hasCurrentSets && globals.timer == null,
         reps: `${minReps != null ? `${minReps}-` : ""}${maxReps}${set.repRange?.isAmrap ? "+" : ""}`,
         rpe: set.rpe?.toString(),
@@ -8171,7 +8776,7 @@ function PlannerProgramExercise_setsToDisplaySets(
 }
 
 function PlannerProgramExercise_degroupWarmupSets(
-  warmupSets: IPlannerProgramExerciseWarmupSet[]
+  warmupSets: IPlannerProgramExerciseWarmupSet[],
 ): IPlannerProgramExerciseWarmupSet[] {
   return warmupSets.reduce<IPlannerProgramExerciseWarmupSet[]>((acc, set) => {
     for (let i = 0; i < set.numberOfSets; i++) {
@@ -8181,24 +8786,31 @@ function PlannerProgramExercise_degroupWarmupSets(
   }, []);
 }
 
-function PlannerProgramExercise_currentSetVariationIndex(exercise: IPlannerProgramExercise): number {
+function PlannerProgramExercise_currentSetVariationIndex(
+  exercise: IPlannerProgramExercise,
+): number {
   const index = exercise.setVariations.findIndex((sv) => sv.isCurrent);
   return index === -1 ? 0 : index;
 }
 
-function PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise: IPlannerProgramExercise): number {
+function PlannerProgramExercise_currentEvaluatedSetVariationIndex(
+  exercise: IPlannerProgramExercise,
+): number {
   const index = exercise.evaluatedSetVariations.findIndex((sv) => sv.isCurrent);
   return index === -1 ? 0 : index;
 }
 
 function PlannerProgramExercise_currentEvaluatedSetVariation(
-  exercise: IPlannerProgramExercise
+  exercise: IPlannerProgramExercise,
 ): IPlannerProgramExerciseEvaluatedSetVariation {
-  const index = PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise);
+  const index =
+    PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise);
   return exercise.evaluatedSetVariations[index];
 }
 
-function PlannerProgramExercise_currentDescription(exercise: IPlannerProgramExercise): string | undefined {
+function PlannerProgramExercise_currentDescription(
+  exercise: IPlannerProgramExercise,
+): string | undefined {
   const index = PlannerProgramExercise_currentDescriptionIndex(exercise);
   return exercise.descriptions.values[index]?.value;
 }
@@ -8206,12 +8818,16 @@ function PlannerProgramExercise_currentDescription(exercise: IPlannerProgramExer
 function PlannerProgramExercise_addSet(
   ex: IPlannerProgramExercise,
   setVariationIndex: number,
-  settings: ISettings
+  settings: ISettings,
 ): IPlannerProgramExercise {
   const evaluatedSetVariation = ex.evaluatedSetVariations[setVariationIndex];
-  let lastEvaluatedSet = evaluatedSetVariation.sets[evaluatedSetVariation.sets.length - 1];
+  let lastEvaluatedSet =
+    evaluatedSetVariation.sets[evaluatedSetVariation.sets.length - 1];
   if (lastEvaluatedSet) {
-    evaluatedSetVariation.sets = [...evaluatedSetVariation.sets, ObjectUtils_clone(lastEvaluatedSet)];
+    evaluatedSetVariation.sets = [
+      ...evaluatedSetVariation.sets,
+      ObjectUtils_clone(lastEvaluatedSet),
+    ];
   } else {
     const originalSets = PlannerProgramExercise_sets(ex, setVariationIndex);
     const lastSet = originalSets[originalSets.length - 1];
@@ -8228,7 +8844,10 @@ function PlannerProgramExercise_addSet(
         timer: lastSet.timer,
         label: lastSet.label,
       };
-      evaluatedSetVariation.sets = [...evaluatedSetVariation.sets, ObjectUtils_clone(lastEvaluatedSet)];
+      evaluatedSetVariation.sets = [
+        ...evaluatedSetVariation.sets,
+        ObjectUtils_clone(lastEvaluatedSet),
+      ];
     } else {
       evaluatedSetVariation.sets = [
         ...evaluatedSetVariation.sets,
@@ -8246,12 +8865,17 @@ function PlannerProgramExercise_addSet(
   return ex;
 }
 
-function PlannerProgramExercise_currentDescriptionIndex(exercise: IPlannerProgramExercise): number {
+function PlannerProgramExercise_currentDescriptionIndex(
+  exercise: IPlannerProgramExercise,
+): number {
   const index = exercise.descriptions.values.findIndex((d) => d.isCurrent);
   return index === -1 ? 0 : index;
 }
 
-function PlannerProgramExercise_numberOfSetsThisWeek(exerciseName: string, week: IPlannerEvalResult[]): number {
+function PlannerProgramExercise_numberOfSetsThisWeek(
+  exerciseName: string,
+  week: IPlannerEvalResult[],
+): number {
   return week.reduce((acc, days) => {
     if (days.success) {
       const numberOfSetsThisDay = days.data
@@ -8264,17 +8888,22 @@ function PlannerProgramExercise_numberOfSetsThisWeek(exerciseName: string, week:
   }, 0);
 }
 
-function PlannerProgramExercise_getProgressScript(exercise: IPlannerProgramExercise): string | undefined {
+function PlannerProgramExercise_getProgressScript(
+  exercise: IPlannerProgramExercise,
+): string | undefined {
   return (
     exercise.progress?.script ??
     exercise.progress?.reuse?.exercise?.progress?.script ??
-    exercise.progress?.reuse?.exercise?.progress?.reuse?.exercise?.progress?.script ??
+    exercise.progress?.reuse?.exercise?.progress?.reuse?.exercise?.progress
+      ?.script ??
     exercise.reuse?.exercise?.progress?.script ??
     exercise.reuse?.exercise?.progress?.reuse?.exercise?.progress?.script
   );
 }
 
-function PlannerProgramExercise_isReusingSetsProgress(exercise: IPlannerProgramExercise): boolean {
+function PlannerProgramExercise_isReusingSetsProgress(
+  exercise: IPlannerProgramExercise,
+): boolean {
   const reuseExercise = exercise.reuse?.exercise;
   return (
     reuseExercise?.progress != null &&
@@ -8282,11 +8911,14 @@ function PlannerProgramExercise_isReusingSetsProgress(exercise: IPlannerProgramE
     exercise.progress.type === reuseExercise.progress?.type &&
     (exercise.progress.reuse?.fullName === reuseExercise.fullName ||
       exercise.progress.script === reuseExercise.progress.script) &&
-    Object.keys(PlannerProgramExercise_getOnlyChangedState(exercise)).length === 0
+    Object.keys(PlannerProgramExercise_getOnlyChangedState(exercise)).length ===
+      0
   );
 }
 
-function PlannerProgramExercise_getState(exercise: IPlannerProgramExercise): IProgramState {
+function PlannerProgramExercise_getState(
+  exercise: IPlannerProgramExercise,
+): IProgramState {
   if (exercise.progress?.state && !exercise.progress.reuse) {
     return exercise.progress.state;
   } else {
@@ -8300,7 +8932,9 @@ function PlannerProgramExercise_getState(exercise: IPlannerProgramExercise): IPr
   }
 }
 
-function PlannerProgramExercise_getOnlyChangedState(exercise: IPlannerProgramExercise): IProgramState {
+function PlannerProgramExercise_getOnlyChangedState(
+  exercise: IPlannerProgramExercise,
+): IProgramState {
   const originalState = exercise.progress?.reuse?.exercise
     ? exercise.progress.reuse.exercise.progress?.state || {}
     : exercise.reuse?.exercise
@@ -8318,16 +8952,21 @@ function PlannerProgramExercise_getOnlyChangedState(exercise: IPlannerProgramExe
     (key, value) =>
       originalState[key] == null ||
       !Weight_eq(originalState[key], value) ||
-      originalStateMetadata[key]?.userPrompted !== stateMetadata[key]?.userPrompted
+      originalStateMetadata[key]?.userPrompted !==
+        stateMetadata[key]?.userPrompted,
   ) as IProgramState;
 }
 
-function PlannerProgramExercise_getStateMetadata(exercise: IPlannerProgramExercise): IProgramStateMetadata {
+function PlannerProgramExercise_getStateMetadata(
+  exercise: IPlannerProgramExercise,
+): IProgramStateMetadata {
   if (exercise.progress?.stateMetadata && !exercise.progress.reuse) {
     return exercise.progress.stateMetadata;
   } else {
     const originalState = exercise.progress?.reuse?.exercise
-      ? PlannerProgramExercise_getStateMetadata(exercise.progress.reuse.exercise)
+      ? PlannerProgramExercise_getStateMetadata(
+          exercise.progress.reuse.exercise,
+        )
       : exercise.reuse?.exercise
         ? PlannerProgramExercise_getStateMetadata(exercise.reuse.exercise)
         : {};
@@ -8336,7 +8975,9 @@ function PlannerProgramExercise_getStateMetadata(exercise: IPlannerProgramExerci
   }
 }
 
-function PlannerProgramExercise_getUpdateScript(exercise: IPlannerProgramExercise): string | undefined {
+function PlannerProgramExercise_getUpdateScript(
+  exercise: IPlannerProgramExercise,
+): string | undefined {
   return (
     exercise.update?.script ??
     exercise.update?.reuse?.exercise?.update?.script ??
@@ -8346,17 +8987,27 @@ function PlannerProgramExercise_getUpdateScript(exercise: IPlannerProgramExercis
   );
 }
 
-function PlannerProgramExercise_getEnableRpe(exercise: IPlannerProgramExercise): boolean {
-  return exercise.setVariations.some((sv, i) => PlannerProgramExercise_sets(exercise, i).some((s) => s.rpe != null));
-}
-
-function PlannerProgramExercise_getEnableRepRanges(exercise: IPlannerProgramExercise): boolean {
+function PlannerProgramExercise_getEnableRpe(
+  exercise: IPlannerProgramExercise,
+): boolean {
   return exercise.setVariations.some((sv, i) =>
-    PlannerProgramExercise_sets(exercise, i).some((s) => s.repRange != null && s.repRange.minrep === s.repRange.maxrep)
+    PlannerProgramExercise_sets(exercise, i).some((s) => s.rpe != null),
   );
 }
 
-function PlannerProgramExercise_getProgressDefaultArgs(type: IProgramExerciseProgressType): string[] {
+function PlannerProgramExercise_getEnableRepRanges(
+  exercise: IPlannerProgramExercise,
+): boolean {
+  return exercise.setVariations.some((sv, i) =>
+    PlannerProgramExercise_sets(exercise, i).some(
+      (s) => s.repRange != null && s.repRange.minrep === s.repRange.maxrep,
+    ),
+  );
+}
+
+function PlannerProgramExercise_getProgressDefaultArgs(
+  type: IProgramExerciseProgressType,
+): string[] {
   switch (type) {
     case "none":
       return [];
@@ -8429,7 +9080,7 @@ function PlannerProgramExercise_buildProgress(
   opts: {
     reuseFullname?: string;
     script?: string;
-  } = {}
+  } = {},
 ): IEither<IProgramExerciseProgress, string> {
   switch (type) {
     case "none": {
@@ -8443,14 +9094,22 @@ function PlannerProgramExercise_buildProgress(
       };
     }
     case "lp": {
-      const increment = args[0] ? Weight_parsePct(args[0]) : Weight_build(0, "lb");
-      const decrement = args[3] ? Weight_parsePct(args[3]) : Weight_build(0, "lb");
+      const increment = args[0]
+        ? Weight_parsePct(args[0])
+        : Weight_build(0, "lb");
+      const decrement = args[3]
+        ? Weight_parsePct(args[3])
+        : Weight_build(0, "lb");
       const state: IProgramState = {
         increment: increment ?? Weight_build(0, "lb"),
         successes: args[1] ? parseInt(args[1], 10) : 1,
         successCounter: args[2] ? parseInt(args[2], 10) : 0,
         decrement: decrement ?? Weight_build(0, "lb"),
-        failures: args[4] ? parseInt(args[4], 10) : (decrement?.value ?? 0) > 0 ? 1 : 0,
+        failures: args[4]
+          ? parseInt(args[4], 10)
+          : (decrement?.value ?? 0) > 0
+            ? 1
+            : 0,
         failureCounter: args[5] ? parseInt(args[5], 10) : 0,
       };
       const script = `for (var.i in completedReps) {
@@ -8494,7 +9153,9 @@ if (state.decrement > 0 && state.failures > 0) {
       };
     }
     case "dp": {
-      const increment = args[0] ? Weight_parsePct(args[0]) : Weight_build(0, "lb");
+      const increment = args[0]
+        ? Weight_parsePct(args[0])
+        : Weight_build(0, "lb");
       const state: IProgramState = {
         increment: increment ?? Weight_build(0, "lb"),
         minReps: args[1] ? parseInt(args[1], 10) : 0,
@@ -8512,7 +9173,9 @@ if (state.decrement > 0 && state.failures > 0) {
       };
     }
     case "sum": {
-      const increment = args[1] ? Weight_parsePct(args[1]) : Weight_build(0, "lb");
+      const increment = args[1]
+        ? Weight_parsePct(args[1])
+        : Weight_build(0, "lb");
       const state: IProgramState = {
         reps: args[0] ? parseInt(args[0], 10) : 0,
         increment: increment ?? Weight_build(0, "lb"),
@@ -8540,9 +9203,10 @@ for (var.i in completedReps) {
     case "custom": {
       const script = opts.script;
       let errorMessage: string | undefined;
-      const { state, stateMetadata } = PlannerExerciseEvaluator.fnArgsToStateVars(args, (message) => {
-        errorMessage = message;
-      });
+      const { state, stateMetadata } =
+        PlannerExerciseEvaluator.fnArgsToStateVars(args, (message) => {
+          errorMessage = message;
+        });
       if (errorMessage) {
         return {
           success: false,
@@ -8556,7 +9220,9 @@ for (var.i in completedReps) {
           state,
           stateMetadata,
           script,
-          reuse: opts.reuseFullname ? { fullName: opts.reuseFullname, source: "specific" } : undefined,
+          reuse: opts.reuseFullname
+            ? { fullName: opts.reuseFullname, source: "specific" }
+            : undefined,
         },
       };
     }
@@ -8564,7 +9230,7 @@ for (var.i in completedReps) {
 }
 
 function PlannerProgramExercise_progressionType(
-  exercise: IPlannerProgramExercise
+  exercise: IPlannerProgramExercise,
 ): IProgressionType | undefined {
   const progress = exercise.progress;
   if (!progress) {
@@ -8601,8 +9267,14 @@ function PlannerProgramExercise_progressionType(
   return undefined;
 }
 
-function PlannerProgramExercise_shortNameFromFullName(fullName: string, settings: ISettings): string {
-  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(fullName, settings.exercises);
+function PlannerProgramExercise_shortNameFromFullName(
+  fullName: string,
+  settings: ISettings,
+): string {
+  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(
+    fullName,
+    settings.exercises,
+  );
   const shortName = `${name}${equipment ? `, ${equipmentName(equipment)}` : ""}`;
   return shortName;
 }
@@ -8611,13 +9283,19 @@ function PlannerProgramExercise_createExerciseFromEntry(
   entry: IHistoryEntry,
   dayData: Required<IDayData>,
   settings: ISettings,
-  index: number
+  index: number,
 ): IPlannerProgramExercise {
   const exerciseType = entry.exercise;
   const exercise = Exercise_get(exerciseType, settings.exercises);
   const fullName = Exercise_fullName(exercise, settings);
-  const shortName = PlannerProgramExercise_shortNameFromFullName(fullName, settings);
-  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(fullName, settings.exercises);
+  const shortName = PlannerProgramExercise_shortNameFromFullName(
+    fullName,
+    settings,
+  );
+  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(
+    fullName,
+    settings.exercises,
+  );
   const setVariations: IPlannerProgramExerciseSetVariation[] = [
     {
       isCurrent: false,
@@ -8632,8 +9310,12 @@ function PlannerProgramExercise_createExerciseFromEntry(
         timer: set.timer,
         rpe: set.rpe,
         logRpe: set.logRpe,
-        percentage: Weight_isPct(set.originalWeight) ? set.originalWeight.value : undefined,
-        weight: !Weight_isPct(set.originalWeight) ? (set.completedWeight ?? set.weight) : undefined,
+        percentage: Weight_isPct(set.originalWeight)
+          ? set.originalWeight.value
+          : undefined,
+        weight: !Weight_isPct(set.originalWeight)
+          ? (set.completedWeight ?? set.weight)
+          : undefined,
         askWeight: set.askWeight,
       })),
     },
@@ -8642,8 +9324,8 @@ function PlannerProgramExercise_createExerciseFromEntry(
     ObjectUtils_values(
       CollectionUtils_groupByExpr(entry.warmupSets, (set) => {
         return `${set.completedReps ?? set.reps}-${(set.completedWeight ?? set.weight ?? { value: "" }).value}`;
-      })
-    )
+      }),
+    ),
   );
   const plannerExercise: IPlannerProgramExercise = {
     id: UidFactory_generateUid(8),
@@ -8675,7 +9357,10 @@ function PlannerProgramExercise_createExerciseFromEntry(
       fullName: { line: 1, offset: 0, from: 0, to: 0 },
     },
   };
-  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(plannerExercise, setVariations);
+  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(
+    plannerExercise,
+    setVariations,
+  );
   plannerExercise.evaluatedSetVariations = evaluatedSetVariations;
   return plannerExercise;
 }
@@ -8716,23 +9401,36 @@ function PlannerProgramExercise_createExerciseFromEntry(
 //   return totalTime;
 // }
 
-function ProgramSet_isEligibleForInferredWeight(set: IPlannerProgramExerciseEvaluatedSet): boolean {
+function ProgramSet_isEligibleForInferredWeight(
+  set: IPlannerProgramExerciseEvaluatedSet,
+): boolean {
   return set.weight == null && set.maxrep != null && set.rpe != null;
 }
 
 function ProgramSet_getEvaluatedWeight(
   programSet: IPlannerProgramExerciseEvaluatedSet,
   exerciseType: IExerciseType,
-  settings: ISettings
+  settings: ISettings,
 ): IWeight | undefined {
   const originalWeight = programSet.weight;
-  const unit = Equipment_getUnitOrDefaultForExerciseType(settings, exerciseType);
+  const unit = Equipment_getUnitOrDefaultForExerciseType(
+    settings,
+    exerciseType,
+  );
   const evaluatedWeight = originalWeight
     ? Weight_evaluateWeight(originalWeight, exerciseType, settings)
-    : ProgramSet_isEligibleForInferredWeight(programSet) && programSet.maxrep != null && programSet.rpe != null
-      ? Weight_evaluateWeight(Weight_rpePct(programSet.maxrep, programSet.rpe), exerciseType, settings)
+    : ProgramSet_isEligibleForInferredWeight(programSet) &&
+        programSet.maxrep != null &&
+        programSet.rpe != null
+      ? Weight_evaluateWeight(
+          Weight_rpePct(programSet.maxrep, programSet.rpe),
+          exerciseType,
+          settings,
+        )
       : undefined;
-  return evaluatedWeight ? Weight_roundConvertTo(evaluatedWeight, settings, unit, exerciseType) : undefined;
+  return evaluatedWeight
+    ? Weight_roundConvertTo(evaluatedWeight, settings, unit, exerciseType)
+    : undefined;
 }
 //#endregion
 
@@ -10374,7 +11072,9 @@ const allExercisesList: Record<IExerciseId, IExercise> = {
   },
 };
 
-const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<Partial<Record<string, IExerciseId>>>((acc, key) => {
+const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
+  Partial<Record<string, IExerciseId>>
+>((acc, key) => {
   acc[allExercisesList[key].name.toLowerCase()] = allExercisesList[key].id;
   return acc;
 }, {});
@@ -12167,8 +12867,12 @@ const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<Partial<Record
 //   }
 // }
 
-function equipmentName(equipment: IEquipment | undefined, equipmentSettings?: IAllEquipment): string {
-  const equipmentData = equipment && equipmentSettings ? equipmentSettings[equipment] : undefined;
+function equipmentName(
+  equipment: IEquipment | undefined,
+  equipmentSettings?: IAllEquipment,
+): string {
+  const equipmentData =
+    equipment && equipmentSettings ? equipmentSettings[equipment] : undefined;
   if (equipmentData?.name) {
     return equipmentData.name.trim();
   }
@@ -12214,102 +12918,165 @@ type IExercise = {
   startingWeightKg: IWeight;
 };
 
-function warmupValues(units: IUnit): Partial<Record<number, IProgramExerciseWarmupSet[]>> {
+function warmupValues(
+  units: IUnit,
+): Partial<Record<number, IProgramExerciseWarmupSet[]>> {
   return {
     10: [
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(60, "lb") : Weight_build(30, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(60, "lb") : Weight_build(30, "kg"),
         value: 0.3,
       },
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(30, "lb") : Weight_build(15, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(30, "lb") : Weight_build(15, "kg"),
         value: 0.5,
       },
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(10, "lb") : Weight_build(5, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(10, "lb") : Weight_build(5, "kg"),
         value: 0.8,
       },
     ],
     45: [
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(120, "lb") : Weight_build(60, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(120, "lb") : Weight_build(60, "kg"),
         value: 0.3,
       },
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(90, "lb") : Weight_build(45, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(90, "lb") : Weight_build(45, "kg"),
         value: 0.5,
       },
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(45, "lb") : Weight_build(20, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(45, "lb") : Weight_build(20, "kg"),
         value: 0.8,
       },
     ],
     95: [
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(150, "lb") : Weight_build(70, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(150, "lb") : Weight_build(70, "kg"),
         value: 0.3,
       },
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(125, "lb") : Weight_build(60, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(125, "lb") : Weight_build(60, "kg"),
         value: 0.5,
       },
       {
         reps: 5,
-        threshold: units === "lb" ? Weight_build(95, "lb") : Weight_build(40, "kg"),
+        threshold:
+          units === "lb" ? Weight_build(95, "lb") : Weight_build(40, "kg"),
         value: 0.8,
       },
     ],
   };
 }
 
-function warmup45(weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] {
-  return warmup(warmupValues(settings.units)[45] || [])(weight, settings, exerciseType);
+function warmup45(
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): ISet[] {
+  return warmup(warmupValues(settings.units)[45] || [])(
+    weight,
+    settings,
+    exerciseType,
+  );
 }
 
-function warmup95(weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] {
-  return warmup(warmupValues(settings.units)[95] || [])(weight, settings, exerciseType);
+function warmup95(
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): ISet[] {
+  return warmup(warmupValues(settings.units)[95] || [])(
+    weight,
+    settings,
+    exerciseType,
+  );
 }
 
-function warmup10(weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] {
-  return warmup(warmupValues(settings.units)[10] || [])(weight, settings, exerciseType);
+function warmup10(
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): ISet[] {
+  return warmup(warmupValues(settings.units)[10] || [])(
+    weight,
+    settings,
+    exerciseType,
+  );
 }
 
 function warmup(
   programExerciseWarmupSets: IProgramExerciseWarmupSet[],
-  shouldSkipThreshold: boolean = false
-): (weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType) => ISet[] {
-  return (weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] => {
+  shouldSkipThreshold: boolean = false,
+): (
+  weight: IWeight | undefined,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+) => ISet[] {
+  return (
+    weight: IWeight | undefined,
+    settings: ISettings,
+    exerciseType?: IExerciseType,
+  ): ISet[] => {
     let index = 0;
-    return programExerciseWarmupSets.reduce<ISet[]>((memo, programExerciseWarmupSet) => {
-      if (shouldSkipThreshold || (weight != null && Weight_gt(weight, programExerciseWarmupSet.threshold))) {
-        const value = programExerciseWarmupSet.value;
-        const unit = Equipment_getUnitOrDefaultForExerciseType(settings, exerciseType);
-        if (typeof value !== "number" || weight != null) {
-          const warmupWeight = typeof value === "number" ? Weight_multiply(weight!, value) : value;
-          const roundedWeight = Weight_roundConvertTo(warmupWeight, settings, unit, exerciseType);
-          memo.push({
-            vtype: "set",
-            index,
-            id: UidFactory_generateUid(6),
-            reps: programExerciseWarmupSet.reps,
-            isUnilateral: exerciseType ? Exercise_getIsUnilateral(exerciseType, settings) : false,
-            weight: roundedWeight,
-            originalWeight: warmupWeight,
-            isCompleted: false,
-          });
-          index += 1;
+    return programExerciseWarmupSets.reduce<ISet[]>(
+      (memo, programExerciseWarmupSet) => {
+        if (
+          shouldSkipThreshold ||
+          (weight != null &&
+            Weight_gt(weight, programExerciseWarmupSet.threshold))
+        ) {
+          const value = programExerciseWarmupSet.value;
+          const unit = Equipment_getUnitOrDefaultForExerciseType(
+            settings,
+            exerciseType,
+          );
+          if (typeof value !== "number" || weight != null) {
+            const warmupWeight =
+              typeof value === "number"
+                ? Weight_multiply(weight!, value)
+                : value;
+            const roundedWeight = Weight_roundConvertTo(
+              warmupWeight,
+              settings,
+              unit,
+              exerciseType,
+            );
+            memo.push({
+              vtype: "set",
+              index,
+              id: UidFactory_generateUid(6),
+              reps: programExerciseWarmupSet.reps,
+              isUnilateral: exerciseType
+                ? Exercise_getIsUnilateral(exerciseType, settings)
+                : false,
+              weight: roundedWeight,
+              originalWeight: warmupWeight,
+              isCompleted: false,
+            });
+            index += 1;
+          }
         }
-      }
-      return memo;
-    }, []);
+        return memo;
+      },
+      [],
+    );
   };
 }
 
@@ -12317,20 +13084,26 @@ function warmupEmpty(weight: IWeight | undefined): ISet[] {
   return [];
 }
 
-function maybeGetExercise(id: IExerciseId, customExercises: IAllCustomExercises): IExercise | undefined {
+function maybeGetExercise(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
   const custom = customExercises[id];
   return custom != null
     ? {
-      ...custom,
-      defaultWarmup: 45,
-      types: custom.types || [],
-      startingWeightKg: Weight_build(0, "kg"),
-      startingWeightLb: Weight_build(0, "lb"),
-    }
+        ...custom,
+        defaultWarmup: 45,
+        types: custom.types || [],
+        startingWeightKg: Weight_build(0, "kg"),
+        startingWeightLb: Weight_build(0, "lb"),
+      }
     : allExercisesList[id];
 }
 
-function getExercise(id: IExerciseId, customExercises: IAllCustomExercises): IExercise {
+function getExercise(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise {
   const exercise = maybeGetExercise(id, customExercises);
   return exercise != null ? exercise : allExercisesList.squat;
 }
@@ -12353,7 +13126,11 @@ function getExercise(id: IExerciseId, customExercises: IAllCustomExercises): IEx
 //   return customExercises[id] != null;
 // }
 
-function Exercise_fullName(exercise: IExercise, settings: ISettings, label?: string): string {
+function Exercise_fullName(
+  exercise: IExercise,
+  settings: ISettings,
+  label?: string,
+): string {
   let str: string;
   if (exercise.equipment && exercise.defaultEquipment !== exercise.equipment) {
     const allEquipment = Equipment_currentEquipment(settings);
@@ -12406,11 +13183,17 @@ function Exercise_fullName(exercise: IExercise, settings: ISettings, label?: str
 //   return names;
 // }
 
-function Exercise_findById(id: IExerciseId, customExercises: IAllCustomExercises): IExercise | undefined {
+function Exercise_findById(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
   return maybeGetExercise(id, customExercises);
 }
 
-function Exercise_findIdByName(name: string, customExercises: IAllCustomExercises): IExerciseId | undefined {
+function Exercise_findIdByName(
+  name: string,
+  customExercises: IAllCustomExercises,
+): IExerciseId | undefined {
   const lowercaseName = name.toLowerCase();
   return (
     nameToIdMapping[lowercaseName] ||
@@ -12418,13 +13201,17 @@ function Exercise_findIdByName(name: string, customExercises: IAllCustomExercise
       const thisLowercaseName = ce?.name?.toLowerCase() || "";
       return (
         thisLowercaseName === lowercaseName ||
-        thisLowercaseName.replace(/\s*,\s*/g, ",") === lowercaseName.replace(/\s*,\s*/g, ",")
+        thisLowercaseName.replace(/\s*,\s*/g, ",") ===
+          lowercaseName.replace(/\s*,\s*/g, ",")
       );
     })?.id
   );
 }
 
-function Exercise_get(type: IExerciseType, customExercises: IAllCustomExercises): IExercise {
+function Exercise_get(
+  type: IExerciseType,
+  customExercises: IAllCustomExercises,
+): IExercise {
   const exercise = getExercise(type.id, customExercises);
   return { ...exercise, equipment: type.equipment };
 }
@@ -12439,7 +13226,9 @@ function Exercise_onerm(type: IExerciseType, settings: ISettings): IWeight {
     return Weight_convertTo(rm, settings.units);
   }
   const exercise = Exercise_get(type, settings.exercises);
-  return settings.units === "kg" ? exercise.startingWeightKg : exercise.startingWeightLb;
+  return settings.units === "kg"
+    ? exercise.startingWeightKg
+    : exercise.startingWeightLb;
 }
 
 // function Exercise_defaultRounding(type: IExerciseType, settings: ISettings): number {
@@ -12460,10 +13249,12 @@ function Exercise_onerm(type: IExerciseType, settings: ISettings): IWeight {
 function Exercise_findByNameEquipment(
   customExercises: IAllCustomExercises,
   name: string,
-  equipment?: string
+  equipment?: string,
 ): IExercise | undefined {
   const exerciseId = Exercise_findIdByName(name, customExercises);
-  const exercise = exerciseId ? Exercise_findById(exerciseId, customExercises) : undefined;
+  const exercise = exerciseId
+    ? Exercise_findById(exerciseId, customExercises)
+    : undefined;
   if (exercise == null) {
     return undefined;
   }
@@ -12472,14 +13263,16 @@ function Exercise_findByNameEquipment(
 
 function Exercise_findByNameAndEquipment(
   nameAndEquipment: string,
-  customExercises: IAllCustomExercises
+  customExercises: IAllCustomExercises,
 ): IExercise | undefined {
   const parts = nameAndEquipment.split(",").map((p) => p.trim());
   let name: string | undefined;
   let equipment: IEquipment | undefined | null;
   if (parts.length > 1) {
     const foundEquipment = equipments.filter(
-      (e) => equipmentName(e).toLowerCase() === parts[parts.length - 1].toLowerCase()
+      (e) =>
+        equipmentName(e).toLowerCase() ===
+        parts[parts.length - 1].toLowerCase(),
     )[0];
     if (foundEquipment != null) {
       equipment = foundEquipment;
@@ -12509,7 +13302,10 @@ function Exercise_findByNameAndEquipment(
   return undefined;
 }
 
-function Exercise_getIsUnilateral(exerciseType: IExerciseType, settings: ISettings): boolean {
+function Exercise_getIsUnilateral(
+  exerciseType: IExerciseType,
+  settings: ISettings,
+): boolean {
   const key = Exercise_toKey(exerciseType);
   const exerciseData = settings.exerciseData[key];
   if (exerciseData?.isUnilateral !== undefined) {
@@ -12559,7 +13355,10 @@ function Exercise_getIsUnilateral(exerciseType: IExerciseType, settings: ISettin
   }
 }
 
-function Exercise_findByName(name: string, customExercises: IAllCustomExercises): IExercise | undefined {
+function Exercise_findByName(
+  name: string,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
   const exerciseId = Exercise_findIdByName(name.trim(), customExercises);
   if (exerciseId != null) {
     const exercise = Exercise_findById(exerciseId, customExercises);
@@ -12686,7 +13485,7 @@ function Exercise_getWarmupSets(
   exercise: IExerciseType,
   weight: IWeight | undefined,
   settings: ISettings,
-  programExerciseWarmupSets?: IProgramExerciseWarmupSet[]
+  programExerciseWarmupSets?: IProgramExerciseWarmupSet[],
 ): ISet[] {
   const ex = Exercise_get(exercise, settings.exercises);
   if (programExerciseWarmupSets != null) {
@@ -13216,7 +14015,6 @@ function Exercise_toKey(type: IExerciseType): string {
 
 //#region Progress
 
-
 interface IScriptBindings {
   day: number;
   week: number;
@@ -13272,9 +14070,21 @@ interface IScriptFnContext {
 interface IScriptFunctions {
   roundWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
   roundConvertWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
-  calculateTrainingMax: (weight: IWeight, reps: number, context: IScriptFnContext) => IWeight;
-  calculate1RM: (weight: IWeight, reps: number, context: IScriptFnContext) => IWeight;
-  rpeMultiplier: (reps: number, rpe: number, context: IScriptFnContext) => number;
+  calculateTrainingMax: (
+    weight: IWeight,
+    reps: number,
+    context: IScriptFnContext,
+  ) => IWeight;
+  calculate1RM: (
+    weight: IWeight,
+    reps: number,
+    context: IScriptFnContext,
+  ) => IWeight;
+  rpeMultiplier: (
+    reps: number,
+    rpe: number,
+    context: IScriptFnContext,
+  ) => number;
   floor(num: number): number;
   floor(num: IWeight): IWeight;
   ceil(num: number): number;
@@ -13282,13 +14092,34 @@ interface IScriptFunctions {
   round(num: number): number;
   round(num: IWeight): IWeight;
   sum(
-    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
   ): number | IWeight | IPercentage;
   min(
-    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
   ): number | IWeight | IPercentage;
   max(
-    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+    ...vals: (
+      | number
+      | number[]
+      | IWeight
+      | IWeight[]
+      | IPercentage
+      | IPercentage[]
+    )[]
   ): number | IWeight | IPercentage;
   zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
   print(...args: unknown[]): (typeof args)[0];
@@ -13309,7 +14140,7 @@ interface IScriptFunctions {
     rpe: number,
     logRpe: number,
     context: IScriptFnContext,
-    bindings: IScriptBindings
+    bindings: IScriptBindings,
   ): number;
 }
 
@@ -13319,7 +14150,9 @@ function floor(num: IWeight | number): IWeight | number {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number" ? Math.floor(num) : Weight_build(Math.floor(num.value), num.unit);
+  return typeof num === "number"
+    ? Math.floor(num)
+    : Weight_build(Math.floor(num.value), num.unit);
 }
 
 function ceil(num: number): number;
@@ -13328,7 +14161,9 @@ function ceil(num: IWeight | number): IWeight | number {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number" ? Math.ceil(num) : Weight_build(Math.ceil(num.value), num.unit);
+  return typeof num === "number"
+    ? Math.ceil(num)
+    : Weight_build(Math.ceil(num.value), num.unit);
 }
 
 function round(num: number): number;
@@ -13337,7 +14172,9 @@ function round(num: IWeight | number): IWeight | number {
   if (num == null) {
     return 0;
   }
-  return typeof num === "number" ? Math.round(num) : Weight_build(Math.round(num.value), num.unit);
+  return typeof num === "number"
+    ? Math.round(num)
+    : Weight_build(Math.round(num.value), num.unit);
 }
 
 type IScriptArg = number | IWeight | IPercentage;
@@ -13367,7 +14204,10 @@ function sum(...args: unknown[]): IWeight | IPercentage | number {
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>((acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y), 0);
+  return flat.reduce<IScriptArg>(
+    (acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y),
+    0,
+  );
 }
 
 function min(...args: unknown[]): IWeight | IPercentage | number {
@@ -13375,7 +14215,10 @@ function min(...args: unknown[]): IWeight | IPercentage | number {
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>((acc, a) => (Weight_lt(a, acc) ? a : acc), flat[0]);
+  return flat.reduce<IScriptArg>(
+    (acc, a) => (Weight_lt(a, acc) ? a : acc),
+    flat[0],
+  );
 }
 
 function max(...args: unknown[]): IWeight | IPercentage | number {
@@ -13383,14 +14226,22 @@ function max(...args: unknown[]): IWeight | IPercentage | number {
   if (flat.length === 0) {
     return 0;
   }
-  return flat.reduce<IScriptArg>((acc, a) => (Weight_lt(acc, a) ? a : acc), flat[0]);
+  return flat.reduce<IScriptArg>(
+    (acc, a) => (Weight_lt(acc, a) ? a : acc),
+    flat[0],
+  );
 }
 
 function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     const aVal = a[i];
     const bVal = b[i];
-    if (aVal != null && bVal != null && !Weight_eq(aVal, 0) && Weight_lt(aVal, bVal)) {
+    if (
+      aVal != null &&
+      bVal != null &&
+      !Weight_eq(aVal, 0) &&
+      Weight_lt(aVal, bVal)
+    ) {
       return false;
     }
   }
@@ -13400,9 +14251,11 @@ function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
 function Progress_createEmptyScriptBindings(
   dayData: IDayData,
   settings: ISettings,
-  exercise?: IExerciseType
+  exercise?: IExerciseType,
 ): IScriptBindings {
-  const rm1 = exercise ? Exercise_onerm(exercise, settings) : Weight_build(0, "lb");
+  const rm1 = exercise
+    ? Exercise_onerm(exercise, settings)
+    : Weight_build(0, "lb");
   return {
     day: dayData.day,
     week: dayData.week ?? 1,
@@ -13446,12 +14299,18 @@ function Progress_createScriptBindings(
   bodyweight: IWeight | undefined,
   setIndex?: number,
   setVariationIndex?: number,
-  descriptionIndex?: number
+  descriptionIndex?: number,
 ): IScriptBindings {
-  const bindings = Progress_createEmptyScriptBindings(dayData, settings, entry.exercise);
+  const bindings = Progress_createEmptyScriptBindings(
+    dayData,
+    settings,
+    entry.exercise,
+  );
   for (const set of entry.sets) {
     bindings.weights.push(set.weight);
-    bindings.originalWeights.push(set.originalWeight ?? Weight_build(0, settings.units));
+    bindings.originalWeights.push(
+      set.originalWeight ?? Weight_build(0, settings.units),
+    );
     bindings.reps.push(set.reps);
     bindings.minReps.push(set.minReps);
     bindings.completedReps.push(set.completedReps);
@@ -13473,7 +14332,9 @@ function Progress_createScriptBindings(
   bindings.ns = entry.sets.length;
   bindings.programNumberOfSets = programNumberOfSets;
   bindings.numberOfSets = entry.sets.length;
-  bindings.completedNumberOfSets = entry.sets.filter((s) => s.isCompleted).length;
+  bindings.completedNumberOfSets = entry.sets.filter(
+    (s) => s.isCompleted,
+  ).length;
   bindings.setIndex = setIndex ?? 1;
   bindings.setVariationIndex = setVariationIndex ?? 1;
   bindings.descriptionIndex = descriptionIndex ?? 1;
@@ -13485,7 +14346,10 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
   function increment(vals: number, context: IScriptFnContext): number;
   function increment(vals: IWeight, context: IScriptFnContext): IWeight;
   function increment(vals: IPercentage, context: IScriptFnContext): IPercentage;
-  function increment(vals: IWeight | IPercentage | number, context: IScriptFnContext): IWeight | IPercentage | number {
+  function increment(
+    vals: IWeight | IPercentage | number,
+    context: IScriptFnContext,
+  ): IWeight | IPercentage | number {
     if (typeof vals === "number") {
       const weight = Weight_build(vals, context.unit);
       return Weight_increment(weight, settings, context.exerciseType);
@@ -13499,7 +14363,10 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
   function decrement(vals: number, context: IScriptFnContext): number;
   function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
   function decrement(vals: IPercentage, context: IScriptFnContext): IPercentage;
-  function decrement(vals: IWeight | IPercentage | number, context: IScriptFnContext): IWeight | IPercentage | number {
+  function decrement(
+    vals: IWeight | IPercentage | number,
+    context: IScriptFnContext,
+  ): IWeight | IPercentage | number {
     if (typeof vals === "number") {
       const weight = Weight_build(vals, context.unit);
       return Weight_decrement(weight, settings, context.exerciseType);
@@ -13515,15 +14382,31 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
       if (!Weight_is(num)) {
         num = Weight_build(num, settings.units);
       }
-      const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
-      return Weight_round(num, settings, unit ?? settings.units, context?.exerciseType);
+      const unit = Equipment_getUnitForExerciseType(
+        settings,
+        context?.exerciseType,
+      );
+      return Weight_round(
+        num,
+        settings,
+        unit ?? settings.units,
+        context?.exerciseType,
+      );
     },
     roundConvertWeight: (num, context) => {
       if (!Weight_is(num)) {
         num = Weight_build(num, settings.units);
       }
-      const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
-      return Weight_roundConvertTo(num, settings, unit ?? settings.units, context?.exerciseType);
+      const unit = Equipment_getUnitForExerciseType(
+        settings,
+        context?.exerciseType,
+      );
+      return Weight_roundConvertTo(
+        num,
+        settings,
+        unit ?? settings.units,
+        context?.exerciseType,
+      );
     },
     calculateTrainingMax: (weight, reps, context) => {
       if (!Weight_is(weight)) {
@@ -13538,7 +14421,11 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
       return Weight_getOneRepMax(weight, reps);
     },
     rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
-      const reps = Weight_is(repsRaw) ? repsRaw.value : typeof repsRaw === "number" ? repsRaw : 1;
+      const reps = Weight_is(repsRaw)
+        ? repsRaw.value
+        : typeof repsRaw === "number"
+          ? repsRaw
+          : 1;
       const rpe =
         typeof rpeRawOrContext === "number" && context != null
           ? Weight_is(rpeRawOrContext)
@@ -13577,15 +14464,24 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
       rpe: number,
       logRpe: number,
       context: IScriptFnContext,
-      bindings: IScriptBindings
+      bindings: IScriptBindings,
     ): number {
       for (let i = 0; i < bindings.numberOfSets; i++) {
         if (i >= from - 1 && i < to) {
-          const weightValue = Weight_convertToWeight(bindings.rm1, weight, context.unit);
+          const weightValue = Weight_convertToWeight(
+            bindings.rm1,
+            weight,
+            context.unit,
+          );
           bindings.minReps[i] = reps !== minReps ? minReps : undefined;
           bindings.reps[i] = reps;
           bindings.originalWeights[i] = weightValue;
-          bindings.weights[i] = Weight_round(weightValue, settings, context.unit, context.exerciseType);
+          bindings.weights[i] = Weight_round(
+            weightValue,
+            settings,
+            context.unit,
+            context.exerciseType,
+          );
           bindings.RPE[i] = rpe !== 0 ? rpe : undefined;
           bindings.amraps[i] = isAmrap !== 0 ? 1 : 0;
           bindings.logrpes[i] = logRpe !== 0 ? 1 : 0;
@@ -13730,7 +14626,7 @@ function Progress_getNextEntry(
   progress: IHistoryRecord,
   entry: IHistoryEntry,
   mode: "workout" | "warmup",
-  shouldGoToNextEntry: boolean
+  shouldGoToNextEntry: boolean,
 ): IHistoryEntry | undefined {
   if (Progress_isFullyEmptyOrFinishedSet(progress)) {
     return undefined;
@@ -13740,19 +14636,29 @@ function Progress_getNextEntry(
   let isInitial = true;
   const supersetGroups = Progress_getSupersetGroups(progress.entries);
   while (currentEntry != null) {
-    let index = progress.entries.findIndex((e) => e.id != null && e.id === currentEntry?.id);
+    let index = progress.entries.findIndex(
+      (e) => e.id != null && e.id === currentEntry?.id,
+    );
     if (index === -1) {
       index = progress.entries.findIndex((e) => e === currentEntry);
     }
     const superset: string | undefined = currentEntry.superset;
-    if (mode === "workout" && superset != null && !visitedAndFinished.has(currentEntry)) {
+    if (
+      mode === "workout" &&
+      superset != null &&
+      !visitedAndFinished.has(currentEntry)
+    ) {
       const supersetGroup: IHistoryEntry[] = supersetGroups?.[superset] ?? [];
       if (supersetGroup.length > 1) {
-        const supersetIndex = supersetGroup?.findIndex((e) => e.id === currentEntry?.id);
-        currentEntry = supersetGroup[(supersetIndex + 1) % supersetGroup.length];
+        const supersetIndex = supersetGroup?.findIndex(
+          (e) => e.id === currentEntry?.id,
+        );
+        currentEntry =
+          supersetGroup[(supersetIndex + 1) % supersetGroup.length];
       } else {
         if (shouldGoToNextEntry) {
-          currentEntry = progress.entries[(index + 1) % progress.entries.length];
+          currentEntry =
+            progress.entries[(index + 1) % progress.entries.length];
         } else {
           return currentEntry;
         }
@@ -13932,7 +14838,9 @@ function Progress_getNextEntry(
 // }
 
 function Progress_isFullyEmptyOrFinishedSet(progress: IHistoryRecord): boolean {
-  return progress.entries.every((entry) => Progress_isEmptyOrFinishedSet(entry));
+  return progress.entries.every((entry) =>
+    Progress_isEmptyOrFinishedSet(entry),
+  );
 }
 
 function Progress_isEmptyOrFinishedSet(entry: IHistoryEntry): boolean {
@@ -13978,7 +14886,9 @@ function Progress_hasLastUnfinishedSet(entry: IHistoryEntry): boolean {
 //   }, {});
 // }
 
-function Progress_getSupersetGroups(entries: IHistoryEntry[]): Partial<Record<string, IHistoryEntry[]>> {
+function Progress_getSupersetGroups(
+  entries: IHistoryEntry[],
+): Partial<Record<string, IHistoryEntry[]>> {
   const groups: Partial<Record<string, IHistoryEntry[]>> = {};
   for (const entry of entries) {
     if (entry.superset != null) {
@@ -14075,7 +14985,7 @@ function Progress_runUpdateScriptForEntry(
   otherStates: IByTag<IProgramState>,
   setIndex: number,
   settings: ISettings,
-  stats: IStats
+  stats: IStats,
 ): IHistoryEntry {
   if (setIndex !== -1 && !entry?.sets[setIndex]?.isCompleted) {
     return entry;
@@ -14085,9 +14995,13 @@ function Progress_runUpdateScriptForEntry(
     return entry;
   }
   const exercise = programExercise.exerciseType;
-  const state = ObjectUtils_clone(PlannerProgramExercise_getState(programExercise));
-  const setVariationIndex = PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
-  const descriptionIndex = PlannerProgramExercise_currentDescriptionIndex(programExercise);
+  const state = ObjectUtils_clone(
+    PlannerProgramExercise_getState(programExercise),
+  );
+  const setVariationIndex =
+    PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
+  const descriptionIndex =
+    PlannerProgramExercise_currentDescriptionIndex(programExercise);
   const bindings = Progress_createScriptBindings(
     dayData,
     entry,
@@ -14096,10 +15010,14 @@ function Progress_runUpdateScriptForEntry(
     Stats_getCurrentMovingAverageBodyweight(stats, settings),
     setIndex + 1,
     setVariationIndex,
-    descriptionIndex
+    descriptionIndex,
   );
   try {
-    const fnContext: IScriptFnContext = { exerciseType: exercise, unit: settings.units, prints: [] };
+    const fnContext: IScriptFnContext = {
+      exerciseType: exercise,
+      unit: settings.units,
+      prints: [],
+    };
     const runner = new ScriptRunner(
       script,
       state,
@@ -14108,7 +15026,7 @@ function Progress_runUpdateScriptForEntry(
       Progress_createScriptFunctions(settings),
       settings.units,
       fnContext,
-      "update"
+      "update",
     );
     runner.execute();
     const newEntry = Progress_applyBindings(entry, bindings, settings);
@@ -14193,7 +15111,7 @@ function Progress_runUpdateScriptForEntry(
 function Progress_applyBindings(
   oldEntry: IHistoryEntry,
   bindings: IScriptBindings,
-  settings: ISettings
+  settings: ISettings,
 ): IHistoryEntry {
   const keys = [
     "RPE",
@@ -14207,8 +15125,13 @@ function Progress_applyBindings(
     "askweights",
   ] as const;
   const entry = ObjectUtils_clone(oldEntry);
-  const lastCompletedIndex = CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) + 1;
-  entry.sets = entry.sets.slice(0, Math.max(lastCompletedIndex, bindings.numberOfSets, 0));
+  const lastCompletedIndex =
+    CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) +
+    1;
+  entry.sets = entry.sets.slice(
+    0,
+    Math.max(lastCompletedIndex, bindings.numberOfSets, 0),
+  );
   for (const key of keys) {
     for (let i = 0; i < bindings[key].length; i += 1) {
       if (entry.sets[i] == null) {
@@ -14440,14 +15363,30 @@ function Progress_isEligibleForInferredWeight(set: ISet): boolean {
 function Progress_updateSetWeights(
   entry: IHistoryEntry,
   exerciseType: IExerciseType,
-  settings: ISettings
+  settings: ISettings,
 ): IHistoryEntry {
   const newSets = entry.sets.map((set) => {
-    if ((Progress_isEligibleForInferredWeight(set) || Weight_isPct(set.originalWeight)) && !set.isCompleted) {
-      const originalWeight = set.originalWeight ?? Weight_rpePct(set.reps ?? 1, set.rpe ?? 10);
-      const evaluatedWeight = Weight_evaluateWeight(originalWeight, exerciseType, settings);
-      const unit = Equipment_getUnitForExerciseType(settings, exerciseType) ?? settings.units;
-      const weight = Weight_roundConvertTo(evaluatedWeight, settings, unit, exerciseType);
+    if (
+      (Progress_isEligibleForInferredWeight(set) ||
+        Weight_isPct(set.originalWeight)) &&
+      !set.isCompleted
+    ) {
+      const originalWeight =
+        set.originalWeight ?? Weight_rpePct(set.reps ?? 1, set.rpe ?? 10);
+      const evaluatedWeight = Weight_evaluateWeight(
+        originalWeight,
+        exerciseType,
+        settings,
+      );
+      const unit =
+        Equipment_getUnitForExerciseType(settings, exerciseType) ??
+        settings.units;
+      const weight = Weight_roundConvertTo(
+        evaluatedWeight,
+        settings,
+        unit,
+        exerciseType,
+      );
       return { ...set, weight };
     }
     return set;
@@ -14610,8 +15549,13 @@ function Progress_getDayData(progress: IHistoryRecord): IDayData {
 //   }
 // }
 
-function Progress_getEntryId(exerciseType: IExerciseType, label?: string): string {
-  return CollectionUtils_compact([label, Exercise_toKey(exerciseType)]).join("_");
+function Progress_getEntryId(
+  exerciseType: IExerciseType,
+  label?: string,
+): string {
+  return CollectionUtils_compact([label, Exercise_toKey(exerciseType)]).join(
+    "_",
+  );
 }
 
 // function Progress_applyProgramDay(
@@ -14847,7 +15791,10 @@ function Progress_getEntryId(exerciseType: IExerciseType, label?: string): strin
 //#region Weight
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
-function Weight_display(weight: IWeight | IPercentage | number, withUnit: boolean = true): string {
+function Weight_display(
+  weight: IWeight | IPercentage | number,
+  withUnit: boolean = true,
+): string {
   if (typeof weight === "number") {
     return `${weight}`;
   } else if (Weight_isPct(weight)) {
@@ -14858,13 +15805,15 @@ function Weight_display(weight: IWeight | IPercentage | number, withUnit: boolea
 }
 
 function Weight_rpePct(reps: number, rpe: number): IPercentage {
-  return Weight_buildPct(MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100));
+  return Weight_buildPct(
+    MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100),
+  );
 }
 
 function Weight_evaluateWeight(
   weight: IWeight | IPercentage,
   exerciseType: IExerciseType,
-  settings: ISettings
+  settings: ISettings,
 ): IWeight {
   if (Weight_is(weight)) {
     return weight;
@@ -14873,7 +15822,10 @@ function Weight_evaluateWeight(
     const onerm = Exercise_onerm(exercise, settings);
     return Weight_multiply(onerm, weight.value / 100);
   } else {
-    const unit = Equipment_getUnitOrDefaultForExerciseType(settings, exerciseType);
+    const unit = Equipment_getUnitOrDefaultForExerciseType(
+      settings,
+      exerciseType,
+    );
     return Weight_build(0, unit);
   }
 }
@@ -14910,7 +15862,9 @@ function Weight_print(weight: IWeight | IPercentage | number): string {
   }
 }
 
-function Weight_printNull(weight: IWeight | IPercentage | number | undefined): string {
+function Weight_printNull(
+  weight: IWeight | IPercentage | number | undefined,
+): string {
   if (weight == null) {
     return "";
   } else if (typeof weight === "number") {
@@ -14935,7 +15889,10 @@ function Weight_parsePct(str?: string): IPercentage | IWeight | undefined {
 function Weight_parse(str: string): IWeight | undefined {
   const match = str.match(/^([\-+]?[0-9.]+)\s*(kg|lb)$/);
   if (match) {
-    return Weight_build(MathUtils_roundFloat(parseFloat(match[1]), 2), match[2] as IUnit);
+    return Weight_build(
+      MathUtils_roundFloat(parseFloat(match[1]), 2),
+      match[2] as IUnit,
+    );
   } else {
     return undefined;
   }
@@ -14963,7 +15920,10 @@ function Weight_build(value: number, unit: IUnit): IWeight {
   if (prebuiltWeight != null) {
     return prebuiltWeight;
   } else {
-    const v = { value: typeof value === "string" ? parseFloat(value) : value, unit };
+    const v = {
+      value: typeof value === "string" ? parseFloat(value) : value,
+      unit,
+    };
     prebuiltWeights[`${value}_${unit}`] = v;
     return v;
   }
@@ -14998,78 +15958,133 @@ function Weight_is(object: unknown): object is IWeight {
 function Weight_isPct(object: unknown): object is IPercentage {
   const objWeight = object as IPercentage;
   return (
-    objWeight && typeof objWeight === "object" && "unit" in objWeight && "value" in objWeight && objWeight.unit === "%"
+    objWeight &&
+    typeof objWeight === "object" &&
+    "unit" in objWeight &&
+    "value" in objWeight &&
+    objWeight.unit === "%"
   );
 }
 
-function Weight_round(weight: IWeight, settings: ISettings, unit: IUnit, exerciseType?: IExerciseType): IWeight {
+function Weight_round(
+  weight: IWeight,
+  settings: ISettings,
+  unit: IUnit,
+  exerciseType?: IExerciseType,
+): IWeight {
   if (exerciseType == null) {
     return Weight_roundTo005(weight);
   }
-  return Weight_calculatePlates(weight, settings, unit, exerciseType).totalWeight;
+  return Weight_calculatePlates(weight, settings, unit, exerciseType)
+    .totalWeight;
 }
 
-function Weight_increment(weight: IWeight, settings: ISettings, exerciseType?: IExerciseType): IWeight {
-  const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+function Weight_increment(
+  weight: IWeight,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IWeight {
+  const equipmentData = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
   if (equipmentData) {
     const unit = equipmentData.unit ?? weight.unit;
     const roundWeight = Weight_round(weight, settings, unit, exerciseType);
     if (equipmentData.isFixed) {
       const items = CollectionUtils_sort(
         equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => Weight_compare(a, b)
+        (a, b) => Weight_compare(a, b),
       );
       const item = items.find((i) => Weight_gt(i, roundWeight));
       return item ?? items[items.length - 1] ?? roundWeight;
     } else {
-      const smallestPlate = Weight_multiply(Equipment_smallestPlate(equipmentData, unit), equipmentData.multiplier);
+      const smallestPlate = Weight_multiply(
+        Equipment_smallestPlate(equipmentData, unit),
+        equipmentData.multiplier,
+      );
       let newWeight = roundWeight;
       let attempt = 0;
       do {
         newWeight = Weight_add(newWeight, smallestPlate);
         attempt += 1;
-      } while (attempt < 20 && Weight_eq(Weight_round(newWeight, settings, unit, exerciseType), roundWeight));
+      } while (
+        attempt < 20 &&
+        Weight_eq(
+          Weight_round(newWeight, settings, unit, exerciseType),
+          roundWeight,
+        )
+      );
       return newWeight;
     }
   } else {
-    const roundWeight = Weight_round(weight, settings, weight.unit, exerciseType);
-    const rounding = exerciseType ? Exercise_defaultRounding(exerciseType, settings) : 1;
+    const roundWeight = Weight_round(
+      weight,
+      settings,
+      weight.unit,
+      exerciseType,
+    );
+    const rounding = exerciseType
+      ? Exercise_defaultRounding(exerciseType, settings)
+      : 1;
     return Weight_build(roundWeight.value + rounding, roundWeight.unit);
   }
 }
 
-function Weight_decrement(weight: IWeight, settings: ISettings, exerciseType?: IExerciseType): IWeight {
-  const equipmentData = exerciseType ? Equipment_getEquipmentDataForExerciseType(settings, exerciseType) : undefined;
+function Weight_decrement(
+  weight: IWeight,
+  settings: ISettings,
+  exerciseType?: IExerciseType,
+): IWeight {
+  const equipmentData = exerciseType
+    ? Equipment_getEquipmentDataForExerciseType(settings, exerciseType)
+    : undefined;
   if (equipmentData) {
     const unit = equipmentData.unit ?? weight.unit;
     const roundWeight = Weight_round(weight, settings, unit, exerciseType);
     if (equipmentData.isFixed) {
       const items = CollectionUtils_sort(
         equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => Weight_compareReverse(a, b)
+        (a, b) => Weight_compareReverse(a, b),
       );
       const item = items.find((i) => Weight_lt(i, roundWeight));
       return item ?? items[items.length - 1] ?? roundWeight;
     } else {
-      const smallestPlate = Weight_multiply(Equipment_smallestPlate(equipmentData, unit), equipmentData.multiplier);
+      const smallestPlate = Weight_multiply(
+        Equipment_smallestPlate(equipmentData, unit),
+        equipmentData.multiplier,
+      );
       const subtracted = Weight_subtract(roundWeight, smallestPlate);
       const newWeight = Weight_round(subtracted, settings, unit, exerciseType);
       return Weight_build(newWeight.value, newWeight.unit);
     }
   } else {
-    const roundWeight = Weight_round(weight, settings, weight.unit, exerciseType);
-    const rounding = exerciseType ? Exercise_defaultRounding(exerciseType, settings) : 1;
+    const roundWeight = Weight_round(
+      weight,
+      settings,
+      weight.unit,
+      exerciseType,
+    );
+    const rounding = exerciseType
+      ? Exercise_defaultRounding(exerciseType, settings)
+      : 1;
     return Weight_build(roundWeight.value - rounding, roundWeight.unit);
   }
 }
 
-function Weight_getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeight {
+function Weight_getOneRepMax(
+  weight: IWeight,
+  reps: number,
+  rpe?: number,
+): IWeight {
   if (reps === 0) {
     return Weight_build(0, weight.unit);
   } else if (reps === 1) {
     return weight;
   } else {
-    return Weight_roundTo005(Weight_divide(weight, Weight_rpeMultiplier(reps, rpe ?? 10)));
+    return Weight_roundTo005(
+      Weight_divide(weight, Weight_rpeMultiplier(reps, rpe ?? 10)),
+    );
   }
 }
 
@@ -15083,8 +16098,16 @@ function Weight_getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeig
 //   }
 // }
 
-function Weight_getTrainingMax(weight: IWeight, reps: number, settings: ISettings): IWeight {
-  return Weight_round(Weight_multiply(Weight_getOneRepMax(weight, reps), 0.9), settings, weight.unit);
+function Weight_getTrainingMax(
+  weight: IWeight,
+  reps: number,
+  settings: ISettings,
+): IWeight {
+  return Weight_round(
+    Weight_multiply(Weight_getOneRepMax(weight, reps), 0.9),
+    settings,
+    weight.unit,
+  );
 }
 
 // function Weight_platesWeight(plates: IPlate[]): IWeight {
@@ -15126,12 +16149,18 @@ function Weight_calculatePlates(
   allWeight: IWeight,
   settings: ISettings,
   units: IUnit,
-  exerciseType: IExerciseType
+  exerciseType: IExerciseType,
 ): { plates: IPlate[]; platesWeight: IWeight; totalWeight: IWeight } {
-  const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+  const equipmentData = Equipment_getEquipmentDataForExerciseType(
+    settings,
+    exerciseType,
+  );
   if (equipmentData == null) {
     const rounding = Exercise_defaultRounding(exerciseType, settings);
-    allWeight = Weight_build(MathUtils_round(allWeight.value, rounding), allWeight.unit);
+    allWeight = Weight_build(
+      MathUtils_round(allWeight.value, rounding),
+      allWeight.unit,
+    );
     return { plates: [], platesWeight: allWeight, totalWeight: allWeight };
   }
 
@@ -15139,15 +16168,26 @@ function Weight_calculatePlates(
   const inverted = allWeight.value < 0;
   if (equipmentData.isFixed) {
     const fixed = CollectionUtils_sort(
-      equipmentData.fixed.filter((w) => w.unit === (equipmentData.unit ?? units)),
-      (a, b) => b.value - a.value
+      equipmentData.fixed.filter(
+        (w) => w.unit === (equipmentData.unit ?? units),
+      ),
+      (a, b) => b.value - a.value,
     );
-    const weight = fixed.find((w) => Weight_lte(w, absAllWeight)) || fixed[fixed.length - 1] || absAllWeight;
+    const weight =
+      fixed.find((w) => Weight_lte(w, absAllWeight)) ||
+      fixed[fixed.length - 1] ||
+      absAllWeight;
     let roundedWeight = Weight_roundTo005(weight);
     roundedWeight = inverted ? Weight_invert(roundedWeight) : roundedWeight;
-    return { plates: [], platesWeight: roundedWeight, totalWeight: roundedWeight };
+    return {
+      plates: [],
+      platesWeight: roundedWeight,
+      totalWeight: roundedWeight,
+    };
   }
-  const availablePlatesArr = equipmentData.plates.filter((p) => p.weight.unit === units);
+  const availablePlatesArr = equipmentData.plates.filter(
+    (p) => p.weight.unit === units,
+  );
   const barWeight =
     equipmentData.useBodyweightForBar && settings.currentBodyweight
       ? settings.currentBodyweight
@@ -15155,18 +16195,29 @@ function Weight_calculatePlates(
   const multiplier = equipmentData.multiplier || 1;
   const isAssisting = equipmentData.isAssisting || false;
   const weight = Weight_roundTo000005(Weight_subtract(absAllWeight, barWeight));
-  const availablePlates: IPlate[] = JSON.parse(JSON.stringify(availablePlatesArr));
+  const availablePlates: IPlate[] = JSON.parse(
+    JSON.stringify(availablePlatesArr),
+  );
   availablePlates.sort((a, b) => Weight_compareReverse(a.weight, b.weight));
-  const plates: IPlate[] = calculatePlatesInternalFast(weight, availablePlates, multiplier, isAssisting);
+  const plates: IPlate[] = calculatePlatesInternalFast(
+    weight,
+    availablePlates,
+    multiplier,
+    isAssisting,
+  );
   const total = plates.reduce(
     (memo, plate) => {
       const weightToAdd = Weight_multiply(plate.weight, plate.num);
-      return isAssisting ? Weight_subtract(memo, weightToAdd) : Weight_add(memo, weightToAdd);
+      return isAssisting
+        ? Weight_subtract(memo, weightToAdd)
+        : Weight_add(memo, weightToAdd);
     },
-    Weight_build(0, allWeight.unit)
+    Weight_build(0, allWeight.unit),
   );
   const totalWeight = Weight_roundTo000005(
-    inverted ? Weight_invert(Weight_add(total, barWeight)) : Weight_add(total, barWeight)
+    inverted
+      ? Weight_invert(Weight_add(total, barWeight))
+      : Weight_add(total, barWeight),
   );
   const thePlatesWeight = inverted ? Weight_invert(total) : total;
   return { plates, platesWeight: thePlatesWeight, totalWeight };
@@ -15184,14 +16235,18 @@ function calculatePlatesInternalFast(
   weight: IWeight,
   availablePlates: IPlate[],
   multiplier: number,
-  isAssisting: boolean
+  isAssisting: boolean,
 ): IPlate[] {
   const targetValue = isAssisting ? -weight.value : weight.value;
   if (targetValue <= 0) {
     return [];
   }
 
-  const plateTypes: { weight: IWeight; unitWeight: number; maxUnits: number }[] = [];
+  const plateTypes: {
+    weight: IWeight;
+    unitWeight: number;
+    maxUnits: number;
+  }[] = [];
   for (const p of availablePlates) {
     if (p.num >= multiplier) {
       plateTypes.push({
@@ -15217,7 +16272,9 @@ function calculatePlatesInternalFast(
   }
   const precision = Math.pow(10, Math.min(maxDecimals, 6));
   const intTarget = Math.round(targetValue * precision);
-  const intWeights = plateTypes.map((p) => Math.round(p.unitWeight * precision));
+  const intWeights = plateTypes.map((p) =>
+    Math.round(p.unitWeight * precision),
+  );
 
   // Max contribution from plates at index i and beyond (for pruning)
   const maxFrom = new Array(plateTypes.length + 1).fill(0);
@@ -15249,7 +16306,10 @@ function calculatePlatesInternalFast(
 
     iterations += 1;
     const w = intWeights[index];
-    const maxCount = Math.min(plateTypes[index].maxUnits, w > 0 ? Math.floor(remaining / w) : 0);
+    const maxCount = Math.min(
+      plateTypes[index].maxUnits,
+      w > 0 ? Math.floor(remaining / w) : 0,
+    );
 
     for (let count = maxCount; count >= 0; count--) {
       const newRemaining = remaining - count * w;
@@ -15291,11 +16351,17 @@ function Weight_divide(weight: IWeight, value: IWeight | number): IWeight {
   return Weight_operation(weight, value, (a, b) => a / b);
 }
 
-function Weight_gt(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+function Weight_gt(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a > b);
 }
 
-function Weight_lt(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+function Weight_lt(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a < b);
 }
 
@@ -15303,13 +16369,16 @@ function Weight_lt(weight: IWeight | number | IPercentage, value: IWeight | numb
 //   return comparison(weight, value, (a, b) => a >= b);
 // }
 
-function Weight_lte(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+function Weight_lte(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a <= b);
 }
 
 function Weight_eqNull(
   weight: IWeight | number | IPercentage | undefined,
-  value: IWeight | number | IPercentage | undefined
+  value: IWeight | number | IPercentage | undefined,
 ): boolean {
   if (weight == null && value == null) {
     return true;
@@ -15322,7 +16391,10 @@ function Weight_eqNull(
   }
 }
 
-function Weight_eq(weight: IWeight | number | IPercentage, value: IWeight | number | IPercentage): boolean {
+function Weight_eq(
+  weight: IWeight | number | IPercentage,
+  value: IWeight | number | IPercentage,
+): boolean {
   return comparison(weight, value, (a, b) => a === b);
 }
 
@@ -15338,12 +16410,19 @@ function Weight_roundConvertTo(
   weight: IWeight,
   settings: ISettings,
   unit: IUnit,
-  exerciseType?: IExerciseType
+  exerciseType?: IExerciseType,
 ): IWeight {
-  return Weight_round(Weight_convertTo(weight, unit), settings, unit, exerciseType);
+  return Weight_round(
+    Weight_convertTo(weight, unit),
+    settings,
+    unit,
+    exerciseType,
+  );
 }
 
-function Weight_type(value: number | IWeight | IPercentage): "weight" | "percentage" | "number" {
+function Weight_type(
+  value: number | IWeight | IPercentage,
+): "weight" | "percentage" | "number" {
   if (typeof value === "number") {
     return "number";
   } else if (Weight_isPct(value)) {
@@ -15358,7 +16437,7 @@ function Weight_convertTo(weight: IWeight, unit: IUnit): IWeight;
 // function Weight_convertTo(weight: number, unit: IUnit): number;
 function Weight_convertTo(
   weight: IWeight | number | IPercentage,
-  unit: IUnit | "%"
+  unit: IUnit | "%",
 ): IWeight | number | IPercentage {
   if (typeof weight === "number") {
     return weight;
@@ -15386,7 +16465,7 @@ function Weight_compareReverse(a: IWeight, b: IWeight): number {
 function comparison(
   weight: IWeight | number | IPercentage,
   value: IWeight | number | IPercentage,
-  o: (a: number, b: number) => boolean
+  o: (a: number, b: number) => boolean,
 ): boolean {
   if (typeof weight === "number" && typeof value === "number") {
     return o(weight, value);
@@ -15411,7 +16490,7 @@ function Weight_applyOp(
   onerm: IWeight | undefined,
   oldValue: IWeight | number | IPercentage,
   value: IWeight | number | IPercentage,
-  opr: "+=" | "-=" | "*=" | "/=" | "="
+  opr: "+=" | "-=" | "*=" | "/=" | "=",
 ): IWeight | number | IPercentage {
   if (opr === "=") {
     return value;
@@ -15420,9 +16499,13 @@ function Weight_applyOp(
   } else if (opr === "-=") {
     return Weight_op(onerm, oldValue, value, (a, b) => a - b);
   } else if (opr === "*=") {
-    return Weight_op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a * b));
+    return Weight_op(onerm, oldValue, value, (a, b) =>
+      MathUtils_roundTo005(a * b),
+    );
   } else {
-    return Weight_op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a / b));
+    return Weight_op(onerm, oldValue, value, (a, b) =>
+      MathUtils_roundTo005(a / b),
+    );
   }
 }
 
@@ -15430,7 +16513,7 @@ function Weight_op(
   onerm: IWeight | undefined,
   a: IWeight | number | IPercentage,
   b: IWeight | number | IPercentage,
-  o: (x: number, y: number) => number
+  o: (x: number, y: number) => number,
 ): IWeight | number | IPercentage {
   if (typeof a === "number" && typeof b === "number") {
     return o(a, b);
@@ -15449,7 +16532,9 @@ function Weight_op(
     return Weight_buildPct(o(a.value, b.value));
   }
   if (Weight_isPct(a) && Weight_is(b)) {
-    const aWeight = onerm ? Weight_multiply(onerm, a.value / 100) : MathUtils_roundFloat(a.value / 100, 4);
+    const aWeight = onerm
+      ? Weight_multiply(onerm, a.value / 100)
+      : MathUtils_roundFloat(a.value / 100, 4);
     return Weight_operation(aWeight, b, o);
   }
 
@@ -15457,7 +16542,9 @@ function Weight_op(
     return Weight_operation(a, b, o);
   }
   if (Weight_is(a) && Weight_isPct(b)) {
-    const bWeight = onerm ? Weight_multiply(onerm, b.value / 100) : MathUtils_roundFloat(b.value / 100, 4);
+    const bWeight = onerm
+      ? Weight_multiply(onerm, b.value / 100)
+      : MathUtils_roundFloat(b.value / 100, 4);
     return Weight_operation(a, bWeight, o);
   }
   if (Weight_is(a) && Weight_is(b)) {
@@ -15470,34 +16557,44 @@ function Weight_op(
 function Weight_operation(
   weight: IWeight,
   value: IWeight | number,
-  o: (a: number, b: number) => number
+  o: (a: number, b: number) => number,
 ): IWeight;
 function Weight_operation(
   weight: IWeight | number,
   value: IWeight,
-  o: (a: number, b: number) => number
+  o: (a: number, b: number) => number,
 ): IWeight;
 function Weight_operation(
   weight: IWeight | number,
   value: IWeight | number,
-  o: (a: number, b: number) => number
+  o: (a: number, b: number) => number,
 ): IWeight {
   if (typeof weight === "number" && typeof value !== "number") {
     return Weight_build(o(weight, value.value), value.unit);
   } else if (typeof weight !== "number" && typeof value === "number") {
     return Weight_build(o(weight.value, value), weight.unit);
   } else if (typeof weight !== "number" && typeof value !== "number") {
-    return Weight_build(o(weight.value, Weight_convertTo(value, weight.unit).value), weight.unit);
+    return Weight_build(
+      o(weight.value, Weight_convertTo(value, weight.unit).value),
+      weight.unit,
+    );
   } else {
     throw new Error("Weight.operation should never work with numbers only");
   }
 }
 
-function Weight_convertToWeight(onerm: IWeight, value: IWeight | number | IPercentage, unit: IUnit): IWeight {
+function Weight_convertToWeight(
+  onerm: IWeight,
+  value: IWeight | number | IPercentage,
+  unit: IUnit,
+): IWeight {
   if (typeof value === "number") {
     return Weight_build(value, unit);
   } else if (Weight_isPct(value)) {
-    return Weight_convertTo(Weight_multiply(onerm, MathUtils_roundFloat(value.value / 100, 4)), unit);
+    return Weight_convertTo(
+      Weight_multiply(onerm, MathUtils_roundFloat(value.value / 100, 4)),
+      unit,
+    );
   } else {
     return value;
   }
@@ -15553,17 +16650,31 @@ function PP_iterate2(
     weekIndex: number,
     dayInWeekIndex: number,
     dayIndex: number,
-    exerciseIndex: number
-  ) => boolean | void
+    exerciseIndex: number,
+  ) => boolean | void,
 ): void {
   let dayIndex = 0;
   for (let weekIndex = 0; weekIndex < evaluatedWeeks.length; weekIndex++) {
     const week = evaluatedWeeks[weekIndex];
-    for (let dayInWeekIndex = 0; dayInWeekIndex < week.days.length; dayInWeekIndex++) {
+    for (
+      let dayInWeekIndex = 0;
+      dayInWeekIndex < week.days.length;
+      dayInWeekIndex++
+    ) {
       const day = week.days[dayInWeekIndex];
-      for (let exerciseIndex = 0; exerciseIndex < day.exercises.length; exerciseIndex++) {
+      for (
+        let exerciseIndex = 0;
+        exerciseIndex < day.exercises.length;
+        exerciseIndex++
+      ) {
         const exercise = day.exercises[exerciseIndex];
-        const shouldReturn = cb(exercise, weekIndex, dayInWeekIndex, dayIndex, exerciseIndex);
+        const shouldReturn = cb(
+          exercise,
+          weekIndex,
+          dayInWeekIndex,
+          dayIndex,
+          exerciseIndex,
+        );
         if (!!shouldReturn) {
           return;
         }
@@ -15580,18 +16691,32 @@ function PP_iterate(
     weekIndex: number,
     dayInWeekIndex: number,
     dayIndex: number,
-    exerciseIndex: number
-  ) => boolean | void
+    exerciseIndex: number,
+  ) => boolean | void,
 ): void {
   let dayIndex = 0;
   for (let weekIndex = 0; weekIndex < evaluatedWeeks.length; weekIndex++) {
     const week = evaluatedWeeks[weekIndex];
-    for (let dayInWeekIndex = 0; dayInWeekIndex < week.length; dayInWeekIndex++) {
+    for (
+      let dayInWeekIndex = 0;
+      dayInWeekIndex < week.length;
+      dayInWeekIndex++
+    ) {
       const day = week[dayInWeekIndex];
       if (day.success) {
-        for (let exerciseIndex = 0; exerciseIndex < day.data.length; exerciseIndex++) {
+        for (
+          let exerciseIndex = 0;
+          exerciseIndex < day.data.length;
+          exerciseIndex++
+        ) {
           const exercise = day.data[exerciseIndex];
-          const shouldReturn = cb(exercise, weekIndex, dayInWeekIndex, dayIndex, exerciseIndex);
+          const shouldReturn = cb(
+            exercise,
+            weekIndex,
+            dayInWeekIndex,
+            dayIndex,
+            exerciseIndex,
+          );
           if (!!shouldReturn) {
             return;
           }
@@ -15613,30 +16738,50 @@ interface IPlannerToProgram2Globals {
   askWeight?: boolean;
 }
 
-type IDereuseDecision = "sets" | "weight" | "rpe" | "timer" | "progress" | "update";
+type IDereuseDecision =
+  | "sets"
+  | "weight"
+  | "rpe"
+  | "timer"
+  | "progress"
+  | "update";
 
 interface IPlannerToProgramConvertOpts {
   renameMapping?: Record<string, { to: string; dayData?: Required<IDayData> }>;
-  reorder?: { dayData: Required<IDayData>; fromIndex: number; toIndex: number }[];
+  reorder?: {
+    dayData: Required<IDayData>;
+    fromIndex: number;
+    toIndex: number;
+  }[];
   add?: { dayData: Required<IDayData>; index: number; fullName: string }[];
 }
 
 class ProgramToPlanner {
   constructor(
     private readonly program: IEvaluatedProgram,
-    private readonly settings: ISettings
+    private readonly settings: ISettings,
   ) {}
 
   private getCurrentDescriptionExercise(
     key: string,
     weekIndex: number,
-    dayInWeekIndex: number
+    dayInWeekIndex: number,
   ): IPlannerProgramExercise | undefined {
-    return this.program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find((e) => e.key === key);
+    return this.program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find(
+      (e) => e.key === key,
+    );
   }
 
-  private getCurrentDescriptionIndex(key: string, weekIndex: number, dayInWeekIndex: number): number {
-    const exercise = this.getCurrentDescriptionExercise(key, weekIndex, dayInWeekIndex);
+  private getCurrentDescriptionIndex(
+    key: string,
+    weekIndex: number,
+    dayInWeekIndex: number,
+  ): number {
+    const exercise = this.getCurrentDescriptionExercise(
+      key,
+      weekIndex,
+      dayInWeekIndex,
+    );
     const descriptions = exercise?.descriptions.values || [];
     const index = descriptions.findIndex((s) => s.isCurrent);
     return index === -1 ? 0 : index;
@@ -15646,7 +16791,9 @@ class ProgramToPlanner {
     return !!programExercise.reuse;
   }
 
-  private getDereuseDecisions(programExercise: IPlannerProgramExercise): IDereuseDecision[] {
+  private getDereuseDecisions(
+    programExercise: IPlannerProgramExercise,
+  ): IDereuseDecision[] {
     const dereuseDecisions: Set<IDereuseDecision> = new Set();
     const reuseExercise = programExercise.reuse?.exercise;
     if (!reuseExercise) {
@@ -15654,11 +16801,16 @@ class ProgramToPlanner {
     }
     const globals = this.getGlobals(programExercise);
     const reusedGlobals = this.getGlobals(reuseExercise);
-    if (programExercise.evaluatedSetVariations.length !== reuseExercise.evaluatedSetVariations.length) {
+    if (
+      programExercise.evaluatedSetVariations.length !==
+      reuseExercise.evaluatedSetVariations.length
+    ) {
       dereuseDecisions.add("sets");
     }
     if (
-      PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise) !==
+      PlannerProgramExercise_currentEvaluatedSetVariationIndex(
+        programExercise,
+      ) !==
       PlannerProgramExercise_currentEvaluatedSetVariationIndex(reuseExercise)
     ) {
       dereuseDecisions.add("sets");
@@ -15669,8 +16821,10 @@ class ProgramToPlanner {
         programExercise.progress.type !== reuseExercise.progress?.type ||
         (programExercise.progress.reuse
           ? programExercise.progress.reuse?.fullName !== reuseExercise.fullName
-          : programExercise.progress.script !== reuseExercise.progress.script) ||
-        Object.keys(PlannerProgramExercise_getOnlyChangedState(programExercise)).length > 0
+          : programExercise.progress.script !==
+            reuseExercise.progress.script) ||
+        Object.keys(PlannerProgramExercise_getOnlyChangedState(programExercise))
+          .length > 0
       ) {
         dereuseDecisions.add("progress");
       }
@@ -15685,8 +16839,15 @@ class ProgramToPlanner {
         dereuseDecisions.add("update");
       }
     }
-    if (programExercise.evaluatedSetVariations.length === reuseExercise.evaluatedSetVariations.length) {
-      for (let i = 0; i < programExercise.evaluatedSetVariations.length; i += 1) {
+    if (
+      programExercise.evaluatedSetVariations.length ===
+      reuseExercise.evaluatedSetVariations.length
+    ) {
+      for (
+        let i = 0;
+        i < programExercise.evaluatedSetVariations.length;
+        i += 1
+      ) {
         const programVariation = programExercise.evaluatedSetVariations[i];
         const reuseVariation = reuseExercise.evaluatedSetVariations[i];
         if (programVariation.sets.length !== reuseVariation.sets.length) {
@@ -15695,14 +16856,20 @@ class ProgramToPlanner {
         for (let j = 0; j < programVariation.sets.length; j += 1) {
           const programSet = programVariation.sets[j];
           const reuseSet = reuseVariation.sets[j];
-          if (programSet.maxrep !== reuseSet?.maxrep || programSet.minrep !== reuseSet?.minrep) {
+          if (
+            programSet.maxrep !== reuseSet?.maxrep ||
+            programSet.minrep !== reuseSet?.minrep
+          ) {
             dereuseDecisions.add("sets");
           }
           if (
             reuseSet
-              ? !Weight_eqNull(programSet.weight, reuseSet.weight) || programSet.askWeight !== reuseSet.askWeight
-              : !Weight_eq(globals.weight || Weight_zero, reusedGlobals.weight || Weight_zero) ||
-              globals.askWeight !== reusedGlobals.askWeight
+              ? !Weight_eqNull(programSet.weight, reuseSet.weight) ||
+                programSet.askWeight !== reuseSet.askWeight
+              : !Weight_eq(
+                  globals.weight || Weight_zero,
+                  reusedGlobals.weight || Weight_zero,
+                ) || globals.askWeight !== reusedGlobals.askWeight
           ) {
             if (globals.weight != null) {
               dereuseDecisions.add("weight");
@@ -15712,8 +16879,10 @@ class ProgramToPlanner {
           }
           if (
             reuseSet
-              ? programSet.rpe !== reuseSet.rpe || programSet.logRpe !== reuseSet.logRpe
-              : globals.rpe !== reusedGlobals.rpe || globals.logRpe !== reusedGlobals.logRpe
+              ? programSet.rpe !== reuseSet.rpe ||
+                programSet.logRpe !== reuseSet.logRpe
+              : globals.rpe !== reusedGlobals.rpe ||
+                globals.logRpe !== reusedGlobals.logRpe
           ) {
             if (globals.rpe != null) {
               dereuseDecisions.add("rpe");
@@ -15721,7 +16890,11 @@ class ProgramToPlanner {
               dereuseDecisions.add("sets");
             }
           }
-          if (reuseSet ? programSet.timer !== reuseSet.timer : globals.timer !== reusedGlobals.timer) {
+          if (
+            reuseSet
+              ? programSet.timer !== reuseSet.timer
+              : globals.timer !== reusedGlobals.timer
+          ) {
             if (globals.timer != null) {
               dereuseDecisions.add("timer");
             } else {
@@ -15736,15 +16909,21 @@ class ProgramToPlanner {
 
   private reorderGroupedTopLine(
     groupedTopLine: IPlannerTopLineItem[][][][],
-    reorders: IPlannerToProgramConvertOpts["reorder"]
+    reorders: IPlannerToProgramConvertOpts["reorder"],
   ): IPlannerTopLineItem[][][][] {
     if (!reorders) {
       return groupedTopLine;
     }
     for (const reorder of reorders) {
-      const groupedDay = groupedTopLine[reorder.dayData.week - 1]?.[reorder.dayData.dayInWeek - 1];
+      const groupedDay =
+        groupedTopLine[reorder.dayData.week - 1]?.[
+          reorder.dayData.dayInWeek - 1
+        ];
       if (groupedDay) {
-        const indexMap = groupedDay.reduce<{ result: Record<number, number>; i: number }>(
+        const indexMap = groupedDay.reduce<{
+          result: Record<number, number>;
+          i: number;
+        }>(
           ({ result, i }, group, index) => {
             const exercise = group.find((item) => item.type === "exercise");
             if (exercise && !exercise.notused) {
@@ -15753,7 +16932,7 @@ class ProgramToPlanner {
             }
             return { result, i };
           },
-          { result: {}, i: 0 }
+          { result: {}, i: 0 },
         ).result;
         const from = groupedDay[indexMap[reorder.fromIndex]];
         if (from) {
@@ -15767,16 +16946,23 @@ class ProgramToPlanner {
 
   private addGroupedTopLine(
     groupedTopLine: IPlannerTopLineItem[][][][],
-    adds: IPlannerToProgramConvertOpts["add"]
+    adds: IPlannerToProgramConvertOpts["add"],
   ): IPlannerTopLineItem[][][][] {
     if (!adds) {
       return groupedTopLine;
     }
     for (const add of adds) {
-      const groupedDay = groupedTopLine[add.dayData.week - 1]?.[add.dayData.dayInWeek - 1];
+      const groupedDay =
+        groupedTopLine[add.dayData.week - 1]?.[add.dayData.dayInWeek - 1];
       if (groupedDay) {
         groupedDay.splice(add.index, 0, [
-          { type: "exercise", value: PlannerKey_fromFullName(add.fullName, this.settings.exercises) },
+          {
+            type: "exercise",
+            value: PlannerKey_fromFullName(
+              add.fullName,
+              this.settings.exercises,
+            ),
+          },
         ]);
       }
     }
@@ -15787,13 +16973,14 @@ class ProgramToPlanner {
     opts: IPlannerToProgramConvertOpts,
     line: IPlannerTopLineItem,
     weekIndex: number,
-    dayInWeekIndex: number
+    dayInWeekIndex: number,
   ): string {
     const renamedValue = opts.renameMapping?.[line.value];
     if (
       renamedValue &&
       (!renamedValue.dayData ||
-        (renamedValue.dayData.week === weekIndex + 1 && renamedValue.dayData.dayInWeek === dayInWeekIndex + 1))
+        (renamedValue.dayData.week === weekIndex + 1 &&
+          renamedValue.dayData.dayInWeek === dayInWeekIndex + 1))
     ) {
       return renamedValue.to;
     } else {
@@ -15805,7 +16992,7 @@ class ProgramToPlanner {
     exercise: IPlannerProgramExercise | undefined,
     weekIndex: number,
     dayInWeekIndex: number,
-    addedCurrentDescription: boolean
+    addedCurrentDescription: boolean,
   ): { lines: string[]; addedCurrentDescription: boolean } | undefined {
     if (!exercise) {
       return undefined;
@@ -15814,11 +17001,15 @@ class ProgramToPlanner {
       exercise?.descriptions.reuse == null ||
       !ObjectUtils_isEqual(
         exercise.descriptions.values || [],
-        exercise.descriptions.reuse.exercise?.descriptions.values || []
+        exercise.descriptions.reuse.exercise?.descriptions.values || [],
       )
     ) {
       const lines: string[] = [];
-      const currentIndex = this.getCurrentDescriptionIndex(exercise.key, weekIndex, dayInWeekIndex);
+      const currentIndex = this.getCurrentDescriptionIndex(
+        exercise.key,
+        weekIndex,
+        dayInWeekIndex,
+      );
       for (let i = 0; i < exercise.descriptions.values.length; i += 1) {
         if (i > 0) {
           lines.push("");
@@ -15826,7 +17017,11 @@ class ProgramToPlanner {
         const description = exercise.descriptions.values[i];
         const parts = description.value.split("\n");
         for (const part of parts) {
-          if (currentIndex !== 0 && currentIndex === i && !addedCurrentDescription) {
+          if (
+            currentIndex !== 0 &&
+            currentIndex === i &&
+            !addedCurrentDescription
+          ) {
             lines.push(`// ! ${part}`);
             addedCurrentDescription = true;
           } else {
@@ -15838,14 +17033,24 @@ class ProgramToPlanner {
     } else if (exercise?.descriptions.reuse?.exercise) {
       const reusedExercise = exercise.descriptions.reuse.exercise;
       const reusedDayData = reusedExercise.dayData;
-      const currentWeekReusedExercisesCount = this.program.weeks[weekIndex]?.days.filter((day) => {
+      const currentWeekReusedExercisesCount = this.program.weeks[
+        weekIndex
+      ]?.days.filter((day) => {
         return day.exercises.some((e) => e.key === reusedExercise.key);
       }).length;
-      if (currentWeekReusedExercisesCount === 1 && reusedDayData.week === weekIndex + 1) {
-        return { lines: [`// ...${reusedExercise.fullName}`], addedCurrentDescription };
+      if (
+        currentWeekReusedExercisesCount === 1 &&
+        reusedDayData.week === weekIndex + 1
+      ) {
+        return {
+          lines: [`// ...${reusedExercise.fullName}`],
+          addedCurrentDescription,
+        };
       } else {
         return {
-          lines: [`// ...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`],
+          lines: [
+            `// ...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`,
+          ],
           addedCurrentDescription,
         };
       }
@@ -15854,7 +17059,9 @@ class ProgramToPlanner {
     }
   }
 
-  public convertToPlanner(opts: IPlannerToProgramConvertOpts = {}): IPlannerProgram {
+  public convertToPlanner(
+    opts: IPlannerToProgramConvertOpts = {},
+  ): IPlannerProgram {
     const plannerWeeks: IPlannerProgramWeek[] = [];
     const plannerProgram = this.program.planner;
     if (this.program.errors.length > 0) {
@@ -15866,28 +17073,54 @@ class ProgramToPlanner {
       }
       throw error.error;
     }
-    const topLineMap = PlannerProgram_topLineItems(plannerProgram, this.settings);
+    const topLineMap = PlannerProgram_topLineItems(
+      plannerProgram,
+      this.settings,
+    );
     let groupedTopLineMap = PlannerProgram_groupedTopLines(topLineMap);
-    groupedTopLineMap = opts.reorder ? this.reorderGroupedTopLine(groupedTopLineMap, opts.reorder) : groupedTopLineMap;
-    groupedTopLineMap = opts.add ? this.addGroupedTopLine(groupedTopLineMap, opts.add) : groupedTopLineMap;
+    groupedTopLineMap = opts.reorder
+      ? this.reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
+      : groupedTopLineMap;
+    groupedTopLineMap = opts.add
+      ? this.addGroupedTopLine(groupedTopLineMap, opts.add)
+      : groupedTopLineMap;
     let dayIndex = 0;
     const addedProgressMap: Record<string, boolean> = {};
     const addedUpdateMap: Record<string, boolean> = {};
     const addedWarmupsMap: Record<string, boolean> = {};
     const addedIdMap: Record<string, boolean> = {};
 
-    for (let weekIndex = 0; weekIndex < this.program.weeks.length; weekIndex += 1) {
+    for (
+      let weekIndex = 0;
+      weekIndex < this.program.weeks.length;
+      weekIndex += 1
+    ) {
       const week = this.program.weeks[weekIndex];
-      const plannerWeek: IPlannerProgramWeek = { name: week.name, days: [], description: week.description };
-      for (let dayInWeekIndex = 0; dayInWeekIndex < week.days.length; dayInWeekIndex += 1) {
+      const plannerWeek: IPlannerProgramWeek = {
+        name: week.name,
+        days: [],
+        description: week.description,
+      };
+      for (
+        let dayInWeekIndex = 0;
+        dayInWeekIndex < week.days.length;
+        dayInWeekIndex += 1
+      ) {
         const programDay = week.days[dayInWeekIndex];
-        const plannerDay: IPlannerProgramDay = { name: programDay.name, exerciseText: "" };
+        const plannerDay: IPlannerProgramDay = {
+          name: programDay.name,
+          exerciseText: "",
+        };
         let descriptionIndex: number | undefined = undefined;
         let addedCurrentDescription = false;
         let finishedToAddDescription = false;
         const groupedTopLines = groupedTopLineMap[weekIndex][dayInWeekIndex];
         let groupTextArr: string[] = [];
-        groupLoop: for (let groupIndex = 0; groupIndex < groupedTopLines.length; groupIndex += 1) {
+        groupLoop: for (
+          let groupIndex = 0;
+          groupIndex < groupedTopLines.length;
+          groupIndex += 1
+        ) {
           const exerciseTextArr: string[] = [];
           const group = groupedTopLines[groupIndex];
           for (let lineIndex = 0; lineIndex < group.length; lineIndex += 1) {
@@ -15901,7 +17134,12 @@ class ProgramToPlanner {
                 let key: string | undefined;
                 for (let i = lineIndex; i < group.length; i += 1) {
                   if (group[i].type === "exercise") {
-                    key = this.getRenamedValue(opts, group[i], weekIndex, dayInWeekIndex);
+                    key = this.getRenamedValue(
+                      opts,
+                      group[i],
+                      weekIndex,
+                      dayInWeekIndex,
+                    );
                     break;
                   }
                 }
@@ -15912,28 +17150,46 @@ class ProgramToPlanner {
                   break;
                 }
                 if (key != null) {
-                  const exercise = this.getCurrentDescriptionExercise(key, weekIndex, dayInWeekIndex);
+                  const exercise = this.getCurrentDescriptionExercise(
+                    key,
+                    weekIndex,
+                    dayInWeekIndex,
+                  );
                   const result = this.addExerciseDescriptions(
                     exercise,
                     weekIndex,
                     dayInWeekIndex,
-                    addedCurrentDescription
+                    addedCurrentDescription,
                   );
                   if (result) {
                     exerciseTextArr.push(...result.lines);
                     addedCurrentDescription = result.addedCurrentDescription;
                     finishedToAddDescription = true;
                   } else {
-                    const currentIndex = this.getCurrentDescriptionIndex(key, weekIndex, dayInWeekIndex);
-                    if (currentIndex !== 0 && currentIndex === descriptionIndex && !addedCurrentDescription) {
-                      exerciseTextArr.push(line.value.replace(/^\/\/\s*!?\s*/, "// ! "));
+                    const currentIndex = this.getCurrentDescriptionIndex(
+                      key,
+                      weekIndex,
+                      dayInWeekIndex,
+                    );
+                    if (
+                      currentIndex !== 0 &&
+                      currentIndex === descriptionIndex &&
+                      !addedCurrentDescription
+                    ) {
+                      exerciseTextArr.push(
+                        line.value.replace(/^\/\/\s*!?\s*/, "// ! "),
+                      );
                       addedCurrentDescription = true;
                     } else {
-                      exerciseTextArr.push(line.value.replace(/^(\/\/\s*)!\s*/, "$1"));
+                      exerciseTextArr.push(
+                        line.value.replace(/^(\/\/\s*)!\s*/, "$1"),
+                      );
                     }
                   }
                 } else {
-                  exerciseTextArr.push(line.value.replace(/^(\/\/\s*)!\s*/, "$1"));
+                  exerciseTextArr.push(
+                    line.value.replace(/^(\/\/\s*)!\s*/, "$1"),
+                  );
                 }
                 break;
               }
@@ -15948,8 +17204,17 @@ class ProgramToPlanner {
               }
               case "exercise": {
                 descriptionIndex = undefined;
-                const value = this.getRenamedValue(opts, line, weekIndex, dayInWeekIndex);
-                const evalExercise = Program_getProgramExercise(dayIndex + 1, this.program, value)!;
+                const value = this.getRenamedValue(
+                  opts,
+                  line,
+                  weekIndex,
+                  dayInWeekIndex,
+                );
+                const evalExercise = Program_getProgramExercise(
+                  dayIndex + 1,
+                  this.program,
+                  value,
+                )!;
 
                 if (evalExercise == null) {
                   continue groupLoop;
@@ -15959,13 +17224,14 @@ class ProgramToPlanner {
 
                 if (
                   !finishedToAddDescription &&
-                  (evalExercise.descriptions.reuse || evalExercise.descriptions.values.length > 0)
+                  (evalExercise.descriptions.reuse ||
+                    evalExercise.descriptions.values.length > 0)
                 ) {
                   const result = this.addExerciseDescriptions(
                     evalExercise,
                     weekIndex,
                     dayInWeekIndex,
-                    addedCurrentDescription
+                    addedCurrentDescription,
                   );
                   if (result) {
                     exerciseTextArr.push(...result.lines);
@@ -15985,7 +17251,9 @@ class ProgramToPlanner {
                 const globals = this.getGlobals(evalExercise);
 
                 const shouldReuseSets = this.shouldReuseSets(evalExercise);
-                const dereuseDecisions = shouldReuseSets ? this.getDereuseDecisions(evalExercise) : [];
+                const dereuseDecisions = shouldReuseSets
+                  ? this.getDereuseDecisions(evalExercise)
+                  : [];
                 if (shouldReuseSets) {
                   plannerExercise += this.reuseToStr(evalExercise);
 
@@ -15994,21 +17262,39 @@ class ProgramToPlanner {
                       ` / ` +
                       variations
                         .map((v, i) => {
-                          return this.variationToString(v, globals, i, evalExercise);
+                          return this.variationToString(
+                            v,
+                            globals,
+                            i,
+                            evalExercise,
+                          );
                         })
                         .join(" / ");
                   }
 
                   const overriddenGlobals: string[] = [];
-                  if (dereuseDecisions.includes("weight") && globals.weight != null) {
-                    overriddenGlobals.push(`${this.weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`);
-                  } else if (dereuseDecisions.includes("weight") && globals.askWeight) {
+                  if (
+                    dereuseDecisions.includes("weight") &&
+                    globals.weight != null
+                  ) {
+                    overriddenGlobals.push(
+                      `${this.weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+                    );
+                  } else if (
+                    dereuseDecisions.includes("weight") &&
+                    globals.askWeight
+                  ) {
                     overriddenGlobals.push("?+");
                   }
                   if (dereuseDecisions.includes("rpe") && globals.rpe != null) {
-                    overriddenGlobals.push(`@${n(globals.rpe)}${globals.logRpe ? "+" : ""}`);
+                    overriddenGlobals.push(
+                      `@${n(globals.rpe)}${globals.logRpe ? "+" : ""}`,
+                    );
                   }
-                  if (dereuseDecisions.includes("timer") && globals.timer != null) {
+                  if (
+                    dereuseDecisions.includes("timer") &&
+                    globals.timer != null
+                  ) {
                     overriddenGlobals.push(`${n(globals.timer)}s`);
                   }
                   if (overriddenGlobals.length > 0) {
@@ -16017,18 +17303,24 @@ class ProgramToPlanner {
                 } else {
                   if (evalExercise.setVariations.length > 0) {
                     plannerExercise += variations
-                      .map((v, i) => this.variationToString(v, globals, i, evalExercise))
+                      .map((v, i) =>
+                        this.variationToString(v, globals, i, evalExercise),
+                      )
                       .join(" / ");
                   }
 
                   const globalsStr: string[] = [];
                   if (globals.weight != null) {
-                    globalsStr.push(`${this.weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`);
+                    globalsStr.push(
+                      `${this.weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+                    );
                   } else if (globals.askWeight) {
                     globalsStr.push("?+");
                   }
                   if (globals.rpe != null) {
-                    globalsStr.push(`@${globals.rpe}${globals.logRpe ? "+" : ""}`);
+                    globalsStr.push(
+                      `@${globals.rpe}${globals.logRpe ? "+" : ""}`,
+                    );
                   }
                   if (globals.timer != null) {
                     globalsStr.push(`${globals.timer}s`);
@@ -16057,14 +17349,26 @@ class ProgramToPlanner {
                 }
 
                 const update = evalExercise.update;
-                if (!addedUpdateMap[key] && update && (update.reuse || update.script)) {
-                  if (!evalExercise.reuse || dereuseDecisions.includes("update")) {
-                    const updateStr = ProgramToPlanner.getUpdate(evalExercise, this.settings);
+                if (
+                  !addedUpdateMap[key] &&
+                  update &&
+                  (update.reuse || update.script)
+                ) {
+                  if (
+                    !evalExercise.reuse ||
+                    dereuseDecisions.includes("update")
+                  ) {
+                    const updateStr = ProgramToPlanner.getUpdate(
+                      evalExercise,
+                      this.settings,
+                    );
                     if (updateStr) {
                       plannerExercise += ` / ${updateStr}`;
                     }
                     addedUpdateMap[key] = true;
-                  } else if (update.reuse?.fullName === evalExercise.reuse.fullName) {
+                  } else if (
+                    update.reuse?.fullName === evalExercise.reuse.fullName
+                  ) {
                     addedUpdateMap[key] = true;
                   }
                 }
@@ -16072,14 +17376,27 @@ class ProgramToPlanner {
                 const progress = evalExercise.progress;
                 if (progress && progress.type === "none") {
                   plannerExercise += ` / progress: none`;
-                } else if (!addedProgressMap[key] && progress && (progress.reuse || progress.script)) {
-                  if (!evalExercise.reuse || dereuseDecisions.includes("progress")) {
-                    const progressStr = ProgramToPlanner.getProgress(evalExercise, this.settings, false);
+                } else if (
+                  !addedProgressMap[key] &&
+                  progress &&
+                  (progress.reuse || progress.script)
+                ) {
+                  if (
+                    !evalExercise.reuse ||
+                    dereuseDecisions.includes("progress")
+                  ) {
+                    const progressStr = ProgramToPlanner.getProgress(
+                      evalExercise,
+                      this.settings,
+                      false,
+                    );
                     if (progressStr) {
                       plannerExercise += ` / ${progressStr}`;
                     }
                     addedProgressMap[key] = true;
-                  } else if (progress.reuse?.fullName === evalExercise.reuse.fullName) {
+                  } else if (
+                    progress.reuse?.fullName === evalExercise.reuse.fullName
+                  ) {
                     addedProgressMap[key] = true;
                   }
                 }
@@ -16099,7 +17416,11 @@ class ProgramToPlanner {
       }
       plannerWeeks.push(plannerWeek);
     }
-    const result: IPlannerProgram = { vtype: "planner", name: this.program.name, weeks: plannerWeeks };
+    const result: IPlannerProgram = {
+      vtype: "planner",
+      name: this.program.name,
+      weeks: plannerWeeks,
+    };
     const repeatingExercises = new Set<string>();
     PP_iterate2(this.program.weeks, (exercise) => {
       if (exercise.repeat != null && exercise.repeat.length > 0) {
@@ -16107,15 +17428,27 @@ class ProgramToPlanner {
         repeatingExercises.add(key);
       }
     });
-    const newPlanner = PlannerProgram_compact(this.program.planner, result, this.settings, repeatingExercises);
+    const newPlanner = PlannerProgram_compact(
+      this.program.planner,
+      result,
+      this.settings,
+      repeatingExercises,
+    );
     // console.log(PlannerProgram.generateFullText(newPlanner.weeks));
     return newPlanner;
   }
 
   private getExerciseName(programExercise: IPlannerProgramExercise): string {
     if (programExercise.exerciseType) {
-      const exercise = Exercise_get(programExercise.exerciseType, this.settings.exercises);
-      let name = Exercise_fullName(exercise, this.settings, programExercise.label);
+      const exercise = Exercise_get(
+        programExercise.exerciseType,
+        this.settings.exercises,
+      );
+      let name = Exercise_fullName(
+        exercise,
+        this.settings,
+        programExercise.label,
+      );
       if (programExercise.order > 0) {
         name = `${name}[${programExercise.order}]`;
       }
@@ -16136,28 +17469,48 @@ class ProgramToPlanner {
     }
     let str = "...";
     if (reuseExercise.exerciseType) {
-      const exercise = Exercise_get(reuseExercise.exerciseType, this.settings.exercises);
-      const reuseStr = Exercise_fullName(exercise, this.settings, reuseExercise.label);
+      const exercise = Exercise_get(
+        reuseExercise.exerciseType,
+        this.settings.exercises,
+      );
+      const reuseStr = Exercise_fullName(
+        exercise,
+        this.settings,
+        reuseExercise.label,
+      );
       str += reuseStr;
     } else {
       str += reuseExercise.fullName;
     }
     if (reuse.week || reuse.day) {
-      const weekAndDay = CollectionUtils_compact([reuse.week, reuse.day]).join(":");
+      const weekAndDay = CollectionUtils_compact([reuse.week, reuse.day]).join(
+        ":",
+      );
       str += `[${weekAndDay}]`;
     }
     return str;
   }
 
-  public static getUpdate(programExercise: IPlannerProgramExercise, settings: ISettings, hideScript?: boolean): string {
+  public static getUpdate(
+    programExercise: IPlannerProgramExercise,
+    settings: ISettings,
+    hideScript?: boolean,
+  ): string {
     const update = programExercise.update;
     if (!update) {
       return "";
     }
     if (update.reuse) {
       if (update.reuse.exercise?.exerciseType) {
-        const exercise = Exercise_get(update.reuse.exercise.exerciseType, settings.exercises);
-        const fullName = Exercise_fullName(exercise, settings, update.reuse.exercise.label);
+        const exercise = Exercise_get(
+          update.reuse.exercise.exerciseType,
+          settings.exercises,
+        );
+        const fullName = Exercise_fullName(
+          exercise,
+          settings,
+          update.reuse.exercise.label,
+        );
         return `update: custom() { ...${fullName} }`;
       } else {
         return ` / update: custom() { ...${update.reuse.exercise?.fullName || update.reuse.fullName} }`;
@@ -16174,7 +17527,7 @@ class ProgramToPlanner {
   public static getProgress(
     programExercise: IPlannerProgramExercise,
     settings: ISettings,
-    hideScript?: boolean
+    hideScript?: boolean,
   ): string {
     const progress = programExercise.progress;
     if (!progress) {
@@ -16182,9 +17535,11 @@ class ProgramToPlanner {
     }
     let progressStr = `progress: ${progress.type}`;
     const state = PlannerProgramExercise_getState(programExercise);
-    const stateMetadata = PlannerProgramExercise_getStateMetadata(programExercise);
+    const stateMetadata =
+      PlannerProgramExercise_getStateMetadata(programExercise);
     if (progress.type === "custom") {
-      const onlyChangedState = PlannerProgramExercise_getOnlyChangedState(programExercise);
+      const onlyChangedState =
+        PlannerProgramExercise_getOnlyChangedState(programExercise);
       progressStr += `(${ObjectUtils_entries(onlyChangedState)
         .map(([k, v]) => {
           return `${k}${stateMetadata[k]?.userPrompted ? "+" : ""}: ${Weight_print(v)}`;
@@ -16230,8 +17585,15 @@ class ProgramToPlanner {
     if (progress.type === "custom") {
       if (progress.reuse) {
         if (progress.reuse.exercise?.exerciseType) {
-          const exercise = Exercise_get(progress.reuse.exercise.exerciseType, settings.exercises);
-          const fullName = Exercise_fullName(exercise, settings, progress.reuse.exercise.label);
+          const exercise = Exercise_get(
+            progress.reuse.exercise.exerciseType,
+            settings.exercises,
+          );
+          const fullName = Exercise_fullName(
+            exercise,
+            settings,
+            progress.reuse.exercise.label,
+          );
           progressStr += ` { ...${fullName} }`;
         } else {
           progressStr += ` { ...${progress.reuse.exercise?.fullName || progress.reuse.fullName} }`;
@@ -16243,7 +17605,9 @@ class ProgramToPlanner {
     return progressStr;
   }
 
-  private getGlobals(exercise: IPlannerProgramExercise): IPlannerToProgram2Globals {
+  private getGlobals(
+    exercise: IPlannerProgramExercise,
+  ): IPlannerToProgram2Globals {
     const variations = exercise.evaluatedSetVariations;
     if (variations.length === 0 || variations[0].sets.length === 0) {
       const globals = exercise.globals;
@@ -16265,19 +17629,32 @@ class ProgramToPlanner {
       weight:
         firstWeight != null &&
         variations.every((v) =>
-          v.sets.every((s) => Weight_eqNull(s.weight, firstWeight) && !!s.askWeight === firstAskWeight)
+          v.sets.every(
+            (s) =>
+              Weight_eqNull(s.weight, firstWeight) &&
+              !!s.askWeight === firstAskWeight,
+          ),
         )
           ? firstWeight
           : undefined,
-      askWeight: variations.every((v) => v.sets.every((s) => Weight_eqNull(s.weight, firstWeight) && !!s.askWeight)),
+      askWeight: variations.every((v) =>
+        v.sets.every(
+          (s) => Weight_eqNull(s.weight, firstWeight) && !!s.askWeight,
+        ),
+      ),
       rpe:
         firstRpe != null &&
-        variations.every((v) => v.sets.every((s) => s.rpe === firstRpe && !!s.logRpe === firstLogRpe))
+        variations.every((v) =>
+          v.sets.every((s) => s.rpe === firstRpe && !!s.logRpe === firstLogRpe),
+        )
           ? firstRpe
           : undefined,
-      logRpe: variations.every((v) => v.sets.every((s) => s.rpe === firstRpe && !!s.logRpe)),
+      logRpe: variations.every((v) =>
+        v.sets.every((s) => s.rpe === firstRpe && !!s.logRpe),
+      ),
       timer:
-        firstTimer != null && variations.every((v) => v.sets.every((s) => s.timer === firstTimer))
+        firstTimer != null &&
+        variations.every((v) => v.sets.every((s) => s.timer === firstTimer))
           ? firstTimer
           : undefined,
     };
@@ -16286,7 +17663,7 @@ class ProgramToPlanner {
   private groupVariationSets(
     sets: IPlannerProgramExerciseEvaluatedSet[],
     exercise: IPlannerProgramExercise,
-    index: number
+    index: number,
   ): [IPlannerProgramExerciseEvaluatedSet, number][] {
     if (sets.length === 0) {
       const originalSets = PlannerProgramExercise_sets(exercise, index)[0];
@@ -16321,7 +17698,9 @@ class ProgramToPlanner {
     return groups;
   }
 
-  private groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [IPlannerProgramExerciseWarmupSet, number][] {
+  private groupWarmupsSets(
+    sets: IPlannerProgramExerciseWarmupSet[],
+  ): [IPlannerProgramExerciseWarmupSet, number][] {
     let lastKey: string | undefined;
     const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
     for (const set of sets) {
@@ -16335,7 +17714,9 @@ class ProgramToPlanner {
     return groups;
   }
 
-  private getWarmupSets(programExercise: IPlannerProgramExercise): string | undefined {
+  private getWarmupSets(
+    programExercise: IPlannerProgramExercise,
+  ): string | undefined {
     const warmupSets = programExercise.warmupSets;
     if (warmupSets) {
       const groups = this.groupWarmupsSets(warmupSets);
@@ -16344,7 +17725,10 @@ class ProgramToPlanner {
         const first = group[0];
         const length = group[1];
         const weight =
-          first.weight ?? (first.percentage != null ? Weight_buildPct(first.percentage) : Weight_build(0, "lb"));
+          first.weight ??
+          (first.percentage != null
+            ? Weight_buildPct(first.percentage)
+            : Weight_build(0, "lb"));
         strs.push(`${length}x${first.reps} ${Weight_print(weight)}`);
       }
       return strs.length === 0 ? "none" : strs.join(", ");
@@ -16363,9 +17747,13 @@ class ProgramToPlanner {
     variation: IPlannerProgramExerciseEvaluatedSetVariation,
     globals: IPlannerToProgram2Globals,
     index: number,
-    exercise: IPlannerProgramExercise
+    exercise: IPlannerProgramExercise,
   ): string {
-    const groupedVariationSets = this.groupVariationSets(variation.sets, exercise, index);
+    const groupedVariationSets = this.groupVariationSets(
+      variation.sets,
+      exercise,
+      index,
+    );
     const result: string[] = [];
     for (const group of groupedVariationSets) {
       const set = group[0];
@@ -16413,13 +17801,519 @@ class ProgramToPlanner {
 }
 //#endregion
 
-//#region ________
+//#region ScriptRunner
+// declare let Rollbar: RB;
+
+// const lastAlertDisplayedTs: Partial<Record<string, number>> = {};
+
+class ScriptRunner {
+  private readonly script: string;
+  private readonly state: IProgramState;
+  private readonly otherStates: Record<number, IProgramState>;
+  private readonly bindings: IScriptBindings;
+  private readonly fns: IScriptFunctions;
+  private readonly units: IUnit;
+  private readonly context: IScriptFnContext;
+  private readonly mode: IProgramMode;
+  private updates: ILiftoscriptEvaluatorUpdate[] = [];
+
+  constructor(
+    script: string,
+    state: IProgramState,
+    otherStates: Record<number, IProgramState>,
+    bindings: IScriptBindings,
+    fns: IScriptFunctions,
+    units: IUnit,
+    context: IScriptFnContext,
+    mode: IProgramMode,
+  ) {
+    this.script = script;
+    this.state = state;
+    this.otherStates = otherStates;
+    this.bindings = bindings;
+    this.fns = fns;
+    this.units = units;
+    this.context = context;
+    this.mode = mode;
+  }
+
+  // public static isValid(
+  //   script: string,
+  //   state: IProgramState,
+  //   dayData: IDayData,
+  //   settings: ISettings,
+  //   exerciseType?: IExerciseType
+  // ): LiftoscriptSyntaxError | undefined {
+  //   const liftoscriptEvaluator = new ScriptRunner(
+  //     script,
+  //     state,
+  //     {},
+  //     Progress_createEmptyScriptBindings(dayData, settings),
+  //     Progress_createScriptFunctions(settings),
+  //     settings.units,
+  //     { exerciseType: exerciseType, unit: settings.units, prints: [] },
+  //     "planner"
+  //   );
+  //   try {
+  //     liftoscriptEvaluator.parse();
+  //   } catch (e) {
+  //     if (e instanceof LiftoscriptSyntaxError) {
+  //       return e;
+  //     } else {
+  //       throw e;
+  //     }
+  //   }
+  //   return undefined;
+  // }
+
+  public parse(): [LiftoscriptEvaluator, Tree] {
+    const liftoscriptTree = LiftoscriptParser.parse(this.script);
+    const liftoscriptEvaluator = new LiftoscriptEvaluator(
+      this.script,
+      this.state,
+      this.otherStates,
+      this.bindings,
+      this.fns,
+      this.context,
+      this.units,
+      this.mode,
+    );
+    liftoscriptEvaluator.parse(liftoscriptTree.topNode);
+    return [liftoscriptEvaluator, liftoscriptTree];
+  }
+
+  public switchWeightsToUnit(toUnit: IUnit): string {
+    const liftoscriptTree = LiftoscriptParser.parse(this.script);
+    const liftoscriptEvaluator = new LiftoscriptEvaluator(
+      this.script,
+      this.state,
+      this.otherStates,
+      this.bindings,
+      this.fns,
+      this.context,
+      this.units,
+      this.mode,
+    );
+    return liftoscriptEvaluator.switchWeightsToUnit(
+      liftoscriptTree.topNode,
+      toUnit,
+    );
+  }
+
+  public getStateVariableKeys(): Set<string> {
+    const liftoscriptTree = LiftoscriptParser.parse(this.script);
+    const liftoscriptEvaluator = new LiftoscriptEvaluator(
+      this.script,
+      this.state,
+      this.otherStates,
+      this.bindings,
+      this.fns,
+      this.context,
+      this.units,
+      this.mode,
+    );
+    return liftoscriptEvaluator.getStateVariableKeys(liftoscriptTree.topNode);
+  }
+
+  // public static hasStateVariable(script: string, name: string): boolean {
+  //   const expr = LiftoscriptParser.parse(script);
+  //   const cursor = expr.cursor();
+  //   do {
+  //     if (cursor.node.type.name === NodeName.StateVariable) {
+  //       const keywordNode = cursor.node.getChild(NodeName.Keyword);
+  //       if (keywordNode != null) {
+  //         const value = LiftoscriptEvaluator.getValue(script, keywordNode);
+  //         if (value === name) {
+  //           return true;
+  //         }
+  //       }
+  //     }
+  //   } while (cursor.next());
+  //   return false;
+  // }
+  //
+  // public static hasKeyword(script: string, name: string): boolean {
+  //   const expr = LiftoscriptParser.parse(script);
+  //   const cursor = expr.cursor();
+  //   do {
+  //     if (cursor.node.type.name === NodeName.Keyword) {
+  //       if (LiftoscriptEvaluator.getValue(script, cursor.node) === name) {
+  //         return true;
+  //       }
+  //     }
+  //   } while (cursor.next());
+  //   return false;
+  // }
+  //
+  // public static safe<T>(cb: () => T, errorMsg: (e: Error) => string, defaultValue: T, disabled?: boolean): T {
+  //   let value: T;
+  //   try {
+  //     value = cb();
+  //   } catch (e) {
+  //     if (!disabled && e instanceof LiftoscriptSyntaxError) {
+  //       const lastAlertTs = lastAlertDisplayedTs[e.message];
+  //       console.error(e);
+  //       if (lastAlertTs == null || lastAlertTs < Date.now() - 1000 * 60 * 1) {
+  //         if (typeof window !== "undefined") {
+  //           alert(errorMsg(e));
+  //         }
+  //         this.reportError("Error during Liftoscript execution", e);
+  //         lastAlertDisplayedTs[e.message] = Date.now();
+  //       }
+  //       value = defaultValue;
+  //     } else {
+  //       throw e;
+  //     }
+  //   }
+  //   return value;
+  // }
+  //
+  // public execute(type: "reps"): number;
+  // public execute(type: "rpe"): number;
+  // public execute(type: "weight"): IWeight | IPercentage;
+  // public execute(type: "timer"): number;
+  public execute(type?: undefined): number | IWeight | boolean;
+  public execute(
+    type?: "reps" | "weight" | "timer" | "rpe",
+  ): number | IWeight | IPercentage | boolean {
+    const [liftoscriptEvaluator, liftoscriptTree] = this.parse();
+    const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
+    let result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
+    if (result == null) {
+      result = 0;
+    }
+    const output = this.convertResult(type, result);
+    this.updates = liftoscriptEvaluator.updates;
+
+    return output;
+  }
+
+  public getUpdates(): ILiftoscriptEvaluatorUpdate[] {
+    return this.updates;
+  }
+
+  private convertResult(
+    type: "reps" | "weight" | "timer" | "rpe" | undefined,
+    result: number | IWeight | IPercentage | boolean,
+  ): number | IWeight | IPercentage | boolean {
+    if (type === "reps" || type === "timer") {
+      if (typeof result !== "number") {
+        throw new LiftoscriptSyntaxError(
+          "Expected to get number as a result",
+          0,
+          0,
+          0,
+          0,
+        );
+      } else if (result < 0) {
+        return 0;
+      } else {
+        return result;
+      }
+    } else if (type === "rpe") {
+      if (typeof result !== "number") {
+        throw new LiftoscriptSyntaxError(
+          "Expected to get number as a result",
+          0,
+          0,
+          0,
+          0,
+        );
+      } else {
+        return Math.round(Math.min(10, Math.max(0, result)) / 0.5) * 0.5;
+      }
+    } else if (type === "weight") {
+      if (typeof result === "boolean") {
+        throw new LiftoscriptSyntaxError(
+          "Expected to get number, percentage or weight as a result",
+          0,
+          0,
+          0,
+          0,
+        );
+      } else if (typeof result === "number") {
+        return Weight_build(result, this.units);
+      } else {
+        if (result.value < 0) {
+          return Weight_build(0, this.units);
+        } else {
+          return result;
+        }
+      }
+    } else {
+      return result;
+    }
+  }
+
+  // private static reportError(msg: string, error?: Error): void {
+  //   if (typeof Rollbar === "undefined") {
+  //     return;
+  //   }
+  //   const payload = {
+  //     error: error ? { message: error.message, name: error.name, stack: error.stack } : undefined,
+  //   };
+  //   Rollbar.error(msg, payload);
+  // }
+}
 //#endregion
 
-//#region ________
+//#region PlannerExerciseEvaluatorText
+function getChildren(node: SyntaxNode): SyntaxNode[] {
+  const cur = node.cursor();
+  const result: SyntaxNode[] = [];
+  if (!cur.firstChild()) {
+    return result;
+  }
+  do {
+    result.push(cur.node);
+  } while (cur.nextSibling());
+  return result;
+}
+
+interface IPlannerExerciseEvaluatorTextWeek {
+  name: string;
+  description?: string;
+  days: IPlannerExerciseEvaluatorTextDay[];
+}
+
+interface IPlannerExerciseEvaluatorTextDay {
+  name: string;
+  description?: string;
+  exercises: string[];
+}
+
+type IPlannerNonExerciseFullTextLine =
+  | { type: "comment"; line: string }
+  | { type: "triplelinecomment"; line: string }
+  | { type: "empty"; line: string };
+
+function fullTextLineToWeekdayDescription(
+  line: IPlannerNonExerciseFullTextLine,
+): string {
+  switch (line.type) {
+    case "comment":
+      return line.line.replace(/^\s*\/\/\s*/, "").trim();
+    case "triplelinecomment":
+      return line.line.replace(/^\s*\/\/\/\s*/, "").trim();
+    case "empty":
+      return "";
+  }
+}
+
+class PlannerExerciseEvaluatorText {
+  private readonly script: string;
+  private weeks: IPlannerExerciseEvaluatorTextWeek[] = [];
+  private ongoingLines: IPlannerNonExerciseFullTextLine[] = [];
+
+  constructor(script: string) {
+    this.script = script;
+  }
+
+  private getValue(node: SyntaxNode): string {
+    return this.script.slice(node.from, node.to);
+  }
+
+  private getWeekDayOngoingLines(): {
+    linesToPreviousExercise: IPlannerNonExerciseFullTextLine[];
+    nextLines: IPlannerNonExerciseFullTextLine[];
+  } {
+    const ongoingLines = [...this.ongoingLines];
+    let anyCommentStarted = false;
+    let commentStarted = false;
+    const linesToPreviousExercise: IPlannerNonExerciseFullTextLine[] = [];
+    const nextLines: IPlannerNonExerciseFullTextLine[] = [];
+    for (let i = 0; i < ongoingLines.length; i++) {
+      const line = ongoingLines[i];
+      if (!anyCommentStarted && line?.type === "empty") {
+        continue;
+      }
+      if (line?.type === "comment" || line?.type === "triplelinecomment") {
+        anyCommentStarted = true;
+      }
+      if (line?.type === "comment") {
+        commentStarted = true;
+      }
+      if (anyCommentStarted && !commentStarted) {
+        linesToPreviousExercise.push(line);
+      }
+      if (commentStarted && line?.type === "comment") {
+        nextLines.push(line);
+      }
+    }
+    for (let i = nextLines.length - 1; i >= 0; i--) {
+      const line = nextLines[i];
+      if (line.type === "empty") {
+        nextLines.pop();
+      } else {
+        break;
+      }
+    }
+    for (let i = linesToPreviousExercise.length - 1; i >= 0; i--) {
+      const line = linesToPreviousExercise[i];
+      if (line.type === "empty") {
+        linesToPreviousExercise.pop();
+      } else {
+        break;
+      }
+    }
+    return { linesToPreviousExercise, nextLines };
+  }
+
+  private getWeekDayDescriptionAndFillLastDay(): string | undefined {
+    const { linesToPreviousExercise, nextLines } =
+      this.getWeekDayOngoingLines();
+    if (linesToPreviousExercise.length > 0) {
+      const lastDay = this.getLastDay();
+      if (lastDay) {
+        lastDay.exercises.push(
+          ...linesToPreviousExercise.map((line) => line.line),
+        );
+      }
+    }
+    const description =
+      nextLines.length > 0
+        ? nextLines.map(fullTextLineToWeekdayDescription).join("\n").trim()
+        : undefined;
+    return description;
+  }
+
+  private getLastDay(): IPlannerExerciseEvaluatorTextDay | undefined {
+    const lastWeek = this.weeks[this.weeks.length - 1];
+    return lastWeek?.days[lastWeek.days.length - 1];
+  }
+
+  private evaluateLine(expr: SyntaxNode): void {
+    if (expr.type.name === PlannerNodeName.Week) {
+      const weekName = this.getValue(expr).replace(/^#+/, "").trim();
+      const description = this.getWeekDayDescriptionAndFillLastDay();
+      this.weeks.push({ name: weekName, description, days: [] });
+      this.ongoingLines = [];
+    } else if (expr.type.name === PlannerNodeName.Day) {
+      const dayName = this.getValue(expr).replace(/^#+/, "").trim();
+      const description = this.getWeekDayDescriptionAndFillLastDay();
+      this.weeks[this.weeks.length - 1].days.push({
+        name: dayName,
+        exercises: [],
+        description,
+      });
+      this.ongoingLines = [];
+    } else if (expr.type.name === PlannerNodeName.EmptyExpression) {
+      this.ongoingLines.push({ type: "empty", line: this.getValue(expr) });
+    } else if (expr.type.name === PlannerNodeName.LineComment) {
+      this.ongoingLines.push({ type: "comment", line: this.getValue(expr) });
+    } else if (expr.type.name === PlannerNodeName.TripleLineComment) {
+      this.ongoingLines.push({
+        type: "triplelinecomment",
+        line: this.getValue(expr),
+      });
+    } else if (expr.type.name === PlannerNodeName.ExerciseExpression) {
+      const lastWeek = this.weeks[this.weeks.length - 1];
+      const lastDay = lastWeek
+        ? lastWeek.days[lastWeek.days.length - 1]
+        : undefined;
+      const exercises = lastDay?.exercises;
+      if (exercises) {
+        for (const line of this.ongoingLines) {
+          exercises.push(line.line);
+        }
+        exercises.push(this.getValue(expr));
+        this.ongoingLines = [];
+      }
+    }
+  }
+
+  public evaluate(expr: SyntaxNode): IPlannerExerciseEvaluatorTextWeek[] {
+    if (expr.type.name === PlannerNodeName.Program) {
+      this.ongoingLines = [];
+      this.weeks = [];
+      for (const child of CollectionUtils_compact(getChildren(expr))) {
+        this.evaluateLine(child);
+      }
+      return this.weeks;
+    } else {
+      throw new Error(`Unexpected node type ${expr.type.name}`);
+    }
+  }
+}
+
 //#endregion
 
-//#region ________
+//#region PlannerNodeName
+enum PlannerNodeName {
+  Program = "Program",
+  LineComment = "LineComment",
+  TripleLineComment = "TripleLineComment",
+  Week = "Week",
+  Day = "Day",
+  ExerciseExpression = "ExerciseExpression",
+  ExerciseName = "ExerciseName",
+  NonSeparator = "NonSeparator",
+  Repeat = "Repeat",
+  Rep = "Rep",
+  Int = "Int",
+  RepRange = "RepRange",
+  SectionSeparator = "SectionSeparator",
+  ExerciseSection = "ExerciseSection",
+  ExerciseProperty = "ExerciseProperty",
+  ExercisePropertyName = "ExercisePropertyName",
+  Keyword = "Keyword",
+  FunctionExpression = "FunctionExpression",
+  FunctionName = "FunctionName",
+  FunctionArgument = "FunctionArgument",
+  Number = "Number",
+  Plus = "Plus",
+  PosNumber = "PosNumber",
+  Float = "Float",
+  Weight = "Weight",
+  Percentage = "Percentage",
+  Rpe = "Rpe",
+  KeyValue = "KeyValue",
+  Liftoscript = "Liftoscript",
+  ReuseLiftoscript = "ReuseLiftoscript",
+  ReuseSection = "ReuseSection",
+  WarmupExerciseSets = "WarmupExerciseSets",
+  WarmupExerciseSet = "WarmupExerciseSet",
+  WarmupSetPart = "WarmupSetPart",
+  None = "None",
+  ExerciseSets = "ExerciseSets",
+  CurrentVariation = "CurrentVariation",
+  ExerciseSet = "ExerciseSet",
+  Timer = "Timer",
+  SetPart = "SetPart",
+  WeightWithPlus = "WeightWithPlus",
+  PercentageWithPlus = "PercentageWithPlus",
+  SetLabel = "SetLabel",
+  ReuseSectionWithWeekDay = "ReuseSectionWithWeekDay",
+  WeekDay = "WeekDay",
+  WeekOrDay = "WeekOrDay",
+  Current = "Current",
+  Superset = "Superset",
+  SupersetKeyword = "SupersetKeyword",
+  AskWeight = "AskWeight",
+  EmptyExpression = "EmptyExpression",
+}
+
+// const plannerExerciseStyles = {
+//   [`${[PlannerNodeName.SetPart]}/...`]: t.atom,
+//   [`${[PlannerNodeName.WarmupSetPart]}/...`]: t.atom,
+//   [`${[PlannerNodeName.Rpe]}/...`]: t.number,
+//   [`${[PlannerNodeName.Timer]}/...`]: t.keyword,
+//   [`${[PlannerNodeName.Weight]}/...`]: t.number,
+//   [`${[PlannerNodeName.Percentage]}/...`]: t.number,
+//   [PlannerNodeName.AskWeight]: t.number,
+//   [PlannerNodeName.LineComment]: t.lineComment,
+//   [PlannerNodeName.TripleLineComment]: t.blockComment,
+//   [PlannerNodeName.SupersetKeyword]: t.keyword,
+//   [PlannerNodeName.SectionSeparator]: t.lineComment,
+//   [`${[PlannerNodeName.ExercisePropertyName]}/...`]: t.keyword,
+//   [`${[PlannerNodeName.FunctionName]}/...`]: t.attributeName,
+//   [`${[PlannerNodeName.FunctionArgument]}/...`]: t.attributeValue,
+//   [PlannerNodeName.None]: t.atom,
+//   [PlannerNodeName.Week]: t.annotation,
+//   [PlannerNodeName.Day]: t.docComment,
+//   [PlannerNodeName.WeekDay]: t.atom,
+//   [PlannerNodeName.Repeat]: t.atom,
+// };
 //#endregion
 
 //#region ________
