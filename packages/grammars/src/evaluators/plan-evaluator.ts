@@ -4,14 +4,21 @@ import type { SyntaxNode } from "@lezer/common";
 import { unsafeCoerce } from "fp-ts/lib/function";
 import {
   CollectionUtils_compact,
-  CollectionUtils_sortBy,
+  CollectionUtils_sortBy,CollectionUtils_groupByExpr, CollectionUtils_sort, CollectionUtils_flat, CollectionUtils_findIndexReverse
 } from "../utils/collection";
 import { UidFactory_generateUid } from "@/utils/generator";
 import { MathUtils_applyOp } from "@/utils/math";
 import type { IEither, IArrayElement } from "@/utils/types";
-import { ObjectUtils_pick, ObjectUtils_isEqual } from "@/utils/object";
-import { StringUtils_unindent } from "@/utils/string";
-import { MathUtils_roundFloat } from "@/utils/math";
+import { ObjectUtils_pick, ObjectUtils_isEqual, ObjectUtils_clone, ObjectUtils_keys, ObjectUtils_values, ObjectUtils_filter, ObjectUtils_entriesNonnull } from "@/utils/object";
+import { StringUtils_unindent,StringUtils_fuzzySearch,
+  StringUtils_dashcase,
+  StringUtils_uncamelCase,
+  StringUtils_camelCase,
+  StringUtils_undashcase,
+  StringUtils_capitalize, } from "@/utils/string";
+import { DateUtils_fromYYYYMMDD, DateUtils_fromYYYYMMDDStr } from "@/utils/date";
+import { lf, lb, LensBuilder } from "lens-shmens";
+import deepmerge from "deepmerge";
 
 //#region Program
 
@@ -6909,19 +6916,7938 @@ class PlannerExerciseEvaluator {
 
 //#endregion
 
-//#region ________
+//#region Planner Evaluator
+type IByTag<T> = Record<number, T>;
+type IByExercise<T> = Record<string, T>;
+type IByExerciseWeekDay<T> = Record<string, Record<number, Record<number, T>>>;
+type IByWeekDayExercise<T> = Record<number, Record<number, Record<string, T>>>;
+
+interface IPlannerEvalMetadata {
+  byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>;
+  byWeekDayExercise: IByWeekDayExercise<IPlannerProgramExercise>;
+  fullNames: Set<string>;
+  notused: Set<string>;
+  properties: {
+    id: IByExercise<{ property: number[]; dayData: Required<IDayData> }>;
+    progress: IByExercise<{ property: IProgramExerciseProgress; dayData: Required<IDayData> }>;
+    update: IByExercise<{ property: IProgramExerciseUpdate; dayData: Required<IDayData> }>;
+    warmup: IByExercise<{ warmupSets: IPlannerProgramExerciseWarmupSet[]; dayData: Required<IDayData> }>;
+  };
+}
+
+// function PlannerEvaluator_getFirstError(evaluatedWeeks: IPlannerEvalResult[][]): PlannerSyntaxError | undefined {
+//   let error: PlannerSyntaxError | undefined;
+//   for (const week of evaluatedWeeks) {
+//     for (const day of week) {
+//       if (!day.success) {
+//         error = day.error;
+//       }
+//     }
+//   }
+//   return error;
+// }
+
+function PlannerEvaluator_fillInMetadata(
+  exercise: IPlannerProgramExercise,
+  metadata: IPlannerEvalMetadata,
+  dayData: Required<IDayData>
+): void {
+  if (exercise.progress?.type === "dp") {
+    const hasRange = exercise.setVariations.some((sv) => sv.sets.some((s) => s.repRange?.minrep != null));
+    if (hasRange) {
+      exercise.progress = { ...exercise.progress, script: PlannerProgramExercise_buildDpRangeScript() };
+    }
+  }
+  if (metadata.byWeekDayExercise[dayData.week - 1]?.[dayData.dayInWeek - 1]?.[exercise.key] != null) {
+    throw PlannerSyntaxError.fromPoint(
+      exercise.fullName,
+      `Exercise ${exercise.key} is already used in this day. Combine them together, or add a label to separate out.`,
+      exercise.points.fullName
+    );
+  }
+  const tagsProp = exercise.tags;
+  if (tagsProp != null && tagsProp.length > 0) {
+    const existingTags = metadata.properties.id[exercise.key];
+    if (existingTags != null && !ObjectUtils_isEqual(existingTags.property, tagsProp)) {
+      const point = exercise.points.idPoint || exercise.points.fullName;
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `Same property 'id' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+        `week ${existingTags.dayData.week + 1}, day ${existingTags.dayData.dayInWeek + 1} ` +
+        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        point
+      );
+    }
+    metadata.properties.id[exercise.key] = {
+      property: tagsProp,
+      dayData,
+    };
+  }
+
+  const progressProp = exercise.progress;
+  if (progressProp != null && progressProp.type !== "none") {
+    const existingProgress = metadata.properties.progress[exercise.key];
+    if (
+      existingProgress != null &&
+      !PlannerExerciseEvaluator.isEqualProgress(progressProp, existingProgress.property)
+    ) {
+      const point = exercise.points.progressPoint || exercise.points.fullName;
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+        `week ${existingProgress.dayData.week + 1}, day ${existingProgress.dayData.dayInWeek + 1} ` +
+        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        point
+      );
+    }
+    metadata.properties.progress[exercise.key] = {
+      property: progressProp,
+      dayData,
+    };
+  }
+
+  const updateProp = exercise.update;
+  if (updateProp != null) {
+    const existingUpdate = metadata.properties.update[exercise.key];
+    if (existingUpdate != null && !PlannerExerciseEvaluator.isEqualUpdate(updateProp, existingUpdate.property)) {
+      const point = exercise.points.updatePoint || exercise.points.fullName;
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `Same property 'update' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+        `week ${existingUpdate.dayData.week + 1}, day ${existingUpdate.dayData.dayInWeek + 1} ` +
+        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        point
+      );
+    }
+    metadata.properties.update[exercise.key] = {
+      property: updateProp,
+      dayData,
+    };
+  }
+  if (exercise.notused) {
+    metadata.notused.add(exercise.key);
+  }
+  if (exercise.warmupSets != null) {
+    const scheme = JSON.stringify(exercise.warmupSets);
+    const ws = metadata.properties.warmup[exercise.key];
+    if (ws != null && JSON.stringify(ws.warmupSets) !== scheme) {
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `Different warmup sets are specified in multiple weeks/days for exercise '${exercise.name}': both in ` +
+        `week ${ws.dayData.week + 1}, day ${ws.dayData.dayInWeek + 1} ` +
+        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+        exercise.points.warmupPoint || exercise.points.fullName
+      );
+    }
+    metadata.properties.warmup[exercise.key] = {
+      warmupSets: exercise.warmupSets,
+      dayData,
+    };
+  }
+  PlannerEvaluator_setByWeekDayExercise(
+    metadata.byWeekDayExercise,
+    exercise.key,
+    dayData.week - 1,
+    dayData.dayInWeek - 1,
+    exercise
+  );
+  PlannerEvaluator_setByExerciseWeekDay(
+    metadata.byExerciseWeekDay,
+    exercise.key,
+    dayData.week - 1,
+    dayData.dayInWeek - 1,
+    exercise
+  );
+  metadata.fullNames.add(exercise.fullName);
+}
+
+function PlannerEvaluator_evaluateDay(
+  day: IPlannerProgramDay,
+  dayData: Required<IDayData>,
+  settings: ISettings
+): IPlannerEvalResult {
+  const tree = plannerExerciseParser.parse(day.exerciseText);
+  const evaluator = new PlannerExerciseEvaluator(day.exerciseText, settings, "perday", dayData);
+  const result = evaluator.evaluate(tree.topNode);
+  if (result.success) {
+    const exercises = result.data[0]?.days[0]?.exercises || [];
+    return { success: true, data: exercises };
+  } else {
+    return result;
+  }
+}
+
+function PlannerEvaluator_getPerDayEvaluatedWeeks(
+  plannerProgram: IPlannerProgram,
+  settings: ISettings
+): {
+  evaluatedWeeks: IPlannerEvalResult[][];
+  metadata: IPlannerEvalMetadata;
+} {
+  let dayIndex = 0;
+  const metadata: IPlannerEvalMetadata = {
+    byExerciseWeekDay: {},
+    byWeekDayExercise: {},
+    fullNames: new Set(),
+    notused: new Set(),
+    properties: { progress: {}, update: {}, warmup: {}, id: {} },
+  };
+  const evaluatedWeeks: IPlannerEvalResult[][] = plannerProgram.weeks.map((week, weekIndex) => {
+    return week.days.map((day, dayInWeekIndex) => {
+      const dayData = {
+        week: weekIndex + 1,
+        dayInWeek: dayInWeekIndex + 1,
+        day: dayIndex + 1,
+      };
+      const result = PlannerEvaluator_evaluateDay(
+        day,
+        { week: weekIndex + 1, dayInWeek: dayInWeekIndex + 1, day: dayIndex + 1 },
+        settings
+      );
+      dayIndex += 1;
+      if (result.success) {
+        const exercises = result.data;
+        for (const exercise of exercises) {
+          try {
+            PlannerEvaluator_fillInMetadata(exercise, metadata, dayData);
+          } catch (e) {
+            if (e instanceof PlannerSyntaxError) {
+              return { success: false, error: e };
+            } else {
+              throw e;
+            }
+          }
+        }
+        return { success: true, data: exercises };
+      } else {
+        return result;
+      }
+    });
+  });
+  return { evaluatedWeeks, metadata };
+}
+
+// function PlannerEvaluator_changeExerciseName(
+//   text: string,
+//   from: string,
+//   to: string,
+//   settings: ISettings
+// ): string {
+//   const evaluator = new PlannerExerciseEvaluator(text, settings, "perday");
+//   const tree = plannerExerciseParser.parse(text);
+//   const result = evaluator.changeExerciseName(tree.topNode, from, to);
+//   return result;
+// }
+//
+// function PlannerEvaluator_getFullEvaluatedWeeks(
+//   fullProgramText: string,
+//   settings: ISettings
+// ): {
+//   evaluatedWeeks: IPlannerEvalFullResult;
+//   metadata: IPlannerEvalMetadata;
+// } {
+//   let dayIndex = 0;
+//   const metadata: IPlannerEvalMetadata = {
+//     byExerciseWeekDay: {},
+//     byWeekDayExercise: {},
+//     fullNames: new Set(),
+//     notused: new Set(),
+//     properties: { progress: {}, update: {}, warmup: {}, id: {} },
+//   };
+//   const evaluator = new PlannerExerciseEvaluator(fullProgramText, settings, "full");
+//   const tree = plannerExerciseParser.parse(fullProgramText);
+//   const result = evaluator.evaluate(tree.topNode);
+//   if (result.success) {
+//     try {
+//       for (let weekIndex = 0; weekIndex < result.data.length; weekIndex += 1) {
+//         const week = result.data[weekIndex];
+//         for (let dayInWeekIndex = 0; dayInWeekIndex < week.days.length; dayInWeekIndex += 1) {
+//           const day = week.days[dayInWeekIndex];
+//           const exercises = day.exercises;
+//           for (const exercise of exercises) {
+//             const dayData = { week: weekIndex + 1, dayInWeek: dayInWeekIndex + 1, day: dayIndex + 1 };
+//             PlannerEvaluator_fillInMetadata(exercise, metadata, dayData);
+//           }
+//           dayIndex += 1;
+//         }
+//       }
+//     } catch (e) {
+//       if (e instanceof PlannerSyntaxError) {
+//         return { evaluatedWeeks: { success: false, error: e }, metadata };
+//       } else {
+//         throw e;
+//       }
+//     }
+//     return { evaluatedWeeks: result, metadata };
+//   } else {
+//     return { evaluatedWeeks: result, metadata };
+//   }
+// }
+
+function PlannerEvaluator_getDayIndexFromWeekAndDayInWeekIndex(
+  evaluatedWeeks: IPlannerEvalResult[][],
+  weekIndex: number,
+  dayInWeekIndex: number
+): number | undefined {
+  let dayIndex = 0;
+  for (let i = 0; i < evaluatedWeeks.length; i += 1) {
+    const week = evaluatedWeeks[i];
+    for (let j = 0; j < week.length; j += 1) {
+      if (i === weekIndex && j === dayInWeekIndex) {
+        return dayIndex;
+      }
+      dayIndex += 1;
+    }
+  }
+  return undefined;
+}
+
+function PlannerEvaluator_fillRepeats(
+  exercise: IPlannerProgramExercise,
+  evaluatedWeeks: IPlannerEvalResult[][],
+  dayInWeekIndex: number,
+  byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>
+): void {
+  for (const repeatWeek of exercise.repeat ?? []) {
+    const repeatWeekIndex = repeatWeek - 1;
+    if (byExerciseWeekDay[exercise.key]?.[repeatWeekIndex]?.[dayInWeekIndex] == null) {
+      const dayData = {
+        week: repeatWeek,
+        dayInWeek: dayInWeekIndex + 1,
+        day:
+          (PlannerEvaluator_getDayIndexFromWeekAndDayInWeekIndex(evaluatedWeeks, repeatWeekIndex, dayInWeekIndex) ??
+            0) + 1,
+      };
+      const repeatedExercise: IPlannerProgramExercise = {
+        ...exercise,
+        reuse: exercise.reuse ? { ...exercise.reuse } : undefined,
+        progress: exercise.progress
+          ? { ...exercise.progress, reuse: exercise.progress.reuse ? { ...exercise.progress.reuse } : undefined }
+          : undefined,
+        update: exercise.update
+          ? { ...exercise.update, reuse: exercise.update.reuse ? { ...exercise.update.reuse } : undefined }
+          : undefined,
+        repeat: [],
+        dayData,
+        isRepeat: true,
+      };
+      PlannerEvaluator_setByExerciseWeekDay(
+        byExerciseWeekDay,
+        exercise.key,
+        repeatWeekIndex,
+        dayInWeekIndex,
+        repeatedExercise
+      );
+      const day = evaluatedWeeks[repeatWeekIndex]?.[dayInWeekIndex];
+      if (day?.success) {
+        day.data.push(repeatedExercise);
+      }
+    }
+  }
+}
+
+function PlannerEvaluator_fillSetReuses(
+  exercise: IPlannerProgramExercise,
+  evaluatedWeeks: IPlannerEvalResult[][],
+  weekIndex: number,
+  settings: ISettings,
+  metadata: IPlannerEvalMetadata
+): void {
+  if (exercise.reuse && exercise.points.reuseSetPoint) {
+    const reuse = exercise.reuse;
+    const originalExercises = PlannerEvaluator_findOriginalExercisesAtWeekDay(
+      settings,
+      reuse.fullName,
+      evaluatedWeeks,
+      reuse.week ?? weekIndex + 1 ?? 1,
+      reuse.day
+    );
+    if (originalExercises.length > 1) {
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `There're several exercises matching, please be more specific with [week:day] syntax`,
+        exercise.points.reuseSetPoint
+      );
+    }
+    const originalExercise = originalExercises[0];
+    if (!originalExercise) {
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `No such exercise ${reuse.fullName} at week: ${reuse.week ?? weekIndex + 1}${
+          reuse.day != null ? `, day: ${reuse.day}` : ""
+        }`,
+        exercise.points.reuseSetPoint
+      );
+    }
+    if (originalExercise.exercise.reuse?.fullName != null) {
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `Original exercise cannot reuse another exercise's sets x reps`,
+        exercise.points.reuseSetPoint
+      );
+    }
+    if (
+      originalExercise.exercise.progress?.reuse != null &&
+      exercise.progress == null &&
+      !originalExercise.exercise.notused
+    ) {
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `This exercise doesn't specify progress - so the original USED exercise's progress cannot reuse another exercise's progress`,
+        exercise.points.reuseSetPoint
+      );
+    }
+    if (
+      originalExercise.exercise.update?.reuse != null &&
+      exercise.update == null &&
+      !originalExercise.exercise.notused
+    ) {
+      throw PlannerSyntaxError.fromPoint(
+        exercise.fullName,
+        `This exercise doesn't specify 'update' - so the original exercise's 'update' cannot reuse another exercise's 'update'`,
+        exercise.points.reuseSetPoint
+      );
+    }
+    if (originalExercise.exercise.progress != null && exercise.progress == null) {
+      const sharedProgressReuse: IPlannerProgramReuse = {
+        fullName: originalExercise.exercise.fullName,
+        source: "overall",
+      };
+      const originalProgress = originalExercise.exercise.progress;
+      PlannerEvaluator_forEachSiblingInstance(exercise, metadata, (other) => {
+        if (other.progress == null) {
+          other.progress = {
+            type: originalProgress.type,
+            state: ObjectUtils_clone(originalProgress.state),
+            stateMetadata: ObjectUtils_clone(originalProgress.stateMetadata),
+            reuse: sharedProgressReuse,
+          };
+        }
+      });
+    }
+    if (originalExercise.exercise.update != null && exercise.update == null) {
+      const sharedUpdateReuse: IPlannerProgramReuse = {
+        fullName: originalExercise.exercise.fullName,
+        source: "overall",
+      };
+      const originalUpdate = originalExercise.exercise.update;
+      PlannerEvaluator_forEachSiblingInstance(exercise, metadata, (other) => {
+        if (other.update == null) {
+          other.update = {
+            type: originalUpdate.type,
+            reuse: sharedUpdateReuse,
+          };
+        }
+      });
+    }
+
+    exercise.reuse.exercise = originalExercise.exercise;
+  }
+}
+
+function PlannerEvaluator_forEachSiblingInstance(
+  exercise: IPlannerProgramExercise,
+  metadata: IPlannerEvalMetadata,
+  cb: (other: IPlannerProgramExercise) => void
+): void {
+  const byKey = metadata.byExerciseWeekDay[exercise.key];
+  if (byKey == null) {
+    return;
+  }
+  for (const weekKey of ObjectUtils_keys(byKey)) {
+    const weekEntry = byKey[weekKey as unknown as number];
+    for (const dayKey of ObjectUtils_keys(weekEntry)) {
+      cb(weekEntry[dayKey as unknown as number]);
+    }
+  }
+}
+
+function PlannerEvaluator_fillEvaluatedSetVariations(exercise: IPlannerProgramExercise): void {
+  const setVariations = PlannerProgramExercise_setVariations(exercise);
+  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(exercise, setVariations);
+  exercise.evaluatedSetVariations = evaluatedSetVariations;
+}
+
+function PlannerEvaluator_fillDescriptions(
+  exercise: IPlannerProgramExercise,
+  evaluatedWeeks: IPlannerEvalResult[][],
+  weekIndex: number,
+  dayIndex: number
+): void {
+  if (exercise.descriptions == null || exercise.descriptions.values.length === 0) {
+    const lastWeekExercise = PlannerEvaluator_findLastWeekExercise(
+      evaluatedWeeks,
+      weekIndex,
+      dayIndex,
+      exercise,
+      (ex) => ex.descriptions != null
+    );
+    if (lastWeekExercise && lastWeekExercise.descriptions) {
+      exercise.descriptions = ObjectUtils_clone(lastWeekExercise.descriptions);
+    }
+  }
+}
+
+function PlannerEvaluator_fillDescriptionReuses(
+  exercise: IPlannerProgramExercise,
+  weekIndex: number,
+  byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>,
+  settings: ISettings
+): void {
+  if (
+    exercise.descriptions != null &&
+    exercise.descriptions.values.length === 1 &&
+    exercise.descriptions.values[0].value?.startsWith("...")
+  ) {
+    const reusingName = exercise.descriptions.values[0].value.slice(3).trim();
+    const result = PlannerEvaluator_findReusedDescriptions(reusingName, weekIndex, byExerciseWeekDay, settings);
+    if (result != null) {
+      const { descriptions, exercise: originalExercise } = result;
+      exercise.descriptions = {
+        values: [...ObjectUtils_clone(descriptions.values)],
+        reuse: { fullName: originalExercise.fullName, exercise: originalExercise, source: "specific" },
+      };
+    }
+  }
+}
+
+function PlannerEvaluator_fillSingleProperties(
+  exercise: IPlannerProgramExercise,
+  metadata: IPlannerEvalMetadata
+): void {
+  if (metadata.notused.has(exercise.key)) {
+    exercise.notused = true;
+  }
+
+  if (metadata.properties.progress[exercise.key] != null) {
+    const existingProgress = exercise.progress;
+    if (!existingProgress) {
+      exercise.progress = metadata.properties.progress[exercise.key].property;
+    }
+  }
+
+  if (metadata.properties.update[exercise.key] != null && !exercise.update) {
+    exercise.update = metadata.properties.update[exercise.key].property;
+  }
+
+  if (metadata.properties.warmup[exercise.key] != null) {
+    exercise.warmupSets = metadata.properties.warmup[exercise.key].warmupSets;
+  }
+}
+
+function PlannerEvaluator_fillProgressReuses(
+  evaluatedWeeks: IPlannerEvalResult[][],
+  exercise: IPlannerProgramExercise,
+  settings: ISettings,
+  metadata: IPlannerEvalMetadata
+): void {
+  const progress = exercise.progress;
+  if (progress?.type === "custom") {
+    const fullName = progress.reuse?.fullName;
+    if (progress.reuse && fullName) {
+      const key = PlannerKey_fromFullName(fullName, settings.exercises);
+      const point = exercise.points.progressPoint || exercise.points.fullName;
+      if (metadata.byExerciseWeekDay[key] == null) {
+        throw PlannerSyntaxError.fromPoint(exercise.fullName, `No such exercise ${fullName}`, point);
+      }
+      const originalProperty = metadata.properties.progress[key];
+      const dayData = originalProperty?.dayData;
+      const originalProgress = originalProperty?.property;
+      if (!originalProgress || !dayData) {
+        throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify progress", point);
+      }
+      if (originalProgress.reuse?.fullName != null && !originalProgress.reuse?.exercise?.notused) {
+        throw PlannerSyntaxError.fromPoint(exercise.fullName, `Original exercise cannot reuse another progress`, point);
+      }
+      if (originalProgress.type !== "custom") {
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          "Original exercise should specify custom progress",
+          point
+        );
+      }
+      const originalState = originalProgress.state;
+      const state = progress.state;
+      for (const stateKey of ObjectUtils_keys(originalState)) {
+        const value = originalState[stateKey];
+        if (state[key] != null && Weight_type(value) !== Weight_type(state[stateKey])) {
+          throw PlannerSyntaxError.fromPoint(exercise.fullName, `Wrong type of state variable ${stateKey}`, point);
+        }
+      }
+      const originalExercises = PlannerEvaluator_findOriginalExercisesAtWeekDay(
+        settings,
+        fullName,
+        evaluatedWeeks,
+        dayData.week,
+        dayData.dayInWeek
+      );
+      const originalExercise = originalExercises[0]?.exercise;
+      if (
+        originalExercise?.reuse != null &&
+        (originalExercise.progress == null || originalExercise.progress.reuse != null)
+      ) {
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          `Original exercise '${originalExercise.fullName}' should not reuse other exercise`,
+          point
+        );
+      }
+      progress.reuse.exercise = originalExercise;
+    }
+  }
+}
+
+function PlannerEvaluator_checkUpdateScript(
+  exercise: IPlannerProgramExercise,
+  settings: ISettings,
+  dayData: IDayData
+): void {
+  const update = exercise.update;
+  if (update?.type === "custom") {
+    const { script, liftoscriptNode } = update;
+    if (script && liftoscriptNode) {
+      const exerciseType = PlannerProgramExercise_getExercise(exercise, settings);
+      const state = PlannerProgramExercise_getState(exercise);
+      const liftoscriptEvaluator = new ScriptRunner(
+        script,
+        state,
+        {},
+        Progress_createEmptyScriptBindings(dayData, settings),
+        Progress_createScriptFunctions(settings),
+        settings.units,
+        { exerciseType, unit: settings.units, prints: [] },
+        "update"
+      );
+      try {
+        liftoscriptEvaluator.parse();
+      } catch (e) {
+        if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
+          const [line] = PlannerExerciseEvaluator.getLineAndOffset(script, liftoscriptNode);
+          throw new PlannerSyntaxError(
+            e.message,
+            line + e.line,
+            e.offset,
+            liftoscriptNode.from + e.from,
+            liftoscriptNode.from + e.to
+          );
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+}
+
+function PlannerEvaluator_fillUpdateReuses(
+  evaluatedWeeks: IPlannerEvalResult[][],
+  exercise: IPlannerProgramExercise,
+  settings: ISettings,
+  metadata: IPlannerEvalMetadata
+): void {
+  const update = exercise.update;
+  if (update?.type === "custom") {
+    const fullName = update.reuse?.fullName;
+    if (update.reuse && fullName) {
+      const key = PlannerKey_fromFullName(fullName, settings.exercises);
+      const point = exercise.points.updatePoint || exercise.points.fullName;
+
+      if (metadata.byExerciseWeekDay[key] == null) {
+        throw PlannerSyntaxError.fromPoint(exercise.fullName, `No such exercise ${fullName}`, point);
+      }
+      const originalProperty = metadata.properties.update[key];
+      const originalUpdate = originalProperty?.property;
+      const dayData = originalProperty?.dayData;
+      if (!originalUpdate || !dayData) {
+        throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify update", point);
+      }
+      if (originalUpdate.reuse?.fullName != null && !originalUpdate.reuse?.exercise?.notused) {
+        throw PlannerSyntaxError.fromPoint(exercise.fullName, `Original exercise cannot reuse another update`, point);
+      }
+      if (originalUpdate.type !== "custom") {
+        throw PlannerSyntaxError.fromPoint(exercise.fullName, "Original exercise should specify custom update", point);
+      }
+      const stateKeys = originalUpdate.meta?.stateKeys || new Set();
+      if (stateKeys.size !== 0) {
+        const progress = exercise.progress;
+        if (progress == null) {
+          throw PlannerSyntaxError.fromPoint(
+            exercise.fullName,
+            "If 'update' block uses state variables, exercise should define them in 'progress' block",
+            point
+          );
+        }
+        const state = PlannerProgramExercise_getState(exercise);
+        for (const stateKey of stateKeys) {
+          if (state[stateKey] == null) {
+            throw PlannerSyntaxError.fromPoint(
+              exercise.fullName,
+              `Missing state variable ${stateKey} that's used in the original update block`,
+              point
+            );
+          }
+        }
+      }
+      const originalExercises = PlannerEvaluator_findOriginalExercisesAtWeekDay(
+        settings,
+        fullName,
+        evaluatedWeeks,
+        dayData.week,
+        dayData.dayInWeek
+      );
+      const originalExercise = originalExercises[0]?.exercise;
+      if (
+        originalExercise?.reuse != null &&
+        (originalExercise.update == null || originalExercise.update.reuse != null)
+      ) {
+        throw PlannerSyntaxError.fromPoint(
+          exercise.fullName,
+          `Original exercise '${originalExercise.fullName}' should not reuse other exercise`,
+          point
+        );
+      }
+      update.reuse.exercise = originalExercise;
+    }
+  }
+}
+
+function PlannerEvaluator_postProcess(
+  evaluatedWeeks: IPlannerEvalResult[][],
+  settings: ISettings,
+  metadata: IPlannerEvalMetadata
+): void {
+  PlannerEvaluator_iterateOverExercises(
+    evaluatedWeeks,
+    (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
+      PlannerEvaluator_fillDescriptions(exercise, evaluatedWeeks, weekIndex, dayInWeekIndex);
+      PlannerEvaluator_fillRepeats(exercise, evaluatedWeeks, dayInWeekIndex, metadata.byExerciseWeekDay);
+      PlannerEvaluator_fillSingleProperties(exercise, metadata);
+      PlannerEvaluator_checkUnknownExercises(exercise, metadata);
+    }
+  );
+
+  PlannerEvaluator_iterateOverExercises(
+    evaluatedWeeks,
+    (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
+      PlannerEvaluator_fillSetReuses(exercise, evaluatedWeeks, weekIndex, settings, metadata);
+      PlannerEvaluator_fillDescriptionReuses(exercise, weekIndex, metadata.byExerciseWeekDay, settings);
+      PlannerEvaluator_fillProgressReuses(evaluatedWeeks, exercise, settings, metadata);
+      PlannerEvaluator_fillUpdateReuses(evaluatedWeeks, exercise, settings, metadata);
+      PlannerEvaluator_checkUpdateScript(exercise, settings, {
+        week: weekIndex + 1,
+        dayInWeek: dayInWeekIndex + 1,
+        day: dayInWeekIndex + 1,
+      });
+    }
+  );
+  for (const week of evaluatedWeeks) {
+    for (const day of week) {
+      if (day.success) {
+        day.data.sort((ex1, ex2) => {
+          if (ex1.exerciseIndex === ex2.exerciseIndex) {
+            return (ex1.repeating[0] ?? 0) - (ex2.repeating[0] ?? 0);
+          } else {
+            return ex1.exerciseIndex - ex2.exerciseIndex;
+          }
+        });
+      }
+    }
+  }
+
+  PlannerEvaluator_iterateOverExercises(
+    evaluatedWeeks,
+    (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
+      PlannerEvaluator_fillEvaluatedSetVariations(exercise);
+    }
+  );
+}
+
+function PlannerEvaluator_checkUnknownExercises(
+  exercise: IPlannerProgramExercise,
+  metadata: IPlannerEvalMetadata
+): void {
+  if (exercise.exerciseType == null && !metadata.notused.has(exercise.key)) {
+    throw PlannerSyntaxError.fromPoint(
+      exercise.fullName,
+      `Unknown exercise ${exercise.name}`,
+      exercise.points.fullName
+    );
+  }
+}
+
+function PlannerEvaluator_findReusedDescriptions(
+  reusingName: string,
+  currentWeekIndex: number,
+  byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>,
+  settings: ISettings
+): { descriptions: IProgramExerciseDescriptions; exercise: IPlannerProgramExercise } | undefined {
+  const weekDayMatch = reusingName.match(/\[([^]+)\]/);
+  let weekIndex: number | undefined;
+  let dayIndex: number | undefined;
+  if (weekDayMatch != null) {
+    const [dayOrWeekStr, dayStr] = weekDayMatch[1].split(":");
+    if (dayStr != null) {
+      weekIndex = parseInt(dayOrWeekStr, 10);
+      weekIndex = isNaN(weekIndex) ? undefined : weekIndex - 1;
+      dayIndex = parseInt(dayStr, 10);
+      dayIndex = isNaN(dayIndex) ? undefined : dayIndex - 1;
+    } else {
+      dayIndex = parseInt(dayOrWeekStr, 10);
+      dayIndex = isNaN(dayIndex) ? undefined : dayIndex - 1;
+    }
+  }
+  reusingName = reusingName.replace(/\[([^]+)\]/, "").trim();
+  const key = PlannerKey_fromFullName(reusingName, settings.exercises);
+  const weekExercises = ObjectUtils_values(byExerciseWeekDay[key]?.[weekIndex ?? currentWeekIndex] || []);
+  const weekDescriptions = weekExercises.map((d) => d.descriptions);
+  const index = dayIndex ?? 0;
+  if (weekDescriptions[index]) {
+    return { descriptions: weekDescriptions[index], exercise: weekExercises[index] };
+  } else {
+    return undefined;
+  }
+}
+
+function PlannerEvaluator_findOriginalExercisesAtWeekDay(
+  settings: ISettings,
+  fullName: string,
+  program: IPlannerEvalResult[][],
+  atWeek: number,
+  atDay?: number
+): { exercise: IPlannerProgramExercise; dayData: Required<IDayData> }[] {
+  const originalExercises: { exercise: IPlannerProgramExercise; dayData: Required<IDayData> }[] = [];
+  const week = program[atWeek - 1];
+  const candidateDays = atDay != null ? [week[atDay - 1]] : week;
+  for (let dayInWeekIndex = 0; dayInWeekIndex < candidateDays.length; dayInWeekIndex += 1) {
+    const day = candidateDays[dayInWeekIndex];
+    if (day == null || !day.success) {
+      continue;
+    }
+    for (const exercise of day.data) {
+      const reusingKey = PlannerKey_fromPlannerExercise(exercise, settings);
+      const originalKey = PlannerKey_fromFullName(fullName, settings.exercises);
+      if (reusingKey === originalKey) {
+        originalExercises.push({
+          exercise,
+          dayData: {
+            week: atWeek,
+            dayInWeek: dayInWeekIndex + 1,
+            day: 1,
+          },
+        });
+      }
+    }
+  }
+  return originalExercises;
+}
+
+// function PlannerEvaluator_evaluateFull(
+//   fullProgramText: string,
+//   settings: ISettings
+// ): { evaluatedWeeks: IPlannerEvalFullResult; exerciseFullNames: string[] } {
+//   const { evaluatedWeeks, metadata } = PlannerEvaluator_getFullEvaluatedWeeks(fullProgramText, settings);
+//   if (evaluatedWeeks.success) {
+//     const perDayEvaluatedWeeks = PlannerProgram_fullToWeekEvalResult(evaluatedWeeks);
+//     PlannerEvaluator_postProcess(perDayEvaluatedWeeks, settings, metadata);
+//     for (const week of perDayEvaluatedWeeks) {
+//       for (const day of week) {
+//         if (!day.success) {
+//           return {
+//             evaluatedWeeks: { success: false, error: day.error },
+//             exerciseFullNames: Array.from(metadata.fullNames),
+//           };
+//         }
+//       }
+//     }
+//   }
+//   return { evaluatedWeeks, exerciseFullNames: Array.from(metadata.fullNames) };
+// }
+
+function PlannerEvaluator_findLastWeekExercise(
+  program: IPlannerEvalResult[][],
+  weekIndex: number,
+  dayIndex: number,
+  exercise: IPlannerProgramExercise,
+  cond?: (ex: IPlannerProgramExercise) => boolean
+): IPlannerProgramExercise | undefined {
+  for (
+    let i = weekIndex - 1, lastWeekDay = program[i]?.[dayIndex];
+    i >= 0 && lastWeekDay != null;
+    i -= 1, lastWeekDay = program[i]?.[dayIndex]
+  ) {
+    if (lastWeekDay.success) {
+      const lastWeekExercise = lastWeekDay.data.find((ex) => ex.key === exercise.key);
+      if (lastWeekExercise != null && (cond == null || cond(lastWeekExercise))) {
+        return lastWeekExercise;
+      }
+    }
+  }
+  return undefined;
+}
+
+function PlannerEvaluator_setByExerciseWeekDay<T, U extends Record<string, Record<number, Record<number, T>>>>(
+  coll: U,
+  exercise: string,
+  weekIndex: number,
+  dayIndex: number,
+  val: T
+): void {
+  coll[exercise as keyof U] = coll[exercise as keyof U] || {};
+  coll[exercise as keyof U][weekIndex] = coll[exercise as keyof U][weekIndex] || {};
+  coll[exercise as keyof U][weekIndex][dayIndex] = val;
+}
+
+function PlannerEvaluator_setByWeekDayExercise<T, U extends Record<number, Record<number, Record<string, T>>>>(
+  coll: U,
+  exercise: string,
+  weekIndex: number,
+  dayIndex: number,
+  val: T
+): void {
+  coll[weekIndex] = coll[weekIndex] || {};
+  coll[weekIndex][dayIndex] = coll[weekIndex][dayIndex] || {};
+  coll[weekIndex][dayIndex][exercise] = val;
+}
+
+function PlannerEvaluator_iterateOverExercises(
+  program: IPlannerEvalResult[][],
+  cb: (
+    weekIndex: number,
+    dayInWeekIndex: number,
+    dayIndex: number,
+    exerciseIndex: number,
+    exercise: IPlannerProgramExercise
+  ) => void
+): void {
+  let dayIndex = 0;
+  for (let weekIndex = 0; weekIndex < program.length; weekIndex += 1) {
+    const week = program[weekIndex];
+    for (let dayInWeekIndex = 0; dayInWeekIndex < week.length; dayInWeekIndex += 1) {
+      const day = week[dayInWeekIndex];
+      try {
+        if (day?.success) {
+          const exercises = day.data;
+          for (let exerciseIndex = 0; exerciseIndex < exercises.length; exerciseIndex += 1) {
+            cb(weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercises[exerciseIndex]);
+          }
+        }
+      } catch (e) {
+        if (e instanceof PlannerSyntaxError) {
+          week[dayInWeekIndex] = { success: false, error: e };
+        } else {
+          throw e;
+        }
+      }
+      dayIndex += 1;
+    }
+  }
+}
+
+const PlannerEvaluator_forceEvaluate = (
+  plannerProgram: IPlannerProgram,
+  settings: ISettings
+): {
+  evaluatedWeeks: IPlannerEvalResult[][];
+  exerciseFullNames: string[];
+} => {
+  const { evaluatedWeeks, metadata } = PlannerEvaluator_getPerDayEvaluatedWeeks(plannerProgram, settings);
+  PlannerEvaluator_postProcess(evaluatedWeeks, settings, metadata);
+  return { evaluatedWeeks, exerciseFullNames: Array.from(metadata.fullNames) };
+};
+
+const PlannerEvaluator_evaluate = memoize(PlannerEvaluator_forceEvaluate, {
+  maxSize: 10,
+  isEqual: (a: IPlannerProgram | ISettings, b: IPlannerProgram | ISettings) => {
+    if (a == null || b == null) {
+      return a === b;
+    }
+    if ("weeks" in a && "weeks" in b) {
+      const aText = PlannerProgram_generateFullText(a.weeks);
+      const bText = PlannerProgram_generateFullText(b.weeks);
+      return aText === bText;
+    } else {
+      return a === b;
+    }
+  },
+});
+
 //#endregion
 
-//#region ________
+//#region Planner Program Exercise
+type ILinearProgressionType = {
+  type: "linear";
+  increase: IWeight | IPercentage;
+  successesRequired?: number;
+  successesCounter?: number;
+  decrease?: IWeight | IPercentage;
+  failuresRequired?: number;
+  failuresCounter?: number;
+};
+type IDoubleProgressionType = {
+  type: "double";
+  increase: IWeight | IPercentage;
+  minReps: number;
+  maxReps: number;
+};
+type ISumRepsProgressionType = {
+  type: "sumreps";
+  increase: IWeight | IPercentage;
+  reps: number;
+};
+type ICustomProgressionType = {
+  type: "custom";
+};
+type IProgressionType =
+  | ILinearProgressionType
+  | IDoubleProgressionType
+  | ISumRepsProgressionType
+  | ICustomProgressionType;
+
+function PlannerProgramExercise_numberOfSets(exercise: IPlannerProgramExercise): number {
+  return PlannerProgramExercise_sets(exercise).reduce((acc, set) => acc + (set.repRange?.numberOfSets || 0), 0);
+}
+
+function PlannerProgramExercise_getExercise(
+  plannerExercise: IPlannerProgramExercise,
+  settings: ISettings
+): IExercise | undefined {
+  const exercise = Exercise_findByName(plannerExercise.name, settings.exercises);
+  if (exercise == null) {
+    return undefined;
+  }
+  exercise.equipment = plannerExercise.equipment || exercise?.equipment || exercise?.defaultEquipment;
+  return exercise;
+}
+
+function PlannerProgramExercise_setVariations(
+  exercise: IPlannerProgramExercise
+): IPlannerProgramExerciseSetVariation[] {
+  const originalSetVariations = exercise.setVariations;
+  const reuseSetVariations = exercise.reuse?.exercise?.setVariations;
+  const setVariations = (originalSetVariations?.length > 0 ? originalSetVariations : reuseSetVariations) || [];
+  return setVariations.length === 0
+    ? [{ sets: PlannerProgramExercise_sets(exercise), isCurrent: true }]
+    : setVariations;
+}
+
+function PlannerProgramExercise_warmups(
+  exercise: IPlannerProgramExercise
+): IPlannerProgramExerciseWarmupSet[] | undefined {
+  return exercise.warmupSets || exercise.reuse?.exercise?.warmupSets;
+}
+
+function PlannerProgramExercise_programWarmups(
+  exercise: IPlannerProgramExercise,
+  settings: ISettings
+): IProgramExerciseWarmupSet[] | undefined {
+  const exerciseWarmups = PlannerProgramExercise_warmups(exercise);
+  if (exerciseWarmups == null) {
+    return undefined;
+  }
+  const sets: IProgramExerciseWarmupSet[] = [];
+  for (const ws of exerciseWarmups) {
+    for (let i = 0; i < ws.numberOfSets; i += 1) {
+      let value: IWeight | number | undefined = ws.percentage ? ws.percentage / 100 : undefined;
+      if (value == null) {
+        value = ws.weight;
+      }
+      if (value == null) {
+        value = MathUtils_roundTo0005(Weight_rpeMultiplier(ws.reps, 4));
+      }
+      sets.push({
+        reps: ws.reps,
+        value,
+        threshold: Weight_build(0, settings.units),
+      });
+    }
+  }
+  return sets;
+}
+
+function PlannerProgramExercise_toUsed(
+  exercise?: IPlannerProgramExercise
+): IPlannerProgramExerciseWithType | undefined {
+  if (exercise?.exerciseType != null) {
+    return exercise as IPlannerProgramExerciseWithType;
+  } else {
+    return undefined;
+  }
+}
+
+function PlannerProgramExercise_evaluateSetVariations(
+  exercise: IPlannerProgramExercise,
+  setVariations: IPlannerProgramExerciseSetVariation[]
+): IPlannerProgramExerciseEvaluatedSetVariation[] {
+  const evaluatedSetVariations: IPlannerProgramExerciseEvaluatedSetVariation[] = [];
+  for (let i = 0; i < setVariations.length; i++) {
+    const sets = PlannerProgramExercise_sets(exercise, i);
+    const evaluatedSets: IPlannerProgramExerciseEvaluatedSet[] = [];
+    for (const aSet of sets) {
+      if (aSet.repRange == null) {
+        continue;
+      }
+      for (let j = 0; j < aSet.repRange.numberOfSets; j++) {
+        evaluatedSets.push({
+          maxrep: aSet.repRange.maxrep,
+          minrep: aSet.repRange.minrep,
+          weight: aSet.weight ? aSet.weight : aSet.percentage ? Weight_buildPct(aSet.percentage) : undefined,
+          timer: aSet.timer,
+          rpe: aSet.rpe,
+          logRpe: !!aSet.logRpe,
+          label: aSet.label,
+          isAmrap: !!aSet.repRange.isAmrap,
+          isQuickAddSet: !!aSet.repRange.isQuickAddSet,
+          askWeight: !!aSet.askWeight,
+        });
+      }
+    }
+    evaluatedSetVariations.push({ sets: evaluatedSets, isCurrent: setVariations[i].isCurrent });
+  }
+  return evaluatedSetVariations;
+}
+
+function PlannerProgramExercise_sets(
+  exercise: IPlannerProgramExercise,
+  variationIndex?: number
+): IPlannerProgramExerciseSet[] {
+  const reusedSets = exercise.reuse?.exercise
+    ? exercise.reuse?.exercise?.setVariations[
+    variationIndex ?? PlannerProgramExercise_currentSetVariationIndex(exercise.reuse?.exercise)
+      ]?.sets
+    : undefined;
+  const reusedGlobals = exercise.reuse?.exercise?.globals || {};
+  variationIndex = variationIndex ?? PlannerProgramExercise_currentSetVariationIndex(exercise);
+  const currentSets = exercise.setVariations[variationIndex]?.sets;
+  const currentGlobals = exercise.globals;
+  const sets = currentSets || reusedSets || [];
+  return sets.map((aSet) => {
+    const set: IPlannerProgramExerciseSet = ObjectUtils_clone(aSet);
+    set.rpe = currentGlobals.rpe != null ? currentGlobals.rpe : (set.rpe ?? reusedGlobals.rpe);
+    set.timer = currentGlobals.timer != null ? currentGlobals.timer : (set.timer ?? reusedGlobals.timer);
+    if (currentGlobals.weight != null || currentGlobals.percentage != null) {
+      if (currentGlobals.weight != null) {
+        set.weight = currentGlobals.weight;
+        set.percentage = undefined;
+      } else {
+        set.percentage = currentGlobals.percentage;
+        set.weight = undefined;
+      }
+    } else {
+      set.weight = set.weight ?? reusedGlobals.weight;
+      set.percentage = set.percentage ?? reusedGlobals.percentage;
+    }
+
+    set.logRpe = !!(currentGlobals.rpe != null && currentGlobals.logRpe != null
+      ? currentGlobals.logRpe
+      : (set.logRpe ?? reusedGlobals.logRpe));
+    set.askWeight = !!((currentGlobals.weight != null || currentGlobals.percentage != null) &&
+    currentGlobals.askWeight != null
+      ? currentGlobals.askWeight
+      : (set.askWeight ?? reusedGlobals.askWeight));
+    return set;
+  });
+}
+
+function PlannerProgramExercise_defaultWarmups(
+  exercise: IExercise,
+  settings: ISettings
+): IPlannerProgramExerciseWarmupSet[] {
+  const warmupSets = (exercise?.defaultWarmup && warmupValues(settings.units)[exercise.defaultWarmup]) || [];
+  const result: IPlannerProgramExerciseWarmupSet[] = [];
+  if (warmupSets) {
+    const groups = ProgramExercise_groupWarmupsSets(warmupSets);
+    for (const group of groups) {
+      const first = group[0];
+      const length = group[1];
+      result.push({
+        type: "warmup",
+        numberOfSets: length,
+        reps: first.reps,
+        percentage: typeof first.value === "number" ? first.value * 100 : first.value.value,
+      });
+    }
+  }
+  return result;
+}
+
+function PlannerProgramExercise_repeatToRangeStr(plannerExercise: IPlannerProgramExercise): string {
+  const repeat = plannerExercise.repeating;
+  const ranges: [number, number][] = [];
+  for (const rep of repeat) {
+    if (ranges.length === 0) {
+      ranges.push([rep, rep]);
+    }
+    const lastRep = ranges[ranges.length - 1][1];
+    if (rep <= lastRep + 1) {
+      ranges[ranges.length - 1][1] = rep;
+    } else {
+      ranges.push([rep, rep]);
+    }
+  }
+  return ranges.map((r) => `${r[0]}-${r[1]}`).join(", ");
+}
+
+function PlannerProgramExercise_warmupSetsToDisplaySets(
+  sets: IPlannerProgramExerciseWarmupSet[]
+): IDisplaySet[][] {
+  const displaySets: IDisplaySet[] = [];
+  for (const set of sets) {
+    for (let setIndex = 0; setIndex < (set.numberOfSets || 0); setIndex++) {
+      const weight =
+        set.percentage != null
+          ? `${set.percentage}%`
+          : set.weight?.value != null
+            ? set.weight.value.toString()
+            : `${Math.round(Weight_rpeMultiplier(set.reps, 10) * 100)}%`;
+      displaySets.push({
+        reps: `${set.reps}`,
+        weight: weight,
+      });
+    }
+  }
+
+  return groupDisplaySets(displaySets);
+}
+
+function PlannerProgramExercise_uniqueKey(exercise: IPlannerProgramExercise): string {
+  return `${exercise.key}-${exercise.dayData.week}-${exercise.dayData.dayInWeek}`;
+}
+
+function PlannerProgramExercise_uniqueSetKey(set: IPlannerProgramExerciseEvaluatedSet): string {
+  return `${set.minrep}-${set.maxrep}-${set.isAmrap}-${set.weight?.value}${set.weight?.unit}${set.askWeight}-${set.rpe}${set.logRpe}-${set.timer}`;
+}
+
+function PlannerProgramExercise_evaluatedSetsToDisplaySets(
+  sets: IPlannerProgramExerciseEvaluatedSet[],
+  settings: ISettings
+): IDisplaySet[][] {
+  const displaySets: IDisplaySet[] = [];
+  for (const set of sets) {
+    const weight = set.weight ? Weight_display(set.weight, false) : undefined;
+    const unit = set.weight?.unit || settings.units;
+    displaySets.push({
+      dimReps: false,
+      dimRpe: !set.logRpe,
+      dimWeight: !set.weight,
+      dimTimer: set.timer == null,
+      reps: `${set.minrep != null ? `${set.minrep}-${set.maxrep}` : `${set.maxrep}`}${set.isAmrap ? "+" : ""}`,
+      rpe: set.rpe?.toString(),
+      weight,
+      unit,
+      askWeight: set.askWeight,
+      timer: set.timer,
+    });
+  }
+  return groupDisplaySets(displaySets);
+}
+
+function PlannerProgramExercise_setsToDisplaySets(
+  sets: IPlannerProgramExerciseSet[],
+  hasCurrentSets: boolean,
+  globals: IPlannerProgramExerciseGlobals,
+  settings: ISettings
+): IDisplaySet[][] {
+  const displaySets: IDisplaySet[] = [];
+  for (const set of sets) {
+    for (let setIndex = 0; setIndex < (set.repRange?.numberOfSets || 0); setIndex++) {
+      const minReps = set.repRange?.minrep;
+      const maxReps = set.repRange?.maxrep || 0;
+      const weight =
+        set.percentage != null
+          ? `${set.percentage}%`
+          : set.weight?.value != null
+            ? set.weight.value.toString()
+            : undefined;
+      const unit = set.percentage == null ? set.weight?.unit || settings.units : undefined;
+      displaySets.push({
+        dimReps: !hasCurrentSets,
+        dimRpe: !hasCurrentSets && globals.rpe == null,
+        dimWeight: !hasCurrentSets && globals.weight == null && globals.percentage == null,
+        dimTimer: !hasCurrentSets && globals.timer == null,
+        reps: `${minReps != null ? `${minReps}-` : ""}${maxReps}${set.repRange?.isAmrap ? "+" : ""}`,
+        rpe: set.rpe?.toString(),
+        weight: weight,
+        unit,
+        askWeight: set.askWeight,
+        timer: set.timer,
+      });
+    }
+  }
+
+  return groupDisplaySets(displaySets);
+}
+
+function PlannerProgramExercise_degroupWarmupSets(
+  warmupSets: IPlannerProgramExerciseWarmupSet[]
+): IPlannerProgramExerciseWarmupSet[] {
+  return warmupSets.reduce<IPlannerProgramExerciseWarmupSet[]>((acc, set) => {
+    for (let i = 0; i < set.numberOfSets; i++) {
+      acc.push({ ...set, numberOfSets: 1 });
+    }
+    return acc;
+  }, []);
+}
+
+function PlannerProgramExercise_currentSetVariationIndex(exercise: IPlannerProgramExercise): number {
+  const index = exercise.setVariations.findIndex((sv) => sv.isCurrent);
+  return index === -1 ? 0 : index;
+}
+
+function PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise: IPlannerProgramExercise): number {
+  const index = exercise.evaluatedSetVariations.findIndex((sv) => sv.isCurrent);
+  return index === -1 ? 0 : index;
+}
+
+function PlannerProgramExercise_currentEvaluatedSetVariation(
+  exercise: IPlannerProgramExercise
+): IPlannerProgramExerciseEvaluatedSetVariation {
+  const index = PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise);
+  return exercise.evaluatedSetVariations[index];
+}
+
+function PlannerProgramExercise_currentDescription(exercise: IPlannerProgramExercise): string | undefined {
+  const index = PlannerProgramExercise_currentDescriptionIndex(exercise);
+  return exercise.descriptions.values[index]?.value;
+}
+
+function PlannerProgramExercise_addSet(
+  ex: IPlannerProgramExercise,
+  setVariationIndex: number,
+  settings: ISettings
+): IPlannerProgramExercise {
+  const evaluatedSetVariation = ex.evaluatedSetVariations[setVariationIndex];
+  let lastEvaluatedSet = evaluatedSetVariation.sets[evaluatedSetVariation.sets.length - 1];
+  if (lastEvaluatedSet) {
+    evaluatedSetVariation.sets = [...evaluatedSetVariation.sets, ObjectUtils_clone(lastEvaluatedSet)];
+  } else {
+    const originalSets = PlannerProgramExercise_sets(ex, setVariationIndex);
+    const lastSet = originalSets[originalSets.length - 1];
+    if (lastSet) {
+      lastEvaluatedSet = {
+        maxrep: lastSet.repRange?.maxrep || 1,
+        minrep: lastSet.repRange?.minrep,
+        weight: lastSet.weight || Weight_zero,
+        logRpe: lastSet.logRpe || false,
+        isAmrap: lastSet.repRange?.isAmrap || false,
+        isQuickAddSet: lastSet.repRange?.isQuickAddSet || false,
+        askWeight: lastSet.askWeight || false,
+        rpe: lastSet.rpe,
+        timer: lastSet.timer,
+        label: lastSet.label,
+      };
+      evaluatedSetVariation.sets = [...evaluatedSetVariation.sets, ObjectUtils_clone(lastEvaluatedSet)];
+    } else {
+      evaluatedSetVariation.sets = [
+        ...evaluatedSetVariation.sets,
+        {
+          maxrep: 5,
+          weight: Weight_build(100, settings.units),
+          isAmrap: false,
+          logRpe: false,
+          askWeight: false,
+          isQuickAddSet: false,
+        },
+      ];
+    }
+  }
+  return ex;
+}
+
+function PlannerProgramExercise_currentDescriptionIndex(exercise: IPlannerProgramExercise): number {
+  const index = exercise.descriptions.values.findIndex((d) => d.isCurrent);
+  return index === -1 ? 0 : index;
+}
+
+function PlannerProgramExercise_numberOfSetsThisWeek(exerciseName: string, week: IPlannerEvalResult[]): number {
+  return week.reduce((acc, days) => {
+    if (days.success) {
+      const numberOfSetsThisDay = days.data
+        .filter((e) => e.name === exerciseName)
+        .reduce((acc2, e) => acc2 + PlannerProgramExercise_numberOfSets(e), 0);
+      return acc + numberOfSetsThisDay;
+    } else {
+      return acc;
+    }
+  }, 0);
+}
+
+function PlannerProgramExercise_getProgressScript(exercise: IPlannerProgramExercise): string | undefined {
+  return (
+    exercise.progress?.script ??
+    exercise.progress?.reuse?.exercise?.progress?.script ??
+    exercise.progress?.reuse?.exercise?.progress?.reuse?.exercise?.progress?.script ??
+    exercise.reuse?.exercise?.progress?.script ??
+    exercise.reuse?.exercise?.progress?.reuse?.exercise?.progress?.script
+  );
+}
+
+function PlannerProgramExercise_isReusingSetsProgress(exercise: IPlannerProgramExercise): boolean {
+  const reuseExercise = exercise.reuse?.exercise;
+  return (
+    reuseExercise?.progress != null &&
+    exercise.progress != null &&
+    exercise.progress.type === reuseExercise.progress?.type &&
+    (exercise.progress.reuse?.fullName === reuseExercise.fullName ||
+      exercise.progress.script === reuseExercise.progress.script) &&
+    Object.keys(PlannerProgramExercise_getOnlyChangedState(exercise)).length === 0
+  );
+}
+
+function PlannerProgramExercise_getState(exercise: IPlannerProgramExercise): IProgramState {
+  if (exercise.progress?.state && !exercise.progress.reuse) {
+    return exercise.progress.state;
+  } else {
+    const originalState = exercise.progress?.reuse?.exercise
+      ? PlannerProgramExercise_getState(exercise.progress.reuse.exercise)
+      : exercise.reuse?.exercise
+        ? PlannerProgramExercise_getState(exercise.reuse.exercise)
+        : {};
+
+    return { ...originalState, ...exercise.progress?.state };
+  }
+}
+
+function PlannerProgramExercise_getOnlyChangedState(exercise: IPlannerProgramExercise): IProgramState {
+  const originalState = exercise.progress?.reuse?.exercise
+    ? exercise.progress.reuse.exercise.progress?.state || {}
+    : exercise.reuse?.exercise
+      ? exercise.reuse.exercise.progress?.state || {}
+      : {};
+  const originalStateMetadata = exercise.progress?.reuse?.exercise
+    ? exercise.progress.reuse.exercise.progress?.stateMetadata || {}
+    : exercise.reuse?.exercise
+      ? exercise.reuse.exercise.progress?.stateMetadata || {}
+      : {};
+  const state = exercise.progress?.state || {};
+  const stateMetadata = exercise.progress?.stateMetadata || {};
+  return ObjectUtils_filter(
+    state,
+    (key, value) =>
+      originalState[key] == null ||
+      !Weight_eq(originalState[key], value) ||
+      originalStateMetadata[key]?.userPrompted !== stateMetadata[key]?.userPrompted
+  ) as IProgramState;
+}
+
+function PlannerProgramExercise_getStateMetadata(exercise: IPlannerProgramExercise): IProgramStateMetadata {
+  if (exercise.progress?.stateMetadata && !exercise.progress.reuse) {
+    return exercise.progress.stateMetadata;
+  } else {
+    const originalState = exercise.progress?.reuse?.exercise
+      ? PlannerProgramExercise_getStateMetadata(exercise.progress.reuse.exercise)
+      : exercise.reuse?.exercise
+        ? PlannerProgramExercise_getStateMetadata(exercise.reuse.exercise)
+        : {};
+
+    return { ...originalState, ...exercise.progress?.stateMetadata };
+  }
+}
+
+function PlannerProgramExercise_getUpdateScript(exercise: IPlannerProgramExercise): string | undefined {
+  return (
+    exercise.update?.script ??
+    exercise.update?.reuse?.exercise?.update?.script ??
+    exercise.update?.reuse?.exercise?.update?.reuse?.exercise?.update?.script ??
+    exercise.reuse?.exercise?.update?.script ??
+    exercise.reuse?.exercise?.update?.reuse?.exercise?.update?.script
+  );
+}
+
+function PlannerProgramExercise_getEnableRpe(exercise: IPlannerProgramExercise): boolean {
+  return exercise.setVariations.some((sv, i) => PlannerProgramExercise_sets(exercise, i).some((s) => s.rpe != null));
+}
+
+function PlannerProgramExercise_getEnableRepRanges(exercise: IPlannerProgramExercise): boolean {
+  return exercise.setVariations.some((sv, i) =>
+    PlannerProgramExercise_sets(exercise, i).some((s) => s.repRange != null && s.repRange.minrep === s.repRange.maxrep)
+  );
+}
+
+function PlannerProgramExercise_getProgressDefaultArgs(type: IProgramExerciseProgressType): string[] {
+  switch (type) {
+    case "none":
+      return [];
+    case "lp":
+      return ["5lb"];
+    case "dp":
+      return ["5lb", "8", "12"];
+    case "sum":
+      return ["30", "5lb"];
+    case "custom":
+      return [];
+  }
+}
+
+function buildDpScript(): string {
+  return `for (var.i in completedReps) {
+  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+    weights[var.i] = completedWeights[var.i]
+  }
+}
+if (completedReps >= reps && completedRPE <= RPE) {
+  if (completedReps >= state.maxReps) {
+    reps = state.minReps
+    for (var.i in completedReps) {
+      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
+      if (var.isInitial) {
+        weights[var.i] = completedWeights[var.i] + state.increment
+      } else {
+        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
+      }
+    }
+  } else {
+    for (var.i in completedReps) {
+      reps[var.i] = completedReps[var.i] + 1 > state.maxReps ?
+        state.maxReps :
+        completedReps[var.i] + 1
+    }
+  }
+}`;
+}
+
+function PlannerProgramExercise_buildDpRangeScript(): string {
+  return `for (var.i in completedReps) {
+  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+    weights[var.i] = completedWeights[var.i]
+  }
+}
+if (completedReps >= reps && completedRPE <= RPE) {
+  minReps = state.minReps
+  for (var.i in completedReps) {
+    var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
+    if (var.isInitial) {
+      weights[var.i] = completedWeights[var.i] + state.increment
+    } else {
+      weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
+    }
+  }
+} else {
+  for (var.i in completedReps) {
+    minReps[var.i] = completedReps[var.i] + 1 > reps[var.i] ?
+      reps[var.i] :
+      completedReps[var.i] + 1
+  }
+}`;
+}
+
+function PlannerProgramExercise_buildProgress(
+  type: IProgramExerciseProgressType,
+  args: string[],
+  opts: {
+    reuseFullname?: string;
+    script?: string;
+  } = {}
+): IEither<IProgramExerciseProgress, string> {
+  switch (type) {
+    case "none": {
+      return {
+        success: true,
+        data: {
+          type: "none",
+          state: {},
+          stateMetadata: {},
+        },
+      };
+    }
+    case "lp": {
+      const increment = args[0] ? Weight_parsePct(args[0]) : Weight_build(0, "lb");
+      const decrement = args[3] ? Weight_parsePct(args[3]) : Weight_build(0, "lb");
+      const state: IProgramState = {
+        increment: increment ?? Weight_build(0, "lb"),
+        successes: args[1] ? parseInt(args[1], 10) : 1,
+        successCounter: args[2] ? parseInt(args[2], 10) : 0,
+        decrement: decrement ?? Weight_build(0, "lb"),
+        failures: args[4] ? parseInt(args[4], 10) : (decrement?.value ?? 0) > 0 ? 1 : 0,
+        failureCounter: args[5] ? parseInt(args[5], 10) : 0,
+      };
+      const script = `for (var.i in completedReps) {
+  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+    weights[var.i] = completedWeights[var.i]
+  }
+}
+if (completedReps >= reps && completedRPE <= RPE) {
+  state.successCounter += 1
+  if (state.successCounter >= state.successes) {
+    for (var.i in completedReps) {
+      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
+      if (var.isInitial) {
+        weights[var.i] = completedWeights[var.i] + state.increment
+      } else {
+        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
+      }
+    }
+    state.successCounter = 0
+    state.failureCounter = 0
+  }
+}
+if (state.decrement > 0 && state.failures > 0) {
+  if (!(completedReps >= minReps && completedRPE <= RPE)) {
+    state.failureCounter += 1
+    if (state.failureCounter >= state.failures) {
+      weights -= state.decrement
+      state.failureCounter = 0
+      state.successCounter = 0
+    }
+  }
+}`;
+      return {
+        success: true,
+        data: {
+          type: "lp",
+          state,
+          stateMetadata: {},
+          script,
+        },
+      };
+    }
+    case "dp": {
+      const increment = args[0] ? Weight_parsePct(args[0]) : Weight_build(0, "lb");
+      const state: IProgramState = {
+        increment: increment ?? Weight_build(0, "lb"),
+        minReps: args[1] ? parseInt(args[1], 10) : 0,
+        maxReps: args[2] ? parseInt(args[2], 10) : 0,
+      };
+      const script = buildDpScript();
+      return {
+        success: true,
+        data: {
+          type: "dp",
+          state,
+          stateMetadata: {},
+          script,
+        },
+      };
+    }
+    case "sum": {
+      const increment = args[1] ? Weight_parsePct(args[1]) : Weight_build(0, "lb");
+      const state: IProgramState = {
+        reps: args[0] ? parseInt(args[0], 10) : 0,
+        increment: increment ?? Weight_build(0, "lb"),
+      };
+      const script = `for (var.i in completedReps) {
+if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+  weights[var.i] = completedWeights[var.i]
+}
+}
+if (sum(completedReps) >= state.reps) {
+for (var.i in completedReps) {
+  weights[var.i] = completedWeights[var.i] + state.increment
+}
+}`;
+      return {
+        success: true,
+        data: {
+          type: "sum",
+          state,
+          stateMetadata: {},
+          script,
+        },
+      };
+    }
+    case "custom": {
+      const script = opts.script;
+      let errorMessage: string | undefined;
+      const { state, stateMetadata } = PlannerExerciseEvaluator.fnArgsToStateVars(args, (message) => {
+        errorMessage = message;
+      });
+      if (errorMessage) {
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+      return {
+        success: true,
+        data: {
+          type: "custom",
+          state,
+          stateMetadata,
+          script,
+          reuse: opts.reuseFullname ? { fullName: opts.reuseFullname, source: "specific" } : undefined,
+        },
+      };
+    }
+  }
+}
+
+function PlannerProgramExercise_progressionType(
+  exercise: IPlannerProgramExercise
+): IProgressionType | undefined {
+  const progress = exercise.progress;
+  if (!progress) {
+    return undefined;
+  }
+  const name = progress.type;
+  const state = PlannerProgramExercise_getState(exercise);
+  if (name === "lp") {
+    return {
+      type: "linear",
+      increase: state.increment as IWeight,
+      successesRequired: state.successes as number,
+      successesCounter: state.successCounter as number,
+      decrease: state.decrement as IWeight,
+      failuresRequired: state.failures as number,
+      failuresCounter: state.failureCounter as number,
+    };
+  } else if (name === "dp") {
+    return {
+      type: "double",
+      increase: state.increment as IWeight,
+      minReps: state.minReps as number,
+      maxReps: state.maxReps as number,
+    };
+  } else if (name === "sum") {
+    return {
+      type: "sumreps",
+      increase: state.increment as IWeight,
+      reps: state.reps as number,
+    };
+  } else if (name === "custom") {
+    return { type: "custom" };
+  }
+  return undefined;
+}
+
+function PlannerProgramExercise_shortNameFromFullName(fullName: string, settings: ISettings): string {
+  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(fullName, settings.exercises);
+  const shortName = `${name}${equipment ? `, ${equipmentName(equipment)}` : ""}`;
+  return shortName;
+}
+
+function PlannerProgramExercise_createExerciseFromEntry(
+  entry: IHistoryEntry,
+  dayData: Required<IDayData>,
+  settings: ISettings,
+  index: number
+): IPlannerProgramExercise {
+  const exerciseType = entry.exercise;
+  const exercise = Exercise_get(exerciseType, settings.exercises);
+  const fullName = Exercise_fullName(exercise, settings);
+  const shortName = PlannerProgramExercise_shortNameFromFullName(fullName, settings);
+  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(fullName, settings.exercises);
+  const setVariations: IPlannerProgramExerciseSetVariation[] = [
+    {
+      isCurrent: false,
+      sets: entry.sets.map((set) => ({
+        repRange: {
+          numberOfSets: 1,
+          maxrep: set.completedReps ?? set.reps,
+          minrep: set.minReps,
+          isAmrap: !!set.isAmrap,
+          isQuickAddSet: false,
+        },
+        timer: set.timer,
+        rpe: set.rpe,
+        logRpe: set.logRpe,
+        percentage: Weight_isPct(set.originalWeight) ? set.originalWeight.value : undefined,
+        weight: !Weight_isPct(set.originalWeight) ? (set.completedWeight ?? set.weight) : undefined,
+        askWeight: set.askWeight,
+      })),
+    },
+  ];
+  const groupedWarmupSets = CollectionUtils_compact(
+    ObjectUtils_values(
+      CollectionUtils_groupByExpr(entry.warmupSets, (set) => {
+        return `${set.completedReps ?? set.reps}-${(set.completedWeight ?? set.weight ?? { value: "" }).value}`;
+      })
+    )
+  );
+  const plannerExercise: IPlannerProgramExercise = {
+    id: UidFactory_generateUid(8),
+    key: PlannerKey_fromExerciseType(exercise),
+    fullName,
+    shortName,
+    dayData,
+    exerciseType,
+    repeat: [],
+    repeating: [],
+    exerciseIndex: index,
+    order: 0,
+    text: "",
+    tags: [],
+    equipment,
+    name,
+    line: 1,
+    evaluatedSetVariations: [],
+    setVariations: setVariations,
+    warmupSets: groupedWarmupSets.map((group) => ({
+      type: "warmup",
+      numberOfSets: group.length,
+      reps: group[0]?.completedReps ?? group[0]?.reps ?? 1,
+      weight: group[0]?.completedWeight ?? group[0]?.weight,
+    })),
+    descriptions: { values: [] },
+    globals: {},
+    points: {
+      fullName: { line: 1, offset: 0, from: 0, to: 0 },
+    },
+  };
+  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(plannerExercise, setVariations);
+  plannerExercise.evaluatedSetVariations = evaluatedSetVariations;
+  return plannerExercise;
+}
+
 //#endregion
 
-//#region ________
+//#region Program Set
+// function ProgramSet_group(sets: IProgramSet[]): IProgramSet[][] {
+//   return sets.reduce<IProgramSet[][]>(
+//     (memo, set) => {
+//       let lastGroup = memo[memo.length - 1];
+//       const last = lastGroup[lastGroup.length - 1];
+//       if (
+//         last != null &&
+//         (last.weightExpr !== set.weightExpr ||
+//           last.repsExpr !== set.repsExpr ||
+//           last.isAmrap !== set.isAmrap ||
+//           last.rpeExpr !== set.rpeExpr ||
+//           last.logRpe !== set.logRpe)
+//       ) {
+//         memo.push([]);
+//         lastGroup = memo[memo.length - 1];
+//       }
+//       lastGroup.push(set);
+//       return memo;
+//     },
+//     [[]]
+//   );
+// }
+//
+// function ProgramSet_approxTimeMs(set: IPlannerProgramExerciseEvaluatedSet, settings: ISettings): number {
+//   const reps = set.maxrep;
+//   const secondsPerRep = 7;
+//   const prepareTime = 20;
+//   const timeToRep = (prepareTime + (reps ?? 0) * secondsPerRep) * 1000;
+//   const timeToRest = (settings.timers.workout || 0) * 1000;
+//   const totalTime = timeToRep + timeToRest;
+//   return totalTime;
+// }
+
+function ProgramSet_isEligibleForInferredWeight(set: IPlannerProgramExerciseEvaluatedSet): boolean {
+  return set.weight == null && set.maxrep != null && set.rpe != null;
+}
+
+function ProgramSet_getEvaluatedWeight(
+  programSet: IPlannerProgramExerciseEvaluatedSet,
+  exerciseType: IExerciseType,
+  settings: ISettings
+): IWeight | undefined {
+  const originalWeight = programSet.weight;
+  const unit = Equipment_getUnitOrDefaultForExerciseType(settings, exerciseType);
+  const evaluatedWeight = originalWeight
+    ? Weight_evaluateWeight(originalWeight, exerciseType, settings)
+    : ProgramSet_isEligibleForInferredWeight(programSet) && programSet.maxrep != null && programSet.rpe != null
+      ? Weight_evaluateWeight(Weight_rpePct(programSet.maxrep, programSet.rpe), exerciseType, settings)
+      : undefined;
+  return evaluatedWeight ? Weight_roundConvertTo(evaluatedWeight, settings, unit, exerciseType) : undefined;
+}
 //#endregion
 
-//#region ________
+//#region Exercise
+const allExercisesList: Record<IExerciseId, IExercise> = {
+  abWheel: {
+    id: "abWheel",
+    name: "Ab Wheel",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  arnoldPress: {
+    id: "arnoldPress",
+    name: "Arnold Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  aroundTheWorld: {
+    id: "aroundTheWorld",
+    name: "Around The World",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["core"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  backExtension: {
+    id: "backExtension",
+    name: "Back Extension",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "core"],
+    startingWeightLb: { value: 50, unit: "lb" },
+    startingWeightKg: { value: 22.5, unit: "kg" },
+  },
+  ballSlams: {
+    id: "ballSlams",
+    name: "Ball Slams",
+    defaultEquipment: "medicineball",
+    types: ["core", "upper"],
+    startingWeightLb: { value: 10, unit: "lb" },
+    startingWeightKg: { value: 4.5, unit: "kg" },
+  },
+  battleRopes: {
+    id: "battleRopes",
+    name: "Battle Ropes",
+    defaultEquipment: "bodyweight",
+    types: ["upper", "core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  behindTheNeckPress: {
+    id: "behindTheNeckPress",
+    name: "Behind The Neck Press",
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  benchDip: {
+    id: "benchDip",
+    name: "Bench Dip",
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  benchPress: {
+    id: "benchPress",
+    name: "Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  benchPressCloseGrip: {
+    id: "benchPressCloseGrip",
+    name: "Bench Press Close Grip",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  benchPressWideGrip: {
+    id: "benchPressWideGrip",
+    name: "Bench Press Wide Grip",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  bentOverOneArmRow: {
+    id: "bentOverOneArmRow",
+    name: "Bent Over One Arm Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  bentOverRow: {
+    id: "bentOverRow",
+    name: "Bent Over Row",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  bicepCurl: {
+    id: "bicepCurl",
+    name: "Bicep Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  bicycleCrunch: {
+    id: "bicycleCrunch",
+    name: "Bicycle Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  boxJump: {
+    id: "boxJump",
+    name: "Box Jump",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  boxSquat: {
+    id: "boxSquat",
+    name: "Box Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 155, unit: "lb" },
+    startingWeightKg: { value: 70, unit: "kg" },
+  },
+  bulgarianSplitSquat: {
+    id: "bulgarianSplitSquat",
+    name: "Bulgarian Split Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  burpee: {
+    id: "burpee",
+    name: "Burpee",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "lower", "core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  cableCrossover: {
+    id: "cableCrossover",
+    name: "Cable Crossover",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  cableCrunch: {
+    id: "cableCrunch",
+    name: "Cable Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["core"],
+    startingWeightLb: { value: 50, unit: "lb" },
+    startingWeightKg: { value: 22.5, unit: "kg" },
+  },
+  cableKickback: {
+    id: "cableKickback",
+    name: "Cable Kickback",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  cablePullThrough: {
+    id: "cablePullThrough",
+    name: "Cable Pull Through",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["lower", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  cableTwist: {
+    id: "cableTwist",
+    name: "Cable Twist",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["core"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  calfPressOnLegPress: {
+    id: "calfPressOnLegPress",
+    name: "Calf Press on Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 150, unit: "lb" },
+    startingWeightKg: { value: 67.5, unit: "kg" },
+  },
+  calfPressOnSeatedLegPress: {
+    id: "calfPressOnSeatedLegPress",
+    name: "Calf Press on Seated Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 120, unit: "lb" },
+    startingWeightKg: { value: 53.75, unit: "kg" },
+  },
+  chestDip: {
+    id: "chestDip",
+    name: "Chest Dip",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  chestFly: {
+    id: "chestFly",
+    name: "Chest Fly",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  chestPress: {
+    id: "chestPress",
+    name: "Chest Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  chestSupportedRow: {
+    id: "chestSupportedRow",
+    name: "Chest-Supported Row",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  chinUp: {
+    id: "chinUp",
+    name: "Chin Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  clean: {
+    id: "clean",
+    name: "Clean",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  cleanandJerk: {
+    id: "cleanandJerk",
+    name: "Clean and Jerk",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  concentrationCurl: {
+    id: "concentrationCurl",
+    name: "Concentration Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  crossBodyCrunch: {
+    id: "crossBodyCrunch",
+    name: "Cross Body Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  crunch: {
+    id: "crunch",
+    name: "Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  cycling: {
+    id: "cycling",
+    name: "Cycling",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  deadlift: {
+    id: "deadlift",
+    name: "Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "pull"],
+    startingWeightLb: { value: 185, unit: "lb" },
+    startingWeightKg: { value: 82.5, unit: "kg" },
+  },
+  deadliftHighPull: {
+    id: "deadliftHighPull",
+    name: "Deadlift High Pull",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  declineBenchPress: {
+    id: "declineBenchPress",
+    name: "Decline Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 125, unit: "lb" },
+    startingWeightKg: { value: 55, unit: "kg" },
+  },
+  declineCrunch: {
+    id: "declineCrunch",
+    name: "Decline Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  deficitDeadlift: {
+    id: "deficitDeadlift",
+    name: "Deficit Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "pull"],
+    startingWeightLb: { value: 165, unit: "lb" },
+    startingWeightKg: { value: 75, unit: "kg" },
+  },
+  ellipticalMachine: {
+    id: "ellipticalMachine",
+    name: "Elliptical Machine",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  facePull: {
+    id: "facePull",
+    name: "Face Pull",
+    defaultWarmup: 10,
+    defaultEquipment: "band",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  flatKneeRaise: {
+    id: "flatKneeRaise",
+    name: "Flat Knee Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  flatLegRaise: {
+    id: "flatLegRaise",
+    name: "Flat Leg Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  frontRaise: {
+    id: "frontRaise",
+    name: "Front Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  frontSquat: {
+    id: "frontSquat",
+    name: "Front Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  gobletSquat: {
+    id: "gobletSquat",
+    name: "Goblet Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  goodMorning: {
+    id: "goodMorning",
+    name: "Good Morning",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  gluteBridge: {
+    id: "gluteBridge",
+    name: "Glute Bridge",
+    defaultWarmup: 45,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  gluteBridgeMarch: {
+    id: "gluteBridgeMarch",
+    name: "Glute Bridge March",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  gluteKickback: {
+    id: "gluteKickback",
+    name: "Glute Kickback",
+    defaultWarmup: 45,
+    defaultEquipment: "cable",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  hackSquat: {
+    id: "hackSquat",
+    name: "Hack Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  hammerCurl: {
+    id: "hammerCurl",
+    name: "Hammer Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  handstandPushUp: {
+    id: "handstandPushUp",
+    name: "Handstand Push Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  hangClean: {
+    id: "hangClean",
+    name: "Hang Clean",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  hangSnatch: {
+    id: "hangSnatch",
+    name: "Hang Snatch",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  hangingLegRaise: {
+    id: "hangingLegRaise",
+    name: "Hanging Leg Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  highKneeSkips: {
+    id: "highKneeSkips",
+    name: "High Knee Skips",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  highRow: {
+    id: "highRow",
+    name: "High Row",
+    defaultWarmup: 45,
+    defaultEquipment: "leverageMachine",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  hipAbductor: {
+    id: "hipAbductor",
+    name: "Hip Abductor",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  hipAdductor: {
+    id: "hipAdductor",
+    name: "Hip Adductor",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  hipThrust: {
+    id: "hipThrust",
+    name: "Hip Thrust",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  inclineBenchPress: {
+    id: "inclineBenchPress",
+    name: "Incline Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  inclineBenchPressWideGrip: {
+    id: "inclineBenchPressWideGrip",
+    name: "Incline Bench Press Wide Grip",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 110, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  inclineChestFly: {
+    id: "inclineChestFly",
+    name: "Incline Chest Fly",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  inclineChestPress: {
+    id: "inclineChestPress",
+    name: "Incline Chest Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  inclineCurl: {
+    id: "inclineCurl",
+    name: "Incline Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  inclineRow: {
+    id: "inclineRow",
+    name: "Incline Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  invertedRow: {
+    id: "invertedRow",
+    name: "Inverted Row",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  isoLateralChestPress: {
+    id: "isoLateralChestPress",
+    name: "Iso-Lateral Chest Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  isoLateralRow: {
+    id: "isoLateralRow",
+    name: "Iso-Lateral Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  jackknifeSitUp: {
+    id: "jackknifeSitUp",
+    name: "Jackknife Sit Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  jumpRope: {
+    id: "jumpRope",
+    name: "Jump Rope",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  jumpSquat: {
+    id: "jumpSquat",
+    name: "Jump Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  jumpingJack: {
+    id: "jumpingJack",
+    name: "Jumping Jack",
+    defaultWarmup: 10,
+    defaultEquipment: undefined,
+    types: ["upper", "lower"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kettlebellSwing: {
+    id: "kettlebellSwing",
+    name: "Kettlebell Swing",
+    defaultWarmup: 10,
+    defaultEquipment: "kettlebell",
+    types: ["upper", "lower", "core"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 16, unit: "kg" },
+  },
+  kettlebellTurkishGetUp: {
+    id: "kettlebellTurkishGetUp",
+    name: "Kettlebell Turkish Get Up",
+    defaultWarmup: 10,
+    defaultEquipment: "kettlebell",
+    types: ["upper", "lower", "core"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 8, unit: "kg" },
+  },
+  kippingPullUp: {
+    id: "kippingPullUp",
+    name: "Kipping Pull Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kneeRaise: {
+    id: "kneeRaise",
+    name: "Knee Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kneelingPulldown: {
+    id: "kneelingPulldown",
+    name: "Kneeling Pulldown",
+    defaultWarmup: 10,
+    defaultEquipment: "band",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  kneestoElbows: {
+    id: "kneestoElbows",
+    name: "Knees to Elbows",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  latPulldown: {
+    id: "latPulldown",
+    name: "Lat Pulldown",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  lateralBoxJump: {
+    id: "lateralBoxJump",
+    name: "Lateral Box Jump",
+    defaultWarmup: 10,
+    defaultEquipment: undefined,
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  lateralRaise: {
+    id: "lateralRaise",
+    name: "Lateral Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  legsUpBenchPress: {
+    id: "legsUpBenchPress",
+    name: "Legs Up Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  legCurl: {
+    id: "legCurl",
+    name: "Leg Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  legExtension: {
+    id: "legExtension",
+    name: "Leg Extension",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  legPress: {
+    id: "legPress",
+    name: "Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 250, unit: "lb" },
+    startingWeightKg: { value: 112.5, unit: "kg" },
+  },
+  lunge: {
+    id: "lunge",
+    name: "Lunge",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  lyingBicepCurl: {
+    id: "lyingBicepCurl",
+    name: "Lying Bicep Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  lyingLegCurl: {
+    id: "lyingLegCurl",
+    name: "Lying Leg Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  mountainClimber: {
+    id: "mountainClimber",
+    name: "Mountain Climber",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core", "lower"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  muscleUp: {
+    id: "muscleUp",
+    name: "Muscle Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  obliqueCrunch: {
+    id: "obliqueCrunch",
+    name: "Oblique Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  overheadPress: {
+    id: "overheadPress",
+    name: "Overhead Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  overheadSquat: {
+    id: "overheadSquat",
+    name: "Overhead Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 55, unit: "lb" },
+    startingWeightKg: { value: 25, unit: "kg" },
+  },
+  pecDeck: {
+    id: "pecDeck",
+    name: "Pec Deck",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 50, unit: "lb" },
+    startingWeightKg: { value: 22.5, unit: "kg" },
+  },
+  pendlayRow: {
+    id: "pendlayRow",
+    name: "Pendlay Row",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  pistolSquat: {
+    id: "pistolSquat",
+    name: "Pistol Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  plank: {
+    id: "plank",
+    name: "Plank",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  powerClean: {
+    id: "powerClean",
+    name: "Power Clean",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  powerSnatch: {
+    id: "powerSnatch",
+    name: "Power Snatch",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  preacherCurl: {
+    id: "preacherCurl",
+    name: "Preacher Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  pressUnder: {
+    id: "pressUnder",
+    name: "Press Under",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  pullUp: {
+    id: "pullUp",
+    name: "Pull Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  pullover: {
+    id: "pullover",
+    name: "Pullover",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  pushPress: {
+    id: "pushPress",
+    name: "Push Press",
+    defaultWarmup: 45,
+    defaultEquipment: "kettlebell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 16, unit: "kg" },
+  },
+  pushUp: {
+    id: "pushUp",
+    name: "Push Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  reverseCrunch: {
+    id: "reverseCrunch",
+    name: "Reverse Crunch",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  reverseCurl: {
+    id: "reverseCurl",
+    name: "Reverse Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  reverseFly: {
+    id: "reverseFly",
+    name: "Reverse Fly",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  reverseGripConcentrationCurl: {
+    id: "reverseGripConcentrationCurl",
+    name: "Reverse Grip Concentration Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  reversePlank: {
+    id: "reversePlank",
+    name: "Reverse Plank",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  reverseLatPulldown: {
+    id: "reverseLatPulldown",
+    name: "Reverse Lat Pulldown",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  reverseLunge: {
+    id: "reverseLunge",
+    name: "Reverse Lunge",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  reverseWristCurl: {
+    id: "reverseWristCurl",
+    name: "Reverse Wrist Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  romanianDeadlift: {
+    id: "romanianDeadlift",
+    name: "Romanian Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 40, unit: "lb" },
+    startingWeightKg: { value: 17.5, unit: "kg" },
+  },
+  reverseHyperextension: {
+    id: "reverseHyperextension",
+    name: "Reverse Hyperextension",
+    defaultWarmup: 45,
+    defaultEquipment: "band",
+    types: ["core", "lower"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  rowing: {
+    id: "rowing",
+    name: "Rowing",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  russianTwist: {
+    id: "russianTwist",
+    name: "Russian Twist",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  safetySquatBarSquat: {
+    id: "safetySquatBarSquat",
+    name: "Safety Squat Bar Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 145, unit: "lb" },
+    startingWeightKg: { value: 65, unit: "kg" },
+  },
+  seatedCalfRaise: {
+    id: "seatedCalfRaise",
+    name: "Seated Calf Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 90, unit: "lb" },
+    startingWeightKg: { value: 40, unit: "kg" },
+  },
+  seatedFrontRaise: {
+    id: "seatedFrontRaise",
+    name: "Seated Front Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  seatedLegCurl: {
+    id: "seatedLegCurl",
+    name: "Seated Leg Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 60, unit: "lb" },
+    startingWeightKg: { value: 26.25, unit: "kg" },
+  },
+  seatedLegPress: {
+    id: "seatedLegPress",
+    name: "Seated Leg Press",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 200, unit: "lb" },
+    startingWeightKg: { value: 90, unit: "kg" },
+  },
+  seatedOverheadPress: {
+    id: "seatedOverheadPress",
+    name: "Seated Overhead Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 75, unit: "lb" },
+    startingWeightKg: { value: 32.5, unit: "kg" },
+  },
+  seatedPalmsUpWristCurl: {
+    id: "seatedPalmsUpWristCurl",
+    name: "Seated Palms Up Wrist Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 15, unit: "lb" },
+    startingWeightKg: { value: 5, unit: "kg" },
+  },
+  seatedRow: {
+    id: "seatedRow",
+    name: "Seated Row",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  seatedWideGripRow: {
+    id: "seatedWideGripRow",
+    name: "Seated Wide Grip Row",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  shoulderPress: {
+    id: "shoulderPress",
+    name: "Shoulder Press",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  shoulderPressParallelGrip: {
+    id: "shoulderPressParallelGrip",
+    name: "Shoulder Press Parallel Grip",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  shrug: {
+    id: "shrug",
+    name: "Shrug",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 45, unit: "lb" },
+    startingWeightKg: { value: 20, unit: "kg" },
+  },
+  sideBend: {
+    id: "sideBend",
+    name: "Side Bend",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["core"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  sideCrunch: {
+    id: "sideCrunch",
+    name: "Side Crunch",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sideHipAbductor: {
+    id: "sideHipAbductor",
+    name: "Side Hip Abductor",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sideLyingClam: {
+    id: "sideLyingClam",
+    name: "Side Lying Clam",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sidePlank: {
+    id: "sidePlank",
+    name: "Side Plank",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegBridge: {
+    id: "singleLegBridge",
+    name: "Single Leg Bridge",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegCalfRaise: {
+    id: "singleLegCalfRaise",
+    name: "Single Leg Calf Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  singleLegDeadlift: {
+    id: "singleLegDeadlift",
+    name: "Single Leg Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  singleLegGluteBridgeBench: {
+    id: "singleLegGluteBridgeBench",
+    name: "Single Leg Glute Bridge On Bench",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegGluteBridgeStraight: {
+    id: "singleLegGluteBridgeStraight",
+    name: "Single Leg Glute Bridge Straight Leg",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegGluteBridgeBentKnee: {
+    id: "singleLegGluteBridgeBentKnee",
+    name: "Single Leg Glute Bridge Bent Knee",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  singleLegHipThrust: {
+    id: "singleLegHipThrust",
+    name: "Single Leg Hip Thrust",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sissySquat: {
+    id: "sissySquat",
+    name: "Sissy Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "bodyweight",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  sitUp: {
+    id: "sitUp",
+    name: "Sit Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  skullcrusher: {
+    id: "skullcrusher",
+    name: "Skullcrusher",
+    defaultWarmup: 10,
+    defaultEquipment: "ezbar",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 45, unit: "lb" },
+    startingWeightKg: { value: 20, unit: "kg" },
+  },
+  slingShotBenchPress: {
+    id: "slingShotBenchPress",
+    name: "Sling Shot Bench Press",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 140, unit: "lb" },
+    startingWeightKg: { value: 62.5, unit: "kg" },
+  },
+  snatch: {
+    id: "snatch",
+    name: "Snatch",
+    defaultWarmup: 45,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  snatchPull: {
+    id: "snatchPull",
+    name: "Snatch Pull",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  splitSquat: {
+    id: "splitSquat",
+    name: "Split Squat",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  splitJerk: {
+    id: "splitJerk",
+    name: "Split Jerk",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 95, unit: "lb" },
+    startingWeightKg: { value: 42.5, unit: "kg" },
+  },
+  squat: {
+    id: "squat",
+    name: "Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 135, unit: "lb" },
+    startingWeightKg: { value: 60, unit: "kg" },
+  },
+  squatRow: {
+    id: "squatRow",
+    name: "Squat Row",
+    defaultWarmup: 10,
+    defaultEquipment: "band",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  standingCalfRaise: {
+    id: "standingCalfRaise",
+    name: "Standing Calf Raise",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 35, unit: "lb" },
+    startingWeightKg: { value: 15, unit: "kg" },
+  },
+  standingRow: {
+    id: "standingRow",
+    name: "Standing Row",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  standingRowCloseGrip: {
+    id: "standingRowCloseGrip",
+    name: "Standing Row Close Grip",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  standingRowRearDeltWithRope: {
+    id: "standingRowRearDeltWithRope",
+    name: "Standing Row Rear Delt With Rope",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  standingRowRearHorizontalDeltWithRope: {
+    id: "standingRowRearHorizontalDeltWithRope",
+    name: "Standing Row Rear Delt, Horizontal, With Rope",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 30, unit: "lb" },
+    startingWeightKg: { value: 12.5, unit: "kg" },
+  },
+  standingRowVBar: {
+    id: "standingRowVBar",
+    name: "Standing Row V-Bar",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 70, unit: "lb" },
+    startingWeightKg: { value: 30, unit: "kg" },
+  },
+  stepUp: {
+    id: "stepUp",
+    name: "Step up",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  stiffLegDeadlift: {
+    id: "stiffLegDeadlift",
+    name: "Stiff Leg Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 115, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  straightLegDeadlift: {
+    id: "straightLegDeadlift",
+    name: "Straight Leg Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 110, unit: "lb" },
+    startingWeightKg: { value: 50, unit: "kg" },
+  },
+  sumoDeadlift: {
+    id: "sumoDeadlift",
+    name: "Sumo Deadlift",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 175, unit: "lb" },
+    startingWeightKg: { value: 77.5, unit: "kg" },
+  },
+  sumoDeadliftHighPull: {
+    id: "sumoDeadliftHighPull",
+    name: "Sumo Deadlift High Pull",
+    defaultWarmup: 95,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "pull"],
+    startingWeightLb: { value: 85, unit: "lb" },
+    startingWeightKg: { value: 37.5, unit: "kg" },
+  },
+  superman: {
+    id: "superman",
+    name: "Superman",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  tBarRow: {
+    id: "tBarRow",
+    name: "T Bar Row",
+    defaultWarmup: 10,
+    defaultEquipment: "leverageMachine",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 90, unit: "lb" },
+    startingWeightKg: { value: 40, unit: "kg" },
+  },
+  thruster: {
+    id: "thruster",
+    name: "Thruster",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["upper", "lower", "push"],
+    startingWeightLb: { value: 65, unit: "lb" },
+    startingWeightKg: { value: 27.5, unit: "kg" },
+  },
+  toesToBar: {
+    id: "toesToBar",
+    name: "Toes To Bar",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  torsoRotation: {
+    id: "torsoRotation",
+    name: "Torso Rotation",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  trapBarDeadlift: {
+    id: "trapBarDeadlift",
+    name: "Trap Bar Deadlift",
+    defaultWarmup: 10,
+    defaultEquipment: "trapbar",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 185, unit: "lb" },
+    startingWeightKg: { value: 82.5, unit: "kg" },
+  },
+  tricepsDip: {
+    id: "tricepsDip",
+    name: "Triceps Dip",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  tricepsExtension: {
+    id: "tricepsExtension",
+    name: "Triceps Extension",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  tricepsPushdown: {
+    id: "tricepsPushdown",
+    name: "Triceps Pushdown",
+    defaultWarmup: 10,
+    defaultEquipment: "cable",
+    types: ["upper", "push"],
+    startingWeightLb: { value: 40, unit: "lb" },
+    startingWeightKg: { value: 17.5, unit: "kg" },
+  },
+  uprightRow: {
+    id: "uprightRow",
+    name: "Upright Row",
+    defaultWarmup: 10,
+    defaultEquipment: "dumbbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 20, unit: "lb" },
+    startingWeightKg: { value: 7.5, unit: "kg" },
+  },
+  vUp: {
+    id: "vUp",
+    name: "V Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["core"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  widePullUp: {
+    id: "widePullUp",
+    name: "Wide Pull Up",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  wristCurl: {
+    id: "wristCurl",
+    name: "Wrist Curl",
+    defaultWarmup: 10,
+    defaultEquipment: "barbell",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 25, unit: "lb" },
+    startingWeightKg: { value: 10, unit: "kg" },
+  },
+  wristRoller: {
+    id: "wristRoller",
+    name: "Wrist Roller",
+    defaultWarmup: 10,
+    defaultEquipment: "bodyweight",
+    types: ["upper", "pull"],
+    startingWeightLb: { value: 0, unit: "lb" },
+    startingWeightKg: { value: 0, unit: "kg" },
+  },
+  zercherSquat: {
+    id: "zercherSquat",
+    name: "Zercher Squat",
+    defaultWarmup: 45,
+    defaultEquipment: "barbell",
+    types: ["lower", "legs"],
+    startingWeightLb: { value: 105, unit: "lb" },
+    startingWeightKg: { value: 47.5, unit: "kg" },
+  },
+};
+
+const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<Partial<Record<string, IExerciseId>>>((acc, key) => {
+  acc[allExercisesList[key].name.toLowerCase()] = allExercisesList[key].id;
+  return acc;
+}, {});
+
+// const metadata: Record<IExerciseId, IMetaExercises> = {
+//   abWheel: {
+//     targetMuscles: ["Iliopsoas"],
+//     synergistMuscles: [
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//       "Deltoid Posterior",
+//       "Latissimus Dorsi",
+//       "Pectineous",
+//       "Pectoralis Major Sternal Head",
+//       "Sartorius",
+//       "Serratus Anterior",
+//       "Tensor Fasciae Latae",
+//       "Teres Major",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   arnoldPress: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["dumbbell", "kettlebell"],
+//   },
+//   aroundTheWorld: {
+//     targetMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Lateral", "Deltoid Posterior", "Latissimus Dorsi", "Serratus Anterior"],
+//     bodyParts: ["Chest", "Shoulders"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   backExtension: {
+//     targetMuscles: ["Erector Spinae"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Hamstrings"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight", "leverageMachine"],
+//   },
+//   ballSlams: {
+//     targetMuscles: [
+//       "Infraspinatus",
+//       "Latissimus Dorsi",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Rectus Abdominis"],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["medicineball"],
+//   },
+//   battleRopes: {
+//     targetMuscles: ["Deltoid Posterior"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Lateral",
+//       "Infraspinatus",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   behindTheNeckPress: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   benchDip: {
+//     targetMuscles: ["Triceps Brachii"],
+//     synergistMuscles: [
+//       "Deltoid Anterior",
+//       "Latissimus Dorsi",
+//       "Levator Scapulae",
+//       "Pectoralis Major Clavicular Head",
+//       "Pectoralis Major Sternal Head",
+//       "Serratus Anterior",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   benchPress: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "smith", "band", "kettlebell"],
+//   },
+//   benchPressCloseGrip: {
+//     targetMuscles: ["Triceps Brachii"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Pectoralis Major Sternal Head"],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["barbell", "ezbar", "smith"],
+//   },
+//   benchPressWideGrip: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["barbell", "smith"],
+//   },
+//   bentOverOneArmRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Infraspinatus",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Pectoralis Major Sternal Head",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   bentOverRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "band", "leverageMachine", "smith"],
+//   },
+//   bicepCurl: {
+//     targetMuscles: ["Biceps Brachii"],
+//     synergistMuscles: ["Brachialis", "Brachioradialis"],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["barbell", "dumbbell", "band", "leverageMachine", "cable", "ezbar"],
+//   },
+//   bicycleCrunch: {
+//     targetMuscles: ["Obliques", "Rectus Abdominis"],
+//     synergistMuscles: ["Gluteus Maximus", "Iliopsoas", "Quadriceps"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   boxJump: {
+//     targetMuscles: ["Quadriceps", "Gluteus Maximus", "Gastrocnemius", "Soleus"],
+//     synergistMuscles: ["Hamstrings", "Adductor Magnus", "Erector Spinae", "Rectus Abdominis"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   boxSquat: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "dumbbell"],
+//   },
+//   bulgarianSplitSquat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Hips", "Thighs"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   burpee: {
+//     targetMuscles: [
+//       "Quadriceps",
+//       "Gluteus Maximus",
+//       "Pectoralis Major Clavicular Head",
+//       "Pectoralis Major Sternal Head",
+//       "Triceps Brachii",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//       "Deltoid Posterior",
+//       "Rectus Abdominis",
+//     ],
+//     synergistMuscles: [
+//       "Hamstrings",
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Latissimus Dorsi",
+//       "Obliques",
+//       "Erector Spinae",
+//       "Obliques",
+//       "Soleus",
+//       "Gastrocnemius",
+//       "Tibialis Anterior",
+//     ],
+//     bodyParts: ["Chest", "Shoulders", "Upper Arms", "Waist", "Thighs"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   cableCrossover: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Latissimus Dorsi", "Levator Scapulae", "Pectoralis Major Clavicular Head"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["cable"],
+//   },
+//   cableCrunch: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Obliques"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["cable"],
+//   },
+//   cableKickback: {
+//     targetMuscles: ["Triceps Brachii"],
+//     synergistMuscles: [],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["cable"],
+//   },
+//   cablePullThrough: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Hamstrings"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["cable"],
+//   },
+//   cableTwist: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: [
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//       "Adductor Magnus",
+//       "Erector Spinae",
+//       "Gluteus Medius",
+//       "Iliopsoas",
+//       "Tensor Fasciae Latae",
+//     ],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["barbell", "bodyweight", "cable", "leverageMachine", "band"],
+//   },
+//   calfPressOnLegPress: {
+//     targetMuscles: ["Gastrocnemius"],
+//     synergistMuscles: ["Soleus"],
+//     bodyParts: ["Calves"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   calfPressOnSeatedLegPress: {
+//     targetMuscles: ["Gastrocnemius"],
+//     synergistMuscles: ["Soleus"],
+//     bodyParts: ["Calves"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   chestDip: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: [
+//       "Deltoid Anterior",
+//       "Latissimus Dorsi",
+//       "Levator Scapulae",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Teres Major",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   chestFly: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Biceps Brachii", "Deltoid Anterior", "Pectoralis Major Clavicular Head"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "leverageMachine"],
+//   },
+//   chestPress: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["leverageMachine", "band"],
+//   },
+//   chestSupportedRow: {
+//     targetMuscles: ["Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Latissimus Dorsi",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["barbell", "dumbbell"],
+//   },
+//   chinUp: {
+//     targetMuscles: ["Latissimus Dorsi"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Levator Scapulae",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["leverageMachine", "bodyweight"],
+//   },
+//   clean: {
+//     targetMuscles: [
+//       "Gluteus Maximus",
+//       "Hamstrings",
+//       "Quadriceps",
+//       "Latissimus Dorsi",
+//       "Trapezius Lower Fibers",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//     ],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Gastrocnemius",
+//       "Soleus",
+//       "Erector Spinae",
+//       "Biceps Brachii",
+//       "Pectoralis Major Clavicular Head",
+//       "Pectoralis Major Sternal Head",
+//       "Wrist Flexors",
+//     ],
+//     bodyParts: ["Hips", "Thighs", "Back", "Shoulders"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   cleanandJerk: {
+//     targetMuscles: [
+//       "Gluteus Maximus",
+//       "Hamstrings",
+//       "Quadriceps",
+//       "Latissimus Dorsi",
+//       "Trapezius Lower Fibers",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//     ],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Gastrocnemius",
+//       "Soleus",
+//       "Erector Spinae",
+//       "Biceps Brachii",
+//       "Pectoralis Major Clavicular Head",
+//       "Pectoralis Major Sternal Head",
+//       "Wrist Flexors",
+//     ],
+//     bodyParts: ["Hips", "Thighs", "Back", "Shoulders"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   concentrationCurl: {
+//     targetMuscles: ["Brachialis"],
+//     synergistMuscles: ["Biceps Brachii", "Brachioradialis"],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["barbell", "dumbbell", "band", "cable"],
+//   },
+//   crossBodyCrunch: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: ["Iliopsoas", "Rectus Abdominis"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   crunch: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Obliques"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["cable", "bodyweight", "leverageMachine"],
+//   },
+//   cycling: {
+//     targetMuscles: ["Quadriceps", "Hamstrings", "Gluteus Maximus", "Gastrocnemius", "Soleus", "Tibialis Anterior"],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Adductor Longus",
+//       "Adductor Brevis",
+//       "Iliopsoas",
+//       "Erector Spinae",
+//       "Rectus Abdominis",
+//       "Obliques",
+//     ],
+//     bodyParts: ["Hips", "Thighs", "Calves", "Shins", "Back", "Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   deadlift: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Hamstrings", "Quadriceps", "Soleus"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "leverageMachine", "smith", "band", "kettlebell", "bodyweight"],
+//   },
+//   deadliftHighPull: {
+//     targetMuscles: ["Deltoid Lateral", "Gluteus Maximus", "Quadriceps"],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Anterior",
+//       "Gastrocnemius",
+//       "Infraspinatus",
+//       "Soleus",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   declineBenchPress: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["dumbbell", "smith"],
+//   },
+//   declineCrunch: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Obliques"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   deficitDeadlift: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Erector Spinae", "Hamstrings", "Quadriceps", "Soleus"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "trapbar"],
+//   },
+//   ellipticalMachine: {
+//     targetMuscles: [],
+//     synergistMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//       "Deltoid Posterior",
+//       "Gluteus Maximus",
+//       "Hamstrings",
+//       "Latissimus Dorsi",
+//       "Levator Scapulae",
+//       "Pectoralis Major Clavicular Head",
+//       "Pectoralis Major Sternal Head",
+//       "Quadriceps",
+//       "Serratus Anterior",
+//     ],
+//     bodyParts: ["Hips", "Thighs", "Back", "Shoulders"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   facePull: {
+//     targetMuscles: ["Deltoid Posterior"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Lateral",
+//       "Infraspinatus",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["band"],
+//   },
+//   flatKneeRaise: {
+//     targetMuscles: ["Iliopsoas"],
+//     synergistMuscles: ["Adductor Brevis", "Adductor Longus", "Pectineous", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   flatLegRaise: {
+//     targetMuscles: ["Iliopsoas"],
+//     synergistMuscles: [
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//       "Pectineous",
+//       "Quadriceps",
+//       "Sartorius",
+//       "Tensor Fasciae Latae",
+//     ],
+//     bodyParts: ["Hips", "Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   frontRaise: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "bodyweight", "band"],
+//   },
+//   gluteBridge: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Quadriceps"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["band", "barbell", "dumbbell"],
+//   },
+//   gluteBridgeMarch: {
+//     targetMuscles: ["Gluteus Maximus", "Rectus Abdominis"],
+//     synergistMuscles: ["Hamstrings", "Quadriceps", "Sartorius"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   gluteKickback: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus"],
+//     bodyParts: ["Glute"],
+//     sortedEquipment: ["leverageMachine", "bodyweight", "cable", "band"],
+//   },
+//   frontSquat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "kettlebell", "dumbbell", "cable", "smith"],
+//   },
+//   gobletSquat: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["kettlebell", "dumbbell"],
+//   },
+//   goodMorning: {
+//     targetMuscles: ["Hamstrings"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "smith", "leverageMachine"],
+//   },
+//   hackSquat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "smith"],
+//   },
+//   hammerCurl: {
+//     targetMuscles: ["Brachioradialis"],
+//     synergistMuscles: ["Biceps Brachii", "Brachialis"],
+//     bodyParts: ["Forearms"],
+//     sortedEquipment: ["cable", "dumbbell", "band"],
+//   },
+//   handstandPushUp: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   hangClean: {
+//     targetMuscles: ["Biceps Brachii", "Brachialis", "Brachioradialis"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head"],
+//     bodyParts: ["Forearms"],
+//     sortedEquipment: ["kettlebell"],
+//   },
+//   hangSnatch: {
+//     targetMuscles: [
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Trapezius Upper Fibers",
+//       "Quadriceps",
+//       "Gluteus Maximus",
+//     ],
+//     synergistMuscles: [
+//       "Hamstrings",
+//       "Erector Spinae",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//       "Deltoid Posterior",
+//       "Latissimus Dorsi",
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Gastrocnemius",
+//       "Soleus",
+//       "Obliques",
+//       "Rectus Abdominis",
+//     ],
+//     bodyParts: ["Thighs", "Back", "Shoulders"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   hangingLegRaise: {
+//     targetMuscles: ["Iliopsoas"],
+//     synergistMuscles: ["Adductor Brevis", "Adductor Longus", "Pectineous", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight", "cable"],
+//   },
+//   highKneeSkips: {
+//     targetMuscles: ["Quadriceps", "Hamstrings", "Gluteus Maximus"],
+//     synergistMuscles: [
+//       "Iliopsoas",
+//       "Gastrocnemius",
+//       "Soleus",
+//       "Tibialis Anterior",
+//       "Rectus Abdominis",
+//       "Obliques",
+//       "Adductor Magnus",
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//     ],
+//     bodyParts: ["Thighs", "Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   highRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Erector Spinae",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   hipAbductor: {
+//     targetMuscles: ["Gluteus Maximus", "Gluteus Medius"],
+//     synergistMuscles: ["Tensor Fasciae Latae"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["leverageMachine", "bodyweight", "cable", "band"],
+//   },
+//   hipAdductor: {
+//     targetMuscles: ["Adductor Brevis", "Adductor Longus", "Adductor Magnus"],
+//     synergistMuscles: ["Pectineous"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["leverageMachine", "cable", "band", "bodyweight"],
+//   },
+//   hipThrust: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Quadriceps"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "leverageMachine", "band", "bodyweight"],
+//   },
+//   inclineBenchPress: {
+//     targetMuscles: ["Pectoralis Major Clavicular Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Sternal Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "smith"],
+//   },
+//   inclineBenchPressWideGrip: {
+//     targetMuscles: ["Pectoralis Major Clavicular Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Sternal Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   inclineChestFly: {
+//     targetMuscles: ["Pectoralis Major Clavicular Head"],
+//     synergistMuscles: ["Biceps Brachii", "Deltoid Anterior", "Pectoralis Major Sternal Head"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["cable", "dumbbell"],
+//   },
+//   inclineChestPress: {
+//     targetMuscles: ["Pectoralis Major Clavicular Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Sternal Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["leverageMachine", "band", "dumbbell"],
+//   },
+//   inclineCurl: {
+//     targetMuscles: ["Biceps Brachii"],
+//     synergistMuscles: ["Brachialis", "Brachioradialis"],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   inclineRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["barbell", "dumbbell"],
+//   },
+//   invertedRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Infraspinatus",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Pectoralis Major Sternal Head",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   isoLateralChestPress: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   isoLateralRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   jackknifeSitUp: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Iliopsoas", "Obliques", "Quadriceps", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   jumpRope: {
+//     targetMuscles: ["Soleus", "Gastrocnemius", "Quadriceps", "Hamstrings"],
+//     synergistMuscles: ["Gluteus Maximus", "Rectus Abdominis", "Obliques", "Tibialis Anterior"],
+//     bodyParts: ["Thighs", "Calves"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   jumpSquat: {
+//     targetMuscles: ["Gluteus Maximus", "Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gastrocnemius", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "bodyweight"],
+//   },
+//   jumpingJack: {
+//     targetMuscles: [
+//       "Gluteus Maximus",
+//       "Quadriceps",
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//       "Adductor Magnus",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//       "Deltoid Posterior",
+//     ],
+//     synergistMuscles: [
+//       "Gastrocnemius",
+//       "Soleus",
+//       "Hamstrings",
+//       "Rectus Abdominis",
+//       "Obliques",
+//       "Trapezius Upper Fibers",
+//       "Serratus Anterior",
+//     ],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   kettlebellSwing: {
+//     targetMuscles: ["Deltoid Anterior", "Gluteus Maximus"],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Hamstrings",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Soleus",
+//     ],
+//     bodyParts: ["Hips", "Shoulders"],
+//     sortedEquipment: ["dumbbell", "kettlebell"],
+//   },
+//   kettlebellTurkishGetUp: {
+//     targetMuscles: ["Deltoid Anterior", "Deltoid Lateral", "Deltoid Posterior", "Quadriceps", "Gluteus Maximus"],
+//     synergistMuscles: [
+//       "Obliques",
+//       "Rectus Abdominis",
+//       "Latissimus Dorsi",
+//       "Hamstrings",
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//       "Adductor Magnus",
+//       "Triceps Brachii",
+//       "Erector Spinae",
+//       "Serratus Anterior",
+//     ],
+//     bodyParts: ["Hips", "Shoulders"],
+//     sortedEquipment: ["kettlebell"],
+//   },
+//   kippingPullUp: {
+//     targetMuscles: [
+//       "Latissimus Dorsi",
+//       "Brachialis",
+//       "Biceps Brachii",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     synergistMuscles: [
+//       "Deltoid Posterior",
+//       "Brachioradialis",
+//       "Pectoralis Major Sternal Head",
+//       "Rectus Abdominis",
+//       "Obliques",
+//       "Iliopsoas",
+//       "Tensor Fasciae Latae",
+//       "Adductor Longus",
+//       "Adductor Brevis",
+//       "Erector Spinae",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   kneeRaise: {
+//     targetMuscles: ["Iliopsoas"],
+//     synergistMuscles: ["Adductor Brevis", "Adductor Longus", "Pectineous", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   kneelingPulldown: {
+//     targetMuscles: ["Latissimus Dorsi"],
+//     synergistMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Levator Scapulae",
+//       "Pectoralis Major Sternal Head",
+//       "Serratus Anterior",
+//       "Teres Major",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["band"],
+//   },
+//   kneestoElbows: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: [
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//       "Iliopsoas",
+//       "Obliques",
+//       "Pectineous",
+//       "Sartorius",
+//       "Tensor Fasciae Latae",
+//     ],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   latPulldown: {
+//     targetMuscles: ["Latissimus Dorsi"],
+//     synergistMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Levator Scapulae",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["cable"],
+//   },
+//   lateralBoxJump: {
+//     targetMuscles: ["Gluteus Maximus", "Quadriceps", "Hamstrings"],
+//     synergistMuscles: [
+//       "Adductor Brevis",
+//       "Adductor Longus",
+//       "Adductor Magnus",
+//       "Gluteus Medius",
+//       "Tensor Fasciae Latae",
+//       "Rectus Abdominis",
+//       "Obliques",
+//       "Deltoid Anterior",
+//       "Deltoid Posterior",
+//       "Deltoid Lateral",
+//     ],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   lateralRaise: {
+//     targetMuscles: ["Deltoid Lateral"],
+//     synergistMuscles: ["Deltoid Anterior", "Serratus Anterior", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["cable", "dumbbell", "leverageMachine", "band", "kettlebell"],
+//   },
+//   legsUpBenchPress: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   legCurl: {
+//     targetMuscles: ["Hamstrings"],
+//     synergistMuscles: ["Gastrocnemius", "Sartorius"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   legExtension: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: [],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["leverageMachine", "band"],
+//   },
+//   legPress: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["smith", "leverageMachine"],
+//   },
+//   lunge: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "dumbbell", "bodyweight", "cable"],
+//   },
+//   lyingBicepCurl: {
+//     targetMuscles: ["Biceps Brachii"],
+//     synergistMuscles: ["Brachialis", "Brachioradialis"],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["barbell", "dumbbell", "band", "leverageMachine", "cable", "ezbar"],
+//   },
+//   lyingLegCurl: {
+//     targetMuscles: ["Hamstrings"],
+//     synergistMuscles: ["Gastrocnemius", "Sartorius"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["leverageMachine", "band"],
+//   },
+//   mountainClimber: {
+//     targetMuscles: ["Iliopsoas"],
+//     synergistMuscles: ["Adductor Brevis", "Adductor Longus", "Pectineous", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   muscleUp: {
+//     targetMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Latissimus Dorsi",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     synergistMuscles: [],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   obliqueCrunch: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: ["Rectus Abdominis"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   overheadPress: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell", "dumbbell", "ezbar"],
+//   },
+//   overheadSquat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "dumbbell"],
+//   },
+//   pecDeck: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Pectoralis Major Clavicular Head", "Serratus Anterior"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   pendlayRow: {
+//     targetMuscles: [
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Latissimus Dorsi",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     synergistMuscles: ["Brachialis", "Brachioradialis", "Pectoralis Major Sternal Head"],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   pistolSquat: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["kettlebell", "leverageMachine", "bodyweight"],
+//   },
+//   plank: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: [],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   powerClean: {
+//     targetMuscles: ["Quadriceps", "Gluteus Maximus", "Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Hamstrings",
+//       "Gastrocnemius",
+//       "Soleus",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Trapezius Upper Fibers",
+//       "Latissimus Dorsi",
+//       "Erector Spinae",
+//       "Biceps Brachii",
+//       "Wrist Flexors",
+//       "Rectus Abdominis",
+//       "Obliques",
+//     ],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   powerSnatch: {
+//     targetMuscles: ["Quadriceps", "Gluteus Maximus", "Deltoid Anterior", "Deltoid Lateral", "Deltoid Posterior"],
+//     synergistMuscles: [
+//       "Hamstrings",
+//       "Gastrocnemius",
+//       "Soleus",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Trapezius Upper Fibers",
+//       "Latissimus Dorsi",
+//       "Erector Spinae",
+//       "Biceps Brachii",
+//       "Wrist Flexors",
+//       "Rectus Abdominis",
+//       "Obliques",
+//     ],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   preacherCurl: {
+//     targetMuscles: ["Brachialis"],
+//     synergistMuscles: ["Biceps Brachii", "Brachioradialis"],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["barbell", "dumbbell", "ezbar", "leverageMachine"],
+//   },
+//   pressUnder: {
+//     targetMuscles: ["Quadriceps", "Deltoid Anterior", "Deltoid Lateral", "Deltoid Posterior"],
+//     synergistMuscles: [
+//       "Gluteus Maximus",
+//       "Hamstrings",
+//       "Erector Spinae",
+//       "Rectus Abdominis",
+//       "Obliques",
+//       "Triceps Brachii",
+//       "Biceps Brachii",
+//     ],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   pullUp: {
+//     targetMuscles: ["Latissimus Dorsi"],
+//     synergistMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Levator Scapulae",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["leverageMachine", "bodyweight", "band"],
+//   },
+//   pullover: {
+//     targetMuscles: ["Latissimus Dorsi"],
+//     synergistMuscles: [
+//       "Deltoid Posterior",
+//       "Levator Scapulae",
+//       "Pectoralis Major Sternal Head",
+//       "Serratus Anterior",
+//       "Teres Major",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["barbell", "dumbbell"],
+//   },
+//   pushPress: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["bodyweight", "kettlebell"],
+//   },
+//   pushUp: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["bodyweight", "band"],
+//   },
+//   reverseCrunch: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Iliopsoas", "Obliques"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight", "cable"],
+//   },
+//   reverseCurl: {
+//     targetMuscles: ["Brachioradialis"],
+//     synergistMuscles: ["Biceps Brachii", "Brachialis"],
+//     bodyParts: ["Forearms"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "band"],
+//   },
+//   reverseFly: {
+//     targetMuscles: ["Deltoid Posterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Infraspinatus",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["dumbbell", "leverageMachine", "band"],
+//   },
+//   reverseGripConcentrationCurl: {
+//     targetMuscles: ["Brachialis", "Brachioradialis"],
+//     synergistMuscles: ["Biceps Brachii", "Wrist Flexors"],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   reverseLatPulldown: {
+//     targetMuscles: ["Latissimus Dorsi"],
+//     synergistMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Levator Scapulae",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["cable"],
+//   },
+//   reverseLunge: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Soleus", "Gluteus Maximus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "dumbbell", "bodyweight", "cable"],
+//   },
+//   reverseWristCurl: {
+//     targetMuscles: ["Wrist Extensors"],
+//     synergistMuscles: [],
+//     bodyParts: ["Forearms"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   reversePlank: {
+//     targetMuscles: ["Gluteus Maximus", "Rectus Abdominis", "Erector Spinae"],
+//     synergistMuscles: [
+//       "Hamstrings",
+//       "Quadriceps",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//       "Deltoid Posterior",
+//       "Triceps Brachii",
+//       "Latissimus Dorsi",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   romanianDeadlift: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Erector Spinae", "Hamstrings"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "dumbbell"],
+//   },
+//   reverseHyperextension: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Hamstrings"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["band", "leverageMachine"],
+//   },
+//   rowing: {
+//     targetMuscles: ["Quadriceps", "Latissimus Dorsi", "Erector Spinae"],
+//     synergistMuscles: [
+//       "Hamstrings",
+//       "Gluteus Maximus",
+//       "Biceps Brachii",
+//       "Deltoid Anterior",
+//       "Deltoid Lateral",
+//       "Deltoid Posterior",
+//       "Wrist Flexors",
+//       "Rectus Abdominis",
+//       "Obliques",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["cable"],
+//   },
+//   russianTwist: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: ["Erector Spinae", "Iliopsoas"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight", "dumbbell", "cable"],
+//   },
+//   safetySquatBarSquat: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   seatedCalfRaise: {
+//     targetMuscles: ["Soleus"],
+//     synergistMuscles: ["Gastrocnemius"],
+//     bodyParts: ["Calves"],
+//     sortedEquipment: ["barbell", "dumbbell", "leverageMachine"],
+//   },
+//   seatedFrontRaise: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell", "dumbbell"],
+//   },
+//   seatedLegCurl: {
+//     targetMuscles: ["Hamstrings"],
+//     synergistMuscles: ["Gastrocnemius", "Sartorius"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   seatedLegPress: {
+//     targetMuscles: ["Gluteus Maximus", "Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Soleus"],
+//     bodyParts: ["Hips", "Thighs"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   seatedOverheadPress: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   seatedPalmsUpWristCurl: {
+//     targetMuscles: ["Wrist Flexors"],
+//     synergistMuscles: [],
+//     bodyParts: ["Forearms"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   seatedRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Erector Spinae",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["cable", "band", "leverageMachine"],
+//   },
+//   seatedWideGripRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Erector Spinae",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["cable"],
+//   },
+//   shoulderPress: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["cable", "dumbbell", "leverageMachine", "band", "smith"],
+//   },
+//   shoulderPressParallelGrip: {
+//     targetMuscles: ["Deltoid Anterior"],
+//     synergistMuscles: [
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   shrug: {
+//     targetMuscles: ["Trapezius Upper Fibers"],
+//     synergistMuscles: ["Levator Scapulae", "Trapezius Middle Fibers"],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "leverageMachine", "band", "smith"],
+//   },
+//   sideBend: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: ["Erector Spinae", "Iliopsoas"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["cable", "dumbbell", "band"],
+//   },
+//   sideCrunch: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: ["Rectus Abdominis"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight", "band", "cable"],
+//   },
+//   sideHipAbductor: {
+//     targetMuscles: ["Gluteus Medius", "Tensor Fasciae Latae"],
+//     synergistMuscles: [],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight", "barbell", "leverageMachine"],
+//   },
+//   sideLyingClam: {
+//     targetMuscles: ["Gluteus Medius"],
+//     synergistMuscles: ["Tensor Fasciae Latae"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   sidePlank: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: [],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   singleLegBridge: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Hamstrings"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   singleLegCalfRaise: {
+//     targetMuscles: ["Gastrocnemius"],
+//     synergistMuscles: ["Soleus"],
+//     bodyParts: ["Calves"],
+//     sortedEquipment: ["barbell", "dumbbell", "leverageMachine", "bodyweight", "cable"],
+//   },
+//   singleLegDeadlift: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Hamstrings"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["dumbbell", "bodyweight"],
+//   },
+//   singleLegGluteBridgeBench: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: [],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   singleLegGluteBridgeStraight: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: [],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   singleLegGluteBridgeBentKnee: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: [],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   singleLegHipThrust: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Quadriceps"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "bodyweight", "leverageMachine"],
+//   },
+//   sissySquat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   sitUp: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Iliopsoas", "Obliques", "Quadriceps", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight", "kettlebell"],
+//   },
+//   slingShotBenchPress: {
+//     targetMuscles: ["Pectoralis Major Sternal Head"],
+//     synergistMuscles: ["Deltoid Anterior", "Pectoralis Major Clavicular Head", "Triceps Brachii"],
+//     bodyParts: ["Chest"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   skullcrusher: {
+//     targetMuscles: ["Triceps Brachii"],
+//     synergistMuscles: [],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "ezbar"],
+//   },
+//   snatch: {
+//     targetMuscles: ["Deltoid Anterior", "Erector Spinae", "Gluteus Maximus", "Quadriceps"],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Deltoid Lateral",
+//       "Gastrocnemius",
+//       "Serratus Anterior",
+//       "Soleus",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Hips", "Shoulders", "Thighs"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   snatchPull: {
+//     targetMuscles: [
+//       "Erector Spinae",
+//       "Gluteus Maximus",
+//       "Hamstrings",
+//       "Quadriceps",
+//       "Latissimus Dorsi",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Trapezius Upper Fibers",
+//     ],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Deltoid Anterior",
+//       "Deltoid Posterior",
+//       "Deltoid Lateral",
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Triceps Brachii",
+//       "Wrist Flexors",
+//       "Wrist Extensors",
+//     ],
+//     bodyParts: ["Back", "Hips", "Thighs"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   splitSquat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Hips", "Thighs"],
+//     sortedEquipment: ["dumbbell"],
+//   },
+//   splitJerk: {
+//     targetMuscles: [
+//       "Deltoid Anterior",
+//       "Deltoid Posterior",
+//       "Deltoid Lateral",
+//       "Triceps Brachii",
+//       "Quadriceps",
+//       "Gluteus Maximus",
+//       "Erector Spinae",
+//     ],
+//     synergistMuscles: [
+//       "Pectoralis Major Sternal Head",
+//       "Pectoralis Major Clavicular Head",
+//       "Latissimus Dorsi",
+//       "Hamstrings",
+//       "Obliques",
+//       "Rectus Abdominis",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//       "Trapezius Upper Fibers",
+//       "Adductor Magnus",
+//       "Tensor Fasciae Latae",
+//       "Wrist Extensors",
+//       "Wrist Flexors",
+//     ],
+//     bodyParts: ["Hips", "Shoulders", "Thighs"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   squat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "dumbbell", "bodyweight", "smith", "leverageMachine"],
+//   },
+//   squatRow: {
+//     targetMuscles: ["Gluteus Maximus", "Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Infraspinatus",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Adductor Magnus",
+//       "Deltoid Posterior",
+//       "Pectoralis Major Sternal Head",
+//       "Quadriceps",
+//       "Soleus",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["band"],
+//   },
+//   standingCalfRaise: {
+//     targetMuscles: ["Gastrocnemius"],
+//     synergistMuscles: ["Soleus"],
+//     bodyParts: ["Calves"],
+//     sortedEquipment: ["barbell", "dumbbell", "leverageMachine", "bodyweight", "cable"],
+//   },
+//   standingRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["cable"],
+//   },
+//   standingRowCloseGrip: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Upper Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Infraspinatus",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["cable"],
+//   },
+//   standingRowRearDeltWithRope: {
+//     targetMuscles: ["Deltoid Posterior"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Lateral",
+//       "Infraspinatus",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["cable"],
+//   },
+//   standingRowRearHorizontalDeltWithRope: {
+//     targetMuscles: ["Deltoid Posterior"],
+//     synergistMuscles: ["Infraspinatus", "Teres Minor", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["cable"],
+//   },
+//   standingRowVBar: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Infraspinatus",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Pectoralis Major Sternal Head",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["cable"],
+//   },
+//   stepUp: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "dumbbell", "bodyweight", "band"],
+//   },
+//   stiffLegDeadlift: {
+//     targetMuscles: ["Erector Spinae"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Hamstrings"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell", "dumbbell", "band"],
+//   },
+//   straightLegDeadlift: {
+//     targetMuscles: ["Hamstrings"],
+//     synergistMuscles: ["Adductor Magnus", "Erector Spinae", "Gluteus Maximus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["barbell", "dumbbell", "band", "kettlebell"],
+//   },
+//   sumoDeadlift: {
+//     targetMuscles: ["Erector Spinae"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Quadriceps", "Soleus"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   sumoDeadliftHighPull: {
+//     targetMuscles: ["Deltoid Lateral", "Gluteus Maximus", "Quadriceps"],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Anterior",
+//       "Gastrocnemius",
+//       "Infraspinatus",
+//       "Soleus",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   superman: {
+//     targetMuscles: ["Erector Spinae"],
+//     synergistMuscles: ["Gluteus Maximus", "Hamstrings"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight", "dumbbell"],
+//   },
+//   tBarRow: {
+//     targetMuscles: ["Latissimus Dorsi", "Trapezius Lower Fibers", "Trapezius Middle Fibers"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Pectoralis Major Sternal Head",
+//       "Teres Major",
+//       "Teres Minor",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["leverageMachine"],
+//   },
+//   thruster: {
+//     targetMuscles: ["Deltoid Anterior", "Gluteus Maximus", "Quadriceps"],
+//     synergistMuscles: [
+//       "Adductor Magnus",
+//       "Deltoid Lateral",
+//       "Pectoralis Major Clavicular Head",
+//       "Serratus Anterior",
+//       "Soleus",
+//       "Triceps Brachii",
+//     ],
+//     bodyParts: ["Shoulders", "Thighs"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   toesToBar: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Iliopsoas", "Obliques", "Quadriceps", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   torsoRotation: {
+//     targetMuscles: ["Obliques"],
+//     synergistMuscles: ["Erector Spinae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["cable"],
+//   },
+//   trapBarDeadlift: {
+//     targetMuscles: ["Gluteus Maximus"],
+//     synergistMuscles: ["Adductor Magnus", "Quadriceps", "Soleus"],
+//     bodyParts: ["Thighs"],
+//     sortedEquipment: ["trapbar"],
+//   },
+//   tricepsDip: {
+//     targetMuscles: ["Triceps Brachii"],
+//     synergistMuscles: [
+//       "Deltoid Anterior",
+//       "Latissimus Dorsi",
+//       "Levator Scapulae",
+//       "Pectoralis Major Clavicular Head",
+//       "Pectoralis Major Sternal Head",
+//     ],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["bodyweight", "leverageMachine"],
+//   },
+//   tricepsExtension: {
+//     targetMuscles: ["Triceps Brachii"],
+//     synergistMuscles: [],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["barbell", "cable", "band", "dumbbell"],
+//   },
+//   tricepsPushdown: {
+//     targetMuscles: ["Triceps Brachii"],
+//     synergistMuscles: [],
+//     bodyParts: ["Upper Arms"],
+//     sortedEquipment: ["cable"],
+//   },
+//   uprightRow: {
+//     targetMuscles: ["Deltoid Lateral"],
+//     synergistMuscles: [
+//       "Biceps Brachii",
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Anterior",
+//       "Infraspinatus",
+//       "Serratus Anterior",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Shoulders"],
+//     sortedEquipment: ["barbell", "cable", "dumbbell", "band"],
+//   },
+//   vUp: {
+//     targetMuscles: ["Rectus Abdominis"],
+//     synergistMuscles: ["Iliopsoas", "Obliques", "Pectineous", "Quadriceps", "Sartorius", "Tensor Fasciae Latae"],
+//     bodyParts: ["Waist"],
+//     sortedEquipment: ["bodyweight", "band", "dumbbell"],
+//   },
+//   widePullUp: {
+//     targetMuscles: ["Latissimus Dorsi"],
+//     synergistMuscles: [
+//       "Brachialis",
+//       "Brachioradialis",
+//       "Deltoid Posterior",
+//       "Infraspinatus",
+//       "Levator Scapulae",
+//       "Serratus Anterior",
+//       "Teres Major",
+//       "Teres Minor",
+//       "Trapezius Lower Fibers",
+//       "Trapezius Middle Fibers",
+//     ],
+//     bodyParts: ["Back"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   wristCurl: {
+//     targetMuscles: ["Wrist Flexors"],
+//     synergistMuscles: [],
+//     bodyParts: ["Forearms"],
+//     sortedEquipment: ["barbell"],
+//   },
+//   wristRoller: {
+//     targetMuscles: ["Wrist Extensors", "Wrist Flexors"],
+//     synergistMuscles: [],
+//     bodyParts: ["Forearms"],
+//     sortedEquipment: ["bodyweight"],
+//   },
+//   zercherSquat: {
+//     targetMuscles: ["Quadriceps"],
+//     synergistMuscles: ["Adductor Magnus", "Gluteus Maximus", "Soleus"],
+//     bodyParts: ["Hips"],
+//     sortedEquipment: ["barbell"],
+//   },
+// };
+
+// function equipmentToBarKey(equipment?: IEquipment): IBarKey | undefined {
+//   switch (equipment) {
+//     case "barbell":
+//       return "barbell";
+//     case "dumbbell":
+//       return "dumbbell";
+//     case "ezbar":
+//       return "ezbar";
+//     default:
+//       return undefined;
+//   }
+// }
+
+function equipmentName(equipment: IEquipment | undefined, equipmentSettings?: IAllEquipment): string {
+  const equipmentData = equipment && equipmentSettings ? equipmentSettings[equipment] : undefined;
+  if (equipmentData?.name) {
+    return equipmentData.name.trim();
+  }
+  switch (equipment) {
+    case "barbell":
+      return "Barbell";
+    case "cable":
+      return "Cable";
+    case "dumbbell":
+      return "Dumbbell";
+    case "smith":
+      return "Smith Machine";
+    case "band":
+      return "Band";
+    case "kettlebell":
+      return "Kettlebell";
+    case "bodyweight":
+      return "Bodyweight";
+    case "leverageMachine":
+      return "Leverage Machine";
+    case "medicineball":
+      return "Medicine Ball";
+    case "ezbar":
+      return "EZ Bar";
+    case "trapbar":
+      return "Trap Bar";
+    default:
+      return "";
+  }
+}
+
+type IExerciseKind = "core" | "pull" | "push" | "legs" | "upper" | "lower";
+
+type IExercise = {
+  id: IExerciseId;
+  name: string;
+  defaultWarmup?: number;
+  equipment?: IEquipment;
+  defaultEquipment?: IEquipment;
+  types: IExerciseKind[];
+  onerm?: number;
+  startingWeightLb: IWeight;
+  startingWeightKg: IWeight;
+};
+
+function warmupValues(units: IUnit): Partial<Record<number, IProgramExerciseWarmupSet[]>> {
+  return {
+    10: [
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(60, "lb") : Weight_build(30, "kg"),
+        value: 0.3,
+      },
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(30, "lb") : Weight_build(15, "kg"),
+        value: 0.5,
+      },
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(10, "lb") : Weight_build(5, "kg"),
+        value: 0.8,
+      },
+    ],
+    45: [
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(120, "lb") : Weight_build(60, "kg"),
+        value: 0.3,
+      },
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(90, "lb") : Weight_build(45, "kg"),
+        value: 0.5,
+      },
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(45, "lb") : Weight_build(20, "kg"),
+        value: 0.8,
+      },
+    ],
+    95: [
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(150, "lb") : Weight_build(70, "kg"),
+        value: 0.3,
+      },
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(125, "lb") : Weight_build(60, "kg"),
+        value: 0.5,
+      },
+      {
+        reps: 5,
+        threshold: units === "lb" ? Weight_build(95, "lb") : Weight_build(40, "kg"),
+        value: 0.8,
+      },
+    ],
+  };
+}
+
+function warmup45(weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] {
+  return warmup(warmupValues(settings.units)[45] || [])(weight, settings, exerciseType);
+}
+
+function warmup95(weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] {
+  return warmup(warmupValues(settings.units)[95] || [])(weight, settings, exerciseType);
+}
+
+function warmup10(weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] {
+  return warmup(warmupValues(settings.units)[10] || [])(weight, settings, exerciseType);
+}
+
+function warmup(
+  programExerciseWarmupSets: IProgramExerciseWarmupSet[],
+  shouldSkipThreshold: boolean = false
+): (weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType) => ISet[] {
+  return (weight: IWeight | undefined, settings: ISettings, exerciseType?: IExerciseType): ISet[] => {
+    let index = 0;
+    return programExerciseWarmupSets.reduce<ISet[]>((memo, programExerciseWarmupSet) => {
+      if (shouldSkipThreshold || (weight != null && Weight_gt(weight, programExerciseWarmupSet.threshold))) {
+        const value = programExerciseWarmupSet.value;
+        const unit = Equipment_getUnitOrDefaultForExerciseType(settings, exerciseType);
+        if (typeof value !== "number" || weight != null) {
+          const warmupWeight = typeof value === "number" ? Weight_multiply(weight!, value) : value;
+          const roundedWeight = Weight_roundConvertTo(warmupWeight, settings, unit, exerciseType);
+          memo.push({
+            vtype: "set",
+            index,
+            id: UidFactory_generateUid(6),
+            reps: programExerciseWarmupSet.reps,
+            isUnilateral: exerciseType ? Exercise_getIsUnilateral(exerciseType, settings) : false,
+            weight: roundedWeight,
+            originalWeight: warmupWeight,
+            isCompleted: false,
+          });
+          index += 1;
+        }
+      }
+      return memo;
+    }, []);
+  };
+}
+
+function warmupEmpty(weight: IWeight | undefined): ISet[] {
+  return [];
+}
+
+function maybeGetExercise(id: IExerciseId, customExercises: IAllCustomExercises): IExercise | undefined {
+  const custom = customExercises[id];
+  return custom != null
+    ? {
+      ...custom,
+      defaultWarmup: 45,
+      types: custom.types || [],
+      startingWeightKg: Weight_build(0, "kg"),
+      startingWeightLb: Weight_build(0, "lb"),
+    }
+    : allExercisesList[id];
+}
+
+function getExercise(id: IExerciseId, customExercises: IAllCustomExercises): IExercise {
+  const exercise = maybeGetExercise(id, customExercises);
+  return exercise != null ? exercise : allExercisesList.squat;
+}
+
+// function Exercise_getMetadata(id: IExerciseId): IMetaExercises {
+//   return metadata[id] || {};
+// }
+
+// function Exercise_exists(name: string, customExercises: IAllCustomExercises): boolean {
+//   let exercise = ObjectUtils_keys(allExercisesList).filter((k) => allExercisesList[k].name === name)[0];
+//   if (exercise == null) {
+//     exercise = ObjectUtils_keys(customExercises).filter(
+//       (k) => !customExercises[k]!.isDeleted && customExercises[k]!.name === name
+//     )[0];
+//   }
+//   return !!exercise;
+// }
+//
+// function Exercise_isCustom(id: string, customExercises: IAllCustomExercises): boolean {
+//   return customExercises[id] != null;
+// }
+
+function Exercise_fullName(exercise: IExercise, settings: ISettings, label?: string): string {
+  let str: string;
+  if (exercise.equipment && exercise.defaultEquipment !== exercise.equipment) {
+    const allEquipment = Equipment_currentEquipment(settings);
+    const equipment = equipmentName(exercise.equipment, allEquipment);
+    str = `${exercise.name}, ${equipment}`;
+  } else {
+    str = exercise.name;
+  }
+  if (label) {
+    str = `${label}: ${str}`;
+  }
+  return str;
+}
+
+// function Exercise_reverseName(exercise: IExercise, settings?: ISettings): string {
+//   if (exercise.equipment) {
+//     const allEquipment = settings ? Equipment_currentEquipment(settings) : {};
+//     const equipment = equipmentName(exercise.equipment, allEquipment);
+//     return `${equipment} ${exercise.name}`;
+//   } else {
+//     return exercise.name;
+//   }
+// }
+//
+// function Exercise_nameWithEquipment(exercise: IExercise, settings?: ISettings): string {
+//   if (exercise.equipment) {
+//     const allEquipment = settings ? Equipment_currentEquipment(settings) : {};
+//     const equipment = equipmentName(exercise.equipment, allEquipment);
+//     return `${exercise.name}, ${equipment}`;
+//   } else {
+//     return exercise.name;
+//   }
+// }
+//
+// function Exercise_searchNames(query: string, customExercises: IAllCustomExercises): string[] {
+//   const allExercises = Exercise_allExpanded({});
+//   const exerciseNames = allExercises
+//     .filter((e) =>
+//       StringUtils_fuzzySearch(
+//         query.toLowerCase(),
+//         `${e.name}${e.equipment ? `, ${equipmentName(e.equipment)}` : ""}`.toLowerCase()
+//       )
+//     )
+//     .map((e) => `${e.name}${e.equipment ? `, ${equipmentName(e.equipment)}` : ""}`);
+//   const customExerciseNames = ObjectUtils_values(customExercises)
+//     .filter((ce) => (ce ? StringUtils_fuzzySearch(query.toLowerCase(), ce.name.toLowerCase()) : false))
+//     .map((e) => e!.name);
+//   const names = [...exerciseNames, ...customExerciseNames];
+//   names.sort();
+//   return names;
+// }
+
+function Exercise_findById(id: IExerciseId, customExercises: IAllCustomExercises): IExercise | undefined {
+  return maybeGetExercise(id, customExercises);
+}
+
+function Exercise_findIdByName(name: string, customExercises: IAllCustomExercises): IExerciseId | undefined {
+  const lowercaseName = name.toLowerCase();
+  return (
+    nameToIdMapping[lowercaseName] ||
+    ObjectUtils_values(customExercises).find((ce) => {
+      const thisLowercaseName = ce?.name?.toLowerCase() || "";
+      return (
+        thisLowercaseName === lowercaseName ||
+        thisLowercaseName.replace(/\s*,\s*/g, ",") === lowercaseName.replace(/\s*,\s*/g, ",")
+      );
+    })?.id
+  );
+}
+
+function Exercise_get(type: IExerciseType, customExercises: IAllCustomExercises): IExercise {
+  const exercise = getExercise(type.id, customExercises);
+  return { ...exercise, equipment: type.equipment };
+}
+
+// function Exercise_getNotes(type: IExerciseType, settings: ISettings): string | undefined {
+//   return settings.exerciseData[Exercise_toKey(type)]?.notes;
+// }
+
+function Exercise_onerm(type: IExerciseType, settings: ISettings): IWeight {
+  const rm = settings.exerciseData[Exercise_toKey(type)]?.rm1;
+  if (rm) {
+    return Weight_convertTo(rm, settings.units);
+  }
+  const exercise = Exercise_get(type, settings.exercises);
+  return settings.units === "kg" ? exercise.startingWeightKg : exercise.startingWeightLb;
+}
+
+// function Exercise_defaultRounding(type: IExerciseType, settings: ISettings): number {
+//   const units = Equipment_getUnitOrDefaultForExerciseType(settings, type);
+//   return Math.max(0.1, settings.exerciseData[Exercise_toKey(type)]?.rounding ?? (units === "kg" ? 2.5 : 5));
+// }
+//
+// function Exercise_find(type: IExerciseType, customExercises: IAllCustomExercises): IExercise | undefined {
+//   const exercise = maybeGetExercise(type.id, customExercises);
+//   return exercise ? { ...exercise, equipment: type.equipment } : undefined;
+// }
+
+// function Exercise_getById(id: IExerciseId, customExercises: IAllCustomExercises): IExercise {
+//   const exercise = getExercise(id, customExercises);
+//   return { ...exercise, equipment: exercise.defaultEquipment };
+// }
+
+function Exercise_findByNameEquipment(
+  customExercises: IAllCustomExercises,
+  name: string,
+  equipment?: string
+): IExercise | undefined {
+  const exerciseId = Exercise_findIdByName(name, customExercises);
+  const exercise = exerciseId ? Exercise_findById(exerciseId, customExercises) : undefined;
+  if (exercise == null) {
+    return undefined;
+  }
+  return { ...exercise, equipment };
+}
+
+function Exercise_findByNameAndEquipment(
+  nameAndEquipment: string,
+  customExercises: IAllCustomExercises
+): IExercise | undefined {
+  const parts = nameAndEquipment.split(",").map((p) => p.trim());
+  let name: string | undefined;
+  let equipment: IEquipment | undefined | null;
+  if (parts.length > 1) {
+    const foundEquipment = equipments.filter(
+      (e) => equipmentName(e).toLowerCase() === parts[parts.length - 1].toLowerCase()
+    )[0];
+    if (foundEquipment != null) {
+      equipment = foundEquipment;
+      name = parts.slice(0, parts.length - 1).join(", ");
+    } else {
+      equipment = null;
+    }
+  }
+  if (name == null) {
+    name = nameAndEquipment;
+  }
+  let exerciseId = Exercise_findIdByName(name, {});
+  if (exerciseId != null && equipment !== null) {
+    const exercise = Exercise_findById(exerciseId, {});
+    if (exercise != null) {
+      return { ...exercise, equipment: equipment || exercise.defaultEquipment };
+    }
+  } else {
+    exerciseId = Exercise_findIdByName(nameAndEquipment, customExercises);
+    if (exerciseId != null) {
+      const exercise = Exercise_findById(exerciseId, customExercises);
+      if (exercise != null) {
+        return { ...exercise };
+      }
+    }
+  }
+  return undefined;
+}
+
+function Exercise_getIsUnilateral(exerciseType: IExerciseType, settings: ISettings): boolean {
+  const key = Exercise_toKey(exerciseType);
+  const exerciseData = settings.exerciseData[key];
+  if (exerciseData?.isUnilateral !== undefined) {
+    return exerciseData.isUnilateral;
+  }
+
+  switch (exerciseType.id) {
+    case "bulgarianSplitSquat":
+    case "concentrationCurl":
+    case "reverseGripConcentrationCurl":
+    case "bentOverOneArmRow":
+    case "cableKickback":
+    case "cableTwist":
+    case "russianTwist":
+    case "lunge":
+    case "reverseLunge":
+    case "splitSquat":
+    case "stepUp":
+    case "pistolSquat":
+    case "singleLegBridge":
+    case "singleLegDeadlift":
+    case "sideBend":
+    case "sideCrunch":
+    case "sideHipAbductor":
+    case "sideLyingClam":
+    case "sidePlank":
+    case "singleLegBridge":
+    case "singleLegCalfRaise":
+    case "singleLegDeadlift":
+    case "singleLegGluteBridgeBench":
+    case "singleLegGluteBridgeStraight":
+    case "singleLegGluteBridgeBentKnee":
+    case "singleLegHipThrust":
+      return true;
+    case "bicepCurl":
+    case "wristCurl":
+    case "reverseWristCurl":
+    case "seatedPalmsUpWristCurl":
+    case "hammerCurl":
+    case "preacherCurl":
+    case "reverseCurl":
+    case "lyingBicepCurl":
+    case "inclineCurl":
+      return exerciseType.equipment === "dumbbell";
+    default:
+      return false;
+  }
+}
+
+function Exercise_findByName(name: string, customExercises: IAllCustomExercises): IExercise | undefined {
+  const exerciseId = Exercise_findIdByName(name.trim(), customExercises);
+  if (exerciseId != null) {
+    const exercise = Exercise_findById(exerciseId, customExercises);
+    if (exercise != null) {
+      return { ...exercise, equipment: exercise.defaultEquipment };
+    }
+  }
+  return undefined;
+}
+
+// function Exercise_getByIds(ids: IExerciseId[], customExercises: IAllCustomExercises): IExercise[] {
+//   return ids.map((id) => {
+//     const exercise = getExercise(id, customExercises);
+//     return { ...exercise, equipment: exercise.defaultEquipment };
+//   });
+// }
+
+// function Exercise_all(customExercises: IAllCustomExercises): IExercise[] {
+//   return ObjectUtils_keys(customExercises)
+//     .map((id) => getExercise(id, customExercises))
+//     .concat(
+//       ObjectUtils_keys(allExercisesList).map((k) => ({
+//         ...allExercisesList[k],
+//         equipment: allExercisesList[k].defaultEquipment,
+//       }))
+//     );
+// }
+//
+// function Exercise_allExpanded(customExercises: IAllCustomExercises): IExercise[] {
+//   return ObjectUtils_keys(customExercises)
+//     .map((id) => getExercise(id, customExercises))
+//     .concat(
+//       ObjectUtils_keys(allExercisesList).flatMap((k) => {
+//         return CollectionUtils_compact(
+//           equipments.map((equipment) => {
+//             const exerciseType = { id: k, equipment };
+//             return ExerciseImageUtils_exists(exerciseType, "small") ? { ...allExercisesList[k], equipment } : undefined;
+//           })
+//         );
+//       })
+//     );
+// }
+
+// function Exercise_toExternalUrl(type: IExerciseType): string {
+//   return `/exercises/${Exercise_toUrlSlug(type)}`;
+// }
+
+// function Exercise_toUrlSlug(type: IExerciseType): string {
+//   const possibleEquipments: Record<string, IEquipment> = {
+//     barbell: "barbell",
+//     cable: "cable",
+//     dumbbell: "dumbbell",
+//     smith: "smith",
+//     band: "band",
+//     kettlebell: "kettlebell",
+//     bodyweight: "bodyweight",
+//     leverageMachine: "leverage-machine",
+//     medicineball: "medicine-ball",
+//     ezbar: "ez-bar",
+//     trapbar: "trap-bar",
+//   };
+//
+//   const equipment = type.equipment ? possibleEquipments[type.equipment] : undefined;
+//   const equipmentSlug = equipment ? `${equipment}-` : "";
+//   return `${equipmentSlug}${StringUtils_dashcase(StringUtils_uncamelCase(type.id))}`;
+// }
+
+// function Exercise_fromUrlSlug(slug: string): IExerciseType | undefined {
+//   // slug looks like leverage-machine-squat or barbell-bench-press
+//   const possibleEquipments: Record<string, IEquipment> = {
+//     barbell: "barbell",
+//     cable: "cable",
+//     dumbbell: "dumbbell",
+//     smith: "smith",
+//     band: "band",
+//     kettlebell: "kettlebell",
+//     bodyweight: "bodyweight",
+//     "leverage-machine": "leverageMachine",
+//     "medicine-ball": "medicineball",
+//     "ez-bar": "ezbar",
+//     "trap-bar": "trapbar",
+//   };
+//   let equipment: IEquipment | undefined = undefined;
+//   const equipmentKey = ObjectUtils_keys(possibleEquipments).find((e) => slug.startsWith(e));
+//   if (equipmentKey != null) {
+//     equipment = possibleEquipments[equipmentKey];
+//     slug = slug.slice(equipmentKey.length + 1);
+//   }
+//   const exerciseId = StringUtils_camelCase(StringUtils_undashcase(slug));
+//   if (allExercisesList[exerciseId]) {
+//     return { id: exerciseId as IExerciseId, equipment };
+//   } else {
+//     return undefined;
+//   }
+// }
+
+// function Exercise_eq(a: IExerciseType, b: IExerciseType): boolean {
+//   return a.id === b.id && a.equipment === b.equipment;
+// }
+
+// function Exercise_filterExercisesByNameAndType(
+//   settings: ISettings,
+//   filter: string,
+//   filterTypes: string[],
+//   isSubstitute: boolean,
+//   exerciseType?: IExerciseType,
+//   length?: number
+// ): IExercise[] {
+//   let allExercises = Exercise_allExpanded({});
+//   if (filter) {
+//     allExercises = Exercise_filterExercises(allExercises, filter);
+//   }
+//   if (filterTypes && filterTypes.length > 0) {
+//     allExercises = Exercise_filterExercisesByType(allExercises, filterTypes, settings);
+//   }
+//   allExercises = Exercise_sortExercises(allExercises, isSubstitute, settings, filterTypes, exerciseType);
+//   if (length != null) {
+//     allExercises = allExercises.slice(0, length);
+//   }
+//   return allExercises;
+// }
+
+function Exercise_getWarmupSets(
+  exercise: IExerciseType,
+  weight: IWeight | undefined,
+  settings: ISettings,
+  programExerciseWarmupSets?: IProgramExerciseWarmupSet[]
+): ISet[] {
+  const ex = Exercise_get(exercise, settings.exercises);
+  if (programExerciseWarmupSets != null) {
+    return warmup(programExerciseWarmupSets, true)(weight, settings, exercise);
+  } else {
+    let warmupSets = warmupEmpty(weight);
+    if (ex.defaultWarmup === 10) {
+      warmupSets = warmup10(weight, settings, exercise);
+    } else if (ex.defaultWarmup === 45) {
+      warmupSets = warmup45(weight, settings, exercise);
+    } else if (ex.defaultWarmup === 95) {
+      warmupSets = warmup95(weight, settings, exercise);
+    }
+    return warmupSets;
+  }
+}
+
+// function Exercise_defaultTargetMuscles(type: IExerciseType, settings: ISettings): IMuscle[] {
+//   const customExercise = settings.exercises[type.id];
+//   if (customExercise) {
+//     return customExercise.meta.targetMuscles;
+//   } else {
+//     const meta = Exercise_getMetadata(type.id);
+//     return meta?.targetMuscles != null ? meta.targetMuscles : [];
+//   }
+// }
+
+// function Exercise_targetMuscles(type: IExerciseType, settings: ISettings): IMuscle[] {
+//   const muscleMultipliers = settings.exerciseData[Exercise_toKey(type)]?.muscleMultipliers;
+//   if (muscleMultipliers) {
+//     return ObjectUtils_keys(muscleMultipliers).filter((m) => muscleMultipliers[m] === 1);
+//   } else {
+//     return Exercise_defaultTargetMuscles(type, settings);
+//   }
+// }
+
+// function Exercise_defaultTargetMusclesGroups(type: IExerciseType, settings: ISettings): IScreenMuscle[] {
+//   const muscles = Exercise_defaultTargetMuscles(type, settings);
+//   const allMuscleGroups = new Set<IScreenMuscle>();
+//   for (const muscle of muscles) {
+//     const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+//     for (const muscleGroup of muscleGroups) {
+//       allMuscleGroups.add(muscleGroup);
+//     }
+//   }
+//   return Array.from(allMuscleGroups);
+// }
+
+// function Exercise_targetMusclesGroups(type: IExerciseType, settings: ISettings): IScreenMuscle[] {
+//   const muscles = Exercise_targetMuscles(type, settings);
+//   const allMuscleGroups = new Set<IScreenMuscle>();
+//   for (const muscle of muscles) {
+//     const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+//     for (const muscleGroup of muscleGroups) {
+//       allMuscleGroups.add(muscleGroup);
+//     }
+//   }
+//   return Array.from(allMuscleGroups);
+// }
+
+// function Exercise_defaultSynergistMuscleMultipliers(
+//   type: IExerciseType,
+//   settings: ISettings
+// ): IMuscleMultiplier[] {
+//   const customExercise = settings.exercises[type.id];
+//   if (customExercise) {
+//     return customExercise.meta.synergistMuscles.map((m) => ({
+//       muscle: m,
+//       multiplier: settings.planner.synergistMultiplier,
+//     }));
+//   } else {
+//     const meta = Exercise_getMetadata(type.id);
+//     return meta?.synergistMuscles != null
+//       ? meta.synergistMuscles.map((m) => {
+//         return { muscle: m, multiplier: settings.planner.synergistMultiplier };
+//       })
+//       : [];
+//   }
+// }
+
+// function Exercise_defaultSynergistMuscles(type: IExerciseType, settings: ISettings): IMuscle[] {
+//   return Exercise_defaultSynergistMuscleMultipliers(type, settings).map((m) => m.muscle);
+// }
+
+// function Exercise_synergistMuscleMultipliers(type: IExerciseType, settings: ISettings): IMuscleMultiplier[] {
+//   const muscleMultipliers = settings.exerciseData[Exercise_toKey(type)]?.muscleMultipliers;
+//   if (muscleMultipliers) {
+//     return ObjectUtils_keys(muscleMultipliers)
+//       .filter((m) => (muscleMultipliers[m] ?? 0) < 1)
+//       .map((m) => ({ muscle: m, multiplier: muscleMultipliers[m] ?? 0 }));
+//   } else {
+//     return Exercise_defaultSynergistMuscleMultipliers(type, settings);
+//   }
+// }
+
+// function Exercise_synergistMuscles(type: IExerciseType, settings: ISettings): IMuscle[] {
+//   const muscleMultipliers = settings.exerciseData[Exercise_toKey(type)]?.muscleMultipliers;
+//   if (muscleMultipliers) {
+//     return ObjectUtils_keys(muscleMultipliers).filter((m) => (muscleMultipliers[m] ?? 0) < 1);
+//   } else {
+//     return Exercise_defaultSynergistMuscles(type, settings);
+//   }
+// }
+
+// function Exercise_defaultSynergistMusclesGroups(type: IExerciseType, settings: ISettings): IScreenMuscle[] {
+//   const muscles = Exercise_defaultSynergistMuscles(type, settings);
+//   const allMuscleGroups = new Set<IScreenMuscle>();
+//   for (const muscle of muscles) {
+//     const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+//     for (const muscleGroup of muscleGroups) {
+//       allMuscleGroups.add(muscleGroup);
+//     }
+//   }
+//   return Array.from(allMuscleGroups);
+// }
+//
+// function Exercise_synergistMusclesGroupMultipliers(
+//   type: IExerciseType,
+//   settings: ISettings
+// ): Partial<Record<IScreenMuscle, number>> {
+//   return Exercise_synergistMuscleMultipliers(type, settings).reduce<Partial<Record<IScreenMuscle, number>>>(
+//     (memo, m) => {
+//       for (const muscleGroup of Muscle_getScreenMusclesFromMuscle(m.muscle, settings)) {
+//         if (memo[muscleGroup] == null || memo[muscleGroup] < m.multiplier) {
+//           memo[muscleGroup] = m.multiplier;
+//         }
+//       }
+//       return memo;
+//     },
+//     {}
+//   );
+// }
+
+// function Exercise_synergistMusclesGroups(type: IExerciseType, settings: ISettings): IScreenMuscle[] {
+//   const muscles = Exercise_synergistMuscles(type, settings);
+//   const allMuscleGroups = new Set<IScreenMuscle>();
+//   for (const muscle of muscles) {
+//     const muscleGroups = Muscle_getScreenMusclesFromMuscle(muscle, settings);
+//     for (const muscleGroup of muscleGroups) {
+//       allMuscleGroups.add(muscleGroup);
+//     }
+//   }
+//   return Array.from(allMuscleGroups);
+// }
+
+function Exercise_toKey(type: IExerciseType): string {
+  return `${type.id}${type.equipment ? `_${type.equipment}` : ""}`;
+}
+
+// function Exercise_fromKey(type: string): IExerciseType {
+//   const [id, equipment] = type.split("_");
+//   return { id: id as IExerciseId, equipment: equipment };
+// }
+//
+// function Exercise_defaultEquipment(
+//   type: IExerciseId,
+//   customExercises: IAllCustomExercises
+// ): IEquipment | undefined {
+//   const priorities: Record<IEquipment, IEquipment[]> = {
+//     barbell: ["ezbar", "trapbar", "dumbbell", "kettlebell"],
+//     cable: ["band", "leverageMachine"],
+//     dumbbell: ["barbell", "kettlebell", "bodyweight"],
+//     smith: ["leverageMachine", "dumbbell", "barbell", "kettlebell", "cable"],
+//     band: ["cable", "bodyweight", "leverageMachine", "smith"],
+//     kettlebell: ["dumbbell", "barbell", "cable"],
+//     bodyweight: ["cable", "dumbbell", "barbell", "band"],
+//     leverageMachine: ["smith", "cable", "dumbbell", "barbell", "kettlebell"],
+//     medicineball: ["bodyweight", "cable"],
+//     ezbar: ["barbell", "dumbbell", "cable"],
+//     trapbar: ["barbell", "dumbbell", "cable"],
+//   };
+//
+//   const exercise = Exercise_getById(type, customExercises);
+//   const bar = exercise.defaultEquipment || "bodyweight";
+//   const sortedEquipment = Exercise_getMetadata(type).sortedEquipment || [];
+//   let equipment: IEquipment | undefined = sortedEquipment.find((b) => b === bar);
+//   equipment = equipment || (priorities[bar] || []).find((eqp) => sortedEquipment.indexOf(eqp) !== -1);
+//   equipment = equipment || sortedEquipment[0];
+//   return equipment;
+// }
+//
+// function Exercise_similarRating(current: IExerciseType, e: IExercise, settings: ISettings): number {
+//   const tm = Exercise_targetMuscles(current, settings);
+//   const sm = Exercise_synergistMuscles(current, settings);
+//   const etm = Exercise_targetMuscles(e, settings);
+//   const esm = Exercise_synergistMuscles(e, settings);
+//   let rating = 0;
+//   if (e.id === current.id || (etm.length === 0 && esm.length === 0)) {
+//     rating = -Infinity;
+//   } else {
+//     for (const muscle of etm) {
+//       if (tm.indexOf(muscle) !== -1) {
+//         rating += 60;
+//       } else {
+//         rating -= 30;
+//       }
+//       if (sm.indexOf(muscle) !== -1) {
+//         rating += 20;
+//       }
+//     }
+//     for (const muscle of tm) {
+//       if (etm.indexOf(muscle) === -1) {
+//         rating -= 30;
+//       }
+//     }
+//     for (const muscle of esm) {
+//       if (sm.indexOf(muscle) !== -1) {
+//         rating += 30;
+//       } else {
+//         rating -= 15;
+//       }
+//       if (tm.indexOf(muscle) !== -1) {
+//         rating += 10;
+//       }
+//     }
+//     for (const muscle of sm) {
+//       if (esm.indexOf(muscle) === -1) {
+//         rating -= 15;
+//       }
+//     }
+//     if (e.defaultEquipment === "cable" || e.defaultEquipment === "leverageMachine") {
+//       rating -= 20;
+//     }
+//   }
+//   return rating;
+// }
+
+// function Exercise_similar(type: IExerciseType, settings: ISettings): [IExercise, number][] {
+//   const tm = Exercise_targetMuscles(type, settings);
+//   const sm = Exercise_synergistMuscles(type, settings);
+//   if (tm.length === 0 && sm.length === 0) {
+//     return [];
+//   }
+//   const rated = Exercise_all(settings.exercises).map<[IExercise, number]>((e) => {
+//     const rating = Exercise_similarRating(type, e, settings);
+//     return [e, rating];
+//   });
+//   rated.sort((a, b) => b[1] - a[1]);
+//   return rated.filter(([, r]) => r > 0);
+// }
+//
+// function Exercise_sortedByScreenMuscle(muscle: IScreenMuscle, settings: ISettings): [IExercise, number][] {
+//   const muscles = Muscle_getMusclesFromScreenMuscle(muscle, settings);
+//
+//   const rated = Exercise_all(settings.exercises).map<[IExercise, number]>((e) => {
+//     let rating = 0;
+//     const tm = Exercise_targetMuscles(e, settings);
+//     const sm = Exercise_synergistMuscles(e, settings);
+//     for (const m of tm) {
+//       if (muscles.indexOf(m) !== -1) {
+//         rating += 100;
+//       }
+//     }
+//     for (const m of sm) {
+//       if (muscles.indexOf(m) !== -1) {
+//         rating += 10;
+//       }
+//     }
+//     return [e, rating];
+//   });
+//   rated.sort((a, b) => b[1] - a[1]);
+//   return rated.filter(([, r]) => r > 0);
+// }
+//
+// function Exercise_createCustomExercise(
+//   name: string,
+//   tMuscles: IMuscle[],
+//   sMuscles: IMuscle[],
+//   types: IExerciseKind[],
+//   smallImageUrl?: string,
+//   largeImageUrl?: string
+// ): ICustomExercise {
+//   const id = UidFactory_generateUid(8);
+//   const newExercise: ICustomExercise = {
+//     vtype: "custom_exercise",
+//     id,
+//     name,
+//     isDeleted: false,
+//     types,
+//     smallImageUrl,
+//     largeImageUrl,
+//     meta: {
+//       targetMuscles: tMuscles,
+//       synergistMuscles: sMuscles,
+//       bodyParts: [],
+//       sortedEquipment: [],
+//     },
+//   };
+//   return newExercise;
+// }
+//
+// function Exercise_editCustomExercise(
+//   exercise: ICustomExercise,
+//   name: string,
+//   tMuscles: IMuscle[],
+//   sMuscles: IMuscle[],
+//   types: IExerciseKind[],
+//   smallImageUrl?: string,
+//   largeImageUrl?: string
+// ): ICustomExercise {
+//   const newExercise: ICustomExercise = {
+//     ...exercise,
+//     name,
+//     types,
+//     smallImageUrl,
+//     largeImageUrl,
+//     meta: { ...exercise.meta, targetMuscles: tMuscles, synergistMuscles: sMuscles },
+//   };
+//   return newExercise;
+// }
+//
+// function Exercise_deleteCustomExercise(
+//   allExercises: IAllCustomExercises,
+//   exerciseId: IExerciseId
+// ): IAllCustomExercises {
+//   const existingExercise = allExercises[exerciseId];
+//   if (existingExercise) {
+//     return { ...allExercises, [exerciseId]: { ...existingExercise, isDeleted: true } };
+//   }
+//   return allExercises;
+// }
+//
+// function Exercise_upsertCustomExercise(
+//   allExercises: IAllCustomExercises,
+//   exercise: ICustomExercise
+// ): IAllCustomExercises {
+//   exercise = { ...exercise, name: exercise.name.trim() };
+//   const existingExercise = allExercises[exercise.id];
+//   if (existingExercise) {
+//     return { ...allExercises, [exercise.id]: { ...existingExercise, ...exercise, isDeleted: false } };
+//   } else {
+//     const sameNameDeletedExercise = ObjectUtils_values(allExercises).find(
+//       (e) => e?.name === exercise.name && e.isDeleted
+//     );
+//     if (sameNameDeletedExercise) {
+//       return {
+//         ...allExercises,
+//         [sameNameDeletedExercise.id]: {
+//           ...sameNameDeletedExercise,
+//           ...exercise,
+//           id: sameNameDeletedExercise.id,
+//           isDeleted: false,
+//         },
+//       };
+//     } else {
+//       return { ...allExercises, [exercise.id]: exercise };
+//     }
+//   }
+// }
+
+// function Exercise_handleCustomExerciseChange(
+//   dispatch: IDispatch,
+//   action: "upsert" | "delete",
+//   exercise: ICustomExercise,
+//   notes: string | undefined,
+//   settings: ISettings,
+//   program?: IProgram
+// ): void {
+//   const oldExercise = settings.exercises[exercise.id];
+//   const ex =
+//     action === "upsert"
+//       ? Exercise_upsertCustomExercise(settings.exercises, exercise)
+//       : Exercise_deleteCustomExercise(settings.exercises, exercise.id);
+//   updateSettings(dispatch, lb<ISettings>().p("exercises").record(ex), "Create custom exercise");
+//   updateSettings(dispatch, lb<ISettings>().p("exerciseData").pi(exercise.id).p("notes").record(notes), "Update notes");
+//   if (program && oldExercise && oldExercise.name !== exercise.name) {
+//     const newProgram = Program_changeExerciseName(oldExercise.name, exercise.name, program, {
+//       ...settings,
+//       exercises: ex,
+//     });
+//     EditProgram_updateProgram(dispatch, newProgram);
+//   }
+// }
+//
+// function Exercise_createOrUpdateCustomExercise(
+//   allExercises: IAllCustomExercises,
+//   name: string,
+//   tMuscles: IMuscle[],
+//   sMuscles: IMuscle[],
+//   types: IExerciseKind[],
+//   smallImageUrl?: string,
+//   largeImageUrl?: string,
+//   exercise?: ICustomExercise
+// ): IAllCustomExercises {
+//   if (exercise != null) {
+//     const newExercise = Exercise_editCustomExercise(
+//       exercise,
+//       name,
+//       tMuscles,
+//       sMuscles,
+//       types,
+//       smallImageUrl,
+//       largeImageUrl
+//     );
+//     return { ...allExercises, [newExercise.id]: newExercise };
+//   } else {
+//     const deletedExerciseKey = ObjectUtils_keys(allExercises).find(
+//       (k) => allExercises[k]?.isDeleted && allExercises[k]?.name === name
+//     );
+//     const deletedExercise = deletedExerciseKey != null ? allExercises[deletedExerciseKey] : undefined;
+//     if (deletedExercise) {
+//       return {
+//         ...allExercises,
+//         [deletedExercise.id]: {
+//           ...deletedExercise,
+//           name,
+//           types,
+//           smallImageUrl,
+//           largeImageUrl,
+//           isDeleted: false,
+//           meta: {
+//             targetMuscles: tMuscles,
+//             bodyParts: [],
+//             synergistMuscles: sMuscles,
+//           },
+//         },
+//       };
+//     } else {
+//       const newExercise = Exercise_createCustomExercise(name, tMuscles, sMuscles, types, smallImageUrl, largeImageUrl);
+//       return { ...allExercises, [newExercise.id]: newExercise };
+//     }
+//   }
+// }
+//
+// function Exercise_filterExercises<T extends { name: string }>(allExercises: T[], filter: string): T[] {
+//   return allExercises.filter((e) => StringUtils_fuzzySearch(filter.toLowerCase(), e.name.toLowerCase()));
+// }
+//
+// function Exercise_sortExercises(
+//   allExercises: IExercise[],
+//   isSubstitute: boolean,
+//   settings: ISettings,
+//   filterTypes?: string[],
+//   currentExerciseType?: IExerciseType
+// ): IExercise[] {
+//   return CollectionUtils_sort(allExercises, (a, b) => {
+//     const exerciseType = currentExerciseType;
+//     if (isSubstitute && exerciseType) {
+//       const aRating = Exercise_similarRating(exerciseType, a, settings);
+//       const bRating = Exercise_similarRating(exerciseType, b, settings);
+//       return bRating - aRating;
+//     } else if (
+//       filterTypes &&
+//       Muscle_getAvailableMuscleGroups(settings)
+//         .map((m) => m.toLowerCase())
+//         .some((t) => filterTypes.map((ft) => ft.toLowerCase()).indexOf(t) !== -1)
+//     ) {
+//       const lowercaseFilterTypes = filterTypes.map((t) => t.toLowerCase());
+//       const aTargetMuscleGroups = Exercise_targetMusclesGroups(a, settings);
+//       const bTargetMuscleGroups = Exercise_targetMusclesGroups(b, settings);
+//       if (
+//         aTargetMuscleGroups.some((m) => lowercaseFilterTypes.indexOf(m) !== -1) &&
+//         bTargetMuscleGroups.every((m) => lowercaseFilterTypes.indexOf(m) === -1)
+//       ) {
+//         return -1;
+//       } else if (
+//         bTargetMuscleGroups.some((m) => lowercaseFilterTypes.indexOf(m) !== -1) &&
+//         aTargetMuscleGroups.every((m) => lowercaseFilterTypes.indexOf(m) === -1)
+//       ) {
+//         return 1;
+//       } else {
+//         return a.name.localeCompare(b.name);
+//       }
+//     } else {
+//       return a.name.localeCompare(b.name);
+//     }
+//   });
+// }
+//
+// function Exercise_filterExercisesByType<T extends IExerciseType>(
+//   allExercises: T[],
+//   filterTypes: string[],
+//   settings: ISettings
+// ): T[] {
+//   return allExercises.filter((e) => {
+//     const exercise = Exercise_get(e, settings.exercises);
+//     const targetMuscleGroups = Exercise_targetMusclesGroups(e, settings).map((m) => m.toLowerCase());
+//     const synergistMuscleGroups = Exercise_synergistMusclesGroups(e, settings).map((m) => m.toLowerCase());
+//     return filterTypes
+//       .map((ft) => ft.toLowerCase())
+//       .every((ft) => {
+//         return (
+//           targetMuscleGroups.indexOf(ft) !== -1 ||
+//           synergistMuscleGroups.indexOf(ft) !== -1 ||
+//           exercise.types.map((t) => t.toLowerCase()).indexOf(ft) !== -1 ||
+//           equipmentName(e.equipment).toLowerCase() === ft
+//         );
+//       });
+//   });
+// }
+
+// function Exercise_filterCustomExercises(
+//   customExercises: IAllCustomExercises,
+//   filter: string
+// ): IAllCustomExercises {
+//   return ObjectUtils_filter(customExercises, (e, v) =>
+//     v ? StringUtils_fuzzySearch(filter.toLowerCase(), v.name.toLowerCase()) : true
+//   );
+// }
+//
+// function Exercise_filterCustomExercisesByType(filterTypes: string[], settings: ISettings): IAllCustomExercises {
+//   return ObjectUtils_filter(settings.exercises, (_id, exercise) => {
+//     if (!exercise) {
+//       return false;
+//     }
+//     const targetMuscleGroups = Array.from(
+//       new Set(
+//         CollectionUtils_flat(exercise.meta.targetMuscles.map((m) => Muscle_getScreenMusclesFromMuscle(m, settings)))
+//       )
+//     ).map((m) => Muscle_getMuscleGroupName(m, settings));
+//     const synergistMuscleGroups = Array.from(
+//       new Set(
+//         CollectionUtils_flat(exercise.meta.synergistMuscles.map((m) => Muscle_getScreenMusclesFromMuscle(m, settings)))
+//       )
+//     ).map((m) => Muscle_getMuscleGroupName(m, settings));
+//     return filterTypes.every((ft) => {
+//       return (
+//         targetMuscleGroups.indexOf(ft) !== -1 ||
+//         synergistMuscleGroups.indexOf(ft) !== -1 ||
+//         (exercise.types || []).map(StringUtils_capitalize).indexOf(ft) !== -1
+//       );
+//     });
+//   });
+// }
+
 //#endregion
 
-//#region ________
+//#region Progress
+
+
+interface IScriptBindings {
+  day: number;
+  week: number;
+  dayInWeek: number;
+  originalWeights: (IWeight | IPercentage)[];
+  weights: (IWeight | undefined)[];
+  completedWeights: (IWeight | undefined)[];
+  rm1: IWeight;
+  reps: (number | undefined)[];
+  minReps: (number | undefined)[];
+  amraps: (number | undefined)[];
+  askweights: (number | undefined)[];
+  logrpes: (number | undefined)[];
+  timers: (number | undefined)[];
+  RPE: (number | undefined)[];
+  completedRPE: (number | undefined)[];
+  completedReps: (number | undefined)[];
+  completedRepsLeft: (number | undefined)[];
+  isCompleted: (0 | 1)[];
+  w: (IWeight | undefined)[];
+  r: (number | undefined)[];
+  mr: (number | undefined)[];
+  cr: (number | undefined)[];
+  cw: (IWeight | undefined)[];
+  ns: number;
+  programNumberOfSets: number;
+  numberOfSets: number;
+  completedNumberOfSets: number;
+  setVariationIndex: number;
+  bodyweight: IWeight;
+  descriptionIndex: number;
+  setIndex: number;
+}
+
+interface IScriptFnContext {
+  prints: (number | IWeight | IPercentage)[][];
+  unit: IUnit;
+  exerciseType?: IExerciseType;
+}
+
+// interface IScriptFinishContext {
+//   type: "finish";
+//   updates: ILiftoscriptEvaluatorUpdate[];
+//   exerciseData: IExerciseDataValue;
+//   setVariationIndex: number;
+//   descriptionIndex: number;
+// }
+//
+// interface IScriptUpdateContext {
+//   equipment?: IEquipment;
+// }
+
+interface IScriptFunctions {
+  roundWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
+  roundConvertWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
+  calculateTrainingMax: (weight: IWeight, reps: number, context: IScriptFnContext) => IWeight;
+  calculate1RM: (weight: IWeight, reps: number, context: IScriptFnContext) => IWeight;
+  rpeMultiplier: (reps: number, rpe: number, context: IScriptFnContext) => number;
+  floor(num: number): number;
+  floor(num: IWeight): IWeight;
+  ceil(num: number): number;
+  ceil(num: IWeight): IWeight;
+  round(num: number): number;
+  round(num: IWeight): IWeight;
+  sum(
+    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+  ): number | IWeight | IPercentage;
+  min(
+    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+  ): number | IWeight | IPercentage;
+  max(
+    ...vals: (number | number[] | IWeight | IWeight[] | IPercentage | IPercentage[])[]
+  ): number | IWeight | IPercentage;
+  zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
+  print(...args: unknown[]): (typeof args)[0];
+  increment(val: IWeight, context: IScriptFnContext): IWeight;
+  increment(val: IPercentage, context: IScriptFnContext): IPercentage;
+  increment(val: number, context: IScriptFnContext): number;
+  decrement(val: IWeight, context: IScriptFnContext): IWeight;
+  decrement(val: IPercentage, context: IScriptFnContext): IPercentage;
+  decrement(val: number, context: IScriptFnContext): number;
+  sets(
+    from: number,
+    to: number,
+    minReps: number,
+    reps: number,
+    isAmrap: number,
+    weight: IWeight | IPercentage | number,
+    timer: number,
+    rpe: number,
+    logRpe: number,
+    context: IScriptFnContext,
+    bindings: IScriptBindings
+  ): number;
+}
+
+function floor(num: number): number;
+function floor(num: IWeight): IWeight;
+function floor(num: IWeight | number): IWeight | number {
+  if (num == null) {
+    return 0;
+  }
+  return typeof num === "number" ? Math.floor(num) : Weight_build(Math.floor(num.value), num.unit);
+}
+
+function ceil(num: number): number;
+function ceil(num: IWeight): IWeight;
+function ceil(num: IWeight | number): IWeight | number {
+  if (num == null) {
+    return 0;
+  }
+  return typeof num === "number" ? Math.ceil(num) : Weight_build(Math.ceil(num.value), num.unit);
+}
+
+function round(num: number): number;
+function round(num: IWeight): IWeight;
+function round(num: IWeight | number): IWeight | number {
+  if (num == null) {
+    return 0;
+  }
+  return typeof num === "number" ? Math.round(num) : Weight_build(Math.round(num.value), num.unit);
+}
+
+type IScriptArg = number | IWeight | IPercentage;
+
+function isScriptValue(v: unknown): v is IScriptArg {
+  return typeof v === "number" || Weight_is(v) || Weight_isPct(v);
+}
+
+function flattenScriptArgs(args: unknown[]): IScriptArg[] {
+  const result: IScriptArg[] = [];
+  for (const arg of args) {
+    if (Array.isArray(arg)) {
+      for (const item of arg) {
+        if (isScriptValue(item)) {
+          result.push(item);
+        }
+      }
+    } else if (isScriptValue(arg)) {
+      result.push(arg);
+    }
+  }
+  return result;
+}
+
+function sum(...args: unknown[]): IWeight | IPercentage | number {
+  const flat = flattenScriptArgs(args);
+  if (flat.length === 0) {
+    return 0;
+  }
+  return flat.reduce<IScriptArg>((acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y), 0);
+}
+
+function min(...args: unknown[]): IWeight | IPercentage | number {
+  const flat = flattenScriptArgs(args);
+  if (flat.length === 0) {
+    return 0;
+  }
+  return flat.reduce<IScriptArg>((acc, a) => (Weight_lt(a, acc) ? a : acc), flat[0]);
+}
+
+function max(...args: unknown[]): IWeight | IPercentage | number {
+  const flat = flattenScriptArgs(args);
+  if (flat.length === 0) {
+    return 0;
+  }
+  return flat.reduce<IScriptArg>((acc, a) => (Weight_lt(acc, a) ? a : acc), flat[0]);
+}
+
+function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const aVal = a[i];
+    const bVal = b[i];
+    if (aVal != null && bVal != null && !Weight_eq(aVal, 0) && Weight_lt(aVal, bVal)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function Progress_createEmptyScriptBindings(
+  dayData: IDayData,
+  settings: ISettings,
+  exercise?: IExerciseType
+): IScriptBindings {
+  const rm1 = exercise ? Exercise_onerm(exercise, settings) : Weight_build(0, "lb");
+  return {
+    day: dayData.day,
+    week: dayData.week ?? 1,
+    dayInWeek: dayData.dayInWeek ?? dayData.day,
+    completedWeights: [],
+    originalWeights: [],
+    weights: [],
+    reps: [],
+    minReps: [],
+    RPE: [],
+    amraps: [],
+    logrpes: [],
+    askweights: [],
+    completedReps: [],
+    completedRepsLeft: [],
+    completedRPE: [],
+    isCompleted: [],
+    timers: [],
+    w: [],
+    r: [],
+    cr: [],
+    cw: [],
+    mr: [],
+    programNumberOfSets: 0,
+    numberOfSets: 0,
+    completedNumberOfSets: 0,
+    ns: 0,
+    setVariationIndex: 1,
+    descriptionIndex: 1,
+    bodyweight: Weight_build(0, settings.units),
+    setIndex: 1,
+    rm1,
+  };
+}
+
+function Progress_createScriptBindings(
+  dayData: IDayData,
+  entry: IHistoryEntry,
+  settings: ISettings,
+  programNumberOfSets: number,
+  bodyweight: IWeight | undefined,
+  setIndex?: number,
+  setVariationIndex?: number,
+  descriptionIndex?: number
+): IScriptBindings {
+  const bindings = Progress_createEmptyScriptBindings(dayData, settings, entry.exercise);
+  for (const set of entry.sets) {
+    bindings.weights.push(set.weight);
+    bindings.originalWeights.push(set.originalWeight ?? Weight_build(0, settings.units));
+    bindings.reps.push(set.reps);
+    bindings.minReps.push(set.minReps);
+    bindings.completedReps.push(set.completedReps);
+    bindings.completedRepsLeft.push(set.completedRepsLeft);
+    bindings.completedRPE.push(set.completedRpe);
+    bindings.completedWeights.push(set.completedWeight);
+    bindings.RPE.push(set.rpe);
+    bindings.amraps.push(set.isAmrap ? 1 : undefined);
+    bindings.logrpes.push(set.logRpe ? 1 : undefined);
+    bindings.askweights.push(set.askWeight ? 1 : undefined);
+    bindings.timers.push(set.timer);
+    bindings.isCompleted.push(set.isCompleted ? 1 : 0);
+  }
+  bindings.w = bindings.weights;
+  bindings.r = bindings.reps;
+  bindings.cr = bindings.completedReps;
+  bindings.cw = bindings.completedWeights;
+  bindings.mr = bindings.minReps;
+  bindings.ns = entry.sets.length;
+  bindings.programNumberOfSets = programNumberOfSets;
+  bindings.numberOfSets = entry.sets.length;
+  bindings.completedNumberOfSets = entry.sets.filter((s) => s.isCompleted).length;
+  bindings.setIndex = setIndex ?? 1;
+  bindings.setVariationIndex = setVariationIndex ?? 1;
+  bindings.descriptionIndex = descriptionIndex ?? 1;
+  bindings.bodyweight = bodyweight ?? Weight_build(0, settings.units);
+  return bindings;
+}
+
+function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
+  function increment(vals: number, context: IScriptFnContext): number;
+  function increment(vals: IWeight, context: IScriptFnContext): IWeight;
+  function increment(vals: IPercentage, context: IScriptFnContext): IPercentage;
+  function increment(vals: IWeight | IPercentage | number, context: IScriptFnContext): IWeight | IPercentage | number {
+    if (typeof vals === "number") {
+      const weight = Weight_build(vals, context.unit);
+      return Weight_increment(weight, settings, context.exerciseType);
+    } else if (Weight_isPct(vals)) {
+      return Weight_buildPct(vals.value + 1);
+    } else {
+      return Weight_increment(vals, settings, context.exerciseType);
+    }
+  }
+
+  function decrement(vals: number, context: IScriptFnContext): number;
+  function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
+  function decrement(vals: IPercentage, context: IScriptFnContext): IPercentage;
+  function decrement(vals: IWeight | IPercentage | number, context: IScriptFnContext): IWeight | IPercentage | number {
+    if (typeof vals === "number") {
+      const weight = Weight_build(vals, context.unit);
+      return Weight_decrement(weight, settings, context.exerciseType);
+    } else if (Weight_isPct(vals)) {
+      return Weight_buildPct(vals.value - 1);
+    } else {
+      return Weight_decrement(vals, settings, context.exerciseType);
+    }
+  }
+
+  const fns: IScriptFunctions = {
+    roundWeight: (num, context) => {
+      if (!Weight_is(num)) {
+        num = Weight_build(num, settings.units);
+      }
+      const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
+      return Weight_round(num, settings, unit ?? settings.units, context?.exerciseType);
+    },
+    roundConvertWeight: (num, context) => {
+      if (!Weight_is(num)) {
+        num = Weight_build(num, settings.units);
+      }
+      const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
+      return Weight_roundConvertTo(num, settings, unit ?? settings.units, context?.exerciseType);
+    },
+    calculateTrainingMax: (weight, reps, context) => {
+      if (!Weight_is(weight)) {
+        weight = Weight_build(weight, settings.units);
+      }
+      return Weight_getTrainingMax(weight, reps || 0, settings);
+    },
+    calculate1RM: (weight, reps, context) => {
+      if (!Weight_is(weight)) {
+        weight = Weight_build(weight, settings.units);
+      }
+      return Weight_getOneRepMax(weight, reps);
+    },
+    rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
+      const reps = Weight_is(repsRaw) ? repsRaw.value : typeof repsRaw === "number" ? repsRaw : 1;
+      const rpe =
+        typeof rpeRawOrContext === "number" && context != null
+          ? Weight_is(rpeRawOrContext)
+            ? rpeRawOrContext.value
+            : typeof rpeRawOrContext === "number"
+              ? rpeRawOrContext
+              : 10
+          : 10;
+      return Weight_rpeMultiplier(reps, rpe);
+    },
+    floor,
+    ceil,
+    round,
+    sum,
+    min,
+    max,
+    increment,
+    decrement,
+    zeroOrGte,
+    print: (...fnArgs) => {
+      fnArgs.pop();
+      const context = fnArgs.pop() as IScriptFnContext;
+      const args = [...fnArgs.flat()] as (number | IWeight | IPercentage)[];
+      context.prints = context.prints || [];
+      context.prints.push(args);
+      return args[0];
+    },
+    sets(
+      from: number,
+      to: number,
+      minReps: number,
+      reps: number,
+      isAmrap: number,
+      weight: IWeight | IPercentage | number,
+      timer: number,
+      rpe: number,
+      logRpe: number,
+      context: IScriptFnContext,
+      bindings: IScriptBindings
+    ): number {
+      for (let i = 0; i < bindings.numberOfSets; i++) {
+        if (i >= from - 1 && i < to) {
+          const weightValue = Weight_convertToWeight(bindings.rm1, weight, context.unit);
+          bindings.minReps[i] = reps !== minReps ? minReps : undefined;
+          bindings.reps[i] = reps;
+          bindings.originalWeights[i] = weightValue;
+          bindings.weights[i] = Weight_round(weightValue, settings, context.unit, context.exerciseType);
+          bindings.RPE[i] = rpe !== 0 ? rpe : undefined;
+          bindings.amraps[i] = isAmrap !== 0 ? 1 : 0;
+          bindings.logrpes[i] = logRpe !== 0 ? 1 : 0;
+          bindings.timers[i] = timer !== 0 ? timer : undefined;
+        }
+      }
+      return to - from;
+    },
+  };
+  return fns;
+}
+
+function Progress_isCurrent(progress: IHistoryRecord | undefined): boolean {
+  return progress?.id === 0;
+}
+
+function Progress_startTimer(
+  progress: IHistoryRecord,
+  timestamp: number,
+  mode: IProgressMode,
+  entryIndex: number,
+  setIndex: number,
+  settings: ISettings,
+  subscription?: ISubscription,
+  timer?: number,
+  isAdjusting?: boolean
+): IHistoryRecord {
+  const entry = progress.entries[entryIndex];
+  const set = mode === "warmup" ? entry?.warmupSets[setIndex] : entry?.sets[setIndex];
+  if (!isAdjusting && (!set || !set.isCompleted)) {
+    return progress;
+  }
+  if (timer == null && Progress_isCurrent(progress) && mode === "workout") {
+    timer = entry?.sets[setIndex]?.timer;
+  }
+  if (timer == null) {
+    timer =
+      mode === "workout" && entry.superset != null && settings.timers.superset != null
+        ? settings.timers.superset
+        : settings.timers[mode] || undefined;
+  }
+  if (!timer) {
+    return {
+      ...progress,
+      timerSince: undefined,
+      timer: undefined,
+      timerMode: undefined,
+      timerEntryIndex: undefined,
+      timerSetIndex: undefined,
+    };
+  }
+  if (subscription && Subscriptions_hasSubscription(subscription)) {
+    const timerForPush = timer - Math.round((Date.now() - timestamp) / 1000);
+    const title = "It's time for the next set!";
+    let subtitle = "";
+    let body = "Time to lift!";
+    let subtitleHeader = "";
+    let bodyHeader = "The rest is over";
+    const nextEntryAndSet = Reps_findNextEntryAndSet(progress, entryIndex, mode);
+    if (nextEntryAndSet != null) {
+      const { entry: nextEntry, set: aSet } = nextEntryAndSet;
+      const exercise = Exercise_get(nextEntry.exercise, settings.exercises);
+      if (exercise) {
+        subtitleHeader = "Next Set";
+        subtitle = CollectionUtils_compact([
+          exercise.name,
+          aSet.reps != null ? `${aSet.reps}${aSet.isAmrap ? "+" : ""} reps` : undefined,
+          aSet.weight != null ? Weight_display(aSet.weight) : undefined,
+        ]).join(", ");
+        if (aSet.weight != null) {
+          const { plates } = Weight_calculatePlates(aSet.weight, settings, aSet.weight.unit, nextEntry.exercise);
+          const formattedPlates = plates.length > 0 ? Weight_formatOneSide(settings, plates, exercise) : "None";
+          bodyHeader = "Plates per side";
+          body = formattedPlates;
+        }
+      }
+    }
+    const ignoreDoNotDisturb = settings.ignoreDoNotDisturb ? "true" : "false";
+    const vibration = settings.vibration ? "true" : "false";
+    const volume = settings.volume.toString();
+    SendMessage_print(`Scheduling timer notification, volume: ${volume}`);
+    SendMessage_toIos({
+      type: "startTimer",
+      duration: timerForPush.toString(),
+      mode,
+      title,
+      subtitleHeader,
+      subtitle,
+      bodyHeader,
+      body,
+      ignoreDoNotDisturb,
+      vibration,
+      volume,
+    });
+    SendMessage_toAndroid({
+      type: "startTimer",
+      duration: timerForPush.toString(),
+      mode,
+      title,
+      subtitleHeader,
+      subtitle,
+      bodyHeader,
+      body,
+      ignoreDoNotDisturb,
+      vibration,
+      volume,
+    });
+  }
+  const newProgress: IHistoryRecord = {
+    ...progress,
+    timerSince: timestamp,
+    timer,
+    timerMode: mode,
+    timerEntryIndex: entryIndex,
+    timerSetIndex: setIndex,
+    ui: { ...progress.ui, nativeNotificationScheduled: undefined },
+  };
+  return newProgress;
+}
+
+// function Progress_getNextSupersetEntry(
+//   entries: IHistoryEntry[],
+//   entry: IHistoryEntry
+// ): IHistoryEntry | undefined {
+//   const superset: string | undefined = entry.superset;
+//   if (superset == null) {
+//     return undefined;
+//   }
+//   const supersetGroups = Progress_getSupersetGroups(entries);
+//   const supersetGroup: IHistoryEntry[] = supersetGroups?.[superset] ?? [];
+//   if (supersetGroup.length <= 1) {
+//     return undefined;
+//   }
+//   const supersetIndex = supersetGroup?.findIndex((e) => e.id === entry!.id);
+//   if (supersetIndex == null || supersetIndex < 0) {
+//     return undefined;
+//   }
+//   return supersetGroup[(supersetIndex + 1) % supersetGroup.length];
+// }
+
+function Progress_getNextEntry(
+  progress: IHistoryRecord,
+  entry: IHistoryEntry,
+  mode: "workout" | "warmup",
+  shouldGoToNextEntry: boolean
+): IHistoryEntry | undefined {
+  if (Progress_isFullyEmptyOrFinishedSet(progress)) {
+    return undefined;
+  }
+  const visitedAndFinished = new Set<IHistoryEntry>();
+  let currentEntry: IHistoryEntry | undefined = entry;
+  let isInitial = true;
+  const supersetGroups = Progress_getSupersetGroups(progress.entries);
+  while (currentEntry != null) {
+    let index = progress.entries.findIndex((e) => e.id != null && e.id === currentEntry?.id);
+    if (index === -1) {
+      index = progress.entries.findIndex((e) => e === currentEntry);
+    }
+    const superset: string | undefined = currentEntry.superset;
+    if (mode === "workout" && superset != null && !visitedAndFinished.has(currentEntry)) {
+      const supersetGroup: IHistoryEntry[] = supersetGroups?.[superset] ?? [];
+      if (supersetGroup.length > 1) {
+        const supersetIndex = supersetGroup?.findIndex((e) => e.id === currentEntry?.id);
+        currentEntry = supersetGroup[(supersetIndex + 1) % supersetGroup.length];
+      } else {
+        if (shouldGoToNextEntry) {
+          currentEntry = progress.entries[(index + 1) % progress.entries.length];
+        } else {
+          return currentEntry;
+        }
+      }
+    } else if (Reps_isEmptyOrFinished(currentEntry.sets)) {
+      if (shouldGoToNextEntry) {
+        const prevEntry: IHistoryEntry = currentEntry;
+        currentEntry = progress.entries[(index + 1) % progress.entries.length];
+        if (currentEntry === prevEntry) {
+          return undefined;
+        }
+      } else {
+        return undefined;
+      }
+    }
+    if (currentEntry == null) {
+      return undefined;
+    }
+    if (!Reps_isEmptyOrFinished(currentEntry.sets)) {
+      return currentEntry;
+    } else if (!isInitial) {
+      visitedAndFinished.add(currentEntry);
+    }
+    isInitial = false;
+  }
+  return undefined;
+}
+
+function Progress_getNextEntryIndex(
+  progress: IHistoryRecord,
+  entry: IHistoryEntry,
+  mode: "workout" | "warmup"
+): number | undefined {
+  const nextEntry = Progress_getNextEntry(progress, entry, mode, false);
+  if (nextEntry != null) {
+    let index = progress.entries.findIndex((e) => e.id != null && e.id === nextEntry.id);
+    if (index === -1) {
+      index = progress.entries.findIndex((e) => e === nextEntry);
+    }
+    return index === -1 ? undefined : index;
+  }
+  return undefined;
+}
+
+// function Progress_updateTimer(
+//   progress: IHistoryRecord,
+//   program: IProgram | undefined,
+//   newTimer: number,
+//   timerSince: number,
+//   liveActivityEntryIndex: number | undefined,
+//   liveActivitySetIndex: number | undefined,
+//   skipLiveActivityUpdate: boolean,
+//   settings: ISettings,
+//   subscription: ISubscription | undefined
+// ): IHistoryRecord {
+//   const timerForPush = newTimer - Math.round((Date.now() - timerSince) / 1000);
+//   if (timerForPush > 0) {
+//     const newProgress = Progress_startTimer(
+//       progress,
+//       progress.timerSince || Date.now(),
+//       progress.timerMode || "workout",
+//       progress.timerEntryIndex || 0,
+//       progress.timerSetIndex || 0,
+//       settings,
+//       subscription,
+//       newTimer,
+//       true
+//     );
+//     if (!skipLiveActivityUpdate) {
+//       LiveActivityManager_updateProgressLiveActivity(
+//         program,
+//         progress,
+//         settings,
+//         subscription,
+//         liveActivityEntryIndex,
+//         liveActivitySetIndex,
+//         newTimer,
+//         progress.timerSince || Date.now()
+//       );
+//     }
+//     return newProgress;
+//   } else {
+//     SendMessage_toIos({ type: "stopTimer" });
+//     SendMessage_toAndroid({ type: "stopTimer" });
+//     const newProgress = {
+//       ...progress,
+//       timer: Math.max(0, newTimer),
+//       ui: {
+//         ...progress.ui,
+//         nativeNotificationScheduled: undefined,
+//       },
+//     };
+//     if (!skipLiveActivityUpdate) {
+//       LiveActivityManager_updateProgressLiveActivity(
+//         program,
+//         progress,
+//         settings,
+//         subscription,
+//         liveActivityEntryIndex,
+//         liveActivitySetIndex,
+//         Math.max(0, newTimer),
+//         progress.timerSince || Date.now()
+//       );
+//     }
+//     return newProgress;
+//   }
+// }
+//
+// function Progress_maybeApplySuperset(
+//   progress: IHistoryRecord,
+//   entryIndex: number,
+//   mode: "workout" | "warmup"
+// ): IHistoryRecord {
+//   if (!Progress_isCurrent(progress)) {
+//     return progress;
+//   }
+//   const entry = progress.entries[entryIndex];
+//   const nextEntryIndex = Progress_getNextEntryIndex(progress, entry, mode);
+//   if (nextEntryIndex != null) {
+//     return { ...progress, ui: { ...progress.ui, currentEntryIndex: nextEntryIndex } };
+//   }
+//   return progress;
+// }
+//
+// function Progress_stopTimer(progress: IHistoryRecord): IHistoryRecord {
+//   SendMessage_toIos({ type: "stopTimer" });
+//   SendMessage_toAndroid({ type: "stopTimer" });
+//   return Progress_stopTimerPure(progress);
+// }
+
+function Progress_stopTimerPure(progress: IHistoryRecord): IHistoryRecord {
+  return {
+    ...progress,
+    timerSince: undefined,
+    timerMode: undefined,
+    timer: undefined,
+    timerSetIndex: undefined,
+    timerEntryIndex: undefined,
+  };
+}
+
+// function Progress_setTimerValue(progress: IHistoryRecord, newTimer: number): IHistoryRecord {
+//   if (progress.timerSince == null) {
+//     return progress;
+//   }
+//   return {
+//     ...progress,
+//     timer: Math.max(0, newTimer),
+//   };
+// }
+//
+// function Progress_findEntryByExercise(
+//   progress: IHistoryRecord,
+//   exerciseType: IExerciseType
+// ): IHistoryEntry | undefined {
+//   return progress.entries.find((entry) => entry.exercise === exerciseType);
+// }
+//
+// function Progress_isFullyCompletedSet(progress: IHistoryRecord): boolean {
+//   return progress.entries.every((entry) => Progress_isCompletedSet(entry));
+// }
+
+function Progress_isCompletedSet(entry: IHistoryEntry): boolean {
+  return Reps_isCompleted(entry.sets);
+}
+//
+// function Progress_isFullyFinishedSet(progress: IHistoryRecord): boolean {
+//   return progress.entries.every((entry) => Progress_isFinishedSet(entry));
+// }
+//
+// function Progress_isFullyEmptySet(progress: IHistoryRecord): boolean {
+//   return progress.entries.every((entry) => Reps_isEmpty(entry.sets));
+// }
+
+function Progress_isFinishedSet(entry: IHistoryEntry): boolean {
+  return Reps_isFinished(entry.sets);
+}
+
+function Progress_isFullyEmptyOrFinishedSet(progress: IHistoryRecord): boolean {
+  return progress.entries.every((entry) => Progress_isEmptyOrFinishedSet(entry));
+}
+
+function Progress_isEmptyOrFinishedSet(entry: IHistoryEntry): boolean {
+  return Reps_isEmptyOrFinished(entry.sets);
+}
+
+function Progress_hasLastUnfinishedSet(entry: IHistoryEntry): boolean {
+  return entry.sets.filter((s) => !s.isCompleted).length === 1;
+}
+
+// function Progress_isChanged(aProgress?: IHistoryRecord, bProgress?: IHistoryRecord): boolean {
+//   if (aProgress != null && bProgress == null) {
+//     return true;
+//   } else if (aProgress == null && bProgress != null) {
+//     return true;
+//   } else if (aProgress == null && bProgress == null) {
+//     return false;
+//   } else {
+//     const changed = !ObjectUtils_isEqual(aProgress!, bProgress!);
+//     return changed;
+//   }
+// }
+//
+// function Progress_showUpdateDate(progress: IHistoryRecord, date: string, time: number): IHistoryRecord {
+//   return {
+//     ...progress,
+//     ui: {
+//       ...progress.ui,
+//       dateModal: { date, time },
+//     },
+//   };
+// }
+//
+// function Progress_getColorToSupersetGroup(progress: IHistoryRecord): Partial<Record<string, IHistoryEntry[]>> {
+//   const groups = Progress_getSupersetGroups(progress.entries);
+//   const colors = ["red", "blue", "green", "purple"];
+//   let index = 0;
+//   return ObjectUtils_entriesNonnull(groups).reduce<Partial<Record<string, IHistoryEntry[]>>>((memo, [, group]) => {
+//     const color = colors[index % colors.length];
+//     memo[color] = group;
+//     index += 1;
+//     return memo;
+//   }, {});
+// }
+
+function Progress_getSupersetGroups(entries: IHistoryEntry[]): Partial<Record<string, IHistoryEntry[]>> {
+  const groups: Partial<Record<string, IHistoryEntry[]>> = {};
+  for (const entry of entries) {
+    if (entry.superset != null) {
+      if (!groups[entry.superset]) {
+        groups[entry.superset] = [];
+      }
+      groups[entry.superset]!.push(entry);
+    }
+  }
+  return groups;
+}
+
+// function Progress_stop(
+//   progresses: Record<number, IHistoryRecord | undefined>,
+//   id: number
+// ): Record<number, IHistoryRecord | undefined> {
+//   return ObjectUtils_keys(progresses).reduce<Record<number, IHistoryRecord | undefined>>((memo, k) => {
+//     const p = progresses[k];
+//     if (p != null && p.id !== id) {
+//       memo[k] = p;
+//     }
+//     return memo;
+//   }, {});
+// }
+
+// function Progress_changeDate(progress: IHistoryRecord, dateStr?: string, time?: number): IHistoryRecord {
+//   let startTime = progress.startTime;
+//   const startTimeDate = new Date(startTime);
+//   const date = dateStr != null ? DateUtils_fromYYYYMMDD(dateStr) : undefined;
+//   if (date != null) {
+//     startTime = new Date(
+//       date.getFullYear(),
+//       date.getMonth(),
+//       date.getDate(),
+//       startTimeDate.getHours(),
+//       startTimeDate.getMinutes(),
+//       startTimeDate.getSeconds()
+//     ).getTime();
+//   }
+//   const endTime = time != null ? startTime + time : startTime + History_workoutTime(progress);
+//   return {
+//     ...progress,
+//     ...(dateStr != null ? { date: DateUtils_fromYYYYMMDDStr(dateStr) } : {}),
+//     startTime,
+//     intervals: [[startTime, endTime]],
+//     endTime,
+//     ui: {
+//       ...progress.ui,
+//       dateModal: undefined,
+//     },
+//   };
+// }
+
+function Progress_getProgressId(state: Pick<IState, "progress">): number {
+  const editIds = Object.keys((state as IState).progress)
+    .map(Number)
+    .filter(Boolean);
+  return editIds.length > 0 ? editIds[0] : 0;
+}
+
+function Progress_lbProgress(progressId?: number): LensBuilder<IState, IHistoryRecord, {}, undefined> {
+  if (progressId == null || progressId === 0) {
+    return lb<IState>().p("storage").pi("progress").i(0);
+  } else {
+    return lb<IState>().pi("progress").pi(progressId);
+  }
+}
+
+// function Progress_getCurrentProgress(state: Pick<IState, "storage">): IHistoryRecord | undefined {
+//   return state.storage.progress?.[0];
+// }
+//
+// function Progress_getProgress(state: Pick<IState, "progress" | "storage">): IHistoryRecord | undefined {
+//   const progressId = Progress_getProgressId(state);
+//   if (progressId === 0) {
+//     return state.storage.progress?.[0];
+//   } else {
+//     return (state as IState).progress[progressId];
+//   }
+// }
+//
+// function Progress_setProgress(state: IState, progress: IHistoryRecord): IState {
+//   if (progress.id === 0) {
+//     return lf(state).p("storage").p("progress").set([progress]);
+//   } else {
+//     return lf(state).pi("progress").p(progress.id).set(progress);
+//   }
+// }
+
+function Progress_runUpdateScriptForEntry(
+  entry: IHistoryEntry,
+  dayData: IDayData,
+  programExercise: IPlannerProgramExercise,
+  otherStates: IByTag<IProgramState>,
+  setIndex: number,
+  settings: ISettings,
+  stats: IStats
+): IHistoryEntry {
+  if (setIndex !== -1 && !entry?.sets[setIndex]?.isCompleted) {
+    return entry;
+  }
+  const script = PlannerProgramExercise_getUpdateScript(programExercise);
+  if (!script) {
+    return entry;
+  }
+  const exercise = programExercise.exerciseType;
+  const state = ObjectUtils_clone(PlannerProgramExercise_getState(programExercise));
+  const setVariationIndex = PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
+  const descriptionIndex = PlannerProgramExercise_currentDescriptionIndex(programExercise);
+  const bindings = Progress_createScriptBindings(
+    dayData,
+    entry,
+    settings,
+    programExercise.evaluatedSetVariations[setVariationIndex]?.sets.length ?? 0,
+    Stats_getCurrentMovingAverageBodyweight(stats, settings),
+    setIndex + 1,
+    setVariationIndex,
+    descriptionIndex
+  );
+  try {
+    const fnContext: IScriptFnContext = { exerciseType: exercise, unit: settings.units, prints: [] };
+    const runner = new ScriptRunner(
+      script,
+      state,
+      ObjectUtils_clone(otherStates),
+      bindings,
+      Progress_createScriptFunctions(settings),
+      settings.units,
+      fnContext,
+      "update"
+    );
+    runner.execute();
+    const newEntry = Progress_applyBindings(entry, bindings, settings);
+    newEntry.state = { ...newEntry.state, ...state };
+    if (fnContext.prints.length > 0) {
+      newEntry.updatePrints = fnContext.prints;
+    }
+    return newEntry;
+  } catch (error) {
+    const e = error as Error;
+    console.error(e);
+    alert(`Error during executing 'update: custom()' script: ${e.message}`);
+    return entry;
+  }
+}
+
+// function Progress_runInitialUpdateScripts(
+//   aProgress: IHistoryRecord,
+//   programExerciseIds: string[] | undefined,
+//   day: number,
+//   program: IEvaluatedProgram,
+//   settings: ISettings,
+//   stats: IStats
+// ): IHistoryRecord {
+//   const programDay = Program_getProgramDay(program, day);
+//   if (!programDay) {
+//     return aProgress;
+//   }
+//   const dayExercises = Program_getProgramDayUsedExercises(programDay);
+//   const programExercises = programExerciseIds
+//     ? CollectionUtils_compact(programExerciseIds.map((id) => dayExercises.find((e) => e.key === id)))
+//     : dayExercises;
+//
+//   return {
+//     ...aProgress,
+//     entries: aProgress.entries.map((entry) => {
+//       const programExercise =
+//         entry.programExerciseId != null ? programExercises.find((e) => e.key === entry.programExerciseId) : undefined;
+//       if (!programExercise) {
+//         return entry;
+//       }
+//       return Progress_runUpdateScriptForEntry(
+//         entry,
+//         Progress_getDayData(aProgress),
+//         programExercise,
+//         program.states,
+//         -1,
+//         settings,
+//         stats
+//       );
+//     }),
+//   };
+// }
+//
+// function Progress_runUpdateScript(
+//   aProgress: IHistoryRecord,
+//   programExercise: IPlannerProgramExercise,
+//   otherStates: IByTag<IProgramState>,
+//   entryIndex: number,
+//   setIndex: number,
+//   mode: IProgressMode,
+//   settings: ISettings,
+//   stats: IStats
+// ): IHistoryRecord {
+//   if (mode === "warmup") {
+//     return aProgress;
+//   }
+//   const entry = aProgress.entries[entryIndex];
+//   const newEntry = Progress_runUpdateScriptForEntry(
+//     entry,
+//     Progress_getDayData(aProgress),
+//     programExercise,
+//     otherStates,
+//     setIndex,
+//     settings,
+//     stats
+//   );
+//   const progress = lf(aProgress).p("entries").i(entryIndex).set(newEntry);
+//   return progress;
+// }
+
+function Progress_applyBindings(
+  oldEntry: IHistoryEntry,
+  bindings: IScriptBindings,
+  settings: ISettings
+): IHistoryEntry {
+  const keys = [
+    "RPE",
+    "minReps",
+    "reps",
+    "weights",
+    "amraps",
+    "logrpes",
+    "timers",
+    "originalWeights",
+    "askweights",
+  ] as const;
+  const entry = ObjectUtils_clone(oldEntry);
+  const lastCompletedIndex = CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) + 1;
+  entry.sets = entry.sets.slice(0, Math.max(lastCompletedIndex, bindings.numberOfSets, 0));
+  for (const key of keys) {
+    for (let i = 0; i < bindings[key].length; i += 1) {
+      if (entry.sets[i] == null) {
+        entry.sets[i] = {
+          vtype: "set",
+          id: UidFactory_generateUid(6),
+          index: i,
+          isUnilateral: Exercise_getIsUnilateral(entry.exercise, settings),
+          reps: 0,
+          weight: Weight_build(0, "lb"),
+          originalWeight: Weight_build(0, "lb"),
+          askWeight: false,
+          isCompleted: false,
+        };
+      }
+      if (!entry.sets[i].isCompleted) {
+        if (key === "RPE") {
+          const value = bindings.RPE[i];
+          entry.sets[i].rpe = value !== 0 ? value : undefined;
+        } else if (key === "reps") {
+          const value = bindings.reps[i];
+          entry.sets[i].reps = value;
+        } else if (key === "minReps") {
+          const value = bindings.minReps[i];
+          entry.sets[i].minReps = value !== 0 ? value : undefined;
+        } else if (key === "weights") {
+          const value = bindings.weights[i];
+          entry.sets[i].weight = value;
+        } else if (key === "originalWeights") {
+          const value = bindings.originalWeights[i];
+          entry.sets[i].originalWeight = value;
+        } else if (key === "amraps") {
+          const value = bindings.amraps[i];
+          entry.sets[i].isAmrap = !!value;
+        } else if (key === "logrpes") {
+          const value = bindings.logrpes[i];
+          entry.sets[i].logRpe = !!value;
+        } else if (key === "askweights") {
+          const value = bindings.askweights[i];
+          entry.sets[i].askWeight = !!value;
+        } else if (key === "timers") {
+          const value = bindings.timers[i];
+          entry.sets[i].timer = value != null && value >= 0 ? value : undefined;
+        }
+      }
+    }
+  }
+  return entry;
+}
+
+function Progress_completeAmrapSet(
+  progress: IHistoryRecord,
+  entryIndex: number,
+  setIndex: number,
+  settings: ISettings
+): IHistoryRecord {
+  const entry = progress.entries[entryIndex];
+  const isUnilateral = Exercise_getIsUnilateral(entry.exercise, settings);
+  return lf(progress)
+    .p("entries")
+    .i(entryIndex)
+    .p("sets")
+    .i(setIndex)
+    .modify((progressSet) => {
+      return {
+        ...progressSet,
+        timestamp: !progressSet.isCompleted ? Date.now() : progressSet.timestamp,
+        completedRepsLeft: isUnilateral ? (progressSet.completedRepsLeft ?? progressSet.reps) : undefined,
+        completedReps: progressSet.completedReps ?? progressSet.reps,
+        completedWeight: progressSet.completedWeight ?? progressSet.weight,
+        isCompleted: !progressSet.isCompleted,
+      };
+    });
+}
+
+function Progress_shouldShowAmrapModal(
+  entry: IHistoryEntry,
+  setIndex: number,
+  mode: IProgressMode,
+  hasUserPromptedVars: boolean,
+  settings: ISettings
+): boolean {
+  const set = mode === "warmup" ? entry.warmupSets[setIndex] : entry.sets[setIndex];
+  const shouldLogRpe = !!set?.logRpe;
+  const shouldPromptUserVars = hasUserPromptedVars && Progress_hasLastUnfinishedSet(entry);
+  const isUnilateral = Exercise_getIsUnilateral(entry.exercise, settings);
+  const isAmrap =
+    (set?.completedReps == null || (isUnilateral && set?.completedRepsLeft == null)) &&
+    (!!set?.isAmrap || set.reps == null);
+  const shouldAskWeight = set?.completedWeight == null && (!!set?.askWeight || set.weight == null);
+  return !set.isCompleted && (shouldLogRpe || shouldPromptUserVars || isAmrap || shouldAskWeight);
+}
+//
+// function Progress_completeSet(
+//   progress: IHistoryRecord,
+//   entryIndex: number,
+//   setIndex: number,
+//   mode: IProgressMode,
+//   hasUserPromptedVars: boolean,
+//   settings: ISettings
+// ): IHistoryRecord {
+//   const entry = progress.entries[entryIndex];
+//   const set = mode === "warmup" ? entry.warmupSets[setIndex] : entry.sets[setIndex];
+//   const shouldLogRpe = !!set?.logRpe;
+//   const shouldPromptUserVars = hasUserPromptedVars && Progress_hasLastUnfinishedSet(entry);
+//   const isUnilateral = Exercise_getIsUnilateral(entry.exercise, settings);
+//   const isAmrap =
+//     (set?.completedReps == null || (isUnilateral && set?.completedRepsLeft == null)) &&
+//     (!!set?.isAmrap || set.reps == null);
+//   const shouldAskWeight = set?.completedWeight == null && (!!set?.askWeight || set.weight == null);
+//   if (mode === "warmup") {
+//     return lf(progress)
+//       .p("entries")
+//       .i(entryIndex)
+//       .p("warmupSets")
+//       .i(setIndex)
+//       .modify((progressSet) => {
+//         return {
+//           ...progressSet,
+//           timestamp: !progressSet.isCompleted ? Date.now() : progressSet.timestamp,
+//           completedRepsLeft: isUnilateral ? (progressSet.completedRepsLeft ?? progressSet.reps) : undefined,
+//           completedReps: progressSet.completedReps ?? progressSet.reps,
+//           completedWeight: progressSet.completedWeight ?? progressSet.weight,
+//           isCompleted: !progressSet.isCompleted,
+//         };
+//       });
+//   } else if (Progress_shouldShowAmrapModal(entry, setIndex, mode, hasUserPromptedVars, settings)) {
+//     const amrapUi: IProgressUi = {
+//       amrapModal: {
+//         entryIndex,
+//         setIndex,
+//         nonce: Date.now(),
+//         logRpe: shouldLogRpe,
+//         userVars: shouldPromptUserVars,
+//         isAmrap: isAmrap,
+//         askWeight: shouldAskWeight,
+//       },
+//     };
+//     return { ...progress, ui: { ...progress.ui, ...amrapUi } };
+//   } else {
+//     return Progress_completeAmrapSet(progress, entryIndex, setIndex, settings);
+//   }
+// }
+//
+// function Progress_getIsRpeEnabled(sets: ISet[]): boolean {
+//   return sets.some((set) => set.rpe != null);
+// }
+//
+// function Progress_getIsMinRepsEnabled(sets: ISet[]): boolean {
+//   return sets.some((set) => set.minReps != null);
+// }
+//
+// function Progress_updateAmrapRepsInExercise(progress: IHistoryRecord, value?: number): IHistoryRecord {
+//   if (progress.ui?.amrapModal != null) {
+//     const { entryIndex, setIndex } = progress.ui.amrapModal;
+//     return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedReps").set(value);
+//   } else {
+//     return progress;
+//   }
+// }
+//
+// function Progress_updateAmrapRepsLeftInExercise(progress: IHistoryRecord, value?: number): IHistoryRecord {
+//   if (progress.ui?.amrapModal != null) {
+//     const { entryIndex, setIndex } = progress.ui.amrapModal;
+//     return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedRepsLeft").set(value);
+//   } else {
+//     return progress;
+//   }
+// }
+//
+// function Progress_updateRpeInExercise(progress: IHistoryRecord, value?: number): IHistoryRecord {
+//   if (progress.ui?.amrapModal != null) {
+//     const { entryIndex, setIndex } = progress.ui.amrapModal;
+//     const newValue = value != null ? Math.round(Math.min(10, Math.max(0, value)) / 0.5) * 0.5 : undefined;
+//     return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedRpe").set(newValue);
+//   } else {
+//     return progress;
+//   }
+// }
+//
+// function Progress_updateWeightInExercise(progress: IHistoryRecord, value?: IWeight): IHistoryRecord {
+//   if (progress.ui?.amrapModal != null) {
+//     const { entryIndex, setIndex } = progress.ui.amrapModal;
+//     return lf(progress).p("entries").i(entryIndex).p("sets").i(setIndex).p("completedWeight").set(value);
+//   } else {
+//     return progress;
+//   }
+// }
+//
+// function Progress_updateUserPromptedStateVars(
+//   progress: IHistoryRecord,
+//   programExerciseId: string,
+//   userPromptedStateVars: IProgramState
+// ): IHistoryRecord {
+//   return {
+//     ...progress,
+//     userPromptedStateVars: {
+//       ...(progress.userPromptedStateVars || {}),
+//       [programExerciseId]: userPromptedStateVars,
+//     },
+//   };
+// }
+//
+// function Progress_editExerciseNotes(dispatch: IDispatch, entryIndex: number, notes: string): void {
+//   updateProgress(dispatch, [lb<IHistoryRecord>().p("entries").i(entryIndex).p("notes").record(notes)], "edit-notes");
+// }
+//
+// function Progress_addExercise(dispatch: IDispatch, exerciseType: IExerciseType, numberOfEntries: number): void {
+//   updateProgress(
+//     dispatch,
+//     [
+//       lb<IHistoryRecord>()
+//         .p("entries")
+//         .recordModify((entries) => {
+//           return [...entries, History_createCustomEntry(exerciseType, numberOfEntries)].map((e, i) => ({
+//             ...e,
+//             index: i,
+//           }));
+//         }),
+//     ],
+//     "add-exercise"
+//   );
+// }
+
+function Progress_isEligibleForInferredWeight(set: ISet): boolean {
+  return set.originalWeight == null && set.reps != null && set.rpe != null;
+}
+
+function Progress_updateSetWeights(
+  entry: IHistoryEntry,
+  exerciseType: IExerciseType,
+  settings: ISettings
+): IHistoryEntry {
+  const newSets = entry.sets.map((set) => {
+    if ((Progress_isEligibleForInferredWeight(set) || Weight_isPct(set.originalWeight)) && !set.isCompleted) {
+      const originalWeight = set.originalWeight ?? Weight_rpePct(set.reps ?? 1, set.rpe ?? 10);
+      const evaluatedWeight = Weight_evaluateWeight(originalWeight, exerciseType, settings);
+      const unit = Equipment_getUnitForExerciseType(settings, exerciseType) ?? settings.units;
+      const weight = Weight_roundConvertTo(evaluatedWeight, settings, unit, exerciseType);
+      return { ...set, weight };
+    }
+    return set;
+  });
+  return { ...entry, sets: newSets };
+}
+//
+// function Progress_doesUse1RM(entry: IHistoryEntry): boolean {
+//   return entry.sets.some((set) => (set.originalWeight == null ? set.rpe != null : Weight_isPct(set.originalWeight)));
+// }
+//
+// function Progress_changeExercise(
+//   dispatch: IDispatch,
+//   settings: ISettings,
+//   progressId: number,
+//   exerciseType: IExerciseType,
+//   entryIndex: number,
+//   shouldKeepProgramExerciseId: boolean
+// ): void {
+//   updateState(
+//     dispatch,
+//     [
+//       Progress_lbProgress(progressId)
+//         .p("entries")
+//         .i(entryIndex)
+//         .recordModify((entry) => {
+//           entry = Progress_updateSetWeights(entry, exerciseType, settings);
+//           return {
+//             ...entry,
+//             exercise: exerciseType,
+//             ...(shouldKeepProgramExerciseId ? {} : { programExerciseId: undefined }),
+//             changed: true,
+//           };
+//         }),
+//     ],
+//     "Change exercise"
+//   );
+// }
+//
+// function Progress_changeEquipment(
+//   dispatch: IDispatch,
+//   progressId: number,
+//   entryIndex: number,
+//   equipment: IEquipment
+// ): void {
+//   updateState(
+//     dispatch,
+//     [Progress_lbProgress(progressId).p("entries").i(entryIndex).p("exercise").p("equipment").record(equipment)],
+//     "Change equipment"
+//   );
+// }
+//
+// function Progress_editNotes(dispatch: IDispatch, progressId: number, notes: string): void {
+//   updateState(dispatch, [Progress_lbProgress(progressId).p("notes").record(notes)], "Edit workout notes");
+// }
+
+function Progress_getDayData(progress: IHistoryRecord): IDayData {
+  return {
+    day: progress.day,
+    week: progress.week,
+    dayInWeek: progress.dayInWeek,
+  };
+}
+
+// function Progress_applyProgramExercise(
+//   progressEntry: IHistoryEntry | undefined,
+//   index: number,
+//   programExercise: IPlannerProgramExerciseWithType,
+//   settings: ISettings,
+//   forceWarmupSets?: boolean
+// ): IHistoryEntry {
+//   const variationIndex = PlannerProgramExercise_currentSetVariationIndex(programExercise);
+//   const sets = programExercise.evaluatedSetVariations[variationIndex].sets;
+//   const programExerciseWarmupSets = PlannerProgramExercise_programWarmups(programExercise, settings);
+//
+//   if (progressEntry != null) {
+//     const newSetsNum = Math.max(progressEntry.sets.length, sets.length);
+//     const newSets: ISet[] = [];
+//     for (let i = 0; i < newSetsNum; i++) {
+//       const progressSet: ISet | undefined = progressEntry.sets[i] as ISet | undefined;
+//       const programSet = sets[i];
+//       if (!!progressSet?.isCompleted) {
+//         newSets.push(progressSet);
+//       } else if (programSet != null) {
+//         const originalWeight = programSet.weight;
+//         const weight = ProgramSet_getEvaluatedWeight(programSet, programExercise.exerciseType, settings);
+//         newSets.push({
+//           ...progressSet,
+//           id: progressSet?.id ?? UidFactory_generateUid(6),
+//           vtype: "set",
+//           index: newSets.length,
+//           reps: programSet.maxrep,
+//           minReps: programSet.minrep,
+//           rpe: programSet.rpe,
+//           isUnilateral: Exercise_getIsUnilateral(programExercise.exerciseType, settings),
+//           originalWeight,
+//           weight,
+//           isAmrap: programSet.isAmrap,
+//           logRpe: programSet.logRpe,
+//           label: programSet.label,
+//         });
+//       }
+//     }
+//     let newWarmupSets = progressEntry.warmupSets;
+//     if (progressEntry.warmupSets.every((w) => !w.isCompleted)) {
+//       const firstWeight = newSets[0]?.weight;
+//       forceWarmupSets = forceWarmupSets || Reps_isEmpty(newSets);
+//       if (forceWarmupSets) {
+//         const generated =
+//           firstWeight != null
+//             ? Exercise_getWarmupSets(programExercise.exerciseType, firstWeight, settings, programExerciseWarmupSets)
+//             : [];
+//         newWarmupSets = generated.map((ws, i) => ({
+//           ...ws,
+//           id: progressEntry.warmupSets[i]?.id ?? ws.id,
+//         }));
+//       } else {
+//         newWarmupSets = progressEntry.warmupSets;
+//       }
+//     }
+//
+//     return {
+//       ...progressEntry,
+//       exercise: progressEntry.changed ? progressEntry.exercise : programExercise.exerciseType,
+//       warmupSets: newWarmupSets,
+//       sets: newSets,
+//     };
+//   } else {
+//     const newSets = sets.map((set, i) => {
+//       const weight = ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings);
+//       return {
+//         vtype: "set" as const,
+//         id: UidFactory_generateUid(6),
+//         index: i,
+//         reps: set.maxrep,
+//         minReps: set.minrep,
+//         originalWeight: set.weight,
+//         isUnilateral: Exercise_getIsUnilateral(programExercise.exerciseType, settings),
+//         weight,
+//         rpe: set.rpe,
+//         logRpe: set.logRpe,
+//         isAmrap: set.isAmrap,
+//         label: set.label,
+//       };
+//     });
+//     const firstWeight = newSets[0]?.weight;
+//
+//     return {
+//       vtype: "history_entry",
+//       index,
+//       id: Progress_getEntryId(programExercise.exerciseType, programExercise.label),
+//       exercise: programExercise.exerciseType,
+//       programExerciseId: programExercise.key,
+//       sets: newSets,
+//       warmupSets:
+//         firstWeight != null
+//           ? Exercise_getWarmupSets(programExercise.exerciseType, firstWeight, settings, programExerciseWarmupSets)
+//           : [],
+//     };
+//   }
+// }
+
+function Progress_getEntryId(exerciseType: IExerciseType, label?: string): string {
+  return CollectionUtils_compact([label, Exercise_toKey(exerciseType)]).join("_");
+}
+
+// function Progress_applyProgramDay(
+//   progress: IHistoryRecord,
+//   program: IEvaluatedProgram,
+//   day: number,
+//   settings: ISettings,
+//   programExerciseIds?: string[]
+// ): IHistoryRecord {
+//   const programDay = Program_getProgramDay(program, day);
+//   if (!programDay) {
+//     return progress;
+//   }
+//   const newEntries = progress.entries.map((entry, index) => {
+//     if (entry.programExerciseId == null) {
+//       return entry;
+//     }
+//     if (programExerciseIds != null && !programExerciseIds.includes(entry.programExerciseId)) {
+//       return entry;
+//     }
+//     const programExercise = Program_getProgramExerciseForKeyAndDay(program, day, entry.programExerciseId);
+//     if (!programExercise) {
+//       return entry;
+//     }
+//     return Progress_applyProgramExercise(entry, index, programExercise, settings, false);
+//   });
+//
+//   return { ...progress, entries: newEntries };
+// }
+//
+// function Progress_changeAmrapAction(
+//   settings: ISettings,
+//   stats: IStats,
+//   progress: IHistoryRecord,
+//   action: IChangeAMRAPAction,
+//   subscription: ISubscription | undefined
+// ): IHistoryRecord {
+//   let newProgress = { ...progress };
+//   if (
+//     action.amrapValue == null &&
+//     action.amrapLeftValue == null &&
+//     action.rpeValue == null &&
+//     action.weightValue == null &&
+//     ObjectUtils_keys(action.userVars || {}).length === 0
+//   ) {
+//     return { ...newProgress, ui: { ...newProgress.ui, amrapModal: undefined } };
+//   }
+//   if (action.amrapValue != null) {
+//     newProgress = Progress_updateAmrapRepsInExercise(newProgress, action.amrapValue);
+//   }
+//   if (action.amrapLeftValue != null) {
+//     newProgress = Progress_updateAmrapRepsLeftInExercise(newProgress, action.amrapLeftValue);
+//   }
+//   if (action.logRpe) {
+//     newProgress = Progress_updateRpeInExercise(newProgress, action.rpeValue);
+//   }
+//   if (action.weightValue != null) {
+//     newProgress = Progress_updateWeightInExercise(newProgress, action.weightValue);
+//   }
+//   const programExerciseId = action.programExercise?.key;
+//   if (ObjectUtils_keys(action.userVars || {}).length > 0 && programExerciseId != null) {
+//     newProgress = Progress_updateUserPromptedStateVars(newProgress, programExerciseId, action.userVars || {});
+//   }
+//   newProgress = Progress_completeAmrapSet(newProgress, action.entryIndex, action.setIndex, settings);
+//   if (action.programExercise) {
+//     newProgress = Progress_runUpdateScript(
+//       newProgress,
+//       action.programExercise,
+//       action.otherStates || {},
+//       action.entryIndex,
+//       action.setIndex,
+//       "workout",
+//       settings,
+//       stats
+//     );
+//   }
+//   if (Progress_isFullyFinishedSet(newProgress)) {
+//     newProgress = Progress_stopTimer(newProgress);
+//   }
+//   newProgress = Progress_maybeApplySuperset(newProgress, action.entryIndex, "workout");
+//   newProgress = Progress_startTimer(
+//     newProgress,
+//     new Date().getTime(),
+//     "workout",
+//     action.entryIndex,
+//     action.setIndex,
+//     settings,
+//     subscription
+//   );
+//   newProgress.intervals = History_resumeWorkout(
+//     newProgress,
+//     action.isPlayground,
+//     settings.timers.reminder,
+//     subscription != null && Subscriptions_hasSubscription(subscription)
+//   );
+//   LiveActivityManager_updateLiveActivityForNextEntry(
+//     newProgress,
+//     action.entryIndex,
+//     "workout",
+//     action.programExercise,
+//     settings,
+//     subscription
+//   );
+//   return { ...newProgress, ui: { ...newProgress.ui, amrapModal: undefined } };
+// }
+//
+// function Progress_completeSetAction(
+//   settings: ISettings,
+//   stats: IStats,
+//   progress: IHistoryRecord,
+//   action: ICompleteSetAction,
+//   subscription: ISubscription | undefined
+// ): IHistoryRecord {
+//   const hasUserPromptedVars = action.programExercise && ProgramExercise_hasUserPromptedVars(action.programExercise);
+//   let newProgress = Progress_completeSet(
+//     progress,
+//     action.entryIndex,
+//     action.setIndex,
+//     action.mode,
+//     !!hasUserPromptedVars,
+//     settings
+//   );
+//   const oldSet = progress.entries[action.entryIndex][action.mode === "warmup" ? "warmupSets" : "sets"][action.setIndex];
+//   const newSet =
+//     newProgress.entries[action.entryIndex][action.mode === "warmup" ? "warmupSets" : "sets"][action.setIndex];
+//   const didFinish = !oldSet.isCompleted && newSet.isCompleted;
+//   if (action.programExercise && !newProgress.ui?.amrapModal) {
+//     newProgress = Progress_runUpdateScript(
+//       newProgress,
+//       action.programExercise,
+//       action.otherStates || {},
+//       action.entryIndex,
+//       action.setIndex,
+//       action.mode,
+//       settings,
+//       stats
+//     );
+//   }
+//
+//   if (Progress_isFullyFinishedSet(newProgress)) {
+//     newProgress = Progress_stopTimer(newProgress);
+//   }
+//   if (didFinish) {
+//     newProgress = Progress_maybeApplySuperset(newProgress, action.entryIndex, action.mode);
+//   }
+//   if (!action.isPlayground) {
+//     newProgress = Progress_startTimer(
+//       newProgress,
+//       new Date().getTime(),
+//       action.mode,
+//       action.entryIndex,
+//       action.setIndex,
+//       settings,
+//       subscription
+//     );
+//   }
+//   newProgress.intervals = History_resumeWorkout(
+//     newProgress,
+//     action.isPlayground,
+//     settings.timers.reminder,
+//     subscription != null && Subscriptions_hasSubscription(subscription)
+//   );
+//   LiveActivityManager_updateLiveActivityForNextEntry(
+//     newProgress,
+//     action.entryIndex,
+//     action.mode,
+//     action.programExercise,
+//     settings,
+//     subscription
+//   );
+//   if (action.forceUpdateEntryIndex) {
+//     newProgress = {
+//       ...newProgress,
+//       ui: { ...newProgress.ui, forceUpdateEntryIndex: !newProgress.ui?.forceUpdateEntryIndex },
+//     };
+//   }
+//   if (action.isExternal) {
+//     newProgress = {
+//       ...newProgress,
+//       ui: { ...newProgress.ui, isExternal: true },
+//     };
+//   }
+//   return newProgress;
+// }
+//
+// function Progress_forceUpdateEntryIndex(dispatch: IDispatch): void {
+//   updateProgress(
+//     dispatch,
+//     [
+//       lb<IHistoryRecord>()
+//         .pi("ui", {})
+//         .p("forceUpdateEntryIndex")
+//         .recordModify((v) => !v),
+//     ],
+//     "Force update entry index"
+//   );
+// }
+//
+// function Progress_finishWorkout(storage: IStorage, progress: IHistoryRecord): IStorage {
+//   const settings = storage.settings;
+//   const programIndex = storage.programs.findIndex((p) => p.id === progress.programId)!;
+//   const program = progress.programId === emptyProgramId ? Program_createEmptyProgram() : storage.programs[programIndex];
+//   const evaluatedProgram = program ? Program_evaluate(program, settings) : undefined;
+//   Progress_stopTimer(progress);
+//   const historyRecord = History_finishProgramDay(progress, storage.settings, progress.day, evaluatedProgram);
+//   let newHistory;
+//   if (!Progress_isCurrent(progress)) {
+//     newHistory = storage.history.map((h) => (h.id === progress.id ? historyRecord : h));
+//   } else {
+//     newHistory = [historyRecord, ...storage.history];
+//   }
+//   const exerciseData = storage.settings.exerciseData;
+//   const { program: newProgram, exerciseData: newExerciseData } =
+//     Progress_isCurrent(progress) && program != null
+//       ? Program_runAllFinishDayScripts(program, progress, storage.stats, settings)
+//       : { program, exerciseData };
+//   const newPrograms = newProgram != null ? lf(storage.programs).i(programIndex).set(newProgram) : storage.programs;
+//   const newSettingsExerciseData = deepmerge(storage.settings.exerciseData, newExerciseData);
+//   return {
+//     ...storage,
+//     progress: Progress_isCurrent(progress) ? [] : storage.progress,
+//     history: newHistory,
+//     programs: newPrograms,
+//     settings: {
+//       ...storage.settings,
+//       exerciseData: newSettingsExerciseData,
+//     },
+//   };
+// }
+
 //#endregion
 
 //#region ________

@@ -33,6 +33,12 @@ catalogs:
     es-toolkit:
       specifier: ^1.46.0
       version: 1.46.0
+    fp-ts:
+      specifier: ^2.16.11
+      version: 2.16.11
+    io-ts:
+      specifier: ^2.2.22
+      version: 2.2.22
     micro-memoize:
       specifier: ^5.1.1
       version: 5.1.1
@@ -106,6 +112,12 @@ importers:
       es-toolkit:
         specifier: 'catalog:'
         version: 1.46.0
+      fp-ts:
+        specifier: 'catalog:'
+        version: 2.16.11
+      io-ts:
+        specifier: 'catalog:'
+        version: 2.2.22(fp-ts@2.16.11)
       micro-memoize:
         specifier: 'catalog:'
         version: 5.1.1
@@ -831,10 +843,18 @@ packages:
       picomatch:
         optional: true
 
+  fp-ts@2.16.11:
+    resolution: {integrity: sha512-LaI+KaX2NFkfn1ZGHoKCmcfv7yrZsC3b8NtWsTVQeHkq4F27vI5igUuO53sxqDEa2gNQMHFPmpojDw/1zmUK7w==}
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  io-ts@2.2.22:
+    resolution: {integrity: sha512-FHCCztTkHoV9mdBsHpocLpdTAfh956ZQcIkWQxxS0U5HT53vtrcuYdQneEJKH6xILaLNzXVl2Cvwtoy8XNN0AA==}
+    peerDependencies:
+      fp-ts: ^2.5.0
 
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
@@ -1588,8 +1608,14 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.4
 
+  fp-ts@2.16.11: {}
+
   fsevents@2.3.3:
     optional: true
+
+  io-ts@2.2.22(fp-ts@2.16.11):
+    dependencies:
+      fp-ts: 2.16.11
 
   jiti@2.6.1: {}
 
