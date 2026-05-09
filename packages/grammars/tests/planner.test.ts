@@ -54,7 +54,7 @@ Squat / 2x5 / 105lb / progress: lp(5lb)
   test.skip("new system", () => {
     // New evaluator system scaffolding. It's okay if this fails for now.
     const result = run({
-      fullProgramText: case_.fullProgramText,
+      fullProgramText: case_.plan,
       settings: baseSettings as unknown as never,
     });
 
