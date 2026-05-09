@@ -32,6 +32,7 @@ import {
 import { StringUtils_unindent } from "@/utils/string";
 import type { ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/parsers/workout-plan.ts";
+import { parser as LiftoscriptParser } from "@/parsers/logic";
 import {
   LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
@@ -15050,7 +15051,8 @@ function Progress_runUpdateScriptForEntry(
   } catch (error) {
     const e = error as Error;
     console.error(e);
-    alert(`Error during executing 'update: custom()' script: ${e.message}`);
+    // @todo browser code in non-browser function, should be bubbled up
+    // alert(`Error during executing 'update: custom()' script: ${e.message}`);
     return entry;
   }
 }
@@ -17078,9 +17080,9 @@ class ProgramToPlanner {
     const plannerProgram = this.program.planner;
     if (this.program.errors.length > 0) {
       const error = this.program.errors[0];
-      const msg = `There's an error during evaluating a program, week ${error.dayData.week}, day: ${error.dayData.dayInWeek}. Please fix it to proceed.\n\n${error.error.toString()}`;
       console.log(PlannerProgram_generateFullText(plannerProgram.weeks));
       //@todo browser code in non-browser aware function, should have been bubbled up
+      // const msg = `There's an error during evaluating a program, week ${error.dayData.week}, day: ${error.dayData.dayInWeek}. Please fix it to proceed.\n\n${error.error.toString()}`;
       // if (typeof window !== "undefined" && window.alert != null) {
       //   window.alert(msg);
       // }
@@ -18754,17 +18756,17 @@ function Equipment_smallestPlate(
 //   return sets.length > 0 && sets.some((s) => Reps_isFinishedSet(s));
 // }
 
-function Reps_isFinished(sets: ISet[]): boolean {
-  return sets.length > 0 && sets.every((s) => Reps_isFinishedSet(s));
-}
+// function Reps_isFinished(sets: ISet[]): boolean {
+//   return sets.length > 0 && sets.every((s) => Reps_isFinishedSet(s));
+// }
 
 // function Reps_isEmptyOrFinished(sets: ISet[]): boolean {
 //   return sets.length === 0 || Reps_isFinished(sets);
 // }
 
-function Reps_isFinishedSet(s: ISet): boolean {
-  return !!s.isCompleted;
-}
+// function Reps_isFinishedSet(s: ISet): boolean {
+//   return !!s.isCompleted;
+// }
 
 // function Reps_toKey(set: ISet): string {
 //   return `${Weight_printNull(set.weight)}-${Weight_printNull(set.completedWeight)}-${set.reps}-${set.minReps}-${set.isAmrap}-${set.rpe}-${set.askWeight}-${set.completedReps}-${set.completedRepsLeft}-${set.completedRpe}-${set.isCompleted}`;
