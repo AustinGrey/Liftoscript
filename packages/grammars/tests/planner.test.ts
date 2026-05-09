@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, type TestFunction } from "vite-plus/test";
 import {
   PlannerTestUtils_changeExercise,
   PlannerTestUtils_changeWeight,
   PlannerTestUtils_finish,
-} from "./plannerTestUtils.ts";
+} from "./oldPlannerSystemTestUtils.ts";
 import { PlannerProgram_generateFullText } from "@/planner/display.ts";
 import {
   Weight_build,
@@ -21,6 +21,72 @@ import {
   type IStats,
 } from "@/evaluators/plan-evaluator.ts";
 import { ObjectUtils_clone } from "@/utils/object.ts";
+import type { IWeight } from "@/models/weight.ts";
+import { run } from "@/planner/evaluators";
+
+type PlannerTestCase = {
+  plan: string;
+  /**
+   * Information about what has been completed, to evaluate the next plan
+   */
+  completed: {
+    reps: number[][];
+    weights?: IWeight[][];
+  };
+  /**
+   * The evaluation settings
+   */
+  settings?: ISettings;
+  /**
+   * The user's stats at the time of plan evaluation
+   */
+  stats?: IStats;
+  /**
+   * The plan that results from evaluating the plan
+   */
+  result: string;
+};
+function makeTest(c: PlannerTestCase): TestFunction {
+  return () => {
+    const { program } = PlannerTestUtils_finish(c.plan, {
+      completedReps: [[5, 5]],
+    });
+    if (!program.planner) {
+      expect.fail("Old system failed to produce a program planner.");
+    }
+    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
+    expect(
+      newText,
+      "Old system failed to produce the expected result",
+    ).to.equal(c.result);
+
+    const newResult = run(c.plan);
+    expect(
+      newResult,
+      "New system failed to produce the expected result",
+    ).to.equal(c.result);
+  };
+}
+
+describe("Plan Evaluator", () => {
+  it(
+    "updates weight after completing",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 2x5 / 100lb / progress: lp(5lb)`,
+      result: `# Week 1
+## Day 1
+Squat / 2x5 / 105lb / progress: lp(5lb)
+
+
+`,
+      completed: {
+        reps: [[5, 5]],
+      },
+    }),
+  );
+});
 
 describe("Planner", () => {
   it("updates weight after completing", () => {
