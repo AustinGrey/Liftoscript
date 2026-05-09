@@ -1,16 +1,7 @@
 import memoize from "micro-memoize";
 import * as t from "io-ts";
 import { unsafeCoerce } from "fp-ts/lib/function";
-import { lb } from "lens-shmens";
-
-import { Service } from "../api/service";
-import { IExercisePickerSettings } from "../components/exercisePicker/exercisePickerSettings";
-import { IDispatch } from "../ducks/types";
-import { Thunk_pushScreen } from "../ducks/thunks";
-import { getLatestMigrationVersion } from "../migrations/migrations";
-import type { INavigateOpts } from "../navigation/navigationService";
 import { ScriptRunner } from "../parser";
-
 import {
   IAllCustomExercises,
   IAllEquipment,
@@ -24,64 +15,36 @@ import {
   IPlannerProgram,
   IPlannerSettings,
   IProgram,
-  IProgramContentSettings,
-  IProgramExercise,
-  IProgramExerciseVariation,
-  IProgramExerciseWarmupSet,
-  IProgramSet,
   IProgramState,
   ISet,
   ISettings,
-  IShortDayData,
   IStats,
-  IStatsKey,
-  IStorage,
-  ITargetType,
-  targetTypes,
-  IUnit,
   IWeight,
 } from "../types";
 import { IPlannerProgramWeek } from "../../../types";
 
 import { IWeightChange } from "../../../models/programExercise";
-import { Storage_getDefault, Storage_get } from "../../../models/storage";
 
 import {
   CollectionUtils_compact,
-  CollectionUtils_sort,
   CollectionUtils_sortBy,
-  CollectionUtils_uniqBy,
-  CollectionUtils_uniqByExpr,
 } from "../utils/collection";
-import { DateUtils_formatYYYYMMDD } from "../utils/date";
-import { Encoder_encodeIntoUrl } from "../utils/encoder";
-import { Exporter_toFile } from "../utils/exporter";
 import { UidFactory_generateUid } from "../utils/generator";
 import { MathUtils_applyOp } from "../utils/math";
 import {
   ObjectUtils_clone,
   ObjectUtils_diff,
-  ObjectUtils_diffPaths,
-  ObjectUtils_filter,
   ObjectUtils_isEqual,
   ObjectUtils_keys,
-  ObjectUtils_omit,
-  ObjectUtils_pick,
   ObjectUtils_values,
 } from "./utils/object";
-import { SendMessage_toIosAndAndroid } from "../utils/sendMessage";
-import { StringUtils_hashString, StringUtils_pluralize } from "../utils/string";
 import { IEither, IArrayElement } from "./utils/types";
-import { UrlUtils_build } from "../utils/url";
 
 import {
   IAssignmentOp,
   ILiftoscriptEvaluatorUpdate,
 } from "../liftoscriptEvaluator";
 import {
-  IPlannerEvalFullResult,
-  IPlannerEvalResult,
-  IPlannerTopLineItem,
   PlannerSyntaxError,
 } from "../plannerExerciseEvaluator";
 import { PlannerExerciseEvaluator } from "./plannerExerciseEvaluator";
@@ -89,45 +52,29 @@ import { PlannerExerciseEvaluatorText } from "../plannerExerciseEvaluatorText";
 import { parser as plannerExerciseParser } from "../plannerExerciseParser";
 
 import {
-  IByExercise,
   IByTag,
-  PlannerEvaluator_changeExerciseName,
   PlannerEvaluator_forceEvaluate,
 } from "../pages/planner/plannerEvaluator";
 import {
   PlannerEvaluator_evaluate,
-  PlannerEvaluator_evaluateFull,
 } from "../plannerEvaluator";
-import { PlannerProgram_switchToUnit } from "../pages/planner/models/plannerProgram";
 import {
-  PlannerProgramExercise_createExerciseFromEntry,
   PlannerProgramExercise_currentDescriptionIndex,
   PlannerProgramExercise_currentEvaluatedSetVariation,
   PlannerProgramExercise_currentEvaluatedSetVariationIndex,
   PlannerProgramExercise_getProgressScript,
   PlannerProgramExercise_getState,
-  PlannerProgramExercise_getStateMetadata,
-  PlannerProgramExercise_getUpdateScript,
   PlannerProgramExercise_programWarmups,
-  PlannerProgramExercise_sets,
 } from "../pages/planner/models/plannerProgramExercise";
 
 import { PlannerKey_fromExerciseType } from "../plannerKey";
 
 import {
-  allExercisesList,
-  Exercise_eq,
-  Exercise_findById,
   Exercise_findByNameEquipment,
-  Exercise_fullName,
-  Exercise_get,
   Exercise_getIsUnilateral,
   Exercise_getWarmupSets,
-  Exercise_nameWithEquipment,
   Exercise_onerm,
   Exercise_toKey,
-  IExercise,
-  warmupValues,
 } from "./exercise";
 import {
   IScriptBindings,
@@ -138,19 +85,12 @@ import {
   Progress_runUpdateScriptForEntry,
 } from "./progress";
 import {
-  ProgramExercise_approxTimeMs,
   ProgramExercise_applyVariables,
-  ProgramExercise_doesUse1RM,
-  ProgramExercise_doesUseRPE,
 } from "./programExercise";
 import {
   IEvaluatedProgram,
-  IExportedProgram,
-  Program_getAllProgramExercises,
-  Program_getAllUsedProgramExercises,
 } from "./program";
 import {
-  ProgramSet_approxTimeMs,
   ProgramSet_getEvaluatedWeight,
   ProgramSet_isEligibleForInferredWeight,
 } from "./programSet";
@@ -161,32 +101,19 @@ import {
   IPlannerProgramExerciseEvaluatedSet,
   IPlannerProgramExerciseWithType,
 } from "./models/types";
-import { IVersions, IVersionTypes } from "./models/versionTracker";
-import {
-  IExportedPlannerProgram,
-  IPlannerProgramExerciseWarmupSet,
-  IPlannerProgramProperty,
-} from "./types";
 import {
   Weight_add,
   Weight_applyOp,
   Weight_build,
-  Weight_buildPct,
-  Weight_convertTo,
-  Weight_display,
   Weight_divide,
   Weight_eq,
   Weight_eqNull,
   Weight_is,
   Weight_isPct,
   Weight_print,
-  Weight_printOrNumber,
   Weight_roundTo005,
 } from "./weight";
-
-import { EditProgram_initPlannerState } from "./editProgram";
 import { Stats_getCurrentMovingAverageBodyweight } from "./stats";
-import { IState, updateSettings, updateState } from "./state";
 
 //#region Program
 
