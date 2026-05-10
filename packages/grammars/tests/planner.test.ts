@@ -4,6 +4,11 @@ import {
   PlannerTestUtils_changeWeight,
   PlannerTestUtils_finish,
 } from "./oldPlannerSystemTestUtils.ts";
+import {
+  PlannerTestUtils_changeExercise as newSystemChangeExercise,
+  PlannerTestUtils_changeWeight as newSystemChangeWeight,
+  PlannerTestUtils_finish as newSystemFinish,
+} from "./newPlannerSystemTestUtils.ts";
 import { PlannerProgram_generateFullText } from "@/planner/display.ts";
 import {
   Weight_build,
@@ -22,7 +27,7 @@ import {
 } from "@/evaluators/plan-evaluator.ts";
 import { ObjectUtils_clone } from "@/utils/object.ts";
 import type { IWeight } from "@/models/weight.ts";
-import { run } from "@/planner/evaluators";
+// import { run } from "@/planner/evaluators";
 
 type PlannerTestCase = {
   plan: string;
@@ -61,16 +66,31 @@ function makeTest(c: PlannerTestCase): TestFunction {
       expect.fail("Old system failed to produce a program planner.");
     }
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(
-      newText,
-      "Old system failed to produce the expected result",
-    ).to.equal(c.result);
+    expect
+      .soft(newText, "Old system failed to produce the expected result")
+      .to.equal(c.result);
 
-    const newResult = run(c.plan);
-    expect(
-      newResult,
-      "New system failed to produce the expected result",
-    ).to.equal(c.result);
+    const { program: newSystemProgram } = newSystemFinish(
+      c.plan,
+      {
+        completedReps: c.completed.reps,
+        completedWeights: c.completed.weights,
+      },
+      c.settings,
+      c.stats,
+    );
+    if (!newSystemProgram.planner) {
+      expect.fail("New system failed to produce a program planner.");
+    }
+    const newSystemNewText = PlannerProgram_generateFullText(
+      newSystemProgram.planner!.weeks,
+    );
+    expect
+      .soft(
+        newSystemNewText,
+        "New system failed to produce the expected result",
+      )
+      .to.equal(c.result);
   };
 }
 

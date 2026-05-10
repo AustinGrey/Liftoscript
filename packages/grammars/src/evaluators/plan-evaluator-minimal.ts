@@ -2878,13 +2878,10 @@ export function PlannerProgram_evaluate(
 export function PlannerProgram_evaluateText(
   fullProgramText: string,
 ): IPlannerProgramWeek[] {
-  const evaluator = new PlannerExerciseEvaluator(fullProgramText);
+  const evaluator = new PlannerExerciseEvaluatorText(fullProgramText);
   const tree = plannerExerciseParser.parse(fullProgramText);
-  const result = evaluator.evaluate(tree.topNode);
-  if (!result.success) {
-    throw result.error;
-  }
-  const weeks: IPlannerProgramWeek[] = result.data.map((week) => {
+  const data = evaluator.evaluate(tree.topNode);
+  const weeks: IPlannerProgramWeek[] = data.map((week) => {
     return {
       name: week.name,
       description: week.description,
