@@ -48,9 +48,15 @@ type PlannerTestCase = {
 };
 function makeTest(c: PlannerTestCase): TestFunction {
   return () => {
-    const { program } = PlannerTestUtils_finish(c.plan, {
-      completedReps: [[5, 5]],
-    });
+    const { program } = PlannerTestUtils_finish(
+      c.plan,
+      {
+        completedReps: c.completed.reps,
+        completedWeights: c.completed.weights,
+      },
+      c.settings,
+      c.stats,
+    );
     if (!program.planner) {
       expect.fail("Old system failed to produce a program planner.");
     }
@@ -75,15 +81,15 @@ describe("Plan Evaluator", () => {
       plan: `# Week 1
 ## Day 1
 Squat / 2x5 / 100lb / progress: lp(5lb)`,
+      completed: {
+        reps: [[5, 5]],
+      },
       result: `# Week 1
 ## Day 1
 Squat / 2x5 / 105lb / progress: lp(5lb)
 
 
 `,
-      completed: {
-        reps: [[5, 5]],
-      },
     }),
   );
 });
