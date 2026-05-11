@@ -3352,7 +3352,11 @@ interface IPlannerExerciseEvaluatorWeek {
   days: { name: string; line: number; exercises: IPlannerProgramExercise[] }[];
 }
 
-type IPlannerExerciseEvaluatorMode = "perday" | "full" | "onset";
+/**
+ * perday -> you are defining the plan for a single, specific day
+ * full -> you are defining the full plan, including all weeks and days
+ */
+type IPlannerExerciseEvaluatorMode = "perday" | "full";
 
 export class PlannerExerciseEvaluator {
   private readonly script: string;
@@ -11585,15 +11589,3 @@ function Equipment_smallestPlate(
     )[0]?.weight || Weight_build(1, unit)
   );
 }
-
-//#endregion
-
-//#region Set
-
-//#endregion
-
-//#region ________
-//#endregion
-
-//#region ________
-//#endregion
