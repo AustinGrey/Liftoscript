@@ -53,7 +53,7 @@ export function Progress_createScriptFunctions(
     }
   }
 
-  const fns: IScriptFunctions = {
+  return {
     roundWeight: (num, context) => {
       if (!is(TWeight, num)) {
         num = Weight.build(num, settings.units);
@@ -185,7 +185,6 @@ export function Progress_createScriptFunctions(
       return to - from;
     },
   };
-  return fns;
 }
 
 function floor(num: number): number;

@@ -5236,7 +5236,7 @@ function PlannerEvaluator_fillSetReuses(
       settings,
       reuse.fullName,
       evaluatedWeeks,
-      reuse.week ?? weekIndex + 1 ?? 1,
+      reuse.week ?? weekIndex + 1,
       reuse.day,
     );
     if (originalExercises.length > 1) {
@@ -11364,8 +11364,9 @@ function Equipment_getEquipmentDataForExerciseType(
     settings,
     exerciseType,
   );
-  const currentGym = Equipment_getCurrentGym(settings);
-  return equipment ? currentGym.equipment[equipment] : undefined;
+  return equipment
+    ? Equipment_getCurrentGym(settings).equipment[equipment]
+    : undefined;
 }
 
 function Equipment_getUnitOrDefaultForExerciseType(
