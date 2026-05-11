@@ -4,40 +4,39 @@ import type { SyntaxNode, Tree } from "@lezer/common";
 import { unsafeCoerce } from "fp-ts/lib/function";
 import {
   CollectionUtils_compact,
-  CollectionUtils_sortBy,
   CollectionUtils_findIndexReverse,
   CollectionUtils_sort,
+  CollectionUtils_sortBy,
 } from "../utils/collection";
 import { UidFactory_generateUid } from "@/utils/generator";
 import {
   MathUtils_applyOp,
-  n,
-  MathUtils_roundTo005,
   MathUtils_round,
   MathUtils_roundFloat,
   MathUtils_roundTo000005,
   MathUtils_roundTo0005,
+  MathUtils_roundTo005,
+  n,
 } from "@/utils/math";
-import type { IEither, IArrayElement } from "@/utils/types";
+import type { IArrayElement, IEither } from "@/utils/types";
 import {
-  ObjectUtils_pick,
-  ObjectUtils_isEqual,
   ObjectUtils_clone,
-  ObjectUtils_keys,
-  ObjectUtils_values,
-  ObjectUtils_filter,
   ObjectUtils_diff,
   ObjectUtils_entries,
+  ObjectUtils_filter,
+  ObjectUtils_isEqual,
+  ObjectUtils_keys,
+  ObjectUtils_pick,
+  ObjectUtils_values,
 } from "@/utils/object";
 import { StringUtils_unindent } from "@/utils/string";
-import type { ILiftoscriptEvaluatorUpdate } from "@/logic/types";
+import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/parsers/workout-plan.ts";
 import { parser as LiftoscriptParser } from "@/parsers/logic";
 import {
   LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
-import type { IAssignmentOp } from "@/logic/types";
 
 //#region Program
 
@@ -134,7 +133,8 @@ function Program_nextHistoryEntry(
       warmupSets,
     ),
   };
-  const newEntry = Progress_runUpdateScriptForEntry(
+
+  return Progress_runUpdateScriptForEntry(
     entry,
     dayData,
     programExercise,
@@ -143,7 +143,6 @@ function Program_nextHistoryEntry(
     settings,
     stats,
   );
-  return newEntry;
 }
 
 export function Program_nextHistoryRecord(
@@ -284,15 +283,15 @@ function Program_runFinishDayScript(
     IByTag<IProgramState>
   >((memo, key) => {
     if (!ObjectUtils_isEqual(otherStates[key], program.states[key])) {
-      const diffState = ObjectUtils_keys(
-        otherStates[key],
-      ).reduce<IProgramState>((memo2, key2) => {
-        if (!Weight_eq(otherStates[key][key2], program.states[key][key2])) {
-          memo2[key2] = otherStates[key][key2];
-        }
-        return memo2;
-      }, {});
-      memo[key] = diffState;
+      memo[key] = ObjectUtils_keys(otherStates[key]).reduce<IProgramState>(
+        (memo2, key2) => {
+          if (!Weight_eq(otherStates[key][key2], program.states[key][key2])) {
+            memo2[key2] = otherStates[key][key2];
+          }
+          return memo2;
+        },
+        {},
+      );
     }
     return memo;
   }, {});
@@ -512,7 +511,8 @@ function Program_forceEvaluate(
       };
     }
   });
-  const result: IEvaluatedProgram = {
+
+  return {
     type: "evaluatedProgram",
     id: program.id,
     errors,
@@ -522,8 +522,6 @@ function Program_forceEvaluate(
     weeks: weeks,
     states,
   };
-
-  return result;
 }
 
 function Program_numberOfDays(program: IEvaluatedProgram): number {
@@ -1121,25 +1119,6 @@ export function PlannerProgram_replaceAndValidateExercise(
   }
 }
 
-export function PlannerProgram_switchToUnit(
-  plannerProgram: IPlannerProgram,
-  settings: ISettings,
-): IPlannerProgram {
-  const newPlannerProgram = ObjectUtils_clone(plannerProgram);
-  for (const week of newPlannerProgram.weeks) {
-    for (const day of week.days) {
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-      );
-      const tree = plannerExerciseParser.parse(day.exerciseText);
-      day.exerciseText = evaluator.switchWeightsToUnit(tree.topNode, settings);
-    }
-  }
-  return newPlannerProgram;
-}
-
 function PlannerProgram_compact(
   oldPlannerProgram: IPlannerProgram,
   plannerProgram: IPlannerProgram,
@@ -1194,8 +1173,8 @@ function PlannerProgram_compact(
         },
       );
       dayIndex += 1;
-      const map = evaluator.topLineMap(tree.topNode);
-      return map;
+
+      return evaluator.topLineMap(tree.topNode);
     });
   });
 
@@ -1384,8 +1363,8 @@ function PlannerProgram_topLineItems(
         },
       );
       dayIndex += 1;
-      const map = evaluator.topLineMap(tree.topNode);
-      return map;
+
+      return evaluator.topLineMap(tree.topNode);
     });
   });
   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
@@ -2957,12 +2936,11 @@ function operation(
     let oldValue =
       typeof set[key] === "boolean" ? (set[key] ? 1 : 0) : set[key];
     if (oldValue == null && ProgramSet_isEligibleForInferredWeight(set)) {
-      const inferredWeight = ProgramSet_getEvaluatedWeight(
+      oldValue = ProgramSet_getEvaluatedWeight(
         set,
         programExercise.exerciseType,
         settings,
       );
-      oldValue = inferredWeight;
     }
     const newValue = Weight_applyOp(onerm, oldValue ?? 0, value, op);
     if (key === "weight" && (Weight_is(newValue) || Weight_isPct(newValue))) {
@@ -3007,8 +2985,8 @@ function PlannerKey_fromExerciseType(
   label?: string,
 ): string {
   const key = Exercise_toKey(exerciseType);
-  const plannerKey = `${label ? `${label}-` : ""}${key}`.toLowerCase();
-  return plannerKey;
+
+  return `${label ? `${label}-` : ""}${key}`.toLowerCase();
 }
 
 export const PlannerKey_fromFullName = memoize(
@@ -3034,8 +3012,8 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
   ): string => {
     const exercise = Exercise_findByNameEquipment(exercises, name, equipment);
     const key = exercise ? Exercise_toKey(exercise) : name;
-    const plannerKey = `${label ? `${label}-` : ""}${key}`.toLowerCase();
-    return plannerKey;
+
+    return `${label ? `${label}-` : ""}${key}`.toLowerCase();
   },
   {
     maxSize: 1000,
@@ -3687,7 +3665,7 @@ export class PlannerExerciseEvaluator {
       const percentage =
         percentageNode == null
           ? undefined
-          : parseFloat(this.getValue(percentageNode).replace(/[%\+]/, ""));
+          : parseFloat(this.getValue(percentageNode).replace(/[%+]/, ""));
       const weight = this.getWeight(weightNode);
       const label = labelNode
         ? getChildren(labelNode)
@@ -4706,15 +4684,7 @@ export class PlannerExerciseEvaluator {
     }
     return nextLines.length > 0
       ? nextLines
-          .map((line) => {
-            switch (line.type) {
-              case "comment":
-              case "triplelinecomment":
-                return line.line.replace(/^\s*\/\/\/?\s*/, "").trim();
-              case "empty":
-                return "";
-            }
-          })
+          .map((line) => line.line.replace(/^\s*\/\/\/?\s*/, "").trim())
           .join("\n")
           .trim()
       : undefined;
@@ -4815,97 +4785,6 @@ export class PlannerExerciseEvaluator {
       this.evaluateExerciseFullText(child);
     }
     return this.weeksFullText;
-  }
-
-  public hasWeightInUnit(programNode: SyntaxNode, unit: IUnit): boolean {
-    const cursor = programNode.cursor();
-    do {
-      const weight = this.getWeight(cursor.node);
-      if (weight != null) {
-        if (weight.unit === unit) {
-          return true;
-        }
-      }
-    } while (cursor.next());
-    return false;
-  }
-
-  public switchWeightsToUnit(
-    programNode: SyntaxNode,
-    settings: ISettings,
-  ): string {
-    const cursor = programNode.cursor();
-    let script = this.script;
-    let shift = 0;
-    do {
-      if (cursor.node.type.name === PlannerNodeName.Weight) {
-        const weight = this.getWeight(cursor.node);
-        if (weight != null) {
-          if (weight.unit !== settings.units) {
-            const from = cursor.node.from;
-            const to = cursor.node.to;
-            const oldWeightStr = Weight_print(weight);
-            const newWeightStr = Weight_print(
-              Weight_smartConvert(weight, settings.units),
-            );
-            script =
-              script.substring(0, from + shift) +
-              newWeightStr +
-              script.substring(to + shift);
-            shift = shift + newWeightStr.length - oldWeightStr.length;
-          }
-        }
-      } else if (cursor.node.type.name === PlannerNodeName.Liftoscript) {
-        const oldLiftoscript = this.getValueTrim(cursor.node);
-        const liftoscriptEvaluator = new ScriptRunner(
-          oldLiftoscript,
-          {},
-          {},
-          Progress_createEmptyScriptBindings(
-            { day: 1, week: 1, dayInWeek: 1 },
-            settings,
-          ),
-          Progress_createScriptFunctions(settings),
-          settings.units,
-          { unit: settings.units, prints: [] },
-          "planner",
-        );
-        const newLiftoscript = liftoscriptEvaluator.switchWeightsToUnit(
-          settings.units,
-        );
-        script =
-          script.substring(0, cursor.node.from + shift) +
-          newLiftoscript +
-          script.substring(cursor.node.to + shift);
-        shift = shift + newLiftoscript.length - oldLiftoscript.length;
-      }
-    } while (cursor.next());
-    return script;
-  }
-
-  public changeExerciseName(
-    node: SyntaxNode,
-    from: string,
-    to: string,
-  ): string {
-    const cursor = node.cursor();
-    let script = this.script;
-    let shift = 0;
-    do {
-      if (cursor.node.type.name === PlannerNodeName.ExerciseName) {
-        const name = this.getValue(cursor.node);
-        if (name === from) {
-          const fromNode = cursor.node.from;
-          const toNode = cursor.node.to;
-          script =
-            script.substring(0, fromNode + shift) +
-            to +
-            script.substring(toNode + shift);
-          shift = shift + to.length - name.length;
-        }
-      }
-    } while (cursor.next());
-    return script;
   }
 
   public static changeWeightsToCompletedWeights(oldScript: string): string {
@@ -5467,11 +5346,9 @@ function PlannerEvaluator_fillEvaluatedSetVariations(
   exercise: IPlannerProgramExercise,
 ): void {
   const setVariations = PlannerProgramExercise_setVariations(exercise);
-  const evaluatedSetVariations = PlannerProgramExercise_evaluateSetVariations(
-    exercise,
-    setVariations,
-  );
-  exercise.evaluatedSetVariations = evaluatedSetVariations;
+
+  exercise.evaluatedSetVariations =
+    PlannerProgramExercise_evaluateSetVariations(exercise, setVariations);
 }
 
 function PlannerEvaluator_fillDescriptions(
@@ -6190,8 +6067,8 @@ function PlannerProgramExercise_evaluateSetVariations(
           rpe: aSet.rpe,
           logRpe: !!aSet.logRpe,
           label: aSet.label,
-          isAmrap: !!aSet.repRange.isAmrap,
-          isQuickAddSet: !!aSet.repRange.isQuickAddSet,
+          isAmrap: aSet.repRange.isAmrap,
+          isQuickAddSet: aSet.repRange.isQuickAddSet,
           askWeight: !!aSet.askWeight,
         });
       }
@@ -6585,8 +6462,8 @@ function PlannerProgramExercise_shortNameFromFullName(
     fullName,
     settings.exercises,
   );
-  const shortName = `${name}${equipment ? `, ${equipmentName(equipment)}` : ""}`;
-  return shortName;
+
+  return `${name}${equipment ? `, ${equipmentName(equipment)}` : ""}`;
 }
 
 //#endregion
@@ -8484,10 +8361,6 @@ function warmup(
   };
 }
 
-function warmupEmpty(weight: IWeight | undefined): ISet[] {
-  return [];
-}
-
 function maybeGetExercise(
   id: IExerciseId,
   customExercises: IAllCustomExercises,
@@ -8673,9 +8546,7 @@ function Exercise_getIsUnilateral(
     case "sideHipAbductor":
     case "sideLyingClam":
     case "sidePlank":
-    case "singleLegBridge":
     case "singleLegCalfRaise":
-    case "singleLegDeadlift":
     case "singleLegGluteBridgeBench":
     case "singleLegGluteBridgeStraight":
     case "singleLegGluteBridgeBentKnee":
@@ -8720,7 +8591,7 @@ function Exercise_getWarmupSets(
   if (programExerciseWarmupSets != null) {
     return warmup(programExerciseWarmupSets, true)(weight, settings, exercise);
   } else {
-    let warmupSets = warmupEmpty(weight);
+    let warmupSets: ISet[] = [];
     if (ex.defaultWarmup === 10) {
       warmupSets = warmup10(weight, settings, exercise);
     } else if (ex.defaultWarmup === 45) {
@@ -9090,7 +8961,7 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
     }
   }
 
-  const fns: IScriptFunctions = {
+  return {
     roundWeight: (num, context) => {
       if (!Weight_is(num)) {
         num = Weight_build(num, settings.units);
@@ -9121,13 +8992,13 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
         context?.exerciseType,
       );
     },
-    calculateTrainingMax: (weight, reps, context) => {
+    calculateTrainingMax: (weight, reps, _context) => {
       if (!Weight_is(weight)) {
         weight = Weight_build(weight, settings.units);
       }
       return Weight_getTrainingMax(weight, reps || 0, settings);
     },
-    calculate1RM: (weight, reps, context) => {
+    calculate1RM: (weight, reps, _context) => {
       if (!Weight_is(weight)) {
         weight = Weight_build(weight, settings.units);
       }
@@ -9204,7 +9075,6 @@ function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
       return to - from;
     },
   };
-  return fns;
 }
 
 function Progress_runUpdateScriptForEntry(
@@ -9316,17 +9186,14 @@ function Progress_applyBindings(
           const value = bindings.RPE[i];
           entry.sets[i].rpe = value !== 0 ? value : undefined;
         } else if (key === "reps") {
-          const value = bindings.reps[i];
-          entry.sets[i].reps = value;
+          entry.sets[i].reps = bindings.reps[i];
         } else if (key === "minReps") {
           const value = bindings.minReps[i];
           entry.sets[i].minReps = value !== 0 ? value : undefined;
         } else if (key === "weights") {
-          const value = bindings.weights[i];
-          entry.sets[i].weight = value;
+          entry.sets[i].weight = bindings.weights[i];
         } else if (key === "originalWeights") {
-          const value = bindings.originalWeights[i];
-          entry.sets[i].originalWeight = value;
+          entry.sets[i].originalWeight = bindings.originalWeights[i];
         } else if (key === "amraps") {
           const value = bindings.amraps[i];
           entry.sets[i].isAmrap = !!value;
@@ -9391,26 +9258,6 @@ function Weight_evaluateWeight(
       exerciseType,
     );
     return Weight_build(0, unit);
-  }
-}
-
-function Weight_smartConvert(weight: IWeight, toUnit: IUnit): IWeight {
-  if (weight.unit === toUnit) {
-    return weight;
-  }
-  const value = weight.value;
-  if (weight.unit === "kg") {
-    if (value < 15) {
-      return Weight_build(value * 2, toUnit);
-    } else {
-      return Weight_build(MathUtils_round(value * 2.25, 5), toUnit);
-    }
-  } else {
-    if (value < 15) {
-      return Weight_build(MathUtils_round(value / 2, 0.25), toUnit);
-    } else {
-      return Weight_build(MathUtils_round(value / 2.25, 2.5), toUnit);
-    }
   }
 }
 
@@ -10892,14 +10739,13 @@ class ProgramToPlanner {
         repeatingExercises.add(key);
       }
     });
-    const newPlanner = PlannerProgram_compact(
+
+    return PlannerProgram_compact(
       this.program.planner,
       result,
       this.settings,
       repeatingExercises,
     );
-
-    return newPlanner;
   }
 
   private getExerciseName(programExercise: IPlannerProgramExercise): string {
@@ -11084,11 +10930,12 @@ class ProgramToPlanner {
         askWeight: globals?.askWeight ?? reusedGlobals.askWeight,
       };
     }
-    const firstWeight = variations[0]?.sets[0]?.weight;
-    const firstRpe = variations[0]?.sets[0]?.rpe;
-    const firstLogRpe = !!variations[0]?.sets[0]?.logRpe;
-    const firstAskWeight = !!variations[0]?.sets[0]?.askWeight;
-    const firstTimer = variations[0]?.sets[0]?.timer;
+    const first = variations.at(0)?.sets.at(0);
+    const firstWeight = first?.weight;
+    const firstRpe = first?.rpe;
+    const firstLogRpe = !!first?.logRpe;
+    const firstAskWeight = !!first?.askWeight;
+    const firstTimer = first?.timer;
     return {
       weight:
         firstWeight != null &&
@@ -11096,25 +10943,25 @@ class ProgramToPlanner {
           v.sets.every(
             (s) =>
               Weight_eqNull(s.weight, firstWeight) &&
-              !!s.askWeight === firstAskWeight,
+              s.askWeight === firstAskWeight,
           ),
         )
           ? firstWeight
           : undefined,
       askWeight: variations.every((v) =>
         v.sets.every(
-          (s) => Weight_eqNull(s.weight, firstWeight) && !!s.askWeight,
+          (s) => Weight_eqNull(s.weight, firstWeight) && s.askWeight,
         ),
       ),
       rpe:
         firstRpe != null &&
         variations.every((v) =>
-          v.sets.every((s) => s.rpe === firstRpe && !!s.logRpe === firstLogRpe),
+          v.sets.every((s) => s.rpe === firstRpe && s.logRpe === firstLogRpe),
         )
           ? firstRpe
           : undefined,
       logRpe: variations.every((v) =>
-        v.sets.every((s) => s.rpe === firstRpe && !!s.logRpe),
+        v.sets.every((s) => s.rpe === firstRpe && s.logRpe),
       ),
       timer:
         firstTimer != null &&
@@ -11312,24 +11159,6 @@ class ScriptRunner {
     );
     liftoscriptEvaluator.parse(liftoscriptTree.topNode);
     return [liftoscriptEvaluator, liftoscriptTree];
-  }
-
-  public switchWeightsToUnit(toUnit: IUnit): string {
-    const liftoscriptTree = LiftoscriptParser.parse(this.script);
-    const liftoscriptEvaluator = new LiftoscriptEvaluator(
-      this.script,
-      this.state,
-      this.otherStates,
-      this.bindings,
-      this.fns,
-      this.context,
-      this.units,
-      this.mode,
-    );
-    return liftoscriptEvaluator.switchWeightsToUnit(
-      liftoscriptTree.topNode,
-      toUnit,
-    );
   }
 
   public getStateVariableKeys(): Set<string> {
