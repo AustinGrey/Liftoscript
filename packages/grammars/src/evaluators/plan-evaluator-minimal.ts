@@ -1431,9 +1431,13 @@ export function PlannerProgram_evaluate(
 export function PlannerProgram_evaluateText(
   fullProgramText: string,
 ): IPlannerProgramWeek[] {
-  const evaluator = new PlannerExerciseEvaluatorText(fullProgramText);
+  const evaluator = new PlannerExerciseEvaluator(
+    fullProgramText,
+    Settings_build(),
+    "fulltext",
+  );
   const tree = plannerExerciseParser.parse(fullProgramText);
-  const data = evaluator.evaluate(tree.topNode);
+  const data = evaluator.evaluatePreservingSource(tree.topNode);
   const weeks: IPlannerProgramWeek[] = data.map((week) => {
     return {
       name: week.name,
@@ -3353,10 +3357,29 @@ interface IPlannerExerciseEvaluatorWeek {
 }
 
 /**
- * perday -> you are defining the plan for a single, specific day
- * full -> you are defining the full plan, including all weeks and days
+ * A program parsed into days and weeks, but with the exercises left as raw source code
  */
-type IPlannerExerciseEvaluatorMode = "perday" | "full";
+interface IPlannerExerciseEvaluatorTextWeek {
+  name: string;
+  description?: string;
+  days: {
+    name: string;
+    description?: string;
+    exercises: string[];
+  }[];
+}
+
+type IPlannerNonExerciseFullTextLine = {
+  type: "comment" | "triplelinecomment" | "empty";
+  line: string;
+};
+
+/**
+ * perday -> single-day exercise list
+ * full -> full program with structured exercises
+ * fulltext -> preserve raw source lines for round-trip text
+ */
+type IPlannerExerciseEvaluatorMode = "perday" | "full" | "fulltext";
 
 export class PlannerExerciseEvaluator {
   private readonly script: string;
@@ -3367,6 +3390,13 @@ export class PlannerExerciseEvaluator {
   private exerciseIndex: number = 0;
 
   private latestDescriptions: string[][] = [];
+
+  /**
+   *
+   * @private
+   */
+  private weeksFullText: IPlannerExerciseEvaluatorTextWeek[] = [];
+  private ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
 
   constructor(
     script: string,
@@ -4616,6 +4646,126 @@ export class PlannerExerciseEvaluator {
     }
   }
 
+  private getWeekDayOngoingLinesFullText(): {
+    linesToPreviousExercise: IPlannerNonExerciseFullTextLine[];
+    nextLines: IPlannerNonExerciseFullTextLine[];
+  } {
+    const ongoingLines = [...this.ongoingLinesFullText];
+    let anyCommentStarted = false;
+    let commentStarted = false;
+    const linesToPreviousExercise: IPlannerNonExerciseFullTextLine[] = [];
+    const nextLines: IPlannerNonExerciseFullTextLine[] = [];
+    for (let i = 0; i < ongoingLines.length; i++) {
+      const line = ongoingLines[i];
+      if (!anyCommentStarted && line?.type === "empty") {
+        continue;
+      }
+      if (line?.type === "comment" || line?.type === "triplelinecomment") {
+        anyCommentStarted = true;
+      }
+      if (line?.type === "comment") {
+        commentStarted = true;
+      }
+      if (anyCommentStarted && !commentStarted) {
+        linesToPreviousExercise.push(line);
+      }
+      if (commentStarted && line?.type === "comment") {
+        nextLines.push(line);
+      }
+    }
+    for (let i = nextLines.length - 1; i >= 0; i--) {
+      const line = nextLines[i];
+      if (line.type === "empty") {
+        nextLines.pop();
+      } else {
+        break;
+      }
+    }
+    for (let i = linesToPreviousExercise.length - 1; i >= 0; i--) {
+      const line = linesToPreviousExercise[i];
+      if (line.type === "empty") {
+        linesToPreviousExercise.pop();
+      } else {
+        break;
+      }
+    }
+    return { linesToPreviousExercise, nextLines };
+  }
+
+  private getWeekDayDescriptionAndFillLastDayFullText(): string | undefined {
+    const { linesToPreviousExercise, nextLines } =
+      this.getWeekDayOngoingLinesFullText();
+    if (linesToPreviousExercise.length > 0) {
+      const lastWeek = this.weeksFullText[this.weeksFullText.length - 1];
+      const lastDay = lastWeek?.days[lastWeek.days.length - 1];
+      if (lastDay) {
+        lastDay.exercises.push(
+          ...linesToPreviousExercise.map((line) => line.line),
+        );
+      }
+    }
+    return nextLines.length > 0
+      ? nextLines
+          .map((line) => {
+            switch (line.type) {
+              case "comment":
+              case "triplelinecomment":
+                return line.line.replace(/^\s*\/\/\/?\s*/, "").trim();
+              case "empty":
+                return "";
+            }
+          })
+          .join("\n")
+          .trim()
+      : undefined;
+  }
+
+  private evaluateExerciseFullText(expr: SyntaxNode): void {
+    if (expr.type.name === PlannerNodeName.Week) {
+      const weekName = this.getValueTrim(expr).replace(/^#+/, "").trim();
+      const description = this.getWeekDayDescriptionAndFillLastDayFullText();
+      this.weeksFullText.push({ name: weekName, description, days: [] });
+      this.ongoingLinesFullText = [];
+    } else if (expr.type.name === PlannerNodeName.Day) {
+      const dayName = this.getValueTrim(expr).replace(/^#+/, "").trim();
+      const description = this.getWeekDayDescriptionAndFillLastDayFullText();
+      this.weeksFullText[this.weeksFullText.length - 1].days.push({
+        name: dayName,
+        exercises: [],
+        description,
+      });
+      this.ongoingLinesFullText = [];
+    } else if (expr.type.name === PlannerNodeName.EmptyExpression) {
+      this.ongoingLinesFullText.push({
+        type: "empty",
+        line: this.getValueTrim(expr),
+      });
+    } else if (expr.type.name === PlannerNodeName.LineComment) {
+      this.ongoingLinesFullText.push({
+        type: "comment",
+        line: this.getValueTrim(expr),
+      });
+    } else if (expr.type.name === PlannerNodeName.TripleLineComment) {
+      this.ongoingLinesFullText.push({
+        type: "triplelinecomment",
+        line: this.getValueTrim(expr),
+      });
+    } else if (expr.type.name === PlannerNodeName.ExerciseExpression) {
+      const lastWeek = this.weeksFullText[this.weeksFullText.length - 1];
+      const lastDay = lastWeek
+        ? lastWeek.days[lastWeek.days.length - 1]
+        : undefined;
+      const exercises = lastDay?.exercises;
+      if (exercises) {
+        for (const line of this.ongoingLinesFullText) {
+          exercises.push(line.line);
+        }
+        exercises.push(this.getValueTrim(expr));
+        this.ongoingLinesFullText = [];
+      }
+    }
+  }
+
   private evaluateProgram(expr: SyntaxNode): IPlannerExerciseEvaluatorWeek[] {
     if (expr.type.name === PlannerNodeName.Program) {
       this.weeks = [];
@@ -4641,6 +4791,30 @@ export class PlannerExerciseEvaluator {
         throw e;
       }
     }
+  }
+
+  /**
+   * Walks the program preserving raw lines (including comments) for each day’s exercise text.
+   * Requires {@link IPlannerExerciseEvaluatorMode} `"fulltext"`.
+   */
+  public evaluatePreservingSource(
+    programNode: SyntaxNode,
+  ): IPlannerExerciseEvaluatorTextWeek[] {
+    if (this.mode !== "fulltext") {
+      throw new Error(
+        'PlannerExerciseEvaluator.evaluatePreservingSource requires mode "fulltext"',
+      );
+    }
+    if (programNode.type.name !== PlannerNodeName.Program) {
+      throw new Error(`Unexpected node type ${programNode.type.name}`);
+    }
+    this.parse(programNode);
+    this.ongoingLinesFullText = [];
+    this.weeksFullText = [];
+    for (const child of CollectionUtils_compact(getChildren(programNode))) {
+      this.evaluateExerciseFullText(child);
+    }
+    return this.weeksFullText;
   }
 
   public hasWeightInUnit(programNode: SyntaxNode, unit: IUnit): boolean {
@@ -11246,187 +11420,6 @@ class ScriptRunner {
     }
   }
 }
-//#endregion
-
-//#region PlannerExerciseEvaluatorText
-function PEET_getChildren(node: SyntaxNode): SyntaxNode[] {
-  const cur = node.cursor();
-  const result: SyntaxNode[] = [];
-  if (!cur.firstChild()) {
-    return result;
-  }
-  do {
-    result.push(cur.node);
-  } while (cur.nextSibling());
-  return result;
-}
-
-interface IPlannerExerciseEvaluatorTextWeek {
-  name: string;
-  description?: string;
-  days: IPlannerExerciseEvaluatorTextDay[];
-}
-
-interface IPlannerExerciseEvaluatorTextDay {
-  name: string;
-  description?: string;
-  exercises: string[];
-}
-
-type IPlannerNonExerciseFullTextLine =
-  | { type: "comment"; line: string }
-  | { type: "triplelinecomment"; line: string }
-  | { type: "empty"; line: string };
-
-function fullTextLineToWeekdayDescription(
-  line: IPlannerNonExerciseFullTextLine,
-): string {
-  switch (line.type) {
-    case "comment":
-      return line.line.replace(/^\s*\/\/\s*/, "").trim();
-    case "triplelinecomment":
-      return line.line.replace(/^\s*\/\/\/\s*/, "").trim();
-    case "empty":
-      return "";
-  }
-}
-
-class PlannerExerciseEvaluatorText {
-  private readonly script: string;
-  private weeks: IPlannerExerciseEvaluatorTextWeek[] = [];
-  private ongoingLines: IPlannerNonExerciseFullTextLine[] = [];
-
-  constructor(script: string) {
-    this.script = script;
-  }
-
-  private getValue(node: SyntaxNode): string {
-    return this.script.slice(node.from, node.to);
-  }
-
-  private getWeekDayOngoingLines(): {
-    linesToPreviousExercise: IPlannerNonExerciseFullTextLine[];
-    nextLines: IPlannerNonExerciseFullTextLine[];
-  } {
-    const ongoingLines = [...this.ongoingLines];
-    let anyCommentStarted = false;
-    let commentStarted = false;
-    const linesToPreviousExercise: IPlannerNonExerciseFullTextLine[] = [];
-    const nextLines: IPlannerNonExerciseFullTextLine[] = [];
-    for (let i = 0; i < ongoingLines.length; i++) {
-      const line = ongoingLines[i];
-      if (!anyCommentStarted && line?.type === "empty") {
-        continue;
-      }
-      if (line?.type === "comment" || line?.type === "triplelinecomment") {
-        anyCommentStarted = true;
-      }
-      if (line?.type === "comment") {
-        commentStarted = true;
-      }
-      if (anyCommentStarted && !commentStarted) {
-        linesToPreviousExercise.push(line);
-      }
-      if (commentStarted && line?.type === "comment") {
-        nextLines.push(line);
-      }
-    }
-    for (let i = nextLines.length - 1; i >= 0; i--) {
-      const line = nextLines[i];
-      if (line.type === "empty") {
-        nextLines.pop();
-      } else {
-        break;
-      }
-    }
-    for (let i = linesToPreviousExercise.length - 1; i >= 0; i--) {
-      const line = linesToPreviousExercise[i];
-      if (line.type === "empty") {
-        linesToPreviousExercise.pop();
-      } else {
-        break;
-      }
-    }
-    return { linesToPreviousExercise, nextLines };
-  }
-
-  private getWeekDayDescriptionAndFillLastDay(): string | undefined {
-    const { linesToPreviousExercise, nextLines } =
-      this.getWeekDayOngoingLines();
-    if (linesToPreviousExercise.length > 0) {
-      const lastDay = this.getLastDay();
-      if (lastDay) {
-        lastDay.exercises.push(
-          ...linesToPreviousExercise.map((line) => line.line),
-        );
-      }
-    }
-    const description =
-      nextLines.length > 0
-        ? nextLines.map(fullTextLineToWeekdayDescription).join("\n").trim()
-        : undefined;
-    return description;
-  }
-
-  private getLastDay(): IPlannerExerciseEvaluatorTextDay | undefined {
-    const lastWeek = this.weeks[this.weeks.length - 1];
-    return lastWeek?.days[lastWeek.days.length - 1];
-  }
-
-  private evaluateLine(expr: SyntaxNode): void {
-    if (expr.type.name === PlannerNodeName.Week) {
-      const weekName = this.getValue(expr).replace(/^#+/, "").trim();
-      const description = this.getWeekDayDescriptionAndFillLastDay();
-      this.weeks.push({ name: weekName, description, days: [] });
-      this.ongoingLines = [];
-    } else if (expr.type.name === PlannerNodeName.Day) {
-      const dayName = this.getValue(expr).replace(/^#+/, "").trim();
-      const description = this.getWeekDayDescriptionAndFillLastDay();
-      this.weeks[this.weeks.length - 1].days.push({
-        name: dayName,
-        exercises: [],
-        description,
-      });
-      this.ongoingLines = [];
-    } else if (expr.type.name === PlannerNodeName.EmptyExpression) {
-      this.ongoingLines.push({ type: "empty", line: this.getValue(expr) });
-    } else if (expr.type.name === PlannerNodeName.LineComment) {
-      this.ongoingLines.push({ type: "comment", line: this.getValue(expr) });
-    } else if (expr.type.name === PlannerNodeName.TripleLineComment) {
-      this.ongoingLines.push({
-        type: "triplelinecomment",
-        line: this.getValue(expr),
-      });
-    } else if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-      const lastWeek = this.weeks[this.weeks.length - 1];
-      const lastDay = lastWeek
-        ? lastWeek.days[lastWeek.days.length - 1]
-        : undefined;
-      const exercises = lastDay?.exercises;
-      if (exercises) {
-        for (const line of this.ongoingLines) {
-          exercises.push(line.line);
-        }
-        exercises.push(this.getValue(expr));
-        this.ongoingLines = [];
-      }
-    }
-  }
-
-  public evaluate(expr: SyntaxNode): IPlannerExerciseEvaluatorTextWeek[] {
-    if (expr.type.name === PlannerNodeName.Program) {
-      this.ongoingLines = [];
-      this.weeks = [];
-      for (const child of CollectionUtils_compact(PEET_getChildren(expr))) {
-        this.evaluateLine(child);
-      }
-      return this.weeks;
-    } else {
-      throw new Error(`Unexpected node type ${expr.type.name}`);
-    }
-  }
-}
-
 //#endregion
 
 //#region PlannerNodeName
