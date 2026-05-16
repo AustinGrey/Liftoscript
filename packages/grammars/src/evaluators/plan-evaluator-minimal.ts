@@ -37,6 +37,12 @@ import {
   LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
+import type {
+  IScriptFunctions,
+  IScriptFnContext,
+  ISettings,
+} from "@/common-types.ts";
+import { Progress_createScriptFunctions } from "@/public-functions.ts";
 
 //#region Program
 
@@ -2571,64 +2577,6 @@ const TMuscleGroupsSettings = t.type({
     }),
   ),
 });
-
-const TSettings = t.intersection(
-  [
-    t.interface({
-      timers: TSettingsTimers,
-      gyms: t.array(TGym),
-      deletedGyms: t.array(t.string),
-      graphs: TGraphs,
-      graphOptions: dictionary(t.string, TGraphOptions),
-      graphsSettings: t.partial({
-        isSameXAxis: t.boolean,
-        isWithBodyweight: t.boolean,
-        isWithOneRm: t.boolean,
-        isWithProgramLines: t.boolean,
-        defaultType: TGraphExerciseSelectedType,
-        defaultMuscleGroupType: TGraphMuscleGroupSelectedType,
-      }),
-      exerciseStatsSettings: t.partial({
-        ascendingSort: t.boolean,
-        hideWithoutWorkoutNotes: t.boolean,
-        hideWithoutExerciseNotes: t.boolean,
-      }),
-      exercises: dictionary(t.string, TCustomExercise),
-      statsEnabled: TStatsEnabled,
-      units: TUnit,
-      lengthUnits: TLengthUnit,
-      volume: t.number,
-      exerciseData: dictionary(t.string, TExerciseDataValue),
-      planner: TPlannerSettings,
-      workoutSettings: TWorkoutSettings,
-      muscleGroups: TMuscleGroupsSettings,
-    }),
-    t.partial({
-      appleHealthSyncWorkout: t.boolean,
-      appleHealthSyncMeasurements: t.boolean,
-      appleHealthAnchor: t.string,
-      googleHealthSyncWorkout: t.boolean,
-      googleHealthSyncMeasurements: t.boolean,
-      googleHealthAnchor: t.string,
-      healthConfirmation: t.boolean,
-      ignoreDoNotDisturb: t.boolean,
-      currentGymId: t.string,
-      isPublicProfile: t.boolean,
-      nickname: t.string,
-      alwaysOnDisplay: t.boolean,
-      vibration: t.boolean,
-      startWeekFromMonday: t.boolean,
-      textSize: t.number,
-      starredExercises: dictionary(TExerciseId, t.boolean),
-      theme: t.union([t.literal("dark"), t.literal("light")]),
-      currentBodyweight: TWeight,
-      affiliateEnabled: t.boolean,
-    }),
-  ],
-  "TSettings",
-);
-
-export type ISettings = t.TypeOf<typeof TSettings>;
 
 const TStats = t.type(
   {
@@ -8645,89 +8593,6 @@ interface IScriptBindings {
   setIndex: number;
 }
 
-interface IScriptFnContext {
-  prints: (number | IWeight | IPercentage)[][];
-  unit: IUnit;
-  exerciseType?: IExerciseType;
-}
-
-interface IScriptFunctions {
-  roundWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
-  roundConvertWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
-  calculateTrainingMax: (
-    weight: IWeight,
-    reps: number,
-    context: IScriptFnContext,
-  ) => IWeight;
-  calculate1RM: (
-    weight: IWeight,
-    reps: number,
-    context: IScriptFnContext,
-  ) => IWeight;
-  rpeMultiplier: (
-    reps: number,
-    rpe: number,
-    context: IScriptFnContext,
-  ) => number;
-  floor(num: number): number;
-  floor(num: IWeight): IWeight;
-  ceil(num: number): number;
-  ceil(num: IWeight): IWeight;
-  round(num: number): number;
-  round(num: IWeight): IWeight;
-  sum(
-    ...vals: (
-      | number
-      | number[]
-      | IWeight
-      | IWeight[]
-      | IPercentage
-      | IPercentage[]
-    )[]
-  ): number | IWeight | IPercentage;
-  min(
-    ...vals: (
-      | number
-      | number[]
-      | IWeight
-      | IWeight[]
-      | IPercentage
-      | IPercentage[]
-    )[]
-  ): number | IWeight | IPercentage;
-  max(
-    ...vals: (
-      | number
-      | number[]
-      | IWeight
-      | IWeight[]
-      | IPercentage
-      | IPercentage[]
-    )[]
-  ): number | IWeight | IPercentage;
-  zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
-  print(...args: unknown[]): (typeof args)[0];
-  increment(val: IWeight, context: IScriptFnContext): IWeight;
-  increment(val: IPercentage, context: IScriptFnContext): IPercentage;
-  increment(val: number, context: IScriptFnContext): number;
-  decrement(val: IWeight, context: IScriptFnContext): IWeight;
-  decrement(val: IPercentage, context: IScriptFnContext): IPercentage;
-  decrement(val: number, context: IScriptFnContext): number;
-  sets(
-    from: number,
-    to: number,
-    minReps: number,
-    reps: number,
-    isAmrap: number,
-    weight: IWeight | IPercentage | number,
-    timer: number,
-    rpe: number,
-    logRpe: number,
-    context: IScriptFnContext,
-    bindings: IScriptBindings,
-  ): number;
-}
-
 function floor(num: number): number;
 function floor(num: IWeight): IWeight;
 function floor(num: IWeight | number): IWeight | number {
@@ -8924,157 +8789,6 @@ function Progress_createScriptBindings(
   bindings.descriptionIndex = descriptionIndex ?? 1;
   bindings.bodyweight = bodyweight ?? Weight_build(0, settings.units);
   return bindings;
-}
-
-function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
-  function increment(vals: number, context: IScriptFnContext): number;
-  function increment(vals: IWeight, context: IScriptFnContext): IWeight;
-  function increment(vals: IPercentage, context: IScriptFnContext): IPercentage;
-  function increment(
-    vals: IWeight | IPercentage | number,
-    context: IScriptFnContext,
-  ): IWeight | IPercentage | number {
-    if (typeof vals === "number") {
-      const weight = Weight_build(vals, context.unit);
-      return Weight_increment(weight, settings, context.exerciseType);
-    } else if (Weight_isPct(vals)) {
-      return Weight_buildPct(vals.value + 1);
-    } else {
-      return Weight_increment(vals, settings, context.exerciseType);
-    }
-  }
-
-  function decrement(vals: number, context: IScriptFnContext): number;
-  function decrement(vals: IWeight, context: IScriptFnContext): IWeight;
-  function decrement(vals: IPercentage, context: IScriptFnContext): IPercentage;
-  function decrement(
-    vals: IWeight | IPercentage | number,
-    context: IScriptFnContext,
-  ): IWeight | IPercentage | number {
-    if (typeof vals === "number") {
-      const weight = Weight_build(vals, context.unit);
-      return Weight_decrement(weight, settings, context.exerciseType);
-    } else if (Weight_isPct(vals)) {
-      return Weight_buildPct(vals.value - 1);
-    } else {
-      return Weight_decrement(vals, settings, context.exerciseType);
-    }
-  }
-
-  return {
-    roundWeight: (num, context) => {
-      if (!Weight_is(num)) {
-        num = Weight_build(num, settings.units);
-      }
-      const unit = Equipment_getUnitForExerciseType(
-        settings,
-        context?.exerciseType,
-      );
-      return Weight_round(
-        num,
-        settings,
-        unit ?? settings.units,
-        context?.exerciseType,
-      );
-    },
-    roundConvertWeight: (num, context) => {
-      if (!Weight_is(num)) {
-        num = Weight_build(num, settings.units);
-      }
-      const unit = Equipment_getUnitForExerciseType(
-        settings,
-        context?.exerciseType,
-      );
-      return Weight_roundConvertTo(
-        num,
-        settings,
-        unit ?? settings.units,
-        context?.exerciseType,
-      );
-    },
-    calculateTrainingMax: (weight, reps, _context) => {
-      if (!Weight_is(weight)) {
-        weight = Weight_build(weight, settings.units);
-      }
-      return Weight_getTrainingMax(weight, reps || 0, settings);
-    },
-    calculate1RM: (weight, reps, _context) => {
-      if (!Weight_is(weight)) {
-        weight = Weight_build(weight, settings.units);
-      }
-      return Weight_getOneRepMax(weight, reps);
-    },
-    rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
-      const reps = Weight_is(repsRaw)
-        ? repsRaw.value
-        : typeof repsRaw === "number"
-          ? repsRaw
-          : 1;
-      const rpe =
-        typeof rpeRawOrContext === "number" && context != null
-          ? Weight_is(rpeRawOrContext)
-            ? rpeRawOrContext.value
-            : typeof rpeRawOrContext === "number"
-              ? rpeRawOrContext
-              : 10
-          : 10;
-      return Weight_rpeMultiplier(reps, rpe);
-    },
-    floor,
-    ceil,
-    round,
-    sum,
-    min,
-    max,
-    increment,
-    decrement,
-    zeroOrGte,
-    print: (...fnArgs) => {
-      fnArgs.pop();
-      const context = fnArgs.pop() as IScriptFnContext;
-      const args = [...fnArgs.flat()] as (number | IWeight | IPercentage)[];
-      context.prints = context.prints || [];
-      context.prints.push(args);
-      return args[0];
-    },
-    sets(
-      from: number,
-      to: number,
-      minReps: number,
-      reps: number,
-      isAmrap: number,
-      weight: IWeight | IPercentage | number,
-      timer: number,
-      rpe: number,
-      logRpe: number,
-      context: IScriptFnContext,
-      bindings: IScriptBindings,
-    ): number {
-      for (let i = 0; i < bindings.numberOfSets; i++) {
-        if (i >= from - 1 && i < to) {
-          const weightValue = Weight_convertToWeight(
-            bindings.rm1,
-            weight,
-            context.unit,
-          );
-          bindings.minReps[i] = reps !== minReps ? minReps : undefined;
-          bindings.reps[i] = reps;
-          bindings.originalWeights[i] = weightValue;
-          bindings.weights[i] = Weight_round(
-            weightValue,
-            settings,
-            context.unit,
-            context.exerciseType,
-          );
-          bindings.RPE[i] = rpe !== 0 ? rpe : undefined;
-          bindings.amraps[i] = isAmrap !== 0 ? 1 : 0;
-          bindings.logrpes[i] = logRpe !== 0 ? 1 : 0;
-          bindings.timers[i] = timer !== 0 ? timer : undefined;
-        }
-      }
-      return to - from;
-    },
-  };
 }
 
 function Progress_runUpdateScriptForEntry(
@@ -11412,3 +11126,5 @@ function Equipment_smallestPlate(
     )[0]?.weight || Weight_build(1, unit)
   );
 }
+
+//#endregion

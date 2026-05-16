@@ -8,13 +8,13 @@ import {
   TWeight,
 } from "@/models/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
+import type { EvaluateTools } from "@/logic/evaluators/types.ts";
+import { Equipment_getUnitForExerciseType } from "@/models/equipment.ts";
 import type {
-  EvaluateTools,
   IScriptFnContext,
   IScriptFunctions,
   ISettings,
-} from "@/logic/evaluators/types.ts";
-import { Equipment_getUnitForExerciseType } from "@/models/equipment.ts";
+} from "@/common-types.ts";
 
 export function Progress_createScriptFunctions(
   settings: ISettings,

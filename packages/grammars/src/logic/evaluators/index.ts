@@ -7,8 +7,6 @@ import type {
   EvaluateTools,
   IProgramState,
   IScriptBindings,
-  IScriptFnContext,
-  IScriptFunctions,
   LogicHandler,
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
@@ -18,6 +16,7 @@ import {
   type ILiftoscriptEvaluatorUpdate,
   type LogicResult,
 } from "@/logic/types.ts";
+import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 
 /**
  * The handler for when we haven't decided how to handle a node

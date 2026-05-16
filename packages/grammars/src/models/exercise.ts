@@ -1,5 +1,5 @@
-import type { IExerciseType, ISettings } from "@/logic/evaluators/types.ts";
 import { Equipment_getUnitOrDefaultForExerciseType } from "@/models/equipment.ts";
+import type { IExerciseType, ISettings } from "@/common-types.ts";
 
 export function Exercise_defaultRounding(
   type: IExerciseType,

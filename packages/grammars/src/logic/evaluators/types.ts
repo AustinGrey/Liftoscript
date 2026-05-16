@@ -2,29 +2,18 @@ import type { SyntaxNode } from "@lezer/common";
 import type { NodeNames_Logic, TypedLogicNode } from "@/parsers/guards.ts";
 import {
   type IDynamicWeight,
-  type IUnit,
   type IWeight,
   TDynamicWeight,
-  TUnit,
   TWeight,
 } from "@/models/weight.ts";
 import { z } from "zod";
-import {
-  type IProgramMode,
-  TCustomExercise,
-  TExerciseDataValue,
-  TExerciseId,
-  TLengthUnit,
-  TMuscleGroupsSettings,
-  TPlannerSettings,
-  TSettingsTimers,
-  TStatsEnabled,
-} from "@/evaluators/logic-evaluator.ts";
+import { type IProgramMode } from "@/evaluators/logic-evaluator.ts";
 import type {
   ILiftoscriptEvaluatorUpdate,
   LogicResult,
   Quantity,
 } from "@/logic/types.ts";
+import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 
 export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
@@ -170,212 +159,6 @@ export interface IScriptBindings {
   descriptionIndex: number;
   setIndex: number;
 }
-
-export interface IScriptFnContext {
-  prints: Quantity[][];
-  unit: IUnit;
-  exerciseType?: IExerciseType;
-}
-
-export interface IScriptFunctions {
-  roundWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
-  roundConvertWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
-  calculateTrainingMax: (
-    weight: IWeight,
-    reps: number,
-    context: IScriptFnContext,
-  ) => IWeight;
-  calculate1RM: (
-    weight: IWeight,
-    reps: number,
-    context: IScriptFnContext,
-  ) => IWeight;
-  rpeMultiplier: (
-    reps: number,
-    rpe: number,
-    context: IScriptFnContext,
-  ) => number;
-  floor: {
-    (num: number): number;
-    (num: IWeight): IWeight;
-    (num: Exclude<LogicResult, number | IWeight>): number;
-  };
-  ceil: {
-    (num: number): number;
-    (num: IWeight): IWeight;
-    (num: Exclude<LogicResult, number | IWeight>): number;
-  };
-  round: {
-    (num: number): number;
-    (num: IWeight): IWeight;
-    (num: Exclude<LogicResult, number | IWeight>): number;
-  };
-  sum(
-    ...vals: (
-      | number
-      | number[]
-      | IWeight
-      | IWeight[]
-      | IDynamicWeight
-      | IDynamicWeight[]
-    )[]
-  ): Quantity;
-  min(
-    ...vals: (
-      | number
-      | number[]
-      | IWeight
-      | IWeight[]
-      | IDynamicWeight
-      | IDynamicWeight[]
-    )[]
-  ): Quantity;
-  max(
-    ...vals: (
-      | number
-      | number[]
-      | IWeight
-      | IWeight[]
-      | IDynamicWeight
-      | IDynamicWeight[]
-    )[]
-  ): Quantity;
-  zeroOrGte(a: number[] | IWeight[], b: number[] | IWeight[]): boolean;
-  print(...args: unknown[]): (typeof args)[0];
-  increment(val: IWeight, context: IScriptFnContext): IWeight;
-  increment(val: IDynamicWeight, context: IScriptFnContext): IDynamicWeight;
-  increment(val: number, context: IScriptFnContext): number;
-  decrement(val: IWeight, context: IScriptFnContext): IWeight;
-  decrement(val: IDynamicWeight, context: IScriptFnContext): IDynamicWeight;
-  decrement(val: number, context: IScriptFnContext): number;
-  sets(
-    from: number,
-    to: number,
-    minReps: number,
-    reps: number,
-    isAmrap: number,
-    weight: IWeight | IDynamicWeight | number,
-    timer: number,
-    rpe: number,
-    logRpe: number,
-    context: IScriptFnContext,
-    tools: EvaluateTools,
-  ): number;
-}
-
-export const TEquipment = z.string();
-export type IEquipment = z.infer<typeof TEquipment>;
-
-export const TEquipmentData = z
-  .object({
-    vtype: z.literal("equipment_data"),
-    bar: z
-      .object({
-        lb: TWeight,
-        kg: TWeight,
-      })
-      .strict(),
-    multiplier: z.number(),
-    plates: z.array(
-      z
-        .object({
-          weight: TWeight,
-          num: z.number(),
-        })
-        .strict(),
-    ),
-    fixed: z.array(TWeight),
-    isFixed: z.boolean(),
-
-    unit: TUnit.optional(),
-    name: z.string().optional(),
-    similarTo: z.string().optional(),
-    isDeleted: z.boolean().optional(),
-    useBodyweightForBar: z.boolean().optional(),
-    isAssisting: z.boolean().optional(),
-    notes: z.string().optional(),
-  })
-  .strict();
-
-export type IEquipmentData = z.infer<typeof TEquipmentData>;
-export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
-
-export const TGym = z
-  .object({
-    vtype: z.literal("gym"),
-    id: z.string(),
-    name: z.string(),
-    equipment: z.record(TEquipment, TEquipmentData),
-  })
-  .strict();
-
-export type IGym = z.infer<typeof TGym>;
-
-export const TSettings = z
-  .object({
-    timers: TSettingsTimers,
-    gyms: z.array(TGym),
-    deletedGyms: z.array(z.string()),
-    // graphs: TGraphs,
-    // graphOptions: z.record(z.string(), TGraphOptions),
-    graphsSettings: z
-      .object({
-        isSameXAxis: z.boolean().optional(),
-        isWithBodyweight: z.boolean().optional(),
-        isWithOneRm: z.boolean().optional(),
-        isWithProgramLines: z.boolean().optional(),
-        // defaultType: TGraphExerciseSelectedType.optional(),
-        // defaultMuscleGroupType: TGraphMuscleGroupSelectedType.optional(),
-      })
-      .optional(),
-    exerciseStatsSettings: z
-      .object({
-        ascendingSort: z.boolean().optional(),
-        hideWithoutWorkoutNotes: z.boolean().optional(),
-        hideWithoutExerciseNotes: z.boolean().optional(),
-      })
-      .optional(),
-    exercises: z.record(z.string(), TCustomExercise),
-    statsEnabled: TStatsEnabled,
-    units: TUnit,
-    lengthUnits: TLengthUnit,
-    volume: z.number(),
-    exerciseData: z.record(z.string(), TExerciseDataValue),
-    planner: TPlannerSettings,
-    // workoutSettings: TWorkoutSettings,
-    muscleGroups: TMuscleGroupsSettings,
-
-    appleHealthSyncWorkout: z.boolean().optional(),
-    appleHealthSyncMeasurements: z.boolean().optional(),
-    appleHealthAnchor: z.string().optional(),
-    googleHealthSyncWorkout: z.boolean().optional(),
-    googleHealthSyncMeasurements: z.boolean().optional(),
-    googleHealthAnchor: z.string().optional(),
-    healthConfirmation: z.boolean().optional(),
-    ignoreDoNotDisturb: z.boolean().optional(),
-    currentGymId: z.string().optional(),
-    isPublicProfile: z.boolean().optional(),
-    nickname: z.string().optional(),
-    alwaysOnDisplay: z.boolean().optional(),
-    vibration: z.boolean().optional(),
-    startWeekFromMonday: z.boolean().optional(),
-    textSize: z.number().optional(),
-    starredExercises: z.record(TExerciseId, z.boolean()).optional(),
-    theme: z.enum(["dark", "light"]).optional(),
-    currentBodyweight: TWeight.optional(),
-    affiliateEnabled: z.boolean().optional(),
-  })
-  .strict();
-
-export type ISettings = z.infer<typeof TSettings>;
-
-export const TExerciseType = z
-  .object({
-    id: TExerciseId,
-    equipment: TEquipment.optional(),
-  })
-  .strict();
-export type IExerciseType = z.infer<typeof TExerciseType>;
 
 export const TPlate = z.object({
   weight: TWeight,

@@ -46,14 +46,13 @@ import {
 import {
   type IProgramState,
   type IScriptBindings,
-  type IScriptFnContext,
-  type IScriptFunctions,
   TProgramState,
 } from "@/logic/evaluators/types.ts";
 import type {
   IAssignmentOp,
   ILiftoscriptEvaluatorUpdate,
 } from "@/logic/types.ts";
+import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 // import { ExerciseImageUtils_exists } from "./exerciseImage";
 // import { IDispatch } from "../ducks/types";
 // import { Program_changeExerciseName } from "./program";

@@ -14,11 +14,9 @@ import {
 import type {
   IProgramState,
   IScriptBindings,
-  IScriptFnContext,
-  ISettings,
 } from "@/logic/evaluators/types.ts";
 import type { LogicResult, Quantity } from "@/logic/types.ts";
-import { Progress_createScriptFunctions } from "@/logic/public-functions.ts";
+import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { is, isNumber, isRealNumber } from "@/utils/types.ts";
 import {
   type TaggedTemplateHandler,
@@ -26,6 +24,7 @@ import {
 } from "@/utils/string.ts";
 import { round } from "@/utils/logic-results.ts";
 import { MathUtils_round } from "@/utils/math.ts";
+import type { IScriptFnContext, ISettings } from "@/common-types.ts";
 
 function emptyGlobalData(): IScriptBindings {
   return {
