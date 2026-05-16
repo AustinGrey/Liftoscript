@@ -375,7 +375,12 @@ export const TSettings = z
     gyms: z.array(TGym),
     deletedGyms: z.array(z.string()),
     // graphs: TGraphs,
-    // graphOptions: z.record(z.string(), TGraphOptions),
+    graphOptions: z.record(
+      z.string(),
+      z.object({
+        movingAverageWindowSize: z.number().optional(),
+      }),
+    ),
     graphsSettings: z
       .object({
         isSameXAxis: z.boolean().optional(),

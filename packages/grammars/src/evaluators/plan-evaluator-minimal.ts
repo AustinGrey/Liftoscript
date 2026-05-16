@@ -41,6 +41,8 @@ import type {
   IScriptFunctions,
   IScriptFnContext,
   ISettings,
+  IPlannerSettings,
+  IAllEquipment,
 } from "@/common-types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 
@@ -1616,34 +1618,6 @@ const TBodyPart = t.keyof(
   "TBodyPart",
 );
 
-const graphExerciseSelectedTypes = ["weight", "volume"] as const;
-const TGraphExerciseSelectedType = t.keyof(
-  graphExerciseSelectedTypes.reduce<
-    Record<IArrayElement<typeof graphExerciseSelectedTypes>, null>
-  >(
-    (memo, muscle) => {
-      memo[muscle] = null;
-      return memo;
-    },
-    {} as Record<IArrayElement<typeof graphExerciseSelectedTypes>, null>,
-  ),
-  "TGraphExerciseSelectedType",
-);
-
-const graphMuscleGroupSelectedTypes = ["volume", "sets"] as const;
-const TGraphMuscleGroupSelectedType = t.keyof(
-  graphMuscleGroupSelectedTypes.reduce<
-    Record<IArrayElement<typeof graphMuscleGroupSelectedTypes>, null>
-  >(
-    (memo, muscle) => {
-      memo[muscle] = null;
-      return memo;
-    },
-    {} as Record<IArrayElement<typeof graphMuscleGroupSelectedTypes>, null>,
-  ),
-  "TGraphMuscleGroupSelectedType",
-);
-
 const TEquipment = t.string;
 type IEquipment = t.TypeOf<typeof TEquipment>;
 
@@ -2295,7 +2269,6 @@ const statsWeightDef = {
   weight: t.array(TStatsWeightValue),
 };
 const TStatsWeight = t.partial(statsWeightDef, "TStatsWeight");
-type IStatsWeight = t.TypeOf<typeof TStatsWeight>;
 
 const TStatsLengthValue = t.intersection(
   [
@@ -2325,7 +2298,6 @@ const statsLengthDef = {
   calfRight: t.array(TStatsLengthValue),
 };
 const TStatsLength = t.partial(statsLengthDef, "TStatsLength");
-type IStatsLength = t.TypeOf<typeof TStatsLength>;
 
 const TStatsPercentageValue = t.intersection(
   [
@@ -2343,97 +2315,6 @@ const statsPercentageDef = {
   bodyfat: t.array(TStatsPercentageValue),
 };
 const TStatsPercentage = t.partial(statsPercentageDef, "TStatsPercentage");
-type IStatsPercentage = t.TypeOf<typeof TStatsPercentage>;
-
-const TStatsWeightEnabled = t.partial(
-  ObjectUtils_keys(statsWeightDef).reduce<
-    Record<keyof IStatsWeight, t.BooleanC>
-  >(
-    (memo, key) => {
-      memo[key] = t.boolean;
-      return memo;
-    },
-    {} as Record<keyof IStatsWeight, t.BooleanC>,
-  ),
-  "TStatsWeightEnabled",
-);
-
-const TStatsLengthEnabled = t.partial(
-  ObjectUtils_keys(statsLengthDef).reduce<
-    Record<keyof IStatsLength, t.BooleanC>
-  >(
-    (memo, key) => {
-      memo[key] = t.boolean;
-      return memo;
-    },
-    {} as Record<keyof IStatsLength, t.BooleanC>,
-  ),
-  "TStatsLengthEnabled",
-);
-
-const TStatsPercentageEnabled = t.partial(
-  ObjectUtils_keys(statsPercentageDef).reduce<
-    Record<keyof IStatsPercentage, t.BooleanC>
-  >(
-    (memo, key) => {
-      memo[key] = t.boolean;
-      return memo;
-    },
-    {} as Record<keyof IStatsPercentage, t.BooleanC>,
-  ),
-  "TStatsPercentageEnabled",
-);
-
-const TStatsEnabled = t.type(
-  {
-    weight: TStatsWeightEnabled,
-    length: TStatsLengthEnabled,
-    percentage: TStatsPercentageEnabled,
-  },
-  "TStatsEnabled",
-);
-
-const TSettingsTimers = t.intersection(
-  [
-    t.interface({
-      warmup: t.union([t.number, t.undefined, t.null]),
-      workout: t.union([t.number, t.undefined, t.null]),
-    }),
-    t.partial({
-      reminder: t.number,
-      superset: t.number,
-    }),
-  ],
-  "TSettingsTimers",
-);
-
-const TGraph = t.union([
-  t.type({
-    vtype: t.literal("graph"),
-    type: t.literal("exercise"),
-    id: TExerciseId,
-  }),
-  t.type({
-    vtype: t.literal("graph"),
-    type: t.literal("statsWeight"),
-    id: t.keyof(statsWeightDef),
-  }),
-  t.type({
-    vtype: t.literal("graph"),
-    type: t.literal("statsLength"),
-    id: t.keyof(statsLengthDef),
-  }),
-  t.type({
-    vtype: t.literal("graph"),
-    type: t.literal("statsPercentage"),
-    id: t.keyof(statsPercentageDef),
-  }),
-  t.type({
-    vtype: t.literal("graph"),
-    type: t.literal("muscleGroup"),
-    id: t.string,
-  }),
-]);
 
 const TEquipmentData = t.intersection(
   [
@@ -2461,11 +2342,6 @@ const TEquipmentData = t.intersection(
   "TEquipmentData",
 );
 type IEquipmentData = t.TypeOf<typeof TEquipmentData>;
-type IAllEquipment = Partial<Record<string, IEquipmentData>>;
-
-const TGraphOptions = t.partial({
-  movingAverageWindowSize: t.number,
-});
 
 const TExerciseDataValue = t.partial(
   {
@@ -2481,48 +2357,6 @@ const TExerciseDataValue = t.partial(
 type IExerciseDataValue = t.TypeOf<typeof TExerciseDataValue>;
 type IExerciseData = Partial<Record<string, IExerciseDataValue>>;
 
-const screenMuscles: string[] = [
-  "shoulders",
-  "triceps",
-  "back",
-  "abs",
-  "glutes",
-  "hamstrings",
-  "quadriceps",
-  "chest",
-  "biceps",
-  "calves",
-  "forearms",
-];
-
-const TScreenMuscle = t.union(
-  [
-    t.keyof(
-      screenMuscles.reduce<Record<IArrayElement<typeof screenMuscles>, null>>(
-        (memo, muscle) => {
-          memo[muscle] = null;
-          return memo;
-        },
-        {} as Record<IArrayElement<typeof screenMuscles>, null>,
-      ),
-    ),
-    t.string,
-  ],
-  "TScreenMuscle",
-);
-
-const TPlannerSettings = t.type(
-  {
-    synergistMultiplier: t.number,
-    strengthSetsPct: t.number,
-    hypertrophySetsPct: t.number,
-    weeklyRangeSets: dictionary(TScreenMuscle, t.tuple([t.number, t.number])),
-    weeklyFrequency: dictionary(TScreenMuscle, t.number),
-  },
-  "TPlannerSettings",
-);
-type IPlannerSettings = t.TypeOf<typeof TPlannerSettings>;
-
 const TGym = t.type(
   {
     vtype: t.literal("gym"),
@@ -2533,50 +2367,6 @@ const TGym = t.type(
   "TGym",
 );
 type IGym = t.TypeOf<typeof TGym>;
-
-const targetTypes = ["target", "lasttime", "platescalculator", "e1rm"] as const;
-const TTargetType = t.keyof(
-  targetTypes.reduce<Record<IArrayElement<typeof targetTypes>, null>>(
-    (memo, exerciseType) => {
-      memo[exerciseType] = null;
-      return memo;
-    },
-    {} as Record<IArrayElement<typeof targetTypes>, null>,
-  ),
-  "TTargetType",
-);
-
-const TWorkoutSettings = t.intersection(
-  [
-    t.interface({
-      targetType: TTargetType,
-    }),
-    t.partial({
-      shouldHideGraphs: t.boolean,
-      shouldKeepProgramExerciseId: t.boolean,
-      shouldShowInvisibleEquipment: t.boolean,
-      pickerSort: TExercisePickerSort,
-    }),
-  ],
-  "TWorkoutSettings",
-);
-
-const TGraphs = t.type({
-  vtype: t.literal("graphs"),
-  graphs: t.array(TGraph),
-});
-
-const TMuscleGroupsSettings = t.type({
-  vtype: t.literal("muscle_groups_settings"),
-  data: t.dictionary(
-    t.string,
-    t.partial({
-      name: t.string,
-      isHidden: t.boolean,
-      muscles: t.array(TMuscle),
-    }),
-  ),
-});
 
 const TStats = t.type(
   {
@@ -8593,110 +8383,6 @@ interface IScriptBindings {
   setIndex: number;
 }
 
-function floor(num: number): number;
-function floor(num: IWeight): IWeight;
-function floor(num: IWeight | number): IWeight | number {
-  if (num == null) {
-    return 0;
-  }
-  return typeof num === "number"
-    ? Math.floor(num)
-    : Weight_build(Math.floor(num.value), num.unit);
-}
-
-function ceil(num: number): number;
-function ceil(num: IWeight): IWeight;
-function ceil(num: IWeight | number): IWeight | number {
-  if (num == null) {
-    return 0;
-  }
-  return typeof num === "number"
-    ? Math.ceil(num)
-    : Weight_build(Math.ceil(num.value), num.unit);
-}
-
-function round(num: number): number;
-function round(num: IWeight): IWeight;
-function round(num: IWeight | number): IWeight | number {
-  if (num == null) {
-    return 0;
-  }
-  return typeof num === "number"
-    ? Math.round(num)
-    : Weight_build(Math.round(num.value), num.unit);
-}
-
-type IScriptArg = number | IWeight | IPercentage;
-
-function isScriptValue(v: unknown): v is IScriptArg {
-  return typeof v === "number" || Weight_is(v) || Weight_isPct(v);
-}
-
-function flattenScriptArgs(args: unknown[]): IScriptArg[] {
-  const result: IScriptArg[] = [];
-  for (const arg of args) {
-    if (Array.isArray(arg)) {
-      for (const item of arg) {
-        if (isScriptValue(item)) {
-          result.push(item);
-        }
-      }
-    } else if (isScriptValue(arg)) {
-      result.push(arg);
-    }
-  }
-  return result;
-}
-
-function sum(...args: unknown[]): IWeight | IPercentage | number {
-  const flat = flattenScriptArgs(args);
-  if (flat.length === 0) {
-    return 0;
-  }
-  return flat.reduce<IScriptArg>(
-    (acc, a) => Weight_op(undefined, acc, a, (x, y) => x + y),
-    0,
-  );
-}
-
-function min(...args: unknown[]): IWeight | IPercentage | number {
-  const flat = flattenScriptArgs(args);
-  if (flat.length === 0) {
-    return 0;
-  }
-  return flat.reduce<IScriptArg>(
-    (acc, a) => (Weight_lt(a, acc) ? a : acc),
-    flat[0],
-  );
-}
-
-function max(...args: unknown[]): IWeight | IPercentage | number {
-  const flat = flattenScriptArgs(args);
-  if (flat.length === 0) {
-    return 0;
-  }
-  return flat.reduce<IScriptArg>(
-    (acc, a) => (Weight_lt(acc, a) ? a : acc),
-    flat[0],
-  );
-}
-
-function zeroOrGte(a: IWeight[] | number[], b: IWeight[] | number[]): boolean {
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const aVal = a[i];
-    const bVal = b[i];
-    if (
-      aVal != null &&
-      bVal != null &&
-      !Weight_eq(aVal, 0) &&
-      Weight_lt(aVal, bVal)
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
 function Progress_createEmptyScriptBindings(
   dayData: IDayData,
   settings: ISettings,
@@ -9073,127 +8759,6 @@ function Weight_round(
     .totalWeight;
 }
 
-function Weight_increment(
-  weight: IWeight,
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-): IWeight {
-  const equipmentData = Equipment_getEquipmentDataForExerciseType(
-    settings,
-    exerciseType,
-  );
-  if (equipmentData) {
-    const unit = equipmentData.unit ?? weight.unit;
-    const roundWeight = Weight_round(weight, settings, unit, exerciseType);
-    if (equipmentData.isFixed) {
-      const items = CollectionUtils_sort(
-        equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => Weight_compare(a, b),
-      );
-      const item = items.find((i) => Weight_gt(i, roundWeight));
-      return item ?? items[items.length - 1] ?? roundWeight;
-    } else {
-      const smallestPlate = Weight_multiply(
-        Equipment_smallestPlate(equipmentData, unit),
-        equipmentData.multiplier,
-      );
-      let newWeight = roundWeight;
-      let attempt = 0;
-      do {
-        newWeight = Weight_add(newWeight, smallestPlate);
-        attempt += 1;
-      } while (
-        attempt < 20 &&
-        Weight_eq(
-          Weight_round(newWeight, settings, unit, exerciseType),
-          roundWeight,
-        )
-      );
-      return newWeight;
-    }
-  } else {
-    const roundWeight = Weight_round(
-      weight,
-      settings,
-      weight.unit,
-      exerciseType,
-    );
-    const rounding = exerciseType
-      ? Exercise_defaultRounding(exerciseType, settings)
-      : 1;
-    return Weight_build(roundWeight.value + rounding, roundWeight.unit);
-  }
-}
-
-function Weight_decrement(
-  weight: IWeight,
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-): IWeight {
-  const equipmentData = exerciseType
-    ? Equipment_getEquipmentDataForExerciseType(settings, exerciseType)
-    : undefined;
-  if (equipmentData) {
-    const unit = equipmentData.unit ?? weight.unit;
-    const roundWeight = Weight_round(weight, settings, unit, exerciseType);
-    if (equipmentData.isFixed) {
-      const items = CollectionUtils_sort(
-        equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => Weight_compareReverse(a, b),
-      );
-      const item = items.find((i) => Weight_lt(i, roundWeight));
-      return item ?? items[items.length - 1] ?? roundWeight;
-    } else {
-      const smallestPlate = Weight_multiply(
-        Equipment_smallestPlate(equipmentData, unit),
-        equipmentData.multiplier,
-      );
-      const subtracted = Weight_subtract(roundWeight, smallestPlate);
-      const newWeight = Weight_round(subtracted, settings, unit, exerciseType);
-      return Weight_build(newWeight.value, newWeight.unit);
-    }
-  } else {
-    const roundWeight = Weight_round(
-      weight,
-      settings,
-      weight.unit,
-      exerciseType,
-    );
-    const rounding = exerciseType
-      ? Exercise_defaultRounding(exerciseType, settings)
-      : 1;
-    return Weight_build(roundWeight.value - rounding, roundWeight.unit);
-  }
-}
-
-function Weight_getOneRepMax(
-  weight: IWeight,
-  reps: number,
-  rpe?: number,
-): IWeight {
-  if (reps === 0) {
-    return Weight_build(0, weight.unit);
-  } else if (reps === 1) {
-    return weight;
-  } else {
-    return Weight_roundTo005(
-      Weight_divide(weight, Weight_rpeMultiplier(reps, rpe ?? 10)),
-    );
-  }
-}
-
-function Weight_getTrainingMax(
-  weight: IWeight,
-  reps: number,
-  settings: ISettings,
-): IWeight {
-  return Weight_round(
-    Weight_multiply(Weight_getOneRepMax(weight, reps), 0.9),
-    settings,
-    weight.unit,
-  );
-}
-
 function Weight_roundTo005(weight: IWeight): IWeight {
   return Weight_build(MathUtils_roundTo005(weight.value), weight.unit);
 }
@@ -9413,13 +8978,6 @@ function Weight_gt(
   return comparison(weight, value, (a, b) => a > b);
 }
 
-function Weight_lt(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
-): boolean {
-  return comparison(weight, value, (a, b) => a < b);
-}
-
 function Weight_lte(
   weight: IWeight | number | IPercentage,
   value: IWeight | number | IPercentage,
@@ -9494,10 +9052,6 @@ function Weight_convertTo(
       return Weight_build(Math.round(weight.value / 2.205 / 0.5) * 0.5, unit);
     }
   }
-}
-
-function Weight_compare(a: IWeight, b: IWeight): number {
-  return a.value - Weight_convertTo(b, a.unit).value;
 }
 
 function Weight_compareReverse(a: IWeight, b: IWeight): number {
@@ -9622,23 +9176,6 @@ function Weight_operation(
     );
   } else {
     throw new Error("Weight.operation should never work with numbers only");
-  }
-}
-
-function Weight_convertToWeight(
-  onerm: IWeight,
-  value: IWeight | number | IPercentage,
-  unit: IUnit,
-): IWeight {
-  if (typeof value === "number") {
-    return Weight_build(value, unit);
-  } else if (Weight_isPct(value)) {
-    return Weight_convertTo(
-      Weight_multiply(onerm, MathUtils_roundFloat(value.value / 100, 4)),
-      unit,
-    );
-  } else {
-    return value;
   }
 }
 
@@ -11094,37 +10631,11 @@ function Equipment_getUnitOrDefaultForExerciseType(
   return equipment?.unit ?? settings.units;
 }
 
-function Equipment_getUnitForExerciseType(
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-): IUnit | undefined {
-  const equipment = Equipment_getEquipmentDataForExerciseType(
-    settings,
-    exerciseType,
-  );
-  const equipmentUnit = equipment?.unit;
-  return equipmentUnit == null || equipmentUnit === settings.units
-    ? undefined
-    : equipmentUnit;
-}
-
 function Equipment_currentEquipment(settings: ISettings): IAllEquipment {
   const currentGym =
     settings.gyms.find((g) => g.id === settings.currentGymId) ??
     settings.gyms[0];
   return currentGym?.equipment;
-}
-
-function Equipment_smallestPlate(
-  equipmentData: IEquipmentData,
-  unit: IUnit,
-): IWeight {
-  return (
-    CollectionUtils_sort(
-      equipmentData.plates.filter((p) => p.weight.unit === unit),
-      (a, b) => Weight_compare(a.weight, b.weight),
-    )[0]?.weight || Weight_build(1, unit)
-  );
 }
 
 //#endregion
