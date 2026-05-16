@@ -929,7 +929,6 @@ export function Settings_build(): ISettings {
     },
     statsEnabled: { weight: { weight: true }, length: {}, percentage: {} },
     exercises: {},
-    graphs: { graphs: [], vtype: "graphs" },
     planner: Settings_buildPlannerSettings(),
     muscleGroups: {
       vtype: "muscle_groups_settings",
