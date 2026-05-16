@@ -144,7 +144,7 @@ export const TGym = z
     vtype: z.literal("gym"),
     id: z.string(),
     name: z.string(),
-    equipment: z.record(TEquipment, TEquipmentData),
+    equipment: z.record(TEquipment, z.union([TEquipmentData, z.undefined()])),
   })
   .strict();
 export type IGym = z.infer<typeof TGym>;
@@ -368,6 +368,22 @@ export const TMuscleGroupsSettings = z
   .strict();
 
 export type IMuscleGroupsSettings = z.infer<typeof TMuscleGroupsSettings>;
+export const targetTypes = [
+  "target",
+  "lasttime",
+  "platescalculator",
+  "e1rm",
+] as const;
+export const TTargetType = z.enum(targetTypes);
+export const exercisePickerSorts = ["name_asc", "similar_muscles"] as const;
+export const TExercisePickerSort = z.enum(exercisePickerSorts);
+const TWorkoutSettings = z.object({
+  targetType: TTargetType,
+  shouldHideGraphs: z.boolean().optional(),
+  shouldKeepProgramExerciseId: z.boolean().optional(),
+  shouldShowInvisibleEquipment: z.boolean().optional(),
+  pickerSort: TExercisePickerSort.optional(),
+});
 //@todo restore the commented out settings, or prune them entirely since they don't impact evaluating logic
 export const TSettings = z
   .object({
@@ -405,7 +421,7 @@ export const TSettings = z
     volume: z.number(),
     exerciseData: z.record(z.string(), TExerciseDataValue),
     planner: TPlannerSettings,
-    // workoutSettings: TWorkoutSettings,
+    workoutSettings: TWorkoutSettings,
     muscleGroups: TMuscleGroupsSettings,
 
     appleHealthSyncWorkout: z.boolean().optional(),
