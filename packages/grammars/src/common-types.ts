@@ -446,3 +446,8 @@ export const TSettings = z
   })
   .strict();
 export type ISettings = z.infer<typeof TSettings>;
+export const TPlate = z.object({
+  weight: TWeight,
+  num: z.number(),
+});
+export type IPlate = z.infer<typeof TPlate>;

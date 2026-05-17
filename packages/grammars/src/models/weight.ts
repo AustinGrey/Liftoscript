@@ -12,14 +12,13 @@ import {
   MathUtils_roundTo000005,
   MathUtils_roundTo005,
 } from "@/utils/math.ts";
-import type { IPlate } from "@/logic/evaluators/types.ts";
 import { CollectionUtils_sort } from "@/utils/collection.ts";
 import { Exercise_defaultRounding } from "@/models/exercise.ts";
 import {
   Equipment_getEquipmentDataForExerciseType,
   Equipment_smallestPlate,
 } from "@/models/equipment.ts";
-import type { IExerciseType, ISettings } from "@/common-types.ts";
+import type { IExerciseType, IPlate, ISettings } from "@/common-types.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";

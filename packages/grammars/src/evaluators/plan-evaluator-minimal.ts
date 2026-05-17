@@ -37,13 +37,24 @@ import {
   LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
+import { type IWeight, TWeight, type IUnit } from "@/models/weight";
 import type {
   IScriptFunctions,
   IScriptFnContext,
   ISettings,
   IPlannerSettings,
   IAllEquipment,
+  IGym,
+  IEquipment,
+  IEquipmentData,
+  IExerciseId,
+  IExerciseType,
+  IExerciseKind,
+  ICustomExercise,
+  IExerciseDataValue,
+  IPlate,
 } from "@/common-types.ts";
+import { TPlate } from "@/common-types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 
 //#region Program
@@ -1604,106 +1615,7 @@ const TExerciseKind = t.keyof(
   "TExerciseKind",
 );
 
-const TBodyPart = t.keyof(
-  availableBodyParts.reduce<
-    Record<IArrayElement<typeof availableBodyParts>, null>
-  >(
-    (memo, muscle) => {
-      memo[muscle] = null;
-      return memo;
-    },
-    {} as Record<IArrayElement<typeof availableBodyParts>, null>,
-  ),
-  "TBodyPart",
-);
-
-const TEquipment = t.string;
-type IEquipment = t.TypeOf<typeof TEquipment>;
-
-const TExerciseId = t.string;
-type IExerciseId = t.TypeOf<typeof TExerciseId>;
-
-const TMetaExercises = t.intersection(
-  [
-    t.interface({
-      bodyParts: t.array(TBodyPart),
-      targetMuscles: t.array(TMuscle),
-      synergistMuscles: t.array(TMuscle),
-    }),
-    t.partial({
-      sortedEquipment: t.array(TEquipment),
-    }),
-  ],
-  "TMetaExercises",
-);
-
-const TExerciseType = t.intersection(
-  [
-    t.interface({
-      id: TExerciseId,
-    }),
-    t.partial({
-      equipment: TEquipment,
-    }),
-  ],
-  "TExerciseType",
-);
-export type IExerciseType = t.TypeOf<typeof TExerciseType>;
-
-const TCustomExercise = t.intersection(
-  [
-    t.interface({
-      vtype: t.literal("custom_exercise"),
-      id: TExerciseId,
-      name: t.string,
-      isDeleted: t.boolean,
-      meta: TMetaExercises,
-    }),
-    t.partial({
-      defaultEquipment: TEquipment,
-      types: t.array(TExerciseKind),
-      clonedFrom: TExerciseType,
-      reuseImageFrom: TExerciseType,
-      largeImageUrl: t.string,
-      smallImageUrl: t.string,
-    }),
-  ],
-  "TCustomExercise",
-);
-type ICustomExercise = t.TypeOf<typeof TCustomExercise>;
 type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
-
-const units = ["kg", "lb"] as const;
-
-const TUnit = t.keyof(
-  units.reduce<Record<IArrayElement<typeof units>, null>>(
-    (memo, exerciseType) => {
-      memo[exerciseType] = null;
-      return memo;
-    },
-    {} as Record<IArrayElement<typeof units>, null>,
-  ),
-  "TUnit",
-);
-export type IUnit = t.TypeOf<typeof TUnit>;
-
-const TWeight = t.type(
-  {
-    value: t.number,
-    unit: TUnit,
-  },
-  "TWeight",
-);
-export type IWeight = t.TypeOf<typeof TWeight>;
-
-const TPlate = t.type(
-  {
-    weight: TWeight,
-    num: t.number,
-  },
-  "TPlate",
-);
-type IPlate = t.TypeOf<typeof TPlate>;
 
 const percentageUnits = ["%"] as const;
 
@@ -2314,58 +2226,7 @@ const statsPercentageDef = {
   bodyfat: t.array(TStatsPercentageValue),
 };
 const TStatsPercentage = t.partial(statsPercentageDef, "TStatsPercentage");
-
-const TEquipmentData = t.intersection(
-  [
-    t.interface({
-      vtype: t.literal("equipment_data"),
-      bar: t.type({
-        lb: TWeight,
-        kg: TWeight,
-      }),
-      multiplier: t.number,
-      plates: t.array(t.type({ weight: TWeight, num: t.number })),
-      fixed: t.array(TWeight),
-      isFixed: t.boolean,
-    }),
-    t.partial({
-      unit: TUnit,
-      name: t.string,
-      similarTo: t.string,
-      isDeleted: t.boolean,
-      useBodyweightForBar: t.boolean,
-      isAssisting: t.boolean,
-      notes: t.string,
-    }),
-  ],
-  "TEquipmentData",
-);
-type IEquipmentData = t.TypeOf<typeof TEquipmentData>;
-
-const TExerciseDataValue = t.partial(
-  {
-    rm1: TWeight,
-    rounding: t.number,
-    equipment: dictionary(t.string, t.union([t.string, t.undefined])),
-    notes: t.string,
-    muscleMultipliers: dictionary(TMuscle, t.union([t.number, t.undefined])),
-    isUnilateral: t.boolean,
-  },
-  "TExerciseDataValue",
-);
-type IExerciseDataValue = t.TypeOf<typeof TExerciseDataValue>;
 type IExerciseData = Partial<Record<string, IExerciseDataValue>>;
-
-const TGym = t.type(
-  {
-    vtype: t.literal("gym"),
-    id: t.string,
-    name: t.string,
-    equipment: dictionary(TEquipment, TEquipmentData),
-  },
-  "TGym",
-);
-type IGym = t.TypeOf<typeof TGym>;
 
 const TStats = t.type(
   {
@@ -7921,8 +7782,6 @@ function equipmentName(
       return "";
   }
 }
-
-type IExerciseKind = "core" | "pull" | "push" | "legs" | "upper" | "lower";
 
 type IExercise = {
   id: IExerciseId;

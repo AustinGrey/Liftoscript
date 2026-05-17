@@ -159,9 +159,3 @@ export interface IScriptBindings {
   descriptionIndex: number;
   setIndex: number;
 }
-
-export const TPlate = z.object({
-  weight: TWeight,
-  num: z.number(),
-});
-export type IPlate = z.infer<typeof TPlate>;
