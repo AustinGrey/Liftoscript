@@ -48,6 +48,9 @@ catalogs:
     type-fest:
       specifier: ^5.6.0
       version: 5.6.0
+    unitmath:
+      specifier: ^1.1.1
+      version: 1.1.1
     vite-plus:
       specifier: latest
       version: 0.1.19
@@ -121,6 +124,9 @@ importers:
       micro-memoize:
         specifier: 'catalog:'
         version: 5.1.1
+      unitmath:
+        specifier: 'catalog:'
+        version: 1.1.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1073,6 +1079,9 @@ packages:
   undici-types@7.19.2:
     resolution: {integrity: sha512-qYVnV5OEm2AW8cJMCpdV20CDyaN3g0AjDlOGf1OW4iaDEx8MwdtChUp4zu4H0VP3nDRF/8RKWH+IPp9uW0YGZg==}
 
+  unitmath@1.1.1:
+    resolution: {integrity: sha512-0gAJPwsTYWnu0DSI/hOSXb3yU8O6s7QTfd8rnFsL70DRsRxjFGo3DP+QYBbfBHS2Xj6afvjEzqut/1tntlWbGQ==}
+
   vite-plus@0.1.19:
     resolution: {integrity: sha512-QWuTqkO/a8Q7I3hHnYdvwlJa7mcc6hgh99/8CHoRb27pgo+z1ux+NGYYCZPJHKVtatAtVRaQQvy4cEQBHyB87A==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1838,6 +1847,8 @@ snapshots:
       unconfig-core: 7.5.0
 
   undici-types@7.19.2: {}
+
+  unitmath@1.1.1: {}
 
   vite-plus@0.1.19(@types/node@25.6.0)(@voidzero-dev/vite-plus-core@0.1.19(@types/node@25.6.0)(jiti@2.6.1)(typescript@6.0.3)(yaml@2.8.3))(jiti@2.6.1)(typescript@6.0.3)(yaml@2.8.3):
     dependencies:
