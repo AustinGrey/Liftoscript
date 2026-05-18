@@ -155,6 +155,123 @@ Squat / 1x5 / 105lb
 `,
     }),
   );
+
+  it(
+    "increases num of sets",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x5 / 2x8 / 100lb / progress: custom() {~
+  numberOfSets += 1
+~}
+
+## Day 2
+Squat / 3x5 / 4x8 / 100lb
+`,
+      completed: {
+        reps: [[5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 2x5 / 3x8 / 100lb / progress: custom() {~
+  numberOfSets += 1
+~}
+
+## Day 2
+Squat / 4x5 / 5x8 / 100lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "decreases num of sets on specific set variation",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x5 / 2x8 / 100lb / progress: custom() {~
+  numberOfSets[2:*:2] -= 2
+~}
+
+# Week 2
+## Day 1
+Squat / 3x5 / 4x8 / 100lb
+`,
+      completed: {
+        reps: [[5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x5 / 2x8 / 100lb / progress: custom() {~
+  numberOfSets[2:*:2] -= 2
+~}
+
+
+# Week 2
+## Day 1
+Squat / 3x5 / 2x8 / 100lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "deletes all the sets",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x5 / 100lb / progress: custom() {~
+  numberOfSets -= 6
+~}`,
+      completed: {
+        reps: [[5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 0x5 / 100lb / progress: custom() {~
+  numberOfSets -= 6
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "properly fills program, completed and current number of sets",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8 / progress: custom(pns: 0, ns: 0, cns: 0) {~
+  state.pns = programNumberOfSets
+  state.ns = numberOfSets
+  state.cns = completedNumberOfSets
+~} / update: custom() {~
+  if (setIndex == 0) {
+    numberOfSets = 5
+  }
+~}`,
+      completed: {
+        reps: [[8, 8]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x8 / update: custom() {~
+  if (setIndex == 0) {
+    numberOfSets = 5
+  }
+~} / progress: custom(pns: 3, ns: 5, cns: 2) {~
+  state.pns = programNumberOfSets
+  state.ns = numberOfSets
+  state.cns = completedNumberOfSets
+~}
+
+
+`,
+    }),
+  );
 });
 
 describe("Planner", () => {
@@ -190,115 +307,6 @@ Squat / 1x5 47.5kg / 2x8 152.5kg / progress: custom(increase: 7.5kg) {~
 
 ## Day 2
 Squat / 3x5 / 4x8 / 47.5kg
-
-
-`);
-  });
-
-  it("increases num of sets", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x5 / 2x8 / 100lb / progress: custom() {~
-  numberOfSets += 1
-~}
-
-## Day 2
-Squat / 3x5 / 4x8 / 100lb
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5]],
-    });
-    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5 / 3x8 / 100lb / progress: custom() {~
-  numberOfSets += 1
-~}
-
-## Day 2
-Squat / 4x5 / 5x8 / 100lb
-
-
-`);
-  });
-
-  it("decreases num of sets on specific set variation", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x5 / 2x8 / 100lb / progress: custom() {~
-  numberOfSets[2:*:2] -= 2
-~}
-
-# Week 2
-## Day 1
-Squat / 3x5 / 4x8 / 100lb
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5]],
-    });
-    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x5 / 2x8 / 100lb / progress: custom() {~
-  numberOfSets[2:*:2] -= 2
-~}
-
-
-# Week 2
-## Day 1
-Squat / 3x5 / 2x8 / 100lb
-
-
-`);
-  });
-
-  it("deletes all the sets", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x5 / 100lb / progress: custom() {~
-  numberOfSets -= 6
-~}`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5]],
-    });
-    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 0x5 / 100lb / progress: custom() {~
-  numberOfSets -= 6
-~}
-
-
-`);
-  });
-
-  it("properly fills program, completed and current number of sets", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8 / progress: custom(pns: 0, ns: 0, cns: 0) {~
-  state.pns = programNumberOfSets
-  state.ns = numberOfSets
-  state.cns = completedNumberOfSets
-~} / update: custom() {~
-  if (setIndex == 0) {
-    numberOfSets = 5
-  }
-~}`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[8, 8]],
-    });
-    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x8 / update: custom() {~
-  if (setIndex == 0) {
-    numberOfSets = 5
-  }
-~} / progress: custom(pns: 3, ns: 5, cns: 2) {~
-  state.pns = programNumberOfSets
-  state.ns = numberOfSets
-  state.cns = completedNumberOfSets
-~}
 
 
 `);
@@ -540,28 +548,17 @@ Bench Press / ...Squat / 1x5, 1x3 / 125lb / progress: lp(5lb)
   });
 
   it("should work with negative weights", () => {
-    const settings: ISettings = {
-      ...Settings_build(),
-      exerciseData: {
-        benchPress_barbell: { equipment: { default: undefined } },
-        squat_barbell: { equipment: { default: undefined } },
-      },
-    };
     const programText = `# Week 1
 ## Day 1
 Squat / 2x5 / -40lb / progress: lp(5lb)
 Bench Press / 2x3-5 -20lb / progress: lp(-5lb)
 `;
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      {
-        completedReps: [
-          [5, 5],
-          [5, 5],
-        ],
-      },
-      settings,
-    );
+    const { program } = PlannerTestUtils_finish(programText, {
+      completedReps: [
+        [5, 5],
+        [5, 5],
+      ],
+    });
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
     expect(newText).to.equal(`# Week 1
 ## Day 1
