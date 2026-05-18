@@ -1,4 +1,4 @@
-import { default as unit } from "unitmath";
+import { default as unit } from "./unitmathfork/Unit.ts";
 
 type UnitMath = ReturnType<typeof unit.config<number>>;
 

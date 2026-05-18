@@ -39,7 +39,6 @@
     "fp-ts": "catalog:",
     "io-ts": "catalog:",
     "micro-memoize": "catalog:",
-    "unitmath": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
