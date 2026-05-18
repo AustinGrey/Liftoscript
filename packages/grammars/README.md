@@ -28,6 +28,7 @@ Earlier layers should be imported by later layers, but never vice versa.
 ## Layer 1 - Common human concepts combining these realities.
 
 - exercises (see ___)
+- equipment (see ___)
 - gyms (see ___)
 
 ## Layer 2 - Concepts that are unique to Liftoscript, or defined specifically beyond what would be considered common to everyone.

@@ -60,10 +60,12 @@ import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { TMuscle } from "@/human-body";
 import {
   allExercisesList,
+  equipments,
   type IEquipment,
   type IExercise,
   type IExerciseId,
   type IExerciseType,
+  TBuiltinEquipment,
   TExerciseKind,
   TExerciseType,
 } from "@/exercises";
@@ -1496,21 +1498,6 @@ export function PlannerProgram_generateFullText(
 //#endregion
 
 //#region Types
-
-const equipments = [
-  "barbell",
-  "cable",
-  "dumbbell",
-  "smith",
-  "band",
-  "kettlebell",
-  "bodyweight",
-  "leverageMachine",
-  "medicineball",
-  "ezbar",
-  "trapbar",
-] as const;
-const TBuiltinEquipment = z.enum(equipments);
 
 type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
 
