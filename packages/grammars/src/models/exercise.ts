@@ -1,5 +1,6 @@
 import { Equipment_getUnitOrDefaultForExerciseType } from "@/models/equipment.ts";
-import type { IExerciseType, ISettings } from "@/common-types.ts";
+import type { ISettings } from "@/common-types.ts";
+import type { IExerciseType } from "@/exercises";
 
 export function Exercise_defaultRounding(
   type: IExerciseType,

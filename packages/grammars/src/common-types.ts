@@ -14,6 +14,13 @@ import {
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { z } from "zod";
 import { TBodyPart, TMuscle, TScreenMuscle } from "@/human-body";
+import {
+  type IExerciseType,
+  TEquipment,
+  TExerciseId,
+  TExerciseKind,
+  TExerciseType,
+} from "@/exercises";
 
 export interface IScriptFnContext {
   prints: Quantity[][];
@@ -107,8 +114,6 @@ export interface IScriptFunctions {
   ): number;
 }
 
-export const TEquipment = z.string();
-export type IEquipment = z.infer<typeof TEquipment>;
 export const TEquipmentData = z
   .object({
     vtype: z.literal("equipment_data"),
@@ -160,15 +165,6 @@ export const TSettingsTimers = z
   .strict();
 
 export type ISettingsTimers = z.infer<typeof TSettingsTimers>;
-export const TExerciseId = z.string();
-export type IExerciseId = z.infer<typeof TExerciseId>;
-export const TExerciseType = z
-  .object({
-    id: TExerciseId,
-    equipment: TEquipment.optional(),
-  })
-  .strict();
-export type IExerciseType = z.infer<typeof TExerciseType>;
 
 export const TMetaExercises = z
   .object({
@@ -180,16 +176,6 @@ export const TMetaExercises = z
   })
   .strict();
 export type IMetaExercises = z.infer<typeof TMetaExercises>;
-export const exerciseKinds = [
-  "core",
-  "pull",
-  "push",
-  "legs",
-  "upper",
-  "lower",
-] as const;
-export const TExerciseKind = z.enum(exerciseKinds);
-export type IExerciseKind = z.infer<typeof TExerciseKind>;
 export const TCustomExercise = z
   .object({
     vtype: z.literal("custom_exercise"),

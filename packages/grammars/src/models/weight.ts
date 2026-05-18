@@ -18,7 +18,8 @@ import {
   Equipment_getEquipmentDataForExerciseType,
   Equipment_smallestPlate,
 } from "@/models/equipment.ts";
-import type { IExerciseType, IPlate, ISettings } from "@/common-types.ts";
+import type { IPlate, ISettings } from "@/common-types.ts";
+import type { IExerciseType } from "@/exercises";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
