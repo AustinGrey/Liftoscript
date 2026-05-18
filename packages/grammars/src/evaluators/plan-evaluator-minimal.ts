@@ -5822,6 +5822,7 @@ function ProgramSet_getEvaluatedWeight(
 }
 //#endregion
 
+//#region Exercise
 const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
   Partial<Record<string, IExerciseId>>
 >((acc, key) => {

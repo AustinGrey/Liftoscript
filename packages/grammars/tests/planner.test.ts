@@ -4,11 +4,7 @@ import {
   PlannerTestUtils_changeWeight,
   PlannerTestUtils_finish,
 } from "./oldPlannerSystemTestUtils.ts";
-import {
-  PlannerTestUtils_changeExercise as newSystemChangeExercise,
-  PlannerTestUtils_changeWeight as newSystemChangeWeight,
-  PlannerTestUtils_finish as newSystemFinish,
-} from "./newPlannerSystemTestUtils.ts";
+import { PlannerTestUtils_finish as newSystemFinish } from "./newPlannerSystemTestUtils.ts";
 import { PlannerProgram_generateFullText } from "@/planner/display.ts";
 import {
   Weight_build,
@@ -27,7 +23,6 @@ import {
 } from "@/evaluators/plan-evaluator.ts";
 import { ObjectUtils_clone } from "@/utils/object.ts";
 import type { IWeight } from "@/models/weight.ts";
-// import { run } from "@/planner/evaluators";
 
 type PlannerTestCase = {
   plan: string;
@@ -112,42 +107,27 @@ Squat / 2x5 / 105lb / progress: lp(5lb)
 `,
     }),
   );
-});
-
-describe("Planner", () => {
-  it("updates weight after completing", () => {
-    const programText = `# Week 1
+  it(
+    "updates empty weight after completing",
+    makeTest({
+      plan: `# Week 1
 ## Day 1
-Squat / 2x5 / 100lb / progress: lp(5lb)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5 / 105lb / progress: lp(5lb)
-
-
-`);
-  });
-
-  it("updates empty weight after completing", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x5 / progress: lp(5lb)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5]],
-      completedWeights: [[Weight_build(100, "lb")]],
-    });
-    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(newText).to.equal(`# Week 1
+Squat / 1x5 / progress: lp(5lb)`,
+      completed: {
+        reps: [[5]],
+        weights: [[Weight_build(100, "lb")]],
+      },
+      result: `# Week 1
 ## Day 1
 Squat / 1x5 / 105lb / progress: lp(5lb)
 
 
-`);
-  });
+`,
+    }),
+  );
+});
 
+describe("Planner", () => {
   it("keeps reusing the progress if reused in previous instance", () => {
     const programText = `# Week 1
 ## Day 1
