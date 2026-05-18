@@ -60,15 +60,14 @@ import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { TMuscle } from "@/human-body";
 import {
   allExercisesList,
-  equipments,
   type IEquipment,
   type IExercise,
   type IExerciseId,
   type IExerciseType,
-  TBuiltinEquipment,
   TExerciseKind,
   TExerciseType,
 } from "@/exercises";
+import { equipments, TBuiltinEquipment } from "@/equipment";
 
 //#region Program
 

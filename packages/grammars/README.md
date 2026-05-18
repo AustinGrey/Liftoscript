@@ -25,13 +25,17 @@ Earlier layers should be imported by later layers, but never vice versa.
 - human body (muscles, areas, groups, etc) (see human-body)
 - math on numbers with units (see quantities)
 
-## Layer 1 - Common human concepts combining these realities.
+## Layer 1 - Nouns, physical things which exist and can be enumerated/defined
 
-- exercises (see ___)
 - equipment (see ___)
 - gyms (see ___)
 
-## Layer 2 - Concepts that are unique to Liftoscript, or defined specifically beyond what would be considered common to everyone.
+
+## Layer 2 - Common human concepts combining these realities, verbs on the nouns, etc.
+
+- exercises (see ___)
+
+## Layer 3 - Concepts that are unique to Liftoscript, or defined specifically beyond what would be considered common to everyone.
 
 - workout plans
 - progression scripts

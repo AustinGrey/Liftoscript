@@ -34,20 +34,6 @@ export type IExercise = {
   startingWeightLb: IWeight;
   startingWeightKg: IWeight;
 };
-export const equipments = [
-  "barbell",
-  "cable",
-  "dumbbell",
-  "smith",
-  "band",
-  "kettlebell",
-  "bodyweight",
-  "leverageMachine",
-  "medicineball",
-  "ezbar",
-  "trapbar",
-] as const;
-export const TBuiltinEquipment = z.enum(equipments);
 export const allExercisesList: Record<IExerciseId, IExercise> = {
   abWheel: {
     id: "abWheel",
