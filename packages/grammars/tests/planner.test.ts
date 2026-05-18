@@ -9,8 +9,6 @@ import { PlannerProgram_generateFullText } from "@/planner/display.ts";
 import {
   Weight_build,
   Settings_build,
-  Stats_getEmpty,
-  type IUnit,
   PlannerProgram_switchToUnit,
   type ISettings,
   type IPlannerProgram,
@@ -145,8 +143,8 @@ Squat / 1x5 / 100lb`;
         completedReps: [[5]],
         completedWeights: [[Weight_build(100, "lb")]],
       },
-      Settings_build(),
-      Stats_getEmpty(),
+      undefined,
+      undefined,
       2,
     );
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
@@ -178,7 +176,7 @@ Squat / 1x5 100lb / 2x8 150kg / progress: custom(increase: 5lb) {~
 ## Day 2
 Squat / 3x5 / 4x8 / 100lb
 `;
-    const settings = { ...Settings_build(), units: "kg" as IUnit };
+    const settings = { ...Settings_build(), units: "kg" as const };
     const { program } = PlannerTestUtils_finish(
       programText,
       { completedReps: [[5]] },
@@ -1396,8 +1394,8 @@ Squat / 1x4 100lb
       {
         completedReps: [[3], [2]],
       },
-      Settings_build(),
-      Stats_getEmpty(),
+      undefined,
+      undefined,
       2,
     );
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
@@ -1626,8 +1624,8 @@ Squat[1-3] / 1x5 / 200lb / warmup: none / progress: custom(week: 1, dayInWeek: 1
     const { program } = PlannerTestUtils_finish(
       programText,
       { completedReps: [[5]] },
-      Settings_build(),
-      Stats_getEmpty(),
+      undefined,
+      undefined,
       4,
     );
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
@@ -1761,17 +1759,16 @@ Squat / 1x10 / 100lb / progress: custom() {~
       { weight: Weight_build(25, "lb"), num: 2 },
       { weight: Weight_build(45, "lb"), num: 2 },
     ];
-    const settings: ISettings = {
-      ...Settings_build(),
-      gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
-      exerciseData: {
-        squat_barbell: { equipment: { default: "barbell" } },
-      },
-    };
     const { program } = PlannerTestUtils_finish(
       programText,
       { completedReps: [[10]] },
-      settings,
+      {
+        ...Settings_build(),
+        gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
+        exerciseData: {
+          squat_barbell: { equipment: { default: "barbell" } },
+        },
+      },
     );
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
     expect(newText).to.equal(`# Week 1
@@ -1797,17 +1794,16 @@ Squat / 1x10 / 100lb / progress: custom() {~
       Weight_build(100, "lb"),
       Weight_build(120, "lb"),
     ];
-    const settings: ISettings = {
-      ...Settings_build(),
-      gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
-      exerciseData: {
-        squat_barbell: { equipment: { default: "barbell" } },
-      },
-    };
     const { program } = PlannerTestUtils_finish(
       programText,
       { completedReps: [[10]] },
-      settings,
+      {
+        ...Settings_build(),
+        gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
+        exerciseData: {
+          squat_barbell: { equipment: { default: "barbell" } },
+        },
+      },
     );
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
     expect(newText).to.equal(`# Week 1
@@ -1859,18 +1855,17 @@ Squat / 1x10 / 100lb / progress: custom() {~
       length: {},
       percentage: {},
     };
-    const settings: ISettings = {
-      ...Settings_build(),
-      graphOptions: {
-        weight: {
-          movingAverageWindowSize: 3,
-        },
-      },
-    };
     const { program } = PlannerTestUtils_finish(
       programText,
       { completedReps: [[10]] },
-      settings,
+      {
+        ...Settings_build(),
+        graphOptions: {
+          weight: {
+            movingAverageWindowSize: 3,
+          },
+        },
+      },
       stats,
     );
     const newText = PlannerProgram_generateFullText(program.planner!.weeks);
