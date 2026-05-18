@@ -54,7 +54,6 @@ import {
   type IPlate,
   TExerciseType,
   TExerciseKind,
-  TMuscle,
   TCustomExercise,
   TSet,
   TProgramState,
@@ -64,6 +63,7 @@ import {
   type IProgramState,
 } from "@/common-types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
+import { TMuscle } from "@/human-body";
 
 //#region Program
 
