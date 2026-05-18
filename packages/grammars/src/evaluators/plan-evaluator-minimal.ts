@@ -221,7 +221,6 @@ function Program_nextHistoryRecordFromEvaluated(
     );
   });
   return {
-    vtype: "progress",
     id: 0,
     date: new Date().toISOString(),
     programId: program.id,
@@ -1769,7 +1768,6 @@ const THistoryRecordChange = z.enum(historyRecordChange);
 
 const THistoryRecord = z
   .object({
-    vtype: z.union([z.literal("history_record"), z.literal("progress")]),
     date: z.string(),
     programId: z.string(),
     programName: z.string(),
