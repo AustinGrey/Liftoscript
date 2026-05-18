@@ -7,6 +7,7 @@ import {
   type IDynamicWeight,
   type IUnit,
   type IWeight,
+  TDynamicWeight,
   TUnit,
   TWeight,
 } from "@/models/weight.ts";
@@ -451,3 +452,45 @@ export const TPlate = z.object({
   num: z.number(),
 });
 export type IPlate = z.infer<typeof TPlate>;
+export const TSet = z
+  .object({
+    vtype: z.literal("set"),
+    index: z.number(),
+    id: z.string(),
+
+    reps: z.number().optional(),
+    originalWeight: z.union([TWeight, TDynamicWeight]).optional(),
+    weight: TWeight.optional(),
+    minReps: z.number().optional(),
+    rpe: z.number().optional(),
+    logRpe: z.boolean().optional(),
+    timestamp: z.number().optional(),
+    isAmrap: z.boolean().optional(),
+    label: z.string().optional(),
+    timer: z.number().optional(),
+    askWeight: z.boolean().optional(),
+    isCompleted: z.boolean().optional(),
+    isUnilateral: z.boolean().optional(),
+    completedRepsLeft: z.number().optional(),
+    completedReps: z.number().optional(),
+    completedWeight: TWeight.optional(),
+    completedRpe: z.number().optional(),
+    programSetIndex: z.number().optional(),
+  })
+  .strict();
+
+export type ISet = z.infer<typeof TSet>;
+
+/**
+ * A program is stateful, as lines execute they may alter the state of the program.
+ * A state is a dictionary of quantities, no other kinds of data are tracked.
+ * @todo why zod this? Either Quantity should be zod'd and used here, or this should not be a zod type.
+ */
+export const TProgramState = z.record(
+  z.string(),
+  z.union([z.number(), TWeight, TDynamicWeight]),
+);
+/**
+ * @see TProgramState
+ */
+export type IProgramState = z.infer<typeof TProgramState>;

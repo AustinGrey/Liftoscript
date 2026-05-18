@@ -38,23 +38,25 @@ import {
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
 import { type IWeight, TWeight, type IUnit } from "@/models/weight";
-import type {
-  IScriptFunctions,
-  IScriptFnContext,
-  ISettings,
-  IPlannerSettings,
-  IAllEquipment,
-  IGym,
-  IEquipment,
-  IEquipmentData,
-  IExerciseId,
-  IExerciseType,
-  IExerciseKind,
-  ICustomExercise,
-  IExerciseDataValue,
-  IPlate,
+import {
+  type IScriptFunctions,
+  type IScriptFnContext,
+  type ISettings,
+  type IPlannerSettings,
+  type IAllEquipment,
+  type IGym,
+  type IEquipment,
+  type IEquipmentData,
+  type IExerciseId,
+  type IExerciseType,
+  type IExerciseKind,
+  type ICustomExercise,
+  type IExerciseDataValue,
+  type IPlate,
+  TExerciseType,
+  type ISet,
+  type IProgramState,
 } from "@/common-types.ts";
-import { TPlate } from "@/common-types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 
 //#region Program
@@ -1584,18 +1586,6 @@ const TMuscle = t.keyof(
   "TMuscle",
 );
 
-const availableBodyParts = [
-  "Back",
-  "Calves",
-  "Chest",
-  "Forearms",
-  "Hips",
-  "Shoulders",
-  "Thighs",
-  "Upper Arms",
-  "Waist",
-];
-
 const exerciseKinds = [
   "core",
   "pull",
@@ -1635,45 +1625,6 @@ const TPercentage = t.type(
   "TPercentage",
 );
 type IPercentage = t.TypeOf<typeof TPercentage>;
-
-const TSet = t.intersection(
-  [
-    t.interface({
-      vtype: t.literal("set"),
-      index: t.number,
-      id: t.string,
-    }),
-    t.partial({
-      reps: t.number,
-      originalWeight: t.union([TWeight, TPercentage]),
-      weight: TWeight,
-      minReps: t.number,
-      rpe: t.number,
-      logRpe: t.boolean,
-      timestamp: t.number,
-      isAmrap: t.boolean,
-      label: t.string,
-      timer: t.number,
-      askWeight: t.boolean,
-      isCompleted: t.boolean,
-      isUnilateral: t.boolean,
-      completedRepsLeft: t.number,
-      completedReps: t.number,
-      completedWeight: TWeight,
-      completedRpe: t.number,
-      programSetIndex: t.number,
-    }),
-  ],
-  "TSet",
-);
-type ISet = t.TypeOf<typeof TSet>;
-
-const TProgramState = t.dictionary(
-  t.string,
-  t.union([t.number, TWeight, TPercentage]),
-  "TProgramState",
-);
-type IProgramState = t.TypeOf<typeof TProgramState>;
 
 const THistoryEntry = t.intersection(
   [
@@ -1981,41 +1932,36 @@ const THistoryRecordChange = t.keyof(
   "THistoryRecordChange",
 );
 
-const historyRecordRequiredFields = {
-  date: t.string,
-  programId: t.string,
-  programName: t.string,
-  day: t.number,
-  dayName: t.string,
-  entries: t.array(THistoryEntry),
-  startTime: t.number,
-  id: t.number,
-};
-const historyRecordOptionalFields = {
-  endTime: t.number,
-  week: t.number,
-  dayInWeek: t.number,
-  ui: TProgressUi,
-  intervals: TIntervals,
-  deletedProgramExercises: dictionary(t.string, t.boolean),
-  userPromptedStateVars: dictionary(t.string, TProgramState),
-  changes: t.array(THistoryRecordChange),
-  timerSince: t.number,
-  timerMode: TProgressMode,
-  timer: t.number,
-  timerEntryIndex: t.number,
-  timerSetIndex: t.number,
-  notes: t.string,
-  updatedAt: t.number,
-};
-
 const THistoryRecord = t.intersection(
   [
     t.interface({
       vtype: t.union([t.literal("history_record"), t.literal("progress")]),
-      ...historyRecordRequiredFields,
+      date: t.string,
+      programId: t.string,
+      programName: t.string,
+      day: t.number,
+      dayName: t.string,
+      entries: t.array(THistoryEntry),
+      startTime: t.number,
+      id: t.number,
     }),
-    t.partial(historyRecordOptionalFields),
+    t.partial({
+      endTime: t.number,
+      week: t.number,
+      dayInWeek: t.number,
+      ui: TProgressUi,
+      intervals: TIntervals,
+      deletedProgramExercises: dictionary(t.string, t.boolean),
+      userPromptedStateVars: dictionary(t.string, TProgramState),
+      changes: t.array(THistoryRecordChange),
+      timerSince: t.number,
+      timerMode: TProgressMode,
+      timer: t.number,
+      timerEntryIndex: t.number,
+      timerSetIndex: t.number,
+      notes: t.string,
+      updatedAt: t.number,
+    }),
   ],
   "THistoryRecord",
 );
