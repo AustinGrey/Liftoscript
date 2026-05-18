@@ -123,11 +123,10 @@ Squat / 1x5 / 105lb / progress: lp(5lb)
 `,
     }),
   );
-});
-
-describe("Planner", () => {
-  it("keeps reusing the progress if reused in previous instance", () => {
-    const programText = `# Week 1
+  it(
+    "keeps reusing the progress if reused in previous instance",
+    makeTest({
+      plan: `# Week 1
 ## Day 1
 main / used: none / 1x5 / 100lb /  progress: custom(increment: 5lb) {~
   weights += 5lb
@@ -136,19 +135,12 @@ main / used: none / 1x5 / 100lb /  progress: custom(increment: 5lb) {~
 Squat / ...main
 
 ## Day 2
-Squat / 1x5 / 100lb`;
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      {
-        completedReps: [[5]],
-        completedWeights: [[Weight_build(100, "lb")]],
+Squat / 1x5 / 100lb`,
+      completed: {
+        reps: [[5]],
+        weights: [[Weight_build(100, "lb")]],
       },
-      undefined,
-      undefined,
-      2,
-    );
-    const newText = PlannerProgram_generateFullText(program.planner!.weeks);
-    expect(newText).to.equal(`# Week 1
+      result: `# Week 1
 ## Day 1
 main / used: none / 1x5 / 100lb / progress: custom(increment: 5lb) {~
   weights += 5lb
@@ -160,9 +152,12 @@ Squat / ...main / 105lb
 Squat / 1x5 / 105lb
 
 
-`);
-  });
+`,
+    }),
+  );
+});
 
+describe("Planner", () => {
   it("switches toe program from lb to kg", () => {
     const programText = `# Week 1
 ## Day 1
