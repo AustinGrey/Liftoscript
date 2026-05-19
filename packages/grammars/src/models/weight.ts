@@ -28,7 +28,7 @@ export const TWeight = z.object({
   unit: TUnit,
 });
 export type IWeight = z.infer<typeof TWeight>;
-export const TDynamicWeight = z.object({
+export const TDynamicWeight = z.strictObject({
   value: z.number(),
   unit: z.literal("%"),
 });

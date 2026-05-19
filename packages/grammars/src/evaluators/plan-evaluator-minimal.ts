@@ -36,7 +36,13 @@ import {
   LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
-import { type IUnit, type IWeight, TWeight } from "@/models/weight";
+import {
+  type IUnit,
+  type IWeight,
+  TWeight,
+  type IDynamicWeight,
+  TDynamicWeight,
+} from "@/models/weight";
 import {
   type IAllEquipment,
   type ICustomExercise,
@@ -1500,14 +1506,6 @@ export function PlannerProgram_generateFullText(
 
 type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
 
-const TPercentage = z
-  .object({
-    value: z.number(),
-    unit: z.literal("%"),
-  })
-  .strict();
-type IPercentage = z.infer<typeof TPercentage>;
-
 const THistoryEntry = z
   .object({
     vtype: z.literal("history_entry"),
@@ -1524,7 +1522,7 @@ const THistoryEntry = z
     isSuppressed: z.boolean().optional(),
     superset: z.string().optional(),
     updatePrints: z
-      .array(z.array(z.union([z.number(), TWeight, TPercentage])))
+      .array(z.array(z.union([z.number(), TWeight, TDynamicWeight])))
       .optional(),
   })
   .strict();
@@ -1937,7 +1935,7 @@ const TStatsLength = z.object(statsLengthDef).partial().strict();
 const TStatsPercentageValue = z
   .object({
     vtype: z.literal("stat"),
-    value: TPercentage,
+    value: TDynamicWeight,
     timestamp: z.number(),
     updatedAt: z.number().optional(),
     appleUuid: z.string().optional(),
@@ -1970,8 +1968,8 @@ type IDayData = {
 //#region Program Exercise
 
 export interface IWeightChange {
-  originalWeight: IWeight | IPercentage;
-  weight: IWeight | IPercentage;
+  originalWeight: IWeight | IDynamicWeight;
+  weight: IWeight | IDynamicWeight;
   current: boolean;
 }
 
@@ -2233,7 +2231,7 @@ function operation(
     | "logRpe"
     | "isAmrap"
     | "askWeight",
-  value: IWeight | IPercentage | number,
+  value: IWeight | IDynamicWeight | number,
   op: IAssignmentOp,
 ): void {
   if (op === "=") {
@@ -2388,20 +2386,6 @@ export function Stats_getEmpty(): IStats {
 //#endregion
 
 //#region Pages Planner Model Types
-interface IPlannerProgramExerciseDescription {
-  value: string;
-  isCurrent: boolean;
-}
-
-interface IPlannerProgramExerciseGlobals {
-  logRpe?: boolean;
-  rpe?: number;
-  timer?: number;
-  percentage?: number;
-  weight?: IWeight;
-  askWeight?: boolean;
-}
-
 type IPlannerProgramExerciseWithType = IPlannerProgramExercise &
   Required<Pick<IPlannerProgramExercise, "exerciseType">>;
 
@@ -2430,7 +2414,14 @@ type IPlannerProgramExercise = {
   setVariations: IPlannerProgramExerciseSetVariation[];
   warmupSets?: IPlannerProgramExerciseWarmupSet[];
   descriptions: IProgramExerciseDescriptions;
-  globals: IPlannerProgramExerciseGlobals;
+  globals: {
+    logRpe?: boolean;
+    rpe?: number;
+    timer?: number;
+    percentage?: number;
+    weight?: IWeight;
+    askWeight?: boolean;
+  };
   progress?: IProgramExerciseProgress;
   update?: IProgramExerciseUpdate;
   points: {
@@ -2456,7 +2447,7 @@ interface IPlannerProgramExerciseEvaluatedSetVariation {
 
 interface IPlannerProgramExerciseEvaluatedSet {
   maxrep?: number;
-  weight?: IWeight | IPercentage;
+  weight?: IWeight | IDynamicWeight;
   minrep?: number;
   timer?: number;
   rpe?: number;
@@ -2504,7 +2495,10 @@ type IProgramExerciseProgressType = "custom" | "lp" | "dp" | "sum" | "none";
 type IProgramExerciseUpdateType = "custom" | "lp" | "dp" | "sum";
 
 interface IProgramExerciseDescriptions {
-  values: IPlannerProgramExerciseDescription[];
+  values: {
+    value: string;
+    isCurrent: boolean;
+  }[];
   reuse?: IPlannerProgramReuse;
 }
 
@@ -6283,7 +6277,7 @@ interface IScriptBindings {
   day: number;
   week: number;
   dayInWeek: number;
-  originalWeights: (IWeight | IPercentage)[];
+  originalWeights: (IWeight | IDynamicWeight)[];
   weights: (IWeight | undefined)[];
   completedWeights: (IWeight | undefined)[];
   rm1: IWeight;
@@ -6565,14 +6559,14 @@ function Progress_getEntryId(
 //#region Weight
 const prebuiltWeights: Partial<Record<string, IWeight>> = {};
 
-function Weight_rpePct(reps: number, rpe: number): IPercentage {
+function Weight_rpePct(reps: number, rpe: number): IDynamicWeight {
   return Weight_buildPct(
     MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100),
   );
 }
 
 function Weight_evaluateWeight(
-  weight: IWeight | IPercentage,
+  weight: IWeight | IDynamicWeight,
   exerciseType: IExerciseType,
   settings: ISettings,
 ): IWeight {
@@ -6591,7 +6585,7 @@ function Weight_evaluateWeight(
   }
 }
 
-function Weight_print(weight: IWeight | IPercentage | number): string {
+function Weight_print(weight: IWeight | IDynamicWeight | number): string {
   if (typeof weight === "number") {
     return `${n(weight)}`;
   } else {
@@ -6600,7 +6594,7 @@ function Weight_print(weight: IWeight | IPercentage | number): string {
 }
 
 function Weight_printNull(
-  weight: IWeight | IPercentage | number | undefined,
+  weight: IWeight | IDynamicWeight | number | undefined,
 ): string {
   if (weight == null) {
     return "";
@@ -6611,7 +6605,7 @@ function Weight_printNull(
   }
 }
 
-function Weight_parsePct(str?: string): IPercentage | IWeight | undefined {
+function Weight_parsePct(str?: string): IDynamicWeight | IWeight | undefined {
   if (str == null) {
     return undefined;
   }
@@ -6635,7 +6629,7 @@ function Weight_parse(str: string): IWeight | undefined {
   }
 }
 
-function Weight_buildPct(value: number): IPercentage {
+function Weight_buildPct(value: number): IDynamicWeight {
   return { value, unit: "%" };
 }
 
@@ -6665,8 +6659,8 @@ function Weight_is(object: unknown): object is IWeight {
   );
 }
 
-function Weight_isPct(object: unknown): object is IPercentage {
-  const objWeight = object as IPercentage;
+function Weight_isPct(object: unknown): object is IDynamicWeight {
+  const objWeight = object as IDynamicWeight;
   return (
     objWeight &&
     typeof objWeight === "object" &&
@@ -6902,22 +6896,22 @@ function Weight_divide(weight: IWeight, value: IWeight | number): IWeight {
 }
 
 function Weight_gt(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a > b);
 }
 
 function Weight_lte(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a <= b);
 }
 
 function Weight_eqNull(
-  weight: IWeight | number | IPercentage | undefined,
-  value: IWeight | number | IPercentage | undefined,
+  weight: IWeight | number | IDynamicWeight | undefined,
+  value: IWeight | number | IDynamicWeight | undefined,
 ): boolean {
   if (weight == null && value == null) {
     return true;
@@ -6931,8 +6925,8 @@ function Weight_eqNull(
 }
 
 function Weight_eq(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
 ): boolean {
   return comparison(weight, value, (a, b) => a === b);
 }
@@ -6952,7 +6946,7 @@ function Weight_roundConvertTo(
 }
 
 function Weight_type(
-  value: number | IWeight | IPercentage,
+  value: number | IWeight | IDynamicWeight,
 ): "weight" | "percentage" | "number" {
   if (typeof value === "number") {
     return "number";
@@ -6966,9 +6960,9 @@ function Weight_type(
 function Weight_convertTo(weight: IWeight, unit: IUnit): IWeight;
 
 function Weight_convertTo(
-  weight: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
   unit: IUnit | "%",
-): IWeight | number | IPercentage {
+): IWeight | number | IDynamicWeight {
   if (typeof weight === "number") {
     return weight;
   } else if (weight.unit === "%" || unit === "%") {
@@ -6989,8 +6983,8 @@ function Weight_compareReverse(a: IWeight, b: IWeight): number {
 }
 
 function comparison(
-  weight: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  weight: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
   o: (a: number, b: number) => boolean,
 ): boolean {
   if (typeof weight === "number" && typeof value === "number") {
@@ -7014,10 +7008,10 @@ function comparison(
 
 function Weight_applyOp(
   onerm: IWeight | undefined,
-  oldValue: IWeight | number | IPercentage,
-  value: IWeight | number | IPercentage,
+  oldValue: IWeight | number | IDynamicWeight,
+  value: IWeight | number | IDynamicWeight,
   opr: "+=" | "-=" | "*=" | "/=" | "=",
-): IWeight | number | IPercentage {
+): IWeight | number | IDynamicWeight {
   if (opr === "=") {
     return value;
   } else if (opr === "+=") {
@@ -7037,10 +7031,10 @@ function Weight_applyOp(
 
 function Weight_op(
   onerm: IWeight | undefined,
-  a: IWeight | number | IPercentage,
-  b: IWeight | number | IPercentage,
+  a: IWeight | number | IDynamicWeight,
+  b: IWeight | number | IDynamicWeight,
   o: (x: number, y: number) => number,
-): IWeight | number | IPercentage {
+): IWeight | number | IDynamicWeight {
   if (typeof a === "number" && typeof b === "number") {
     return o(a, b);
   }
@@ -7226,7 +7220,7 @@ function PP_iterate(
 
 //#region Program to Planner
 interface IPlannerToProgram2Globals {
-  weight?: IWeight | IPercentage;
+  weight?: IWeight | IDynamicWeight;
   rpe?: number;
   timer?: number;
   logRpe?: boolean;
@@ -8037,10 +8031,10 @@ class ProgramToPlanner {
         })
         .join(", ")})`;
     } else if (progress.type === "lp") {
-      const increment = state.increment as IWeight | IPercentage;
+      const increment = state.increment as IWeight | IDynamicWeight;
       const successes = state.successes as number;
       const successCounter = state.successCounter as number;
-      const decrement = state.decrement as IWeight | IPercentage;
+      const decrement = state.decrement as IWeight | IDynamicWeight;
       const failures = state.failures as number;
       const failureCounter = state.failureCounter as number;
       const args: string[] = [];
@@ -8062,14 +8056,14 @@ class ProgramToPlanner {
       }
       progressStr += `(${args.join(", ")})`;
     } else if (progress.type === "dp") {
-      const increment = state.increment as IWeight | IPercentage;
+      const increment = state.increment as IWeight | IDynamicWeight;
       const minReps = state.minReps as number;
       const maxReps = state.maxReps as number;
       const args = [Weight_print(increment), `${minReps}`, `${maxReps}`];
       progressStr += `(${args.join(", ")})`;
     } else if (progress.type === "sum") {
       const reps = state.reps as number;
-      const increment = state.increment as IWeight | IPercentage;
+      const increment = state.increment as IWeight | IDynamicWeight;
       const args = [`${reps}`, Weight_print(increment)];
       progressStr += `(${args.join(", ")})`;
     }
@@ -8228,7 +8222,7 @@ class ProgramToPlanner {
     return undefined;
   }
 
-  private weightExprToStr(weightExpr?: IWeight | IPercentage): string {
+  private weightExprToStr(weightExpr?: IWeight | IDynamicWeight): string {
     if (weightExpr != null) {
       return Weight_print(weightExpr);
     }
@@ -8360,7 +8354,7 @@ class ScriptRunner {
   public execute(type?: undefined): number | IWeight | boolean;
   public execute(
     type?: "reps" | "weight" | "timer" | "rpe",
-  ): number | IWeight | IPercentage | boolean {
+  ): number | IWeight | IDynamicWeight | boolean {
     const [liftoscriptEvaluator, liftoscriptTree] = this.parse();
     const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
     let result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
@@ -8379,8 +8373,8 @@ class ScriptRunner {
 
   private convertResult(
     type: "reps" | "weight" | "timer" | "rpe" | undefined,
-    result: number | IWeight | IPercentage | boolean,
-  ): number | IWeight | IPercentage | boolean {
+    result: number | IWeight | IDynamicWeight | boolean,
+  ): number | IWeight | IDynamicWeight | boolean {
     if (type === "reps" || type === "timer") {
       if (typeof result !== "number") {
         throw new LiftoscriptSyntaxError(
