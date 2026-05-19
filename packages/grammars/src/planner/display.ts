@@ -3,28 +3,30 @@ import type { IPlannerProgramWeek } from "@/evaluators/logic-evaluator.ts";
 export function PlannerProgram_generateFullText(
   weeks: IPlannerProgramWeek[],
 ): string {
-  let fullText = "";
+  let lines: string[] = [];
   for (const week of weeks) {
     if (week.description != null) {
-      fullText +=
+      lines.push(
         week.description
           .split("\n")
           .map((l) => (l ? `// ${l}` : "//"))
-          .join("\n") + "\n";
+          .join("\n"),
+      );
     }
-    fullText += `# ${week.name}\n`;
+    lines.push(`# ${week.name}`);
     for (const day of week.days) {
       if (day.description != null) {
-        fullText +=
+        lines.push(
           day.description
             .split("\n")
             .map((l) => `// ${l}`)
-            .join("\n") + "\n";
+            .join("\n"),
+        );
       }
-      fullText += `## ${day.name}\n`;
-      fullText += `${day.exerciseText}\n\n`;
+      lines.push(`## ${day.name}`);
+      lines.push(`${day.exerciseText}\n`);
     }
-    fullText += "\n";
+    lines.push("");
   }
-  return fullText;
+  return lines.join("\n") + "\n";
 }
