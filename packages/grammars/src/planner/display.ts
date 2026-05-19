@@ -1,10 +1,16 @@
-import type { IPlannerProgramWeek } from "@/evaluators/logic-evaluator.ts";
+import type { IPlannerProgram } from "@/evaluators/plan-evaluator-minimal.ts";
 
-export function PlannerProgram_generateFullText(
-  weeks: IPlannerProgramWeek[],
-): string {
+/**
+ * @returns the script that would represent the provided program
+ * @param program The program to convert to a script
+ */
+export function asProgramScript(program: IPlannerProgram | undefined): string {
+  if (!program) {
+    return "";
+  }
   let lines: string[] = [];
-  for (const week of weeks) {
+  for (const week of program.weeks) {
+    // @todo This logic preserves empty comments. But does that really provide value?
     if (week.description != null) {
       lines.push(
         week.description
