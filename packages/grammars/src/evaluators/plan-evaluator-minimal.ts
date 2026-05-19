@@ -136,7 +136,6 @@ function Program_nextHistoryEntry(
       settings,
     );
     sets.push({
-      vtype: "set",
       id: UidFactory_generateUid(6),
       reps: programSet.maxrep,
       index: i,
@@ -156,7 +155,6 @@ function Program_nextHistoryEntry(
   }
 
   const entry: IHistoryEntry = {
-    vtype: "history_entry",
     id: Progress_getEntryId(exercise, programExercise.label),
     index,
     exercise: exercise,
@@ -482,7 +480,6 @@ function Program_forceEvaluate(
       type: "evaluatedProgram",
       id: program.id,
       planner: {
-        vtype: "planner",
         name: program.name,
         weeks: [
           { name: "Week 1", days: [{ name: "Day 1", exerciseText: "" }] },
@@ -674,7 +671,6 @@ function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
 
 export function Program_create(name: string, id?: string): IProgram {
   return {
-    vtype: "program" as const,
     id: id || UidFactory_generateUid(8),
     name: name,
     url: "",
@@ -717,7 +713,6 @@ function Settings_programContentBuild(): Pick<
 export function Settings_defaultEquipment(): IAllEquipment {
   return {
     barbell: {
-      vtype: "equipment_data",
       multiplier: 2,
       bar: {
         lb: Weight_build(45, "lb"),
@@ -741,7 +736,6 @@ export function Settings_defaultEquipment(): IAllEquipment {
       isFixed: false,
     },
     trapbar: {
-      vtype: "equipment_data",
       multiplier: 2,
       bar: {
         lb: Weight_build(45, "lb"),
@@ -765,7 +759,6 @@ export function Settings_defaultEquipment(): IAllEquipment {
       isFixed: false,
     },
     leverageMachine: {
-      vtype: "equipment_data",
       multiplier: 1,
       bar: {
         lb: Weight_build(0, "lb"),
@@ -789,7 +782,6 @@ export function Settings_defaultEquipment(): IAllEquipment {
       isFixed: false,
     },
     smith: {
-      vtype: "equipment_data",
       multiplier: 2,
       bar: {
         lb: Weight_build(45, "lb"),
@@ -813,7 +805,6 @@ export function Settings_defaultEquipment(): IAllEquipment {
       isFixed: false,
     },
     dumbbell: {
-      vtype: "equipment_data",
       multiplier: 2,
       bar: {
         lb: Weight_build(10, "lb"),
@@ -848,7 +839,6 @@ export function Settings_defaultEquipment(): IAllEquipment {
       isFixed: false,
     },
     ezbar: {
-      vtype: "equipment_data",
       multiplier: 2,
       bar: {
         lb: Weight_build(20, "lb"),
@@ -872,7 +862,6 @@ export function Settings_defaultEquipment(): IAllEquipment {
       isFixed: false,
     },
     cable: {
-      vtype: "equipment_data",
       multiplier: 1,
       bar: {
         lb: Weight_build(0, "lb"),
@@ -900,7 +889,6 @@ export function Settings_defaultEquipment(): IAllEquipment {
       isFixed: false,
     },
     kettlebell: {
-      vtype: "equipment_data",
       multiplier: 1,
       bar: {
         lb: Weight_build(0, "lb"),
@@ -941,7 +929,6 @@ export function Settings_build(): ISettings {
     },
     gyms: [
       {
-        vtype: "gym",
         id: "default",
         name: "Main",
         equipment: Settings_defaultEquipment(),
@@ -959,7 +946,6 @@ export function Settings_build(): ISettings {
     exercises: {},
     planner: Settings_buildPlannerSettings(),
     muscleGroups: {
-      vtype: "muscle_groups_settings",
       data: {},
     },
   };
@@ -1508,7 +1494,6 @@ type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
 
 const THistoryEntry = z
   .object({
-    vtype: z.literal("history_entry"),
     exercise: TExerciseType,
     sets: z.array(TSet),
     warmupSets: z.array(TSet),
@@ -1672,7 +1657,6 @@ const TExercisePickerState = z
 
 const TProgressUi = z
   .object({
-    vtype: z.literal("progress_ui").optional(),
     id: z.string().optional(),
     amrapModal: z
       .object({
@@ -1851,7 +1835,6 @@ type IPlannerProgramWeek = Readonly<z.infer<typeof TPlannerProgramWeek>>;
 
 const TPlannerProgram = z
   .object({
-    vtype: z.literal("planner"),
     name: z.string(),
     weeks: z.array(TPlannerProgramWeek),
   })
@@ -1860,7 +1843,6 @@ export type IPlannerProgram = Readonly<z.infer<typeof TPlannerProgram>>;
 
 const TProgram = z
   .object({
-    vtype: z.literal("program"),
     exercises: z.array(TProgramExercise),
     id: z.string(),
     name: z.string(),
@@ -1892,7 +1874,6 @@ const TLength = z.object({
 
 const TStatsWeightValue = z
   .object({
-    vtype: z.literal("stat"),
     value: TWeight,
     timestamp: z.number(),
     updatedAt: z.number().optional(),
@@ -1907,7 +1888,6 @@ const TStatsWeight = z.object(statsWeightDef).partial().strict();
 
 const TStatsLengthValue = z
   .object({
-    vtype: z.literal("stat"),
     value: TLength,
     timestamp: z.number(),
     updatedAt: z.number().optional(),
@@ -1934,7 +1914,6 @@ const TStatsLength = z.object(statsLengthDef).partial().strict();
 
 const TStatsPercentageValue = z
   .object({
-    vtype: z.literal("stat"),
     value: TDynamicWeight,
     timestamp: z.number(),
     updatedAt: z.number().optional(),
@@ -6002,7 +5981,6 @@ function warmup(
               exerciseType,
             );
             memo.push({
-              vtype: "set",
               index,
               id: UidFactory_generateUid(6),
               reps: programExerciseWarmupSet.reps,
@@ -6494,7 +6472,6 @@ function Progress_applyBindings(
     for (let i = 0; i < bindings[key].length; i += 1) {
       if (entry.sets[i] == null) {
         entry.sets[i] = {
-          vtype: "set",
           id: UidFactory_generateUid(6),
           index: i,
           isUnilateral: Exercise_getIsUnilateral(entry.exercise, settings),
@@ -7903,7 +7880,6 @@ class ProgramToPlanner {
       plannerWeeks.push(plannerWeek);
     }
     const result: IPlannerProgram = {
-      vtype: "planner",
       name: this.program.name,
       weeks: plannerWeeks,
     };

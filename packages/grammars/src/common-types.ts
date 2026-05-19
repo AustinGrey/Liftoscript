@@ -116,7 +116,6 @@ export interface IScriptFunctions {
 
 export const TEquipmentData = z
   .object({
-    vtype: z.literal("equipment_data"),
     bar: z
       .object({
         lb: TWeight,
@@ -148,7 +147,6 @@ export type IEquipmentData = z.infer<typeof TEquipmentData>;
 export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
 export const TGym = z
   .object({
-    vtype: z.literal("gym"),
     id: z.string(),
     name: z.string(),
     equipment: z.record(TEquipment, z.union([TEquipmentData, z.undefined()])),
@@ -269,7 +267,6 @@ export const TPlannerSettings = z
 export type IPlannerSettings = z.infer<typeof TPlannerSettings>;
 export const TMuscleGroupsSettings = z
   .object({
-    vtype: z.literal("muscle_groups_settings"),
     data: z.record(
       z.string(),
       z
@@ -369,7 +366,6 @@ export const TPlate = z.object({
 export type IPlate = z.infer<typeof TPlate>;
 export const TSet = z
   .object({
-    vtype: z.literal("set"),
     index: z.number(),
     id: z.string(),
 
