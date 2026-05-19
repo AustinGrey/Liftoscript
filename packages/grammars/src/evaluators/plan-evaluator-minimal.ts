@@ -1856,6 +1856,7 @@ const TProgram = z
     nextDay: z.number(),
     days: z.array(TProgramDay),
     weeks: z.array(TProgramWeek),
+    // @todo why not just check if weeks length > 1?
     isMultiweek: z.boolean(),
     tags: z.array(TProgramTag),
     deletedDays: z.array(z.string()).optional(),
@@ -8509,11 +8510,10 @@ function Equipment_getUnitOrDefaultForExerciseType(
   settings: ISettings,
   exerciseType?: IExerciseType,
 ): IUnit {
-  const equipment = Equipment_getEquipmentDataForExerciseType(
-    settings,
-    exerciseType,
+  return (
+    Equipment_getEquipmentDataForExerciseType(settings, exerciseType)?.unit ??
+    settings.units
   );
-  return equipment?.unit ?? settings.units;
 }
 
 //#endregion
