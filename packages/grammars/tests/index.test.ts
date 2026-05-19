@@ -24,7 +24,8 @@ import {
 } from "@/utils/string.ts";
 import { round } from "@/utils/logic-results.ts";
 import { MathUtils_round } from "@/utils/math.ts";
-import type { IScriptFnContext, ISettings } from "@/common-types.ts";
+import type { IScriptFnContext } from "@/common-types.ts";
+import type { ISettings } from "@/user-settings";
 
 function emptyGlobalData(): IScriptBindings {
   return {

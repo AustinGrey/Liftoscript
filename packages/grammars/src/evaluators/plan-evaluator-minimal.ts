@@ -55,7 +55,6 @@ import {
   type IScriptFnContext,
   type IScriptFunctions,
   type ISet,
-  type ISettings,
   TCustomExercise,
   TExercisePickerSort,
   TLengthUnit,
@@ -74,6 +73,7 @@ import {
   TExerciseType,
 } from "@/exercises";
 import { equipments, TBuiltinEquipment } from "@/equipment";
+import type { ISettings } from "@/user-settings";
 
 //#region Program
 
@@ -8472,10 +8472,7 @@ function Equipment_getGymByIdOrCurrent(
 }
 
 function Equipment_getCurrentGym(settings: ISettings): IGym {
-  return (
-    settings.gyms.find((g) => g.id === settings.currentGymId) ??
-    settings.gyms[0]
-  );
+  return Equipment_getGymByIdOrCurrent(settings, undefined);
 }
 
 function Equipment_getEquipmentIdForExerciseType(
@@ -8532,10 +8529,7 @@ function Equipment_getUnitOrDefaultForExerciseType(
 }
 
 function Equipment_currentEquipment(settings: ISettings): IAllEquipment {
-  const currentGym =
-    settings.gyms.find((g) => g.id === settings.currentGymId) ??
-    settings.gyms[0];
-  return currentGym?.equipment;
+  return Equipment_getCurrentGym(settings)?.equipment;
 }
 
 //#endregion

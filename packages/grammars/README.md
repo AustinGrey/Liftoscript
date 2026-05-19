@@ -35,8 +35,11 @@ Earlier layers should be imported by later layers, but never vice versa.
 
 - exercises (see ___)
 
-## Layer 3 - Concepts that are unique to Liftoscript, or defined specifically beyond what would be considered common to everyone.
+## Layer 3 - Concepts that are unique to and defined by an individual
+
+- settings
+
+## Layer 4 - Liftoscript - Combine and work on all of these things
 
 - workout plans
 - progression scripts
-- settings

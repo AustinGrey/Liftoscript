@@ -10,11 +10,8 @@ import {
 import { is, isNumber } from "@/utils/types.ts";
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { Equipment_getUnitForExerciseType } from "@/models/equipment.ts";
-import type {
-  IScriptFnContext,
-  IScriptFunctions,
-  ISettings,
-} from "@/common-types.ts";
+import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
+import type { ISettings } from "@/user-settings";
 
 export function Progress_createScriptFunctions(
   settings: ISettings,
