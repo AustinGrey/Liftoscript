@@ -31,7 +31,6 @@ export function PlannerTestUtils_get(text: string): {
   planner: IPlannerProgram;
 } {
   const planner: IPlannerProgram = {
-    vtype: "planner",
     name: "MyProgram",
     weeks: PlannerProgram_evaluateText(text),
   };

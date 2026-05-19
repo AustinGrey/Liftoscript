@@ -5,6 +5,7 @@ import type { IPlannerProgram } from "@/evaluators/plan-evaluator-minimal.ts";
  * @param program The program to convert to a script
  */
 export function asProgramScript(program: IPlannerProgram | undefined): string {
+  // @todo do we really need to support this? Can't we just check everywhere that the program is defined? Parse don't validate.
   if (!program) {
     return "";
   }
