@@ -37,18 +37,17 @@ import {
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
 import {
+  type IDynamicWeight,
   type IUnit,
   type IWeight,
-  TWeight,
-  type IDynamicWeight,
   TDynamicWeight,
+  TWeight,
 } from "@/models/weight";
 import {
   type IAllEquipment,
   type ICustomExercise,
   type IEquipmentData,
   type IExerciseDataValue,
-  type IGym,
   type IPlannerSettings,
   type IPlate,
   type IProgramState,
@@ -73,7 +72,12 @@ import {
   TExerciseType,
 } from "@/exercises";
 import { equipments, TBuiltinEquipment } from "@/equipment";
-import type { ISettings } from "@/user-settings";
+import {
+  getCurrentEquipment,
+  getCurrentGym,
+  getGymByIdOrCurrent,
+  type ISettings,
+} from "@/user-settings";
 
 //#region Program
 
@@ -6032,7 +6036,7 @@ function Exercise_fullName(
 ): string {
   let str: string;
   if (exercise.equipment && exercise.defaultEquipment !== exercise.equipment) {
-    const allEquipment = Equipment_currentEquipment(settings);
+    const allEquipment = getCurrentEquipment(settings);
     const equipment = equipmentName(exercise.equipment, allEquipment);
     str = `${exercise.name}, ${equipment}`;
   } else {
@@ -8461,20 +8465,6 @@ enum PlannerNodeName {
 
 //#region Equipment
 
-function Equipment_getGymByIdOrCurrent(
-  settings: ISettings,
-  gymId?: string,
-): IGym {
-  return (
-    settings.gyms.find((g) => g.id === (gymId ?? settings.currentGymId)) ??
-    settings.gyms[0]
-  );
-}
-
-function Equipment_getCurrentGym(settings: ISettings): IGym {
-  return Equipment_getGymByIdOrCurrent(settings, undefined);
-}
-
 function Equipment_getEquipmentIdForExerciseType(
   settings: ISettings,
   exerciseType?: IExerciseType,
@@ -8500,7 +8490,7 @@ function Equipment_getEquipmentIdForExerciseType(
     return undefined;
   }
 
-  const currentGym = Equipment_getGymByIdOrCurrent(settings, gymId);
+  const currentGym = getGymByIdOrCurrent(settings, gymId);
   return exerciseEquipment[currentGym.id];
 }
 
@@ -8512,9 +8502,7 @@ function Equipment_getEquipmentDataForExerciseType(
     settings,
     exerciseType,
   );
-  return equipment
-    ? Equipment_getCurrentGym(settings).equipment[equipment]
-    : undefined;
+  return equipment ? getCurrentGym(settings).equipment[equipment] : undefined;
 }
 
 function Equipment_getUnitOrDefaultForExerciseType(
@@ -8526,10 +8514,6 @@ function Equipment_getUnitOrDefaultForExerciseType(
     exerciseType,
   );
   return equipment?.unit ?? settings.units;
-}
-
-function Equipment_currentEquipment(settings: ISettings): IAllEquipment {
-  return Equipment_getCurrentGym(settings)?.equipment;
 }
 
 //#endregion

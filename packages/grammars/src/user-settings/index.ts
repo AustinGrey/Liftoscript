@@ -1,6 +1,8 @@
 import { TUnit, TWeight } from "@/models/weight.ts";
 import { TExerciseId } from "@/exercises";
 import {
+  type IAllEquipment,
+  type IGym,
   TCustomExercise,
   TExerciseDataValue,
   TExercisePickerSort,
@@ -82,3 +84,23 @@ export const TSettings = z
   })
   .strict();
 export type ISettings = z.infer<typeof TSettings>;
+
+/**
+ * @returns The first gym found from this list
+ *   - The gym in the settings with the provided id
+ *   - The gym in the settings matching the currentGymId in the settings
+ *   - The first gym
+ *   - @todo what if this list is empty? The types are wrong here and I think this should throw? Or create a default gym?
+ * @param settings The settings object to use
+ * @param gymId The id of the gym to find, if desired.
+ */
+export function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
+  const targetId = gymId ?? settings.currentGymId;
+  return settings.gyms.find((g) => g.id === targetId) ?? settings.gyms[0];
+}
+
+export const getCurrentGym = (settings: ISettings): IGym =>
+  getGymByIdOrCurrent(settings);
+
+export const getCurrentEquipment = (settings: ISettings): IAllEquipment =>
+  getCurrentGym(settings)?.equipment;
