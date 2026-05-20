@@ -78,6 +78,7 @@ import {
   getGymByIdOrCurrent,
   type ISettings,
 } from "@/user-settings";
+import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 
 //#region Program
 
@@ -8405,63 +8406,6 @@ class ScriptRunner {
     }
   }
 }
-//#endregion
-
-//#region PlannerNodeName
-enum PlannerNodeName {
-  Program = "Program",
-  LineComment = "LineComment",
-  TripleLineComment = "TripleLineComment",
-  Week = "Week",
-  Day = "Day",
-  ExerciseExpression = "ExerciseExpression",
-  ExerciseName = "ExerciseName",
-  NonSeparator = "NonSeparator",
-  Repeat = "Repeat",
-  Rep = "Rep",
-  Int = "Int",
-  RepRange = "RepRange",
-  SectionSeparator = "SectionSeparator",
-  ExerciseSection = "ExerciseSection",
-  ExerciseProperty = "ExerciseProperty",
-  ExercisePropertyName = "ExercisePropertyName",
-  Keyword = "Keyword",
-  FunctionExpression = "FunctionExpression",
-  FunctionName = "FunctionName",
-  FunctionArgument = "FunctionArgument",
-  Number = "Number",
-  Plus = "Plus",
-  PosNumber = "PosNumber",
-  Float = "Float",
-  Weight = "Weight",
-  Percentage = "Percentage",
-  Rpe = "Rpe",
-  KeyValue = "KeyValue",
-  Liftoscript = "Liftoscript",
-  ReuseLiftoscript = "ReuseLiftoscript",
-  ReuseSection = "ReuseSection",
-  WarmupExerciseSets = "WarmupExerciseSets",
-  WarmupExerciseSet = "WarmupExerciseSet",
-  WarmupSetPart = "WarmupSetPart",
-  None = "None",
-  ExerciseSets = "ExerciseSets",
-  CurrentVariation = "CurrentVariation",
-  ExerciseSet = "ExerciseSet",
-  Timer = "Timer",
-  SetPart = "SetPart",
-  WeightWithPlus = "WeightWithPlus",
-  PercentageWithPlus = "PercentageWithPlus",
-  SetLabel = "SetLabel",
-  ReuseSectionWithWeekDay = "ReuseSectionWithWeekDay",
-  WeekDay = "WeekDay",
-  WeekOrDay = "WeekOrDay",
-  Current = "Current",
-  Superset = "Superset",
-  SupersetKeyword = "SupersetKeyword",
-  AskWeight = "AskWeight",
-  EmptyExpression = "EmptyExpression",
-}
-
 //#endregion
 
 //#region Equipment
