@@ -5844,105 +5844,78 @@ function equipmentName(
 
 function warmupValues(
   units: IUnit,
-): Partial<Record<number, IProgramExerciseWarmupSet[]>> {
-  return {
-    10: [
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(60, "lb") : Weight_build(30, "kg"),
-        value: 0.3,
-      },
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(30, "lb") : Weight_build(15, "kg"),
-        value: 0.5,
-      },
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(10, "lb") : Weight_build(5, "kg"),
-        value: 0.8,
-      },
-    ],
-    45: [
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(120, "lb") : Weight_build(60, "kg"),
-        value: 0.3,
-      },
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(90, "lb") : Weight_build(45, "kg"),
-        value: 0.5,
-      },
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(45, "lb") : Weight_build(20, "kg"),
-        value: 0.8,
-      },
-    ],
-    95: [
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(150, "lb") : Weight_build(70, "kg"),
-        value: 0.3,
-      },
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(125, "lb") : Weight_build(60, "kg"),
-        value: 0.5,
-      },
-      {
-        reps: 5,
-        threshold:
-          units === "lb" ? Weight_build(95, "lb") : Weight_build(40, "kg"),
-        value: 0.8,
-      },
-    ],
-  };
-}
-
-function warmup45(
-  weight: IWeight | undefined,
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-): ISet[] {
-  return warmup(warmupValues(settings.units)[45] || [])(
-    weight,
-    settings,
-    exerciseType,
-  );
-}
-
-function warmup95(
-  weight: IWeight | undefined,
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-): ISet[] {
-  return warmup(warmupValues(settings.units)[95] || [])(
-    weight,
-    settings,
-    exerciseType,
-  );
-}
-
-function warmup10(
-  weight: IWeight | undefined,
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-): ISet[] {
-  return warmup(warmupValues(settings.units)[10] || [])(
-    weight,
-    settings,
-    exerciseType,
-  );
+  startingLbs: 10 | 45 | 95,
+): ReturnType<typeof warmup> {
+  let sets: IProgramExerciseWarmupSet[];
+  switch (startingLbs) {
+    case 10:
+      sets = [
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(60, "lb") : Weight_build(30, "kg"),
+          value: 0.3,
+        },
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(30, "lb") : Weight_build(15, "kg"),
+          value: 0.5,
+        },
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(10, "lb") : Weight_build(5, "kg"),
+          value: 0.8,
+        },
+      ];
+      break;
+    case 45:
+      sets = [
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(120, "lb") : Weight_build(60, "kg"),
+          value: 0.3,
+        },
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(90, "lb") : Weight_build(45, "kg"),
+          value: 0.5,
+        },
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(45, "lb") : Weight_build(20, "kg"),
+          value: 0.8,
+        },
+      ];
+      break;
+    case 95:
+      sets = [
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(150, "lb") : Weight_build(70, "kg"),
+          value: 0.3,
+        },
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(125, "lb") : Weight_build(60, "kg"),
+          value: 0.5,
+        },
+        {
+          reps: 5,
+          threshold:
+            units === "lb" ? Weight_build(95, "lb") : Weight_build(40, "kg"),
+          value: 0.8,
+        },
+      ];
+      break;
+  }
+  return warmup(sets);
 }
 
 function warmup(
@@ -6232,18 +6205,25 @@ function Exercise_getWarmupSets(
   } else {
     let warmupSets: ISet[] = [];
     if (ex.defaultWarmup === 10) {
-      warmupSets = warmup10(weight, settings, exercise);
+      warmupSets = warmupValues(settings.units, 10)(weight, settings, exercise);
     } else if (ex.defaultWarmup === 45) {
-      warmupSets = warmup45(weight, settings, exercise);
+      warmupSets = warmupValues(settings.units, 45)(weight, settings, exercise);
     } else if (ex.defaultWarmup === 95) {
-      warmupSets = warmup95(weight, settings, exercise);
+      warmupSets = warmupValues(settings.units, 95)(weight, settings, exercise);
     }
     return warmupSets;
   }
 }
 
+/**
+ * @returns a unique, stable key that can be used to refer to an exercise type
+ * @param type The type to make a key from
+ */
 function Exercise_toKey(type: IExerciseType): string {
-  return `${type.id}${type.equipment ? `_${type.equipment}` : ""}`;
+  const parts = [type.id];
+  // @TODO why would the unique key of an _exercise_ rely on the equipment of that exercise?
+  if (type.equipment) parts.push(type.equipment);
+  return parts.join("_");
 }
 
 //#endregion
@@ -6670,10 +6650,7 @@ function Weight_calculatePlates(
   units: IUnit,
   exerciseType: IExerciseType,
 ): { plates: IPlate[]; platesWeight: IWeight; totalWeight: IWeight } {
-  const equipmentData = Equipment_getEquipmentDataForExerciseType(
-    settings,
-    exerciseType,
-  );
+  const equipmentData = getEquipmentData(settings, exerciseType);
   if (equipmentData == null) {
     const rounding = Exercise_defaultRounding(exerciseType, settings);
     allWeight = Weight_build(
@@ -8404,7 +8381,7 @@ function Equipment_getEquipmentIdForExerciseType(
   exerciseType?: IExerciseType,
   gymId?: string,
 ): string | undefined {
-  if (exerciseType == null) {
+  if (!exerciseType) {
     return undefined;
   }
 
@@ -8428,9 +8405,14 @@ function Equipment_getEquipmentIdForExerciseType(
   return exerciseEquipment[foundGymId];
 }
 
-function Equipment_getEquipmentDataForExerciseType(
+/**
+ * @returns The user's equipment settings for the given exercise type
+ * @param settings The settings to consider
+ * @param exerciseType The type to look for
+ */
+function getEquipmentData(
   settings: ISettings,
-  exerciseType?: IExerciseType,
+  exerciseType: IExerciseType,
 ): IEquipmentData | undefined {
   const id = Equipment_getEquipmentIdForExerciseType(settings, exerciseType);
   return id ? getCurrentGym(settings).equipment[id] : undefined;
@@ -8446,8 +8428,8 @@ function getPreferredUnit(
   exerciseType: IExerciseType | undefined,
 ): IUnit {
   return (
-    Equipment_getEquipmentDataForExerciseType(settings, exerciseType)?.unit ??
-    settings.units
+    (exerciseType ? getEquipmentData(settings, exerciseType) : undefined)
+      ?.unit ?? settings.units
   );
 }
 
