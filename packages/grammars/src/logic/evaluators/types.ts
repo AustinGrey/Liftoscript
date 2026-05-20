@@ -1,5 +1,8 @@
 import type { SyntaxNode } from "@lezer/common";
-import type { NodeNames_Logic, TypedLogicNode } from "@/parsers/guards.ts";
+import type {
+  NodeNames_Logic,
+  TypedLogicNode,
+} from "@/logic/parsing/guards.ts";
 import {
   type IDynamicWeight,
   type IWeight,

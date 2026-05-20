@@ -1,5 +1,5 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
-import { type TypedLogicNode } from "@/parsers/guards.ts";
+import { type TypedLogicNode } from "@/logic/parsing/guards.ts";
 import * as Weight from "@/models/weight.ts";
 import { type IWeight, TUnit } from "@/models/weight.ts";
 import { getChild } from "@/utils/grammars.ts";
@@ -22,7 +22,10 @@ function getWeight(
   }
   const unit = tools.getText(unitNode);
   if (!is(TUnit, unit)) {
-    tools.error("WeightExpression must contain a unit of either kg or lb", unitNode);
+    tools.error(
+      "WeightExpression must contain a unit of either kg or lb",
+      unitNode,
+    );
   }
   return Weight.build(num, unit);
 }

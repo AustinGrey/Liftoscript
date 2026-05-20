@@ -30,8 +30,8 @@ import {
 } from "@/utils/object";
 import { StringUtils_unindent } from "@/utils/string";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
-import { parser as plannerExerciseParser } from "@/parsers/workout-plan.ts";
-import { parser as LiftoscriptParser } from "@/parsers/logic";
+import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
+import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import {
   LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
@@ -8465,7 +8465,6 @@ enum PlannerNodeName {
 //#endregion
 
 //#region Equipment
-
 function Equipment_getEquipmentIdForExerciseType(
   settings: ISettings,
   exerciseType?: IExerciseType,
@@ -8491,8 +8490,8 @@ function Equipment_getEquipmentIdForExerciseType(
     return undefined;
   }
 
-  const currentGym = getGymByIdOrCurrent(settings, gymId);
-  return exerciseEquipment[currentGym.id];
+  const foundGymId = getGymByIdOrCurrent(settings, gymId).id;
+  return exerciseEquipment[foundGymId];
 }
 
 function Equipment_getEquipmentDataForExerciseType(

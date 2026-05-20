@@ -2,7 +2,7 @@ import {
   isLogicNodeName,
   type NodeNames_Logic,
   type TypedLogicNode,
-} from "@/parsers/guards.ts";
+} from "@/logic/parsing/guards.ts";
 import type {
   EvaluateTools,
   IProgramState,
@@ -10,7 +10,7 @@ import type {
   LogicHandler,
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
-import { parser } from "@/parsers/logic.ts";
+import { parser } from "@/logic/parsing/logic.ts";
 import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
 import {
   type ILiftoscriptEvaluatorUpdate,

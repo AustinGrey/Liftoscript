@@ -1,5 +1,5 @@
 import { expect, test, describe } from "vite-plus/test";
-import { parser } from "@/parsers/logic";
+import { parser } from "@/logic/parsing/logic.ts";
 import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
 import type { RequireAtLeastOne } from "type-fest";

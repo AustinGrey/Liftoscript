@@ -1,7 +1,7 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { getDescendant } from "@/utils/grammars.ts";
-import type { TypedLogicNode } from "@/parsers/guards.ts";
+import type { TypedLogicNode } from "@/logic/parsing/guards.ts";
 
 export const handler: LogicHandler<"StateVariable"> = (n, t) => {
   const stateKey = getStateKey(n, t);

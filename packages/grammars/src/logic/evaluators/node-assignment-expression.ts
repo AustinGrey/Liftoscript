@@ -11,7 +11,7 @@ import {
   Weight_convertToWeight,
 } from "@/evaluators/logic-evaluator.ts";
 import * as Weight from "@/models/weight";
-import { isLogicNodeOfType } from "@/parsers/guards.ts";
+import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 import {
   type IAssignmentOp,
   isQuantity,

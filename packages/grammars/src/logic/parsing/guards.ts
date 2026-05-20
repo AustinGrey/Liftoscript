@@ -1,5 +1,5 @@
-import * as logicTerms from "./logic.terms";
-import type * as planTerms from "./workout-plan.terms";
+import * as logicTerms from "./logic.terms.ts";
+import type * as planTerms from "../../planner/parsing/workout-plan.terms.ts";
 import type { SyntaxNode } from "@lezer/common";
 
 /**
@@ -55,9 +55,11 @@ export namespace LogicNodes {
   export type VariableExpression = TypedLogicNode<"VariableExpression">;
   export type VariableIndex = TypedLogicNode<"VariableIndex">;
   export type Wildcard = TypedLogicNode<"Wildcard">;
-  export type IncAssignmentExpression = TypedLogicNode<"IncAssignmentExpression">;
+  export type IncAssignmentExpression =
+    TypedLogicNode<"IncAssignmentExpression">;
   export type IncAssignment = TypedLogicNode<"IncAssignment">;
-  export type BuiltinFunctionExpression = TypedLogicNode<"BuiltinFunctionExpression">;
+  export type BuiltinFunctionExpression =
+    TypedLogicNode<"BuiltinFunctionExpression">;
   export type UnaryExpression = TypedLogicNode<"UnaryExpression">;
   export type Not = TypedLogicNode<"Not">;
 }

@@ -15,7 +15,7 @@ import {
   MathUtils_roundTo005,
   n,
 } from "@/utils/math";
-import { parser as LiftoscriptParser } from "@/parsers/logic";
+import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import { z } from "zod";
 import {
   ObjectUtils_clone,
