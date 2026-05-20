@@ -17,7 +17,7 @@ import {
   MathUtils_roundTo005,
   n,
 } from "@/utils/math";
-import type { IEither, OpenRecord } from "@/utils/types";
+import { type IEither, is, type OpenRecord } from "@/utils/types";
 import {
   ObjectUtils_clone,
   ObjectUtils_diff,
@@ -412,7 +412,7 @@ export function Program_runAllFinishDayScripts(
               rm1: Weight_roundTo005(bindings.rm1),
             };
           }
-          PP_iterate2(newEvaluatedProgram.weeks, (exercise) => {
+          forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
             if (exercise.key === programExercise.key && exercise.progress) {
               exercise.progress.state = {
                 ...exercise.progress.state,
@@ -428,14 +428,17 @@ export function Program_runAllFinishDayScripts(
             settings,
           );
           for (const key of ObjectUtils_keys(otherStates || {})) {
-            PP_iterate2(newEvaluatedProgram.weeks, (exercise) => {
-              if (exercise.tags?.includes(Number(key)) && exercise.progress) {
-                exercise.progress.state = {
-                  ...exercise.progress.state,
-                  ...otherStates[key],
-                };
-              }
-            });
+            forExerciseInEvaluatedWeeks(
+              newEvaluatedProgram.weeks,
+              (exercise) => {
+                if (exercise.tags?.includes(Number(key)) && exercise.progress) {
+                  exercise.progress.state = {
+                    ...exercise.progress.state,
+                    ...otherStates[key],
+                  };
+                }
+              },
+            );
           }
         } else {
         }
@@ -540,7 +543,7 @@ function Program_forceEvaluate(
     return { name: week.name, description: week.description, days };
   });
   const states: IByTag<IProgramState> = {};
-  PP_iterate(evaluatedWeeks, (exercise) => {
+  forExerciseInEvaluatedResults(evaluatedWeeks, (exercise) => {
     for (const tag of exercise.tags) {
       states[tag] = {
         ...states[tag],
@@ -1006,7 +1009,7 @@ export function PlannerProgram_replaceWeight(
     return program;
   }
   const newEvalutedProgram = ObjectUtils_clone(program);
-  PP_iterate2(newEvalutedProgram.weeks, (ex) => {
+  forExerciseInEvaluatedWeeks(newEvalutedProgram.weeks, (ex) => {
     if (ex.key === programExerciseId) {
       for (const setVariation of ex.evaluatedSetVariations) {
         for (const set of setVariation.sets) {
@@ -1078,35 +1081,38 @@ function PlannerProgram_replaceExercise(
     string,
     { to: string; dayData?: Required<IDayData> }
   > = {};
-  PP_iterate2(evaluatedProgram.weeks, (exercise, weekIndex, dayInWeekIndex) => {
-    if (exercise.key === key) {
-      if (
-        !dayData ||
-        (dayData.week === weekIndex + 1 &&
-          dayData.dayInWeek === dayInWeekIndex + 1)
-      ) {
-        exercise.exerciseType =
-          typeof toExerciseType === "string" ? undefined : toExerciseType;
-        const newLabel2 = getLabel(exercise.label);
-        exercise.label = newLabel2;
-        if (typeof toExerciseType === "string") {
-          exercise.notused = true;
-          exercise.fullName = `${newLabel2 ? `${newLabel2}: ` : ""}${toExerciseType}`;
+  forExerciseInEvaluatedWeeks(
+    evaluatedProgram.weeks,
+    (exercise, weekIndex, dayInWeekIndex) => {
+      if (exercise.key === key) {
+        if (
+          !dayData ||
+          (dayData.week === weekIndex + 1 &&
+            dayData.dayInWeek === dayInWeekIndex + 1)
+        ) {
+          exercise.exerciseType =
+            typeof toExerciseType === "string" ? undefined : toExerciseType;
+          const newLabel2 = getLabel(exercise.label);
+          exercise.label = newLabel2;
+          if (typeof toExerciseType === "string") {
+            exercise.notused = true;
+            exercise.fullName = `${newLabel2 ? `${newLabel2}: ` : ""}${toExerciseType}`;
+          }
+          const newKey =
+            typeof toExerciseType === "string"
+              ? PlannerKey_fromLabelNameAndEquipment(
+                  newLabel2,
+                  toExerciseType,
+                  undefined,
+                  settings.exercises,
+                )
+              : PlannerKey_fromExerciseType(toExerciseType, newLabel2);
+          renameMapping[exercise.key] = { to: newKey, dayData };
+          exercise.key = newKey;
         }
-        const newKey =
-          typeof toExerciseType === "string"
-            ? PlannerKey_fromLabelNameAndEquipment(
-                newLabel2,
-                toExerciseType,
-                undefined,
-                settings.exercises,
-              )
-            : PlannerKey_fromExerciseType(toExerciseType, newLabel2);
-        renameMapping[exercise.key] = { to: newKey, dayData };
-        exercise.key = newKey;
       }
-    }
-  });
+    },
+  );
   return new ProgramToPlanner(evaluatedProgram, settings).convertToPlanner({
     renameMapping,
   });
@@ -1161,7 +1167,7 @@ function PlannerProgram_compact(
     settings,
   );
   for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
-    PP_iterate(ev, (exercise) => {
+    forExerciseInEvaluatedResults(ev, (exercise) => {
       if (exercise.repeat != null && exercise.repeat.length > 0) {
         repeatingExercises.add(exercise.key);
       }
@@ -1962,7 +1968,7 @@ export function ProgramExercise_weightChanges(
   programExerciseKey: string,
 ): IWeightChange[] {
   const results: Record<string, IWeightChange> = {};
-  PP_iterate2(program.weeks, (exercise) => {
+  forExerciseInEvaluatedWeeks(program.weeks, (exercise) => {
     if (exercise.key === programExerciseKey) {
       const currentVariationIndex =
         PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise);
@@ -2219,7 +2225,7 @@ function operation(
   op: IAssignmentOp,
 ): void {
   if (op === "=") {
-    if (key === "weight" && (Weight_is(value) || Weight_isPct(value))) {
+    if (key === "weight" && (is(TWeight, value) || is(TDynamicWeight, value))) {
       set[key] = value;
     } else if (
       typeof value === "number" &&
@@ -2244,7 +2250,10 @@ function operation(
       );
     }
     const newValue = Weight_applyOp(onerm, oldValue ?? 0, value, op);
-    if (key === "weight" && (Weight_is(newValue) || Weight_isPct(newValue))) {
+    if (
+      key === "weight" &&
+      (is(TWeight, newValue) || is(TDynamicWeight, newValue))
+    ) {
       set[key] = newValue;
     } else if (
       typeof newValue === "number" &&
@@ -6527,16 +6536,12 @@ function Weight_evaluateWeight(
   exerciseType: IExerciseType,
   settings: ISettings,
 ): IWeight {
-  if (Weight_is(weight)) {
+  if (is(TWeight, weight)) {
     return weight;
-  } else if (Weight_isPct(weight)) {
-    const exercise = Exercise_get(exerciseType, settings.exercises);
-    const onerm = Exercise_onerm(exercise, settings);
-    return Weight_multiply(onerm, weight.value / 100);
-  } else {
-    const unit = getPreferredUnit(settings, exerciseType);
-    return Weight_build(0, unit);
   }
+  const exercise = Exercise_get(exerciseType, settings.exercises);
+  const onerm = Exercise_onerm(exercise, settings);
+  return Weight_multiply(onerm, weight.value / 100);
 }
 
 function Weight_print(weight: IWeight | IDynamicWeight | number): string {
@@ -6600,28 +6605,6 @@ export function Weight_build(value: number, unit: IUnit): IWeight {
     prebuiltWeights[`${value}_${unit}`] = v;
     return v;
   }
-}
-
-function Weight_is(object: unknown): object is IWeight {
-  const objWeight = object as IWeight;
-  return (
-    objWeight &&
-    typeof objWeight === "object" &&
-    "unit" in objWeight &&
-    "value" in objWeight &&
-    (objWeight.unit === "kg" || objWeight.unit === "lb")
-  );
-}
-
-function Weight_isPct(object: unknown): object is IDynamicWeight {
-  const objWeight = object as IDynamicWeight;
-  return (
-    objWeight &&
-    typeof objWeight === "object" &&
-    "unit" in objWeight &&
-    "value" in objWeight &&
-    objWeight.unit === "%"
-  );
 }
 
 function Weight_round(
@@ -6901,7 +6884,7 @@ function Weight_type(
 ): "weight" | "percentage" | "number" {
   if (typeof value === "number") {
     return "number";
-  } else if (Weight_isPct(value)) {
+  } else if (is(TDynamicWeight, value)) {
     return "percentage";
   } else {
     return "weight";
@@ -6947,7 +6930,7 @@ function comparison(
   } else if (typeof weight !== "number" && typeof value !== "number") {
     if (weight.unit === "%" && value.unit === "%") {
       return o(weight.value, value.value);
-    } else if (Weight_is(weight) && Weight_is(value)) {
+    } else if (is(TWeight, weight) && is(TWeight, value)) {
       return o(weight.value, Weight_convertTo(value, weight.unit).value);
     } else {
       return false;
@@ -6989,36 +6972,36 @@ function Weight_op(
   if (typeof a === "number" && typeof b === "number") {
     return o(a, b);
   }
-  if (typeof a === "number" && Weight_isPct(b)) {
+  if (typeof a === "number" && is(TDynamicWeight, b)) {
     return Weight_buildPct(o(a, b.value));
   }
-  if (typeof a === "number" && Weight_is(b)) {
+  if (typeof a === "number" && is(TWeight, b)) {
     return Weight_operation(a, b, o);
   }
 
-  if (Weight_isPct(a) && typeof b === "number") {
+  if (is(TDynamicWeight, a) && typeof b === "number") {
     return Weight_buildPct(o(a.value, b));
   }
-  if (Weight_isPct(a) && Weight_isPct(b)) {
+  if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
     return Weight_buildPct(o(a.value, b.value));
   }
-  if (Weight_isPct(a) && Weight_is(b)) {
+  if (is(TDynamicWeight, a) && is(TWeight, b)) {
     const aWeight = onerm
       ? Weight_multiply(onerm, a.value / 100)
       : MathUtils_roundFloat(a.value / 100, 4);
     return Weight_operation(aWeight, b, o);
   }
 
-  if (Weight_is(a) && typeof b === "number") {
+  if (is(TWeight, a) && typeof b === "number") {
     return Weight_operation(a, b, o);
   }
-  if (Weight_is(a) && Weight_isPct(b)) {
+  if (is(TWeight, a) && is(TDynamicWeight, b)) {
     const bWeight = onerm
       ? Weight_multiply(onerm, b.value / 100)
       : MathUtils_roundFloat(b.value / 100, 4);
     return Weight_operation(a, bWeight, o);
   }
-  if (Weight_is(a) && Weight_is(b)) {
+  if (is(TWeight, a) && is(TWeight, b)) {
     return Weight_operation(a, b, o);
   }
 
@@ -7083,7 +7066,7 @@ const Weight_zero: IWeight = { value: 0, unit: "lb" } as const;
 //#endregion
 
 //#region PP
-function PP_iterate2(
+function forExerciseInEvaluatedWeeks(
   evaluatedWeeks: IEvaluatedProgramWeek[],
   cb: (
     exercise: IPlannerProgramExercise,
@@ -7124,7 +7107,7 @@ function PP_iterate2(
   }
 }
 
-function PP_iterate(
+function forExerciseInEvaluatedResults(
   evaluatedWeeks: IPlannerEvalResult[][],
   cb: (
     exercise: IPlannerProgramExercise,
@@ -7858,7 +7841,7 @@ class ProgramToPlanner {
       weeks: plannerWeeks,
     };
     const repeatingExercises = new Set<string>();
-    PP_iterate2(this.program.weeks, (exercise) => {
+    forExerciseInEvaluatedWeeks(this.program.weeks, (exercise) => {
       if (exercise.repeat != null && exercise.repeat.length > 0) {
         const key = PlannerKey_fromPlannerExercise(exercise, this.settings);
         repeatingExercises.add(key);
