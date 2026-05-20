@@ -5,17 +5,19 @@ export type IEither<T, U> =
   | { success: false; error: U };
 export type IArrayElement<ArrayType extends readonly unknown[]> =
   ArrayType[number];
-export type IDeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? IDeepPartial<T[P]> : T[P];
-};
-export type IRect = { x: number; y: number; width: number; height: number };
 export type INonNullObject<T> = {
   [K in keyof T as T[K] extends null ? never : K]: T[K];
 };
-
-export function c<T>(value: unknown): T {
-  return value as T;
-}
+/**
+ * Record is normally closed. If you say something is a Record<string, number> what you are saying
+ * is that there is a value for every possible string. Which can't be true.
+ *
+ * An open record is shorthand that not all keys will have values.
+ */
+export type OpenRecord<
+  TVal,
+  TKey extends string | number | symbol = string,
+> = Partial<Record<TKey, TVal>>;
 
 export function isNumber(value: unknown): value is number {
   return typeof value === "number";

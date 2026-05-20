@@ -17,7 +17,7 @@ import {
   MathUtils_roundTo005,
   n,
 } from "@/utils/math";
-import type { IEither } from "@/utils/types";
+import type { IEither, OpenRecord } from "@/utils/types";
 import {
   ObjectUtils_clone,
   ObjectUtils_diff,
@@ -1171,7 +1171,7 @@ function PlannerProgram_compact(
     repeatingExercises.add(ex);
   }
 
-  const lastDescriptions: Partial<Record<number, string | undefined>> = {};
+  const lastDescriptions: OpenRecord<string, number> = {};
   plannerProgram.weeks.forEach((week) => {
     week.days.forEach((day, dayInWeekIndex) => {
       if (lastDescriptions[dayInWeekIndex] == null) {
@@ -1494,7 +1494,7 @@ export function PlannerProgram_generateFullText(
 
 //#region Types
 
-type IAllCustomExercises = Partial<Record<string, ICustomExercise>>;
+type IAllCustomExercises = OpenRecord<ICustomExercise>;
 
 const THistoryEntry = z
   .object({
@@ -1930,7 +1930,7 @@ const statsPercentageDef = {
   bodyfat: z.array(TStatsPercentageValue),
 };
 const TStatsPercentage = z.object(statsPercentageDef).partial().strict();
-type IExerciseData = Partial<Record<string, IExerciseDataValue>>;
+type IExerciseData = OpenRecord<IExerciseDataValue>;
 
 const TStats = z
   .object({
@@ -5799,7 +5799,7 @@ function ProgramSet_getEvaluatedWeight(
 
 //#region Exercise
 const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
-  Partial<Record<string, IExerciseId>>
+  OpenRecord<IExerciseId>
 >((acc, key) => {
   acc[allExercisesList[key].name.toLowerCase()] = allExercisesList[key].id;
   return acc;
@@ -6186,7 +6186,8 @@ function Exercise_findByName(
   const exerciseId = Exercise_findIdByName(name.trim(), customExercises);
   if (exerciseId != null) {
     const exercise = Exercise_findById(exerciseId, customExercises);
-    if (exercise != null) {
+    if (exercise) {
+      // @todo why would this find method be overriding the equipment from the found thing?
       return { ...exercise, equipment: exercise.defaultEquipment };
     }
   }
@@ -6513,7 +6514,7 @@ function Progress_getEntryId(
 //#endregion
 
 //#region Weight
-const prebuiltWeights: Partial<Record<string, IWeight>> = {};
+const prebuiltWeights: OpenRecord<IWeight> = {};
 
 function Weight_rpePct(reps: number, rpe: number): IDynamicWeight {
   return Weight_buildPct(
