@@ -41,7 +41,6 @@ export function ObjectUtils_isNotEmpty<T extends {}>(obj: T): boolean {
 export function ObjectUtils_isEqual<T extends Record<string, any>>(
   obj1: T,
   obj2: T,
-  ignoreKeys: string[] = [],
 ): boolean {
   // Create a stack for comparing objects
   const stack: Array<[any, any]> = [[obj1, obj2]];
@@ -72,9 +71,6 @@ export function ObjectUtils_isEqual<T extends Record<string, any>>(
 
     // Iterate over keys and add nested objects to the stack
     for (const key of new Set([...keys1, ...keys2])) {
-      if (ignoreKeys.indexOf(key) !== -1) {
-        continue;
-      }
       stack.push([currentObj1[key], currentObj2[key]]);
     }
   }
