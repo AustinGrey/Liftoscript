@@ -64,14 +64,13 @@ import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { TMuscle } from "@/human-body";
 import {
   allExercisesList,
-  type IEquipment,
   type IExercise,
   type IExerciseId,
   type IExerciseType,
   TExerciseKind,
   TExerciseType,
 } from "@/exercises";
-import { equipments, TBuiltinEquipment } from "@/equipment";
+import { equipments, type IEquipment, TBuiltinEquipment } from "@/equipment";
 import {
   getCurrentEquipment,
   getCurrentGym,
@@ -5780,10 +5779,7 @@ function ProgramSet_getEvaluatedWeight(
   settings: ISettings,
 ): IWeight | undefined {
   const originalWeight = programSet.weight;
-  const unit = Equipment_getUnitOrDefaultForExerciseType(
-    settings,
-    exerciseType,
-  );
+  const unit = getPreferredUnit(settings, exerciseType);
   const evaluatedWeight = originalWeight
     ? Weight_evaluateWeight(originalWeight, exerciseType, settings)
     : ProgramSet_isEligibleForInferredWeight(programSet) &&
@@ -5971,10 +5967,7 @@ function warmup(
             Weight_gt(weight, programExerciseWarmupSet.threshold))
         ) {
           const value = programExerciseWarmupSet.value;
-          const unit = Equipment_getUnitOrDefaultForExerciseType(
-            settings,
-            exerciseType,
-          );
+          const unit = getPreferredUnit(settings, exerciseType);
           if (typeof value !== "number" || weight != null) {
             const warmupWeight =
               typeof value === "number"
@@ -6098,7 +6091,7 @@ function Exercise_defaultRounding(
   type: IExerciseType,
   settings: ISettings,
 ): number {
-  const units = Equipment_getUnitOrDefaultForExerciseType(settings, type);
+  const units = getPreferredUnit(settings, type);
   return Math.max(
     0.1,
     settings.exerciseData[Exercise_toKey(type)]?.rounding ??
@@ -6560,10 +6553,7 @@ function Weight_evaluateWeight(
     const onerm = Exercise_onerm(exercise, settings);
     return Weight_multiply(onerm, weight.value / 100);
   } else {
-    const unit = Equipment_getUnitOrDefaultForExerciseType(
-      settings,
-      exerciseType,
-    );
+    const unit = getPreferredUnit(settings, exerciseType);
     return Weight_build(0, unit);
   }
 }
@@ -8442,16 +8432,18 @@ function Equipment_getEquipmentDataForExerciseType(
   settings: ISettings,
   exerciseType?: IExerciseType,
 ): IEquipmentData | undefined {
-  const equipment = Equipment_getEquipmentIdForExerciseType(
-    settings,
-    exerciseType,
-  );
-  return equipment ? getCurrentGym(settings).equipment[equipment] : undefined;
+  const id = Equipment_getEquipmentIdForExerciseType(settings, exerciseType);
+  return id ? getCurrentGym(settings).equipment[id] : undefined;
 }
 
-function Equipment_getUnitOrDefaultForExerciseType(
+/**
+ * @returns The user's preferred unit for a given situation. This might be a fallback default if no preferred unit can be determined for that situation.
+ * @param settings The settings where any preferred units might be specified
+ * @param exerciseType If getting the units in the context of an exercise type, this is the type to consider, since a user might have different preferences for different exercise types.
+ */
+function getPreferredUnit(
   settings: ISettings,
-  exerciseType?: IExerciseType,
+  exerciseType: IExerciseType | undefined,
 ): IUnit {
   return (
     Equipment_getEquipmentDataForExerciseType(settings, exerciseType)?.unit ??

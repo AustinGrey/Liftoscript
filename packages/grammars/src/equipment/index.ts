@@ -14,3 +14,5 @@ export const equipments = [
   "trapbar",
 ] as const;
 export const TBuiltinEquipment = z.enum(equipments);
+export const TEquipment = z.string();
+export type IEquipment = z.infer<typeof TEquipment>;

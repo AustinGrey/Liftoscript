@@ -16,11 +16,11 @@ import { z } from "zod";
 import { TBodyPart, TMuscle, TScreenMuscle } from "@/human-body";
 import {
   type IExerciseType,
-  TEquipment,
   TExerciseId,
   TExerciseKind,
   TExerciseType,
 } from "@/exercises";
+import { TEquipment } from "@/equipment";
 
 export interface IScriptFnContext {
   prints: Quantity[][];
@@ -145,14 +145,6 @@ export const TEquipmentData = z
   .strict();
 export type IEquipmentData = z.infer<typeof TEquipmentData>;
 export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
-export const TGym = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    equipment: z.record(TEquipment, z.union([TEquipmentData, z.undefined()])),
-  })
-  .strict();
-export type IGym = z.infer<typeof TGym>;
 export const TSettingsTimers = z
   .object({
     warmup: z.union([z.number(), z.undefined(), z.null()]),

@@ -1,11 +1,10 @@
 //#region Exercise
 import type { IWeight } from "@/models/weight.ts";
 import { z } from "zod";
+import { type IEquipment, TEquipment } from "@/equipment";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
-export const TEquipment = z.string();
-export type IEquipment = z.infer<typeof TEquipment>;
 export const exerciseKinds = [
   "core",
   "pull",

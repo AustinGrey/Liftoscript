@@ -2,11 +2,9 @@ import { TUnit, TWeight } from "@/models/weight.ts";
 import { TExerciseId } from "@/exercises";
 import {
   type IAllEquipment,
-  type IGym,
   TCustomExercise,
   TExerciseDataValue,
   TExercisePickerSort,
-  TGym,
   TLengthUnit,
   TMuscleGroupsSettings,
   TPlannerSettings,
@@ -15,6 +13,7 @@ import {
   TTargetType,
 } from "@/common-types.ts";
 import { z } from "zod";
+import { type IGym, TGym } from "@/gyms";
 
 //@todo restore the commented out settings, or prune them entirely since they don't impact evaluating logic
 export const TSettings = z
