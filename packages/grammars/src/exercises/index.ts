@@ -2,6 +2,7 @@
 import type { IWeight } from "@/models/weight.ts";
 import { z } from "zod";
 import { type IEquipment, TEquipment } from "@/equipment";
+import type { ISettings } from "@/user-settings";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
@@ -1669,3 +1670,69 @@ export const allExercisesList: Record<IExerciseId, IExercise> = {
     startingWeightKg: { value: 47.5, unit: "kg" },
   },
 };
+/**
+ * @returns true if the exercise to be performed is done one side at a time.
+ * @param exerciseType The exercise to be performed
+ * @param settings The user's settings - what equipment a user prefers for an exercise can change if the movement is unilateral or not.
+ */
+export function isUnilateral(
+  exerciseType: IExerciseType,
+  settings: ISettings,
+): boolean {
+  const key = toKey(exerciseType);
+  const exerciseData = settings.exerciseData[key];
+  if (exerciseData?.isUnilateral !== undefined) {
+    return exerciseData.isUnilateral;
+  }
+
+  switch (exerciseType.id) {
+    case "bulgarianSplitSquat":
+    case "concentrationCurl":
+    case "reverseGripConcentrationCurl":
+    case "bentOverOneArmRow":
+    case "cableKickback":
+    case "cableTwist":
+    case "russianTwist":
+    case "lunge":
+    case "reverseLunge":
+    case "splitSquat":
+    case "stepUp":
+    case "pistolSquat":
+    case "singleLegBridge":
+    case "singleLegDeadlift":
+    case "sideBend":
+    case "sideCrunch":
+    case "sideHipAbductor":
+    case "sideLyingClam":
+    case "sidePlank":
+    case "singleLegCalfRaise":
+    case "singleLegGluteBridgeBench":
+    case "singleLegGluteBridgeStraight":
+    case "singleLegGluteBridgeBentKnee":
+    case "singleLegHipThrust":
+      return true;
+    case "bicepCurl":
+    case "wristCurl":
+    case "reverseWristCurl":
+    case "seatedPalmsUpWristCurl":
+    case "hammerCurl":
+    case "preacherCurl":
+    case "reverseCurl":
+    case "lyingBicepCurl":
+    case "inclineCurl":
+      return exerciseType.equipment === "dumbbell";
+    default:
+      return false;
+  }
+}
+
+/**
+ * @returns a unique, stable key that can be used to refer to an exercise type
+ * @param type The type to make a key from
+ */
+export function toKey(type: IExerciseType): string {
+  const parts = [type.id];
+  // @TODO why would the unique key of an _exercise_ rely on the equipment of that exercise?
+  if (type.equipment) parts.push(type.equipment);
+  return parts.join("_");
+}

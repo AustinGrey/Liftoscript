@@ -64,6 +64,8 @@ import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { TMuscle } from "@/human-body";
 import {
   allExercisesList,
+  isUnilateral,
+  toKey,
   type IExercise,
   type IExerciseId,
   type IExerciseType,
@@ -145,7 +147,7 @@ function Program_nextHistoryEntry(
       index: i,
       minReps,
       weight,
-      isUnilateral: Exercise_getIsUnilateral(exercise, settings),
+      isUnilateral: isUnilateral(exercise, settings),
       rpe: programSet.rpe,
       timer: programSet.timer,
       logRpe: programSet.logRpe,
@@ -405,7 +407,7 @@ export function Program_runAllFinishDayScripts(
         );
         if (newStateResult.success) {
           const { state, updates, bindings, otherStates } = newStateResult.data;
-          const exerciseKey = Exercise_toKey(entry.exercise);
+          const exerciseKey = toKey(entry.exercise);
           const onerm = Exercise_onerm(entry.exercise, settings);
           if (!Weight_eq(bindings.rm1, onerm)) {
             exerciseData[exerciseKey] = {
@@ -2294,7 +2296,7 @@ function PlannerKey_fromExerciseType(
   exerciseType: IExerciseType,
   label?: string,
 ): string {
-  const key = Exercise_toKey(exerciseType);
+  const key = toKey(exerciseType);
 
   return `${label ? `${label}-` : ""}${key}`.toLowerCase();
 }
@@ -2321,7 +2323,7 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
     exercises: IAllCustomExercises,
   ): string => {
     const exercise = Exercise_findByNameEquipment(exercises, name, equipment);
-    const key = exercise ? Exercise_toKey(exercise) : name;
+    const key = exercise ? toKey(exercise) : name;
 
     return `${label ? `${label}-` : ""}${key}`.toLowerCase();
   },
@@ -5966,7 +5968,7 @@ function warmup(
               id: UidFactory_generateUid(6),
               reps: programExerciseWarmupSet.reps,
               isUnilateral: exerciseType
-                ? Exercise_getIsUnilateral(exerciseType, settings)
+                ? isUnilateral(exerciseType, settings)
                 : false,
               weight: roundedWeight,
               originalWeight: warmupWeight,
@@ -6059,7 +6061,7 @@ function Exercise_get(
 }
 
 function Exercise_onerm(type: IExerciseType, settings: ISettings): IWeight {
-  const rm = settings.exerciseData[Exercise_toKey(type)]?.rm1;
+  const rm = settings.exerciseData[toKey(type)]?.rm1;
   if (rm) {
     return Weight_convertTo(rm, settings.units);
   }
@@ -6076,8 +6078,7 @@ function Exercise_defaultRounding(
   const units = getPreferredUnit(settings, type);
   return Math.max(
     0.1,
-    settings.exerciseData[Exercise_toKey(type)]?.rounding ??
-      (units === "kg" ? 2.5 : 5),
+    settings.exerciseData[toKey(type)]?.rounding ?? (units === "kg" ? 2.5 : 5),
   );
 }
 
@@ -6137,57 +6138,6 @@ function Exercise_findByNameAndEquipment(
   return undefined;
 }
 
-function Exercise_getIsUnilateral(
-  exerciseType: IExerciseType,
-  settings: ISettings,
-): boolean {
-  const key = Exercise_toKey(exerciseType);
-  const exerciseData = settings.exerciseData[key];
-  if (exerciseData?.isUnilateral !== undefined) {
-    return exerciseData.isUnilateral;
-  }
-
-  switch (exerciseType.id) {
-    case "bulgarianSplitSquat":
-    case "concentrationCurl":
-    case "reverseGripConcentrationCurl":
-    case "bentOverOneArmRow":
-    case "cableKickback":
-    case "cableTwist":
-    case "russianTwist":
-    case "lunge":
-    case "reverseLunge":
-    case "splitSquat":
-    case "stepUp":
-    case "pistolSquat":
-    case "singleLegBridge":
-    case "singleLegDeadlift":
-    case "sideBend":
-    case "sideCrunch":
-    case "sideHipAbductor":
-    case "sideLyingClam":
-    case "sidePlank":
-    case "singleLegCalfRaise":
-    case "singleLegGluteBridgeBench":
-    case "singleLegGluteBridgeStraight":
-    case "singleLegGluteBridgeBentKnee":
-    case "singleLegHipThrust":
-      return true;
-    case "bicepCurl":
-    case "wristCurl":
-    case "reverseWristCurl":
-    case "seatedPalmsUpWristCurl":
-    case "hammerCurl":
-    case "preacherCurl":
-    case "reverseCurl":
-    case "lyingBicepCurl":
-    case "inclineCurl":
-      return exerciseType.equipment === "dumbbell";
-    default:
-      return false;
-  }
-}
-
 function Exercise_findByName(
   name: string,
   customExercises: IAllCustomExercises,
@@ -6223,17 +6173,6 @@ function Exercise_getWarmupSets(
     }
     return warmupSets;
   }
-}
-
-/**
- * @returns a unique, stable key that can be used to refer to an exercise type
- * @param type The type to make a key from
- */
-function Exercise_toKey(type: IExerciseType): string {
-  const parts = [type.id];
-  // @TODO why would the unique key of an _exercise_ rely on the equipment of that exercise?
-  if (type.equipment) parts.push(type.equipment);
-  return parts.join("_");
 }
 
 //#endregion
@@ -6463,7 +6402,7 @@ function Progress_applyBindings(
         entry.sets[i] = {
           id: UidFactory_generateUid(6),
           index: i,
-          isUnilateral: Exercise_getIsUnilateral(entry.exercise, settings),
+          isUnilateral: isUnilateral(entry.exercise, settings),
           reps: 0,
           weight: Weight_build(0, "lb"),
           originalWeight: Weight_build(0, "lb"),
@@ -6515,9 +6454,7 @@ function Progress_getEntryId(
   exerciseType: IExerciseType,
   label?: string,
 ): string {
-  return CollectionUtils_compact([label, Exercise_toKey(exerciseType)]).join(
-    "_",
-  );
+  return CollectionUtils_compact([label, toKey(exerciseType)]).join("_");
 }
 
 //#endregion
@@ -8369,7 +8306,7 @@ function Equipment_getEquipmentIdForExerciseType(
     return undefined;
   }
 
-  const key = Exercise_toKey(exerciseType);
+  const key = toKey(exerciseType);
   if (
     !(
       settings.exerciseData[key] &&
