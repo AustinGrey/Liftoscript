@@ -8297,35 +8297,6 @@ class ScriptRunner {
 //#endregion
 
 //#region Equipment
-function Equipment_getEquipmentIdForExerciseType(
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-  gymId?: string,
-): string | undefined {
-  if (!exerciseType) {
-    return undefined;
-  }
-
-  const key = toKey(exerciseType);
-  if (
-    !(
-      settings.exerciseData[key] &&
-      ("equipment" in settings.exerciseData[key] ||
-        "rounding" in settings.exerciseData[key])
-    )
-  ) {
-    return exerciseType.equipment;
-  }
-  const exerciseData = settings.exerciseData[key];
-  const exerciseEquipment = exerciseData?.equipment;
-  if (exerciseEquipment == null) {
-    return undefined;
-  }
-
-  const foundGymId = getGymByIdOrCurrent(settings, gymId).id;
-  return exerciseEquipment[foundGymId];
-}
-
 /**
  * @returns The user's equipment settings for the given exercise type
  * @param settings The settings to consider
@@ -8335,7 +8306,34 @@ function getEquipmentData(
   settings: ISettings,
   exerciseType: IExerciseType,
 ): IEquipmentData | undefined {
-  const id = Equipment_getEquipmentIdForExerciseType(settings, exerciseType);
+  function getId(
+    settings: ISettings,
+    exerciseType?: IExerciseType,
+  ): string | undefined {
+    if (!exerciseType) {
+      return undefined;
+    }
+
+    const key = toKey(exerciseType);
+    if (
+      !(
+        settings.exerciseData[key] &&
+        ("equipment" in settings.exerciseData[key] ||
+          "rounding" in settings.exerciseData[key])
+      )
+    ) {
+      return exerciseType.equipment;
+    }
+    const exerciseEquipment = settings.exerciseData[key]?.equipment;
+    if (exerciseEquipment == null) {
+      return undefined;
+    }
+
+    const foundGymId = getGymByIdOrCurrent(settings).id;
+    return exerciseEquipment[foundGymId];
+  }
+
+  const id = getId(settings, exerciseType);
   return id ? getCurrentGym(settings).equipment[id] : undefined;
 }
 

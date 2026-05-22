@@ -1673,16 +1673,17 @@ export const allExercisesList: Record<IExerciseId, IExercise> = {
 /**
  * @returns true if the exercise to be performed is done one side at a time.
  * @param exerciseType The exercise to be performed
- * @param settings The user's settings - what equipment a user prefers for an exercise can change if the movement is unilateral or not.
+ * @param settings The user's settings - a user can choose if an exercise should be done unilaterally in their settings.
+ * @todo this layer shouldn't know about "settings", this should be split up
  */
 export function isUnilateral(
   exerciseType: IExerciseType,
   settings: ISettings,
 ): boolean {
-  const key = toKey(exerciseType);
-  const exerciseData = settings.exerciseData[key];
-  if (exerciseData?.isUnilateral !== undefined) {
-    return exerciseData.isUnilateral;
+  const unilateralOverride =
+    settings.exerciseData[toKey(exerciseType)]?.isUnilateral;
+  if (unilateralOverride !== undefined) {
+    return unilateralOverride;
   }
 
   switch (exerciseType.id) {
@@ -1726,13 +1727,15 @@ export function isUnilateral(
   }
 }
 
+export const TExerciseTypeKey = z.string().brand<"ExerciseTypeKey">();
+export type IExerciseTypeKey = z.infer<typeof TExerciseTypeKey>;
 /**
  * @returns a unique, stable key that can be used to refer to an exercise type
  * @param type The type to make a key from
  */
-export function toKey(type: IExerciseType): string {
+export function toKey(type: IExerciseType): IExerciseTypeKey {
   const parts = [type.id];
   // @TODO why would the unique key of an _exercise_ rely on the equipment of that exercise?
   if (type.equipment) parts.push(type.equipment);
-  return parts.join("_");
+  return TExerciseTypeKey.parse(parts.join("_"));
 }
