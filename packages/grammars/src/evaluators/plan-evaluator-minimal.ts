@@ -71,6 +71,7 @@ import {
   type IExerciseType,
   TExerciseKind,
   TExerciseType,
+  type IExerciseTypeKey,
 } from "@/exercises";
 import { equipments, type IEquipment, TBuiltinEquipment } from "@/equipment";
 import {
@@ -8306,14 +8307,10 @@ function getEquipmentData(
   settings: ISettings,
   exerciseType: IExerciseType,
 ): IEquipmentData | undefined {
-  function getId(
-    settings: ISettings,
-    exerciseType?: IExerciseType,
-  ): string | undefined {
-    if (!exerciseType) {
-      return undefined;
-    }
-
+  const gym = getCurrentGym(settings);
+  // @todo what is the string value of this function supposed to represent? The two strings it might be set to seem unrelated to each other?
+  let id: string | undefined;
+  if (exerciseType) {
     const key = toKey(exerciseType);
     if (
       !(
@@ -8322,19 +8319,12 @@ function getEquipmentData(
           "rounding" in settings.exerciseData[key])
       )
     ) {
-      return exerciseType.equipment;
+      id = exerciseType.equipment;
+    } else {
+      id = settings.exerciseData[key]?.equipment?.[gym.id];
     }
-    const exerciseEquipment = settings.exerciseData[key]?.equipment;
-    if (exerciseEquipment == null) {
-      return undefined;
-    }
-
-    const foundGymId = getGymByIdOrCurrent(settings).id;
-    return exerciseEquipment[foundGymId];
   }
-
-  const id = getId(settings, exerciseType);
-  return id ? getCurrentGym(settings).equipment[id] : undefined;
+  return id ? gym.equipment[id] : undefined;
 }
 
 /**
