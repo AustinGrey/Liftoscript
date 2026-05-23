@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-export const equipments = [
+export const TEquipmentType = z.string();
+export type IEquipmentType = z.infer<typeof TEquipmentType>;
+
+/**
+ * The various known broad categories of equipment built in to the system.
+ * There may be other categories which a user would add to themselves, but these are the ones known always.
+ */
+export const builtInEquipmentTypes = [
   "barbell",
   "cable",
   "dumbbell",
@@ -12,7 +19,5 @@ export const equipments = [
   "medicineball",
   "ezbar",
   "trapbar",
-] as const;
-export const TBuiltinEquipment = z.enum(equipments);
-export const TEquipment = z.string();
-export type IEquipment = z.infer<typeof TEquipment>;
+] as const satisfies IEquipmentType[];
+export const TBuiltinEquipmentTypes = z.enum(builtInEquipmentTypes);

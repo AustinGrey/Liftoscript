@@ -20,7 +20,7 @@ import {
   TExerciseKind,
   TExerciseType,
 } from "@/exercises";
-import { TEquipment } from "@/equipment";
+import { TEquipmentType } from "@/equipment";
 
 export interface IScriptFnContext {
   prints: Quantity[][];
@@ -162,7 +162,7 @@ export const TMetaExercises = z
     targetMuscles: z.array(TMuscle),
     synergistMuscles: z.array(TMuscle),
 
-    sortedEquipment: z.array(TEquipment).optional(),
+    sortedEquipment: z.array(TEquipmentType).optional(),
   })
   .strict();
 export type IMetaExercises = z.infer<typeof TMetaExercises>;
@@ -174,7 +174,7 @@ export const TCustomExercise = z
     isDeleted: z.boolean(),
     meta: TMetaExercises,
 
-    defaultEquipment: TEquipment.optional(),
+    defaultEquipment: TEquipmentType.optional(),
     types: z.array(TExerciseKind).optional(),
     clonedFrom: TExerciseType.optional(),
     reuseImageFrom: TExerciseType.optional(),

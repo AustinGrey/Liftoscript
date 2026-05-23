@@ -71,13 +71,15 @@ import {
   type IExerciseType,
   TExerciseKind,
   TExerciseType,
-  type IExerciseTypeKey,
 } from "@/exercises";
-import { equipments, type IEquipment, TBuiltinEquipment } from "@/equipment";
+import {
+  builtInEquipmentTypes,
+  type IEquipmentType,
+  TBuiltinEquipmentTypes,
+} from "@/equipment";
 import {
   getCurrentEquipment,
   getCurrentGym,
-  getGymByIdOrCurrent,
   type ISettings,
 } from "@/user-settings";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
@@ -1611,7 +1613,7 @@ const TExercisePickerScreen = z.enum(exercisePickerScreens);
 
 const TExercisePickerFilters = z
   .object({
-    equipment: z.array(TBuiltinEquipment).optional(),
+    equipment: z.array(TBuiltinEquipmentTypes).optional(),
     type: z.array(TExerciseKind).optional(),
     muscles: z.array(TMuscle).optional(),
     isStarred: z.boolean().optional(),
@@ -5818,7 +5820,7 @@ const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
 }, {});
 
 function equipmentName(
-  equipment: IEquipment | undefined,
+  equipment: IEquipmentType | undefined,
   equipmentSettings?: IAllEquipment,
 ): string {
   const equipmentData =
@@ -6104,9 +6106,9 @@ function Exercise_findByNameAndEquipment(
 ): IExercise | undefined {
   const parts = nameAndEquipment.split(",").map((p) => p.trim());
   let name: string | undefined;
-  let equipment: IEquipment | undefined | null;
+  let equipment: IEquipmentType | undefined | null;
   if (parts.length > 1) {
-    const foundEquipment = equipments.filter(
+    const foundEquipment = builtInEquipmentTypes.filter(
       (e) =>
         equipmentName(e).toLowerCase() ===
         parts[parts.length - 1].toLowerCase(),

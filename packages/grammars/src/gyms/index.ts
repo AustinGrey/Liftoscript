@@ -1,4 +1,4 @@
-import { TEquipment } from "@/equipment";
+import { TEquipmentType } from "@/equipment";
 import { TEquipmentData } from "@/common-types.ts";
 import { z } from "zod";
 
@@ -15,7 +15,10 @@ export const TGym = z
     /**
      * What equipment is available at this gym, and any additional data about that specific equipment in the gym
      */
-    equipment: z.record(TEquipment, z.union([TEquipmentData, z.undefined()])),
+    equipment: z.record(
+      TEquipmentType,
+      z.union([TEquipmentData, z.undefined()]),
+    ),
   })
   .strict();
 export type IGym = z.infer<typeof TGym>;

@@ -1,7 +1,7 @@
 //#region Exercise
 import type { IWeight } from "@/models/weight.ts";
 import { z } from "zod";
-import { type IEquipment, TEquipment } from "@/equipment";
+import { type IEquipmentType, TEquipmentType } from "@/equipment";
 import type { ISettings } from "@/user-settings";
 
 export const TExerciseId = z.string();
@@ -19,7 +19,7 @@ export type IExerciseKind = z.infer<typeof TExerciseKind>;
 export const TExerciseType = z
   .object({
     id: TExerciseId,
-    equipment: TEquipment.optional(),
+    equipment: TEquipmentType.optional(),
   })
   .strict();
 export type IExerciseType = z.infer<typeof TExerciseType>;
@@ -27,8 +27,8 @@ export type IExercise = {
   id: IExerciseId;
   name: string;
   defaultWarmup?: number;
-  equipment?: IEquipment;
-  defaultEquipment?: IEquipment;
+  equipment?: IEquipmentType;
+  defaultEquipment?: IEquipmentType;
   types: IExerciseKind[];
   onerm?: number;
   startingWeightLb: IWeight;
