@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { CollectionUtils_compact, CollectionUtils_remove } from "./collection";
-import type { INonNullObject } from "./types";
+import { CollectionUtils_remove } from "./collection";
 
 export function ObjectUtils_keys<T extends {}>(obj: T): Array<keyof T> {
   return Object.keys(obj) as Array<keyof T>;
@@ -19,23 +18,6 @@ export function ObjectUtils_entries<T extends {}>(
   obj: T,
 ): Array<[keyof T, T[keyof T]]> {
   return ObjectUtils_keys(obj).map((key) => [key, obj[key]]);
-}
-
-export function ObjectUtils_entriesNonnull<T extends {}>(
-  obj: T,
-): Array<[keyof T, NonNullable<T[keyof T]>]> {
-  return CollectionUtils_compact(ObjectUtils_keys(obj)).map((key) => [
-    key,
-    obj[key] as NonNullable<T[keyof T]>,
-  ]);
-}
-
-export function ObjectUtils_isEmpty<T extends {}>(obj: T): boolean {
-  return ObjectUtils_keys(obj).length === 0;
-}
-
-export function ObjectUtils_isNotEmpty<T extends {}>(obj: T): boolean {
-  return !ObjectUtils_isEmpty(obj);
 }
 
 export function ObjectUtils_isEqual<T extends Record<string, any>>(
@@ -77,41 +59,6 @@ export function ObjectUtils_isEqual<T extends Record<string, any>>(
 
   // If all checks pass, the objects are equal
   return true;
-}
-
-export function ObjectUtils_diffPaths<T extends object>(
-  obj1original: T,
-  obj2original: T,
-): string[] {
-  const result: string[] = [];
-  const queue: {
-    obj1: any;
-    obj2: any;
-    path: string;
-  }[] = [{ obj1: obj1original, obj2: obj2original, path: "" }];
-
-  while (queue.length > 0) {
-    const { obj1, obj2, path } = queue.shift()!;
-
-    if (obj1 === obj2) {
-      continue;
-    }
-
-    if (Object(obj1) !== obj1 || Object(obj2) !== obj2) {
-      if (obj1 !== obj2) {
-        // console.log("diffPath", path, obj1, obj2);
-        result.push(path);
-      }
-      continue;
-    }
-
-    for (const key of new Set([...Object.keys(obj1), ...Object.keys(obj2)])) {
-      const newPath = path ? `${path}.${key}` : key;
-      queue.push({ obj1: obj1[key], obj2: obj2[key], path: newPath });
-    }
-  }
-
-  return result;
 }
 
 export function ObjectUtils_diff<T extends Record<string, any>>(
@@ -158,19 +105,6 @@ export function ObjectUtils_changedKeys<T extends {}>(
   return changes;
 }
 
-export function ObjectUtils_mapValues<U, V, T extends Record<any, U>>(
-  obj: T,
-  fn: (x: U, k: keyof T) => V,
-): Record<keyof T, V> {
-  return ObjectUtils_keys(obj).reduce<Record<keyof T, V>>(
-    (memo, k) => {
-      memo[k] = fn(obj[k], k);
-      return memo;
-    },
-    {} as Record<keyof T, V>,
-  );
-}
-
 export function ObjectUtils_filter<T extends {}>(
   obj: T,
   cb: (key: keyof T, value: T[keyof T]) => boolean,
@@ -185,30 +119,6 @@ export function ObjectUtils_filter<T extends {}>(
   }, {});
 }
 
-export function ObjectUtils_compact<T extends Record<string, any>>(
-  obj: T,
-): INonNullObject<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([_, value]) => value !== null),
-  ) as INonNullObject<T>;
-}
-
-export function ObjectUtils_sortedByKeys<T extends {}>(
-  obj: T,
-  sortedKeys: Array<keyof T>,
-): Array<[keyof T, T[keyof T]]> {
-  const arr: Array<[keyof T, T[keyof T]]> = [];
-  const copyObj = { ...obj };
-  for (const k of sortedKeys) {
-    arr.push([k, copyObj[k]]);
-    delete copyObj[k];
-  }
-  for (const k of ObjectUtils_keys(copyObj)) {
-    arr.push([k, copyObj[k]]);
-  }
-  return arr;
-}
-
 export function ObjectUtils_pick<
   T extends {},
   K extends keyof T,
@@ -216,19 +126,6 @@ export function ObjectUtils_pick<
 >(obj: T, theKeys: K[]): U {
   return ObjectUtils_keys(obj).reduce<U>((memo, key: any) => {
     if (theKeys.indexOf(key) !== -1) {
-      (memo as any)[key] = (obj as any)[key];
-    }
-    return memo;
-  }, {} as any);
-}
-
-export function ObjectUtils_omit<
-  T extends {},
-  K extends keyof T,
-  U extends Omit<T, K>,
->(obj: T, theKeys: readonly K[]): U {
-  return ObjectUtils_keys(obj).reduce<U>((memo, key: any) => {
-    if (theKeys.indexOf(key) === -1) {
       (memo as any)[key] = (obj as any)[key];
     }
     return memo;
@@ -265,16 +162,4 @@ export function ObjectUtils_clone<T>(obj: T): T {
   } else {
     return JSON.parse(JSON.stringify(obj));
   }
-}
-
-export function ObjectUtils_fromArray<K extends string, V>(
-  arr: Array<[K, V]>,
-): Record<K, V> {
-  return arr.reduce<Record<K, V>>(
-    (memo, [key, value]) => {
-      memo[key] = value;
-      return memo;
-    },
-    {} as Record<K, V>,
-  );
 }

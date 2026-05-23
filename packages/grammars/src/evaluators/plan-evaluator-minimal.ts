@@ -951,7 +951,6 @@ export function Settings_build(): ISettings {
     workoutSettings: {
       targetType: "target",
     },
-    statsEnabled: { weight: { weight: true }, length: {}, percentage: {} },
     exercises: {},
     planner: Settings_buildPlannerSettings(),
     muscleGroups: {

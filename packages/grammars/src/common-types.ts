@@ -21,6 +21,8 @@ import {
   TExerciseType,
 } from "@/exercises";
 import { TEquipmentType } from "@/equipment";
+import type { IBuiltinEquipment } from "@/evaluators/logic-evaluator.ts";
+import type { OpenRecord } from "@/utils/types.ts";
 
 export interface IScriptFnContext {
   prints: Quantity[][];
@@ -114,120 +116,114 @@ export interface IScriptFunctions {
   ): number;
 }
 
-export const TEquipmentData = z
-  .object({
-    bar: z
-      .object({
-        lb: TWeight,
-        kg: TWeight,
-      })
-      .strict(),
-    multiplier: z.number(),
-    plates: z.array(
-      z
-        .object({
-          weight: TWeight,
-          num: z.number(),
-        })
-        .strict(),
-    ),
-    fixed: z.array(TWeight),
-    isFixed: z.boolean(),
-
-    unit: TUnit.optional(),
-    name: z.string().optional(),
-    similarTo: z.string().optional(),
-    isDeleted: z.boolean().optional(),
-    useBodyweightForBar: z.boolean().optional(),
-    isAssisting: z.boolean().optional(),
-    notes: z.string().optional(),
-  })
-  .strict();
+/**
+ * Definition of how to treat a piece of equipment for calculations
+ */
+export const TEquipmentData = z.strictObject({
+  /**
+   * The weight of the bar
+   */
+  bar: z.strictObject({
+    // @todo why is this specified twice when a single TWeight can handle either?
+    lb: TWeight,
+    kg: TWeight,
+  }),
+  multiplier: z.number(),
+  /**
+   * What bar plates are available
+   */
+  plates: z.array(
+    z.strictObject({
+      weight: TWeight,
+      num: z.number(),
+    }),
+  ),
+  fixed: z.array(TWeight),
+  isFixed: z.boolean(),
+  unit: TUnit.optional(),
+  name: z.string().optional(),
+  similarTo: z.string().optional(),
+  isDeleted: z.boolean().optional(),
+  useBodyweightForBar: z.boolean().optional(),
+  isAssisting: z.boolean().optional(),
+  notes: z.string().optional(),
+});
 export type IEquipmentData = z.infer<typeof TEquipmentData>;
-export type IAllEquipment = Partial<Record<string, IEquipmentData>>;
-export const TSettingsTimers = z
-  .object({
-    warmup: z.union([z.number(), z.undefined(), z.null()]),
-    workout: z.union([z.number(), z.undefined(), z.null()]),
-    reminder: z.number().optional(),
-    superset: z.number().optional(),
-  })
-  .strict();
+/**
+ * A dictionary combining custom equipment categories with the built in ones, and the settings to use for them
+ */
+export type IAllEquipment = OpenRecord<
+  IEquipmentData,
+  | IBuiltinEquipment
+  // Because the user can specify their own equipment categories, the key could be any string
+  | string
+>;
+export const TSettingsTimers = z.strictObject({
+  warmup: z.union([z.number(), z.undefined(), z.null()]),
+  workout: z.union([z.number(), z.undefined(), z.null()]),
+  reminder: z.number().optional(),
+  superset: z.number().optional(),
+});
 
 export type ISettingsTimers = z.infer<typeof TSettingsTimers>;
 
-export const TMetaExercises = z
-  .object({
-    bodyParts: z.array(TBodyPart),
-    targetMuscles: z.array(TMuscle),
-    synergistMuscles: z.array(TMuscle),
-
-    sortedEquipment: z.array(TEquipmentType).optional(),
-  })
-  .strict();
+export const TMetaExercises = z.strictObject({
+  bodyParts: z.array(TBodyPart),
+  targetMuscles: z.array(TMuscle),
+  synergistMuscles: z.array(TMuscle),
+  sortedEquipment: z.array(TEquipmentType).optional(),
+});
 export type IMetaExercises = z.infer<typeof TMetaExercises>;
-export const TCustomExercise = z
-  .object({
-    vtype: z.literal("custom_exercise"),
-    id: TExerciseId,
-    name: z.string(),
-    isDeleted: z.boolean(),
-    meta: TMetaExercises,
-
-    defaultEquipment: TEquipmentType.optional(),
-    types: z.array(TExerciseKind).optional(),
-    clonedFrom: TExerciseType.optional(),
-    reuseImageFrom: TExerciseType.optional(),
-    largeImageUrl: z.string().optional(),
-    smallImageUrl: z.string().optional(),
-  })
-  .strict();
+export const TCustomExercise = z.strictObject({
+  id: TExerciseId,
+  name: z.string(),
+  isDeleted: z.boolean(),
+  meta: TMetaExercises,
+  defaultEquipment: TEquipmentType.optional(),
+  types: z.array(TExerciseKind).optional(),
+  clonedFrom: TExerciseType.optional(),
+  reuseImageFrom: TExerciseType.optional(),
+  largeImageUrl: z.string().optional(),
+  smallImageUrl: z.string().optional(),
+});
 
 export type ICustomExercise = z.infer<typeof TCustomExercise>;
 export const TLengthUnit = z.enum(["in", "cm"] as const);
 export type ILengthUnit = z.infer<typeof TLengthUnit>;
-export const TExerciseDataValue = z
-  .object({
-    rm1: TWeight.optional(),
-    rounding: z.number().optional(),
-    equipment: z
-      .record(z.string(), z.union([z.string(), z.undefined()]))
-      .optional(),
-    notes: z.string().optional(),
-    muscleMultipliers: z
-      .record(TMuscle, z.union([z.number(), z.undefined()]))
-      .optional(),
-    isUnilateral: z.boolean().optional(),
-  })
-  .strict();
+export const TExerciseDataValue = z.strictObject({
+  rm1: TWeight.optional(),
+  rounding: z.number().optional(),
+  equipment: z
+    .record(z.string(), z.union([z.string(), z.undefined()]))
+    .optional(),
+  notes: z.string().optional(),
+  muscleMultipliers: z
+    .record(TMuscle, z.union([z.number(), z.undefined()]))
+    .optional(),
+  isUnilateral: z.boolean().optional(),
+});
 
 export type IExerciseDataValue = z.infer<typeof TExerciseDataValue>;
 
-export const TPlannerSettings = z
-  .object({
-    synergistMultiplier: z.number(),
-    strengthSetsPct: z.number(),
-    hypertrophySetsPct: z.number(),
-    weeklyRangeSets: z.record(TScreenMuscle, z.tuple([z.number(), z.number()])),
-    weeklyFrequency: z.record(TScreenMuscle, z.number()),
-  })
-  .strict();
+export const TPlannerSettings = z.strictObject({
+  synergistMultiplier: z.number(),
+  strengthSetsPct: z.number(),
+  hypertrophySetsPct: z.number(),
+  weeklyRangeSets: z.record(TScreenMuscle, z.tuple([z.number(), z.number()])),
+  weeklyFrequency: z.record(TScreenMuscle, z.number()),
+});
 
 export type IPlannerSettings = z.infer<typeof TPlannerSettings>;
-export const TMuscleGroupsSettings = z
-  .object({
-    data: z.record(
-      z.string(),
-      z
-        .object({
-          name: z.string().optional(),
-          isHidden: z.boolean().optional(),
-          muscles: z.array(TMuscle).optional(),
-        })
-        .strict(),
-    ),
-  })
-  .strict();
+export const TMuscleGroupsSettings = z.strictObject({
+  data: z.record(
+    z.string(),
+    z.strictObject({
+      name: z.string().optional(),
+      isHidden: z.boolean().optional(),
+      muscles: z.array(TMuscle).optional(),
+    }),
+  ),
+});
 
 export type IMuscleGroupsSettings = z.infer<typeof TMuscleGroupsSettings>;
 export const targetTypes = [
@@ -244,31 +240,28 @@ export const TPlate = z.object({
   num: z.number(),
 });
 export type IPlate = z.infer<typeof TPlate>;
-export const TSet = z
-  .object({
-    index: z.number(),
-    id: z.string(),
-
-    reps: z.number().optional(),
-    originalWeight: z.union([TWeight, TDynamicWeight]).optional(),
-    weight: TWeight.optional(),
-    minReps: z.number().optional(),
-    rpe: z.number().optional(),
-    logRpe: z.boolean().optional(),
-    timestamp: z.number().optional(),
-    isAmrap: z.boolean().optional(),
-    label: z.string().optional(),
-    timer: z.number().optional(),
-    askWeight: z.boolean().optional(),
-    isCompleted: z.boolean().optional(),
-    isUnilateral: z.boolean().optional(),
-    completedRepsLeft: z.number().optional(),
-    completedReps: z.number().optional(),
-    completedWeight: TWeight.optional(),
-    completedRpe: z.number().optional(),
-    programSetIndex: z.number().optional(),
-  })
-  .strict();
+export const TSet = z.strictObject({
+  index: z.number(),
+  id: z.string(),
+  reps: z.number().optional(),
+  originalWeight: z.union([TWeight, TDynamicWeight]).optional(),
+  weight: TWeight.optional(),
+  minReps: z.number().optional(),
+  rpe: z.number().optional(),
+  logRpe: z.boolean().optional(),
+  timestamp: z.number().optional(),
+  isAmrap: z.boolean().optional(),
+  label: z.string().optional(),
+  timer: z.number().optional(),
+  askWeight: z.boolean().optional(),
+  isCompleted: z.boolean().optional(),
+  isUnilateral: z.boolean().optional(),
+  completedRepsLeft: z.number().optional(),
+  completedReps: z.number().optional(),
+  completedWeight: TWeight.optional(),
+  completedRpe: z.number().optional(),
+  programSetIndex: z.number().optional(),
+});
 
 export type ISet = z.infer<typeof TSet>;
 

@@ -13,6 +13,8 @@ export type INonNullObject<T> = {
  * is that there is a value for every possible string. Which can't be true.
  *
  * An open record is shorthand that not all keys will have values.
+ *
+ * The key is defined second since it's almost always just a string, and we want to allow leaving it out for code simplicity.
  */
 export type OpenRecord<
   TVal,
