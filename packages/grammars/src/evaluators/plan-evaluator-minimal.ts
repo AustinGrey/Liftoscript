@@ -13,7 +13,7 @@ import {
   MathUtils_roundTo0005,
   n,
 } from "@/utils/math";
-import { type IEither, is, type OpenRecord } from "@/utils/types";
+import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
 import {
   ObjectUtils_clone,
   ObjectUtils_diff,
@@ -86,6 +86,7 @@ import {
 } from "@/exercises";
 import {
   builtInEquipmentTypes,
+  equipmentName,
   type IEquipmentType,
   TBuiltinEquipmentTypes,
 } from "@/equipment";
@@ -96,7 +97,7 @@ import {
 } from "@/user-settings";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";
-import { type IStats, getAverageBodyweight } from "@/fitness-stats";
+import { getAverageBodyweight, type IStats } from "@/fitness-stats";
 
 //#region Program
 
@@ -2231,10 +2232,6 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
     maxSize: 1000,
   },
 );
-
-//#endregion
-
-//#region Stats
 
 //#endregion
 
@@ -5663,43 +5660,6 @@ const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
   return acc;
 }, {});
 
-function equipmentName(
-  equipment: IEquipmentType | undefined,
-  equipmentSettings?: IAllEquipment,
-): string {
-  const equipmentData =
-    equipment && equipmentSettings ? equipmentSettings[equipment] : undefined;
-  if (equipmentData?.name) {
-    return equipmentData.name.trim();
-  }
-  switch (equipment) {
-    case "barbell":
-      return "Barbell";
-    case "cable":
-      return "Cable";
-    case "dumbbell":
-      return "Dumbbell";
-    case "smith":
-      return "Smith Machine";
-    case "band":
-      return "Band";
-    case "kettlebell":
-      return "Kettlebell";
-    case "bodyweight":
-      return "Bodyweight";
-    case "leverageMachine":
-      return "Leverage Machine";
-    case "medicineball":
-      return "Medicine Ball";
-    case "ezbar":
-      return "EZ Bar";
-    case "trapbar":
-      return "Trap Bar";
-    default:
-      return "";
-  }
-}
-
 function warmupValues(
   units: IUnit,
   startingLbs: 10 | 45 | 95,
@@ -5789,9 +5749,10 @@ function warmup(
         ) {
           const value = programExerciseWarmupSet.value;
           const unit = getPreferredUnit(settings, exerciseType);
-          if (typeof value !== "number" || weight != null) {
-            const warmupWeight =
-              typeof value === "number" ? multiply(weight!, value) : value;
+          if (!isNumber(value) || weight != null) {
+            const warmupWeight = isNumber(value)
+              ? multiply(weight!, value)
+              : value;
             const roundedWeight = roundConvertTo(
               warmupWeight,
               settings,
@@ -5940,19 +5901,22 @@ function Exercise_getWarmupSets(
   settings: ISettings,
   programExerciseWarmupSets?: IProgramExerciseWarmupSet[],
 ): ISet[] {
-  const ex = getExerciseOrDefault(exercise, settings.exercises);
-  if (programExerciseWarmupSets != null) {
+  if (programExerciseWarmupSets) {
     return warmup(programExerciseWarmupSets, true)(weight, settings, exercise);
-  } else {
-    let warmupSets: ISet[] = [];
-    if (ex.defaultWarmup === 10) {
-      warmupSets = warmupValues(settings.units, 10)(weight, settings, exercise);
-    } else if (ex.defaultWarmup === 45) {
-      warmupSets = warmupValues(settings.units, 45)(weight, settings, exercise);
-    } else if (ex.defaultWarmup === 95) {
-      warmupSets = warmupValues(settings.units, 95)(weight, settings, exercise);
-    }
-    return warmupSets;
+  }
+
+  const ex = getExerciseOrDefault(exercise, settings.exercises);
+  switch (ex.defaultWarmup) {
+    case 10:
+    case 45:
+    case 95:
+      return warmupValues(settings.units, ex.defaultWarmup)(
+        weight,
+        settings,
+        exercise,
+      );
+    default:
+      return [];
   }
 }
 
