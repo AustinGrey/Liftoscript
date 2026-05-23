@@ -96,10 +96,7 @@ import {
 } from "@/user-settings";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";
-import {
-  type IStats,
-  Stats_getCurrentMovingAverageBodyweight,
-} from "@/fitness-stats";
+import { type IStats, getAverageBodyweight } from "@/fitness-stats";
 
 //#region Program
 
@@ -297,7 +294,7 @@ function Program_runFinishDayScript(
     entry,
     settings,
     programExercise.evaluatedSetVariations[setVariationIndex]?.sets.length ?? 0,
-    Stats_getCurrentMovingAverageBodyweight(
+    getAverageBodyweight(
       stats,
       settings.units,
       settings.graphOptions.weight?.movingAverageWindowSize,
@@ -6118,7 +6115,7 @@ function Progress_runUpdateScriptForEntry(
     entry,
     settings,
     programExercise.evaluatedSetVariations[setVariationIndex]?.sets.length ?? 0,
-    Stats_getCurrentMovingAverageBodyweight(
+    getAverageBodyweight(
       stats,
       settings.units,
       settings.graphOptions.weight?.movingAverageWindowSize,
