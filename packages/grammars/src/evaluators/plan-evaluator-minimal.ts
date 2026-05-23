@@ -1841,11 +1841,9 @@ type IExerciseData = OpenRecord<IExerciseDataValue>;
  */
 function dataSeries<TValue extends ZodTypeAny>(valueSchema: TValue) {
   return z.array(
-    z.strictObject({
+    z.object({
       value: valueSchema,
       timestamp: z.number(),
-      updatedAt: z.number().optional(),
-      appleUuid: z.string().optional(),
     }),
   );
 }
