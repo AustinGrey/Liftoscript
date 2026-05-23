@@ -107,7 +107,7 @@ export const getCurrentGym = (settings: ISettings): IGym =>
 
 export const getCurrentEquipment = (settings: ISettings): IAllEquipment =>
   getCurrentGym(settings)?.equipment;
-//#region Equipment
+
 /**
  * @returns The user's equipment settings for the given exercise type
  * @param settings The settings to consider

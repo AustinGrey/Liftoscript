@@ -13,7 +13,7 @@ import {
   MathUtils_roundTo0005,
   n,
 } from "@/utils/math";
-import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
+import { type IEither, is, type OpenRecord } from "@/utils/types";
 import {
   ObjectUtils_clone,
   ObjectUtils_diff,
@@ -36,11 +36,9 @@ import {
   applyOp,
   build,
   eq,
-  gt,
   type IDynamicWeight,
   type IUnit,
   type IWeight,
-  multiply,
   parse,
   parsePct,
   percentORM,
@@ -97,6 +95,11 @@ import {
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";
 import { getAverageBodyweight, type IStats } from "@/fitness-stats";
+import {
+  getWarmupSets,
+  type IProgramExerciseWarmupSet,
+  TProgramExerciseWarmupSet,
+} from "@/program";
 
 //#region Program
 
@@ -183,12 +186,7 @@ function Program_nextHistoryEntry(
     programExerciseId: programExercise.key,
     sets,
     superset: programExercise.superset?.name,
-    warmupSets: Exercise_getWarmupSets(
-      exercise,
-      sets[0]?.weight,
-      settings,
-      warmupSets,
-    ),
+    warmupSets: getWarmupSets(exercise, sets[0]?.weight, settings, warmupSets),
   };
 
   return Progress_runUpdateScriptForEntry(
@@ -1562,15 +1560,6 @@ const TProgramExerciseVariation = z.strictObject({
   sets: z.array(TProgramSet),
   quickAddSets: z.boolean().optional(),
 });
-
-const TProgramExerciseWarmupSet = z.strictObject({
-  reps: z.number(),
-  value: z.union([TWeight, z.number()]),
-  threshold: TWeight,
-});
-type IProgramExerciseWarmupSet = Readonly<
-  z.infer<typeof TProgramExerciseWarmupSet>
->;
 
 const TProgramExerciseReuseLogic = z.strictObject({
   selected: z.union([z.string(), z.undefined()]),
@@ -5659,59 +5648,6 @@ const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
   return acc;
 }, {});
 
-function warmup(
-  programExerciseWarmupSets: IProgramExerciseWarmupSet[],
-  shouldSkipThreshold: boolean = false,
-): (
-  weight: IWeight | undefined,
-  settings: ISettings,
-  exerciseType?: IExerciseType,
-) => ISet[] {
-  return (
-    weight: IWeight | undefined,
-    settings: ISettings,
-    exerciseType?: IExerciseType,
-  ): ISet[] => {
-    let index = 0;
-    return programExerciseWarmupSets.reduce<ISet[]>(
-      (memo, programExerciseWarmupSet) => {
-        if (
-          shouldSkipThreshold ||
-          (weight != null && gt(weight, programExerciseWarmupSet.threshold))
-        ) {
-          const value = programExerciseWarmupSet.value;
-          const unit = getPreferredUnit(settings, exerciseType);
-          if (!isNumber(value) || weight != null) {
-            const warmupWeight = isNumber(value)
-              ? multiply(weight!, value)
-              : value;
-            const roundedWeight = roundConvertTo(
-              warmupWeight,
-              settings,
-              unit,
-              exerciseType,
-            );
-            memo.push({
-              index,
-              id: UidFactory_generateUid(6),
-              reps: programExerciseWarmupSet.reps,
-              isUnilateral: exerciseType
-                ? isUnilateral(exerciseType, settings)
-                : false,
-              weight: roundedWeight,
-              originalWeight: warmupWeight,
-              isCompleted: false,
-            });
-            index += 1;
-          }
-        }
-        return memo;
-      },
-      [],
-    );
-  };
-}
-
 function Exercise_fullName(
   exercise: IExercise,
   settings: ISettings,
@@ -5825,48 +5761,6 @@ function Exercise_findByName(
     }
   }
   return undefined;
-}
-
-function Exercise_getWarmupSets(
-  exercise: IExerciseType,
-  weight: IWeight | undefined,
-  settings: ISettings,
-  programExerciseWarmupSets?: IProgramExerciseWarmupSet[],
-): ISet[] {
-  if (programExerciseWarmupSets) {
-    return warmup(programExerciseWarmupSets, true)(weight, settings, exercise);
-  }
-
-  const def = getExerciseOrDefault(exercise, settings.exercises).defaultWarmup;
-  if (def !== 10 && def !== 45 && def !== 95) {
-    return [];
-  }
-  const reps = 5;
-  const first = { reps, value: 0.3 };
-  const second = { reps, value: 0.5 };
-  const third = { reps, value: 0.8 };
-  const isLb = settings.units === "lb";
-  return warmup(
-    def === 10
-      ? [
-          { ...first, threshold: isLb ? w`60lb` : w`30kg` },
-          { ...second, threshold: isLb ? w`30lb` : w`15kg` },
-          { ...third, threshold: isLb ? w`10lb` : w`5kg` },
-        ]
-      : def === 45
-        ? [
-            { ...first, threshold: isLb ? w`120lb` : w`60kg` },
-            { ...second, threshold: isLb ? w`90lb` : w`45kg` },
-            { ...third, threshold: isLb ? w`45lb` : w`20kg` },
-          ]
-        : def === 95
-          ? [
-              { ...first, threshold: isLb ? w`150lb` : w`70kg` },
-              { ...second, threshold: isLb ? w`125lb` : w`60kg` },
-              { ...third, threshold: isLb ? w`95lb` : w`40kg` },
-            ]
-          : [],
-  )(weight, settings, exercise);
 }
 
 //#endregion
@@ -7439,6 +7333,4 @@ class ScriptRunner {
     }
   }
 }
-//#endregion
-
 //#endregion
