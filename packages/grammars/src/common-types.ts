@@ -184,50 +184,30 @@ export const TCustomExercise = z
   .strict();
 
 export type ICustomExercise = z.infer<typeof TCustomExercise>;
-export const TStatsWeightEnabled = z
-  .object({
-    weight: z.boolean(),
-  })
-  .partial()
-  .strict();
-
-export type IStatsWeightEnabled = z.infer<typeof TStatsWeightEnabled>;
-export const TStatsLengthEnabled = z
-  .object({
-    neck: z.boolean(),
-    shoulders: z.boolean(),
-    bicepLeft: z.boolean(),
-    bicepRight: z.boolean(),
-    forearmLeft: z.boolean(),
-    forearmRight: z.boolean(),
-    chest: z.boolean(),
-    waist: z.boolean(),
-    hips: z.boolean(),
-    thighLeft: z.boolean(),
-    thighRight: z.boolean(),
-    calfLeft: z.boolean(),
-    calfRight: z.boolean(),
-  })
-  .partial()
-  .strict();
-export type IStatsLengthEnabled = z.infer<typeof TStatsLengthEnabled>;
-export const TStatsPercentageEnabled = z
-  .object({
-    bodyfat: z.boolean(),
-  })
-  .partial()
-  .strict();
-export const TStatsEnabled = z
-  .object({
-    weight: TStatsWeightEnabled,
-    length: TStatsLengthEnabled,
-    percentage: TStatsPercentageEnabled,
-  })
-  .strict();
+/**
+ * Which stats the user wants to be tracking - see IStats
+ * @todo is there a way to specify this as a mapped type instead of redefining all the keys?
+ */
+export const TStatsEnabled = z.strictObject({
+  weight: z.boolean(),
+  neck: z.boolean(),
+  shoulders: z.boolean(),
+  bicepLeft: z.boolean(),
+  bicepRight: z.boolean(),
+  forearmLeft: z.boolean(),
+  forearmRight: z.boolean(),
+  chest: z.boolean(),
+  waist: z.boolean(),
+  hips: z.boolean(),
+  thighLeft: z.boolean(),
+  thighRight: z.boolean(),
+  calfLeft: z.boolean(),
+  calfRight: z.boolean(),
+  bodyfat: z.boolean(),
+});
 
 export type IStatsEnabled = Readonly<z.infer<typeof TStatsEnabled>>;
-export const lengthUnits = ["in", "cm"] as const;
-export const TLengthUnit = z.enum(lengthUnits);
+export const TLengthUnit = z.enum(["in", "cm"] as const);
 export type ILengthUnit = z.infer<typeof TLengthUnit>;
 export const TExerciseDataValue = z
   .object({
