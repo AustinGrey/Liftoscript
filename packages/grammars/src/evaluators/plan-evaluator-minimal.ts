@@ -1849,42 +1849,36 @@ function dataSeries<TValue extends ZodTypeAny>(valueSchema: TValue) {
 }
 
 const TStats = z.strictObject({
-  /**
-   * All collected mass unit stats
-   */
-  weight: z
-    .strictObject({
-      weight: dataSeries(TWeight),
-    })
-    .partial(),
-  /**
-   * All collected length unit stats
-   */
-  length: z
-    .strictObject({
-      neck: dataSeries(TLength),
-      shoulders: dataSeries(TLength),
-      bicepLeft: dataSeries(TLength),
-      bicepRight: dataSeries(TLength),
-      forearmLeft: dataSeries(TLength),
-      forearmRight: dataSeries(TLength),
-      chest: dataSeries(TLength),
-      waist: dataSeries(TLength),
-      hips: dataSeries(TLength),
-      thighLeft: dataSeries(TLength),
-      thighRight: dataSeries(TLength),
-      calfLeft: dataSeries(TLength),
-      calfRight: dataSeries(TLength),
-    })
-    .partial(),
-  /**
-   * All collected percentage unit stats
-   */
-  percentage: z
-    .strictObject({
-      bodyfat: dataSeries(TDynamicWeight),
-    })
-    .partial(),
+  /** The user's bodyweight */
+  weight: dataSeries(TWeight),
+  /** The measured circumference ofcalfRight */
+  neck: dataSeries(TLength),
+  /** The measured circumference of the calfRight */
+  shoulders: dataSeries(TLength),
+  /** The measured circumference of the calfRight */
+  bicepLeft: dataSeries(TLength),
+  /** The measured circumference of the bcalfRight */
+  bicepRight: dataSeries(TLength),
+  /** The measured circumference of the focalfRight */
+  forearmLeft: dataSeries(TLength),
+  /** The measured circumference of the forcalfRight */
+  forearmRight: dataSeries(TLength),
+  /** The measured circumference of calfRight */
+  chest: dataSeries(TLength),
+  /** The measured circumference of calfRight */
+  waist: dataSeries(TLength),
+  /** The measured circumference ofcalfRight */
+  hips: dataSeries(TLength),
+  /** The measured circumference of the calfRight */
+  thighLeft: dataSeries(TLength),
+  /** The measured circumference of the tcalfRight */
+  thighRight: dataSeries(TLength),
+  /** The measured circumference of thecalfRight */
+  calfLeft: dataSeries(TLength),
+  /** The measured circumference of the calfRight */
+  calfRight: dataSeries(TLength),
+  /** The measured percent weight of bodyfat */
+  bodyfat: dataSeries(TDynamicWeight),
 });
 export type IStats = z.infer<typeof TStats>;
 
@@ -2276,11 +2270,8 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
 //#region Stats
 
 function Stats_getCurrentBodyweight(stats: IStats): IWeight | undefined {
-  return CollectionUtils_sortBy(
-    stats.weight.weight || [],
-    "timestamp",
-    true,
-  ).at(0)?.value;
+  return CollectionUtils_sortBy(stats.weight || [], "timestamp", true).at(0)
+    ?.value;
 }
 
 function Stats_getCurrentMovingAverageBodyweight(
@@ -2292,11 +2283,7 @@ function Stats_getCurrentMovingAverageBodyweight(
   if (!movingAverageWindowSize) {
     return Stats_getCurrentBodyweight(stats);
   }
-  const weights = CollectionUtils_sortBy(
-    stats.weight.weight || [],
-    "timestamp",
-    true,
-  );
+  const weights = CollectionUtils_sortBy(stats.weight || [], "timestamp", true);
   if (weights.length < movingAverageWindowSize) {
     return Stats_getCurrentBodyweight(stats);
   }
