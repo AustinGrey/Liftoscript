@@ -782,16 +782,3 @@ export function typeOf(value: Quantity): "weight" | "percentage" | "number" {
     return "weight";
   }
 }
-
-export function Weight_evaluateWeight(
-  weight: IWeight | IDynamicWeight,
-  exerciseType: IExerciseType,
-  settings: ISettings,
-): IWeight {
-  if (is(TWeight, weight)) {
-    return weight;
-  }
-  const exercise = Exercise_get(exerciseType, settings.exercises);
-  const onerm = Exercise_onerm(exercise, settings);
-  return multiply(onerm, weight.value / 100);
-}

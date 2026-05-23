@@ -1,5 +1,5 @@
 import { memoize } from "micro-memoize";
-import { z, type ZodTypeAny } from "zod";
+import { z, type ZodType } from "zod";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import {
   CollectionUtils_compact,
@@ -33,33 +33,31 @@ import {
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
 import {
+  add,
+  applyOp,
   build,
+  divide,
+  eq,
+  gt,
   type IDynamicWeight,
   type IUnit,
   type IWeight,
+  multiply,
+  parse,
+  parsePct,
+  percentORM,
+  print,
+  roundConvertTo,
+  roundTo005,
+  rpeMultiplier,
+  rpePct,
   TDynamicWeight,
   TWeight,
-  w,
-  eq,
-  roundTo005,
-  add,
-  divide,
-  gt,
-  multiply,
-  print,
-  applyOp,
-  parse,
-  percentORM,
   typeOf,
-  rpeMultiplier,
-  parsePct,
-  rpePct,
-  roundConvertTo,
-  convertTo,
+  w,
 } from "@/quantities/weight.ts";
 import {
   type IAllEquipment,
-  type ICustomExercise,
   type IEquipmentData,
   type IExerciseDataValue,
   type IPlannerSettings,
@@ -67,7 +65,6 @@ import {
   type IScriptFnContext,
   type IScriptFunctions,
   type ISet,
-  TCustomExercise,
   TExercisePickerSort,
   TLengthUnit,
   TProgramState,
@@ -77,13 +74,18 @@ import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { TMuscle } from "@/human-body";
 import {
   allExercisesList,
-  isUnilateral,
-  toKey,
+  getExerciseOrDefault,
+  type IAllCustomExercises,
   type IExercise,
   type IExerciseId,
   type IExerciseType,
+  isUnilateral,
+  getOrmOrStartingWeight,
+  TCustomExercise,
   TExerciseKind,
   TExerciseType,
+  toKey,
+  maybeGetExercise,
 } from "@/exercises";
 import {
   builtInEquipmentTypes,
@@ -96,6 +98,7 @@ import {
   type ISettings,
 } from "@/user-settings";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
+import { evaluateWeight } from "@/quantities-dynamic";
 
 //#region Program
 
@@ -423,8 +426,9 @@ export function Program_runAllFinishDayScripts(
         if (newStateResult.success) {
           const { state, updates, bindings, otherStates } = newStateResult.data;
           const exerciseKey = toKey(entry.exercise);
-          const onerm = Exercise_onerm(entry.exercise, settings);
-          if (!eq(bindings.rm1, onerm)) {
+          if (
+            !eq(bindings.rm1, getOrmOrStartingWeight(entry.exercise, settings))
+          ) {
             exerciseData[exerciseKey] = {
               rm1: roundTo005(bindings.rm1),
             };
@@ -1514,8 +1518,6 @@ export function PlannerProgram_generateFullText(
 
 //#region Types
 
-type IAllCustomExercises = OpenRecord<ICustomExercise>;
-
 const THistoryEntry = z.strictObject({
   exercise: TExerciseType,
   sets: z.array(TSet),
@@ -1851,7 +1853,7 @@ type IExerciseData = OpenRecord<IExerciseDataValue>;
  * A timestamped series of samples. They may or may not be in order, but can be sorted via the time stamp
  * @param valueSchema
  */
-function dataSeries<TValue extends ZodTypeAny>(valueSchema: TValue) {
+function dataSeries<TValue extends ZodType>(valueSchema: TValue) {
   return z.array(
     z.object({
       value: valueSchema,
@@ -2186,7 +2188,10 @@ function operation(
       set[key] = value !== 0;
     }
   } else {
-    const onerm = Exercise_onerm(programExercise.exerciseType, settings);
+    const onerm = getOrmOrStartingWeight(
+      programExercise.exerciseType,
+      settings,
+    );
     let oldValue =
       typeof set[key] === "boolean" ? (set[key] ? 1 : 0) : set[key];
     if (oldValue == null && ProgramSet_isEligibleForInferredWeight(set)) {
@@ -5709,11 +5714,11 @@ function ProgramSet_getEvaluatedWeight(
   const originalWeight = programSet.weight;
   const unit = getPreferredUnit(settings, exerciseType);
   const evaluatedWeight = originalWeight
-    ? Weight_evaluateWeight(originalWeight, exerciseType, settings)
+    ? evaluateWeight(originalWeight, exerciseType, settings)
     : ProgramSet_isEligibleForInferredWeight(programSet) &&
         programSet.maxrep != null &&
         programSet.rpe != null
-      ? Weight_evaluateWeight(
+      ? evaluateWeight(
           rpePct(programSet.maxrep, programSet.rpe),
           exerciseType,
           settings,
@@ -5889,29 +5894,6 @@ function warmup(
   };
 }
 
-function maybeGetExercise(
-  id: IExerciseId,
-  customExercises: IAllCustomExercises,
-): IExercise | undefined {
-  const custom = customExercises[id];
-  return custom != null
-    ? {
-        ...custom,
-        defaultWarmup: 45,
-        types: custom.types || [],
-        startingWeightKg: w`0kg`,
-        startingWeightLb: w`0lb`,
-      }
-    : allExercisesList[id];
-}
-
-function getExercise(
-  id: IExerciseId,
-  customExercises: IAllCustomExercises,
-): IExercise {
-  return maybeGetExercise(id, customExercises) ?? allExercisesList.squat;
-}
-
 function Exercise_fullName(
   exercise: IExercise,
   settings: ISettings,
@@ -5953,38 +5935,6 @@ function Exercise_findIdByName(
           lowercaseName.replace(/\s*,\s*/g, ",")
       );
     })?.id
-  );
-}
-
-function Exercise_get(
-  type: IExerciseType,
-  customExercises: IAllCustomExercises,
-): IExercise {
-  return {
-    ...getExercise(type.id, customExercises),
-    equipment: type.equipment,
-  };
-}
-
-function Exercise_onerm(type: IExerciseType, settings: ISettings): IWeight {
-  const rm = settings.exerciseData[toKey(type)]?.rm1;
-  if (rm) {
-    return convertTo(rm, settings.units);
-  }
-  const exercise = Exercise_get(type, settings.exercises);
-  return settings.units === "kg"
-    ? exercise.startingWeightKg
-    : exercise.startingWeightLb;
-}
-
-function Exercise_defaultRounding(
-  type: IExerciseType,
-  settings: ISettings,
-): number {
-  const units = getPreferredUnit(settings, type);
-  return Math.max(
-    0.1,
-    settings.exerciseData[toKey(type)]?.rounding ?? (units === "kg" ? 2.5 : 5),
   );
 }
 
@@ -6065,7 +6015,7 @@ function Exercise_getWarmupSets(
   settings: ISettings,
   programExerciseWarmupSets?: IProgramExerciseWarmupSet[],
 ): ISet[] {
-  const ex = Exercise_get(exercise, settings.exercises);
+  const ex = getExerciseOrDefault(exercise, settings.exercises);
   if (programExerciseWarmupSets != null) {
     return warmup(programExerciseWarmupSets, true)(weight, settings, exercise);
   } else {
@@ -6124,7 +6074,7 @@ function Progress_createEmptyScriptBindings(
   settings: ISettings,
   exercise?: IExerciseType,
 ): IScriptBindings {
-  const rm1 = exercise ? Exercise_onerm(exercise, settings) : w`0lb`;
+  const rm1 = exercise ? getOrmOrStartingWeight(exercise, settings) : w`0lb`;
   return {
     day: dayData.day,
     week: dayData.week ?? 1,
@@ -6361,549 +6311,6 @@ function Progress_getEntryId(
   return CollectionUtils_compact([label, toKey(exerciseType)]).join("_");
 }
 
-//#endregion
-
-//#region Weight
-// const prebuiltWeights: OpenRecord<IWeight> = {};
-//
-// function Weight_rpePct(reps: number, rpe: number): IDynamicWeight {
-//   return Weight_buildPct(
-//     MathUtils_roundTo005(Weight_rpeMultiplier(reps, rpe) * 100),
-//   );
-// }
-//
-// function Weight_evaluateWeight(
-//   weight: IWeight | IDynamicWeight,
-//   exerciseType: IExerciseType,
-//   settings: ISettings,
-// ): IWeight {
-//   if (is(TWeight, weight)) {
-//     return weight;
-//   }
-//   const exercise = Exercise_get(exerciseType, settings.exercises);
-//   const onerm = Exercise_onerm(exercise, settings);
-//   return Weight_multiply(onerm, weight.value / 100);
-// }
-//
-// function print(weight: IWeight | IDynamicWeight | number): string {
-//   if (typeof weight === "number") {
-//     return `${n(weight)}`;
-//   } else {
-//     return `${n(weight.value)}${weight.unit}`;
-//   }
-// }
-//
-// function Weight_printNull(
-//   weight: IWeight | IDynamicWeight | number | undefined,
-// ): string {
-//   if (weight == null) {
-//     return "";
-//   } else if (typeof weight === "number") {
-//     return `${n(weight)}`;
-//   } else {
-//     return `${n(weight.value)}${weight.unit}`;
-//   }
-// }
-//
-// function Weight_parsePct(str?: string): IDynamicWeight | IWeight | undefined {
-//   if (str == null) {
-//     return undefined;
-//   }
-//   const match = str.match(/^([\-+]?[0-9.]+)%$/);
-//   if (match) {
-//     return Weight_buildPct(MathUtils_roundFloat(parseFloat(match[1]), 2));
-//   } else {
-//     return Weight_parse(str);
-//   }
-// }
-//
-// function Weight_parse(str: string): IWeight | undefined {
-//   const match = str.match(/^([\-+]?[0-9.]+)\s*(kg|lb)$/);
-//   if (match) {
-//     return build(
-//       MathUtils_roundFloat(parseFloat(match[1]), 2),
-//       match[2] as IUnit,
-//     );
-//   } else {
-//     return undefined;
-//   }
-// }
-//
-// function Weight_buildPct(value: number): IDynamicWeight {
-//   return { value, unit: "%" };
-// }
-//
-// export function build(value: number, unit: IUnit): IWeight {
-//   const key = `${value}_${unit}`;
-//   const prebuiltWeight = prebuiltWeights[key];
-//   if (prebuiltWeight != null) {
-//     return prebuiltWeight;
-//   } else {
-//     const v = {
-//       value: typeof value === "string" ? parseFloat(value) : value,
-//       unit,
-//     };
-//     prebuiltWeights[`${value}_${unit}`] = v;
-//     return v;
-//   }
-// }
-//
-// function Weight_round(
-//   weight: IWeight,
-//   settings: ISettings,
-//   unit: IUnit,
-//   exerciseType?: IExerciseType,
-// ): IWeight {
-//   if (exerciseType == null) {
-//     return Weight_roundTo005(weight);
-//   }
-//   return Weight_calculatePlates(weight, settings, unit, exerciseType)
-//     .totalWeight;
-// }
-//
-// function Weight_roundTo005(weight: IWeight): IWeight {
-//   return build(MathUtils_roundTo005(weight.value), weight.unit);
-// }
-//
-// function Weight_roundTo000005(weight: IWeight): IWeight {
-//   return build(MathUtils_roundTo000005(weight.value), weight.unit);
-// }
-//
-// function Weight_calculatePlates(
-//   allWeight: IWeight,
-//   settings: ISettings,
-//   units: IUnit,
-//   exerciseType: IExerciseType,
-// ): { plates: IPlate[]; platesWeight: IWeight; totalWeight: IWeight } {
-//   const equipmentData = getEquipmentData(settings, exerciseType);
-//   if (equipmentData == null) {
-//     const rounding = Exercise_defaultRounding(exerciseType, settings);
-//     allWeight = build(
-//       MathUtils_round(allWeight.value, rounding),
-//       allWeight.unit,
-//     );
-//     return { plates: [], platesWeight: allWeight, totalWeight: allWeight };
-//   }
-//
-//   const absAllWeight = Weight_abs(allWeight);
-//   const inverted = allWeight.value < 0;
-//   if (equipmentData.isFixed) {
-//     const fixed = CollectionUtils_sort(
-//       equipmentData.fixed.filter(
-//         (w) => w.unit === (equipmentData.unit ?? units),
-//       ),
-//       (a, b) => b.value - a.value,
-//     );
-//     const weight =
-//       fixed.find((w) => Weight_lte(w, absAllWeight)) ||
-//       fixed[fixed.length - 1] ||
-//       absAllWeight;
-//     let roundedWeight = Weight_roundTo005(weight);
-//     roundedWeight = inverted ? Weight_invert(roundedWeight) : roundedWeight;
-//     return {
-//       plates: [],
-//       platesWeight: roundedWeight,
-//       totalWeight: roundedWeight,
-//     };
-//   }
-//   const availablePlatesArr = equipmentData.plates.filter(
-//     (p) => p.weight.unit === units,
-//   );
-//   const barWeight =
-//     equipmentData.useBodyweightForBar && settings.currentBodyweight
-//       ? settings.currentBodyweight
-//       : equipmentData.bar[units];
-//   const multiplier = equipmentData.multiplier || 1;
-//   const isAssisting = equipmentData.isAssisting || false;
-//   const weight = Weight_roundTo000005(Weight_subtract(absAllWeight, barWeight));
-//   const availablePlates: IPlate[] = JSON.parse(
-//     JSON.stringify(availablePlatesArr),
-//   );
-//   availablePlates.sort((a, b) => Weight_compareReverse(a.weight, b.weight));
-//   const plates: IPlate[] = calculatePlatesInternalFast(
-//     weight,
-//     availablePlates,
-//     multiplier,
-//     isAssisting,
-//   );
-//   const total = plates.reduce(
-//     (memo, plate) => {
-//       const weightToAdd = Weight_multiply(plate.weight, plate.num);
-//       return isAssisting
-//         ? Weight_subtract(memo, weightToAdd)
-//         : add(memo, weightToAdd);
-//     },
-//     build(0, allWeight.unit),
-//   );
-//   const totalWeight = Weight_roundTo000005(
-//     inverted
-//       ? Weight_invert(add(total, barWeight))
-//       : add(total, barWeight),
-//   );
-//   const thePlatesWeight = inverted ? Weight_invert(total) : total;
-//   return { plates, platesWeight: thePlatesWeight, totalWeight };
-// }
-//
-// function Weight_abs(weight: IWeight): IWeight {
-//   return build(Math.abs(weight.value), weight.unit);
-// }
-//
-// function Weight_invert(weight: IWeight): IWeight {
-//   return build(-weight.value, weight.unit);
-// }
-//
-// function calculatePlatesInternalFast(
-//   weight: IWeight,
-//   availablePlates: IPlate[],
-//   multiplier: number,
-//   isAssisting: boolean,
-// ): IPlate[] {
-//   const targetValue = isAssisting ? -weight.value : weight.value;
-//   if (targetValue <= 0) {
-//     return [];
-//   }
-//
-//   const plateTypes: {
-//     weight: IWeight;
-//     unitWeight: number;
-//     maxUnits: number;
-//   }[] = [];
-//   for (const p of availablePlates) {
-//     if (p.num >= multiplier) {
-//       plateTypes.push({
-//         weight: p.weight,
-//         unitWeight: p.weight.value * multiplier,
-//         maxUnits: Math.floor(p.num / multiplier),
-//       });
-//     }
-//   }
-//   if (plateTypes.length === 0) {
-//     return [];
-//   }
-//
-//   const allValues = [targetValue, ...plateTypes.map((p) => p.unitWeight)];
-//   let maxDecimals = 0;
-//   for (const v of allValues) {
-//     const s = v.toString();
-//     const dot = s.indexOf(".");
-//     if (dot >= 0) {
-//       maxDecimals = Math.max(maxDecimals, s.length - dot - 1);
-//     }
-//   }
-//   const precision = Math.pow(10, Math.min(maxDecimals, 6));
-//   const intTarget = Math.round(targetValue * precision);
-//   const intWeights = plateTypes.map((p) =>
-//     Math.round(p.unitWeight * precision),
-//   );
-//
-//   const maxFrom = new Array(plateTypes.length + 1).fill(0);
-//   for (let i = plateTypes.length - 1; i >= 0; i--) {
-//     maxFrom[i] = maxFrom[i + 1] + intWeights[i] * plateTypes[i].maxUnits;
-//   }
-//
-//   const best = new Array(plateTypes.length).fill(0);
-//   const current = new Array(plateTypes.length).fill(0);
-//   let bestRemaining = intTarget + 1;
-//   let iterations = 0;
-//
-//   function search(index: number, remaining: number): void {
-//     if (bestRemaining === 0 || iterations >= 10000) {
-//       return;
-//     }
-//     if (remaining === 0 || index >= plateTypes.length) {
-//       if (remaining < bestRemaining) {
-//         bestRemaining = remaining;
-//         for (let i = 0; i < index; i++) {
-//           best[i] = current[i];
-//         }
-//         for (let i = index; i < plateTypes.length; i++) {
-//           best[i] = 0;
-//         }
-//       }
-//       return;
-//     }
-//
-//     iterations += 1;
-//     const w = intWeights[index];
-//     const maxCount = Math.min(
-//       plateTypes[index].maxUnits,
-//       w > 0 ? Math.floor(remaining / w) : 0,
-//     );
-//
-//     for (let count = maxCount; count >= 0; count--) {
-//       const newRemaining = remaining - count * w;
-//       if (newRemaining - maxFrom[index + 1] >= bestRemaining) {
-//         continue;
-//       }
-//       current[index] = count;
-//       search(index + 1, newRemaining);
-//       if (bestRemaining === 0) {
-//         return;
-//       }
-//     }
-//   }
-//
-//   search(0, intTarget);
-//
-//   const plates: IPlate[] = [];
-//   for (let i = 0; i < plateTypes.length; i++) {
-//     if (best[i] > 0) {
-//       plates.push({ weight: plateTypes[i].weight, num: best[i] * multiplier });
-//     }
-//   }
-//   return plates;
-// }
-//
-// function Weight_add(weight: IWeight, value: IWeight | number): IWeight {
-//   return Weight_operation(weight, value, (a, b) => a + b);
-// }
-//
-// function Weight_subtract(weight: IWeight, value: IWeight | number): IWeight {
-//   return Weight_operation(weight, value, (a, b) => a - b);
-// }
-//
-// function Weight_multiply(weight: IWeight, value: IWeight | number): IWeight {
-//   return Weight_operation(weight, value, (a, b) => a * b);
-// }
-//
-// function Weight_divide(weight: IWeight, value: IWeight | number): IWeight {
-//   return Weight_operation(weight, value, (a, b) => a / b);
-// }
-//
-// function Weight_gt(
-//   weight: IWeight | number | IDynamicWeight,
-//   value: IWeight | number | IDynamicWeight,
-// ): boolean {
-//   return comparison(weight, value, (a, b) => a > b);
-// }
-//
-// function Weight_lte(
-//   weight: IWeight | number | IDynamicWeight,
-//   value: IWeight | number | IDynamicWeight,
-// ): boolean {
-//   return comparison(weight, value, (a, b) => a <= b);
-// }
-//
-// function Weight_eqNull(
-//   weight: IWeight | number | IDynamicWeight | undefined,
-//   value: IWeight | number | IDynamicWeight | undefined,
-// ): boolean {
-//   if (weight == null && value == null) {
-//     return true;
-//   } else if (weight == null && value != null) {
-//     return false;
-//   } else if (weight != null && value == null) {
-//     return false;
-//   } else {
-//     return comparison(weight!, value!, (a, b) => a === b);
-//   }
-// }
-//
-// function Weight_eq(
-//   weight: IWeight | number | IDynamicWeight,
-//   value: IWeight | number | IDynamicWeight,
-// ): boolean {
-//   return comparison(weight, value, (a, b) => a === b);
-// }
-//
-// function Weight_roundConvertTo(
-//   weight: IWeight,
-//   settings: ISettings,
-//   unit: IUnit,
-//   exerciseType?: IExerciseType,
-// ): IWeight {
-//   return Weight_round(
-//     Weight_convertTo(weight, unit),
-//     settings,
-//     unit,
-//     exerciseType,
-//   );
-// }
-//
-// function Weight_type(
-//   value: number | IWeight | IDynamicWeight,
-// ): "weight" | "percentage" | "number" {
-//   if (typeof value === "number") {
-//     return "number";
-//   } else if (is(TDynamicWeight, value)) {
-//     return "percentage";
-//   } else {
-//     return "weight";
-//   }
-// }
-//
-// function Weight_convertTo(weight: IWeight, unit: IUnit): IWeight;
-//
-// function Weight_convertTo(
-//   weight: IWeight | number | IDynamicWeight,
-//   unit: IUnit | "%",
-// ): IWeight | number | IDynamicWeight {
-//   if (typeof weight === "number") {
-//     return weight;
-//   } else if (weight.unit === "%" || unit === "%") {
-//     return weight;
-//   } else {
-//     if (weight.unit === unit) {
-//       return weight;
-//     } else if (weight.unit === "kg" && unit === "lb") {
-//       return build(Math.round((weight.value * 2.205) / 0.5) * 0.5, unit);
-//     } else {
-//       return build(Math.round(weight.value / 2.205 / 0.5) * 0.5, unit);
-//     }
-//   }
-// }
-//
-// function Weight_compareReverse(a: IWeight, b: IWeight): number {
-//   return Weight_convertTo(b, a.unit).value - a.value;
-// }
-//
-// function comparison(
-//   weight: IWeight | number | IDynamicWeight,
-//   value: IWeight | number | IDynamicWeight,
-//   o: (a: number, b: number) => boolean,
-// ): boolean {
-//   if (typeof weight === "number" && typeof value === "number") {
-//     return o(weight, value);
-//   } else if (typeof weight === "number" && typeof value !== "number") {
-//     return o(weight, value.value);
-//   } else if (typeof weight !== "number" && typeof value === "number") {
-//     return o(weight.value, value);
-//   } else if (typeof weight !== "number" && typeof value !== "number") {
-//     if (weight.unit === "%" && value.unit === "%") {
-//       return o(weight.value, value.value);
-//     } else if (is(TWeight, weight) && is(TWeight, value)) {
-//       return o(weight.value, Weight_convertTo(value, weight.unit).value);
-//     } else {
-//       return false;
-//     }
-//   } else {
-//     return false;
-//   }
-// }
-//
-// function Weight_applyOp(
-//   onerm: IWeight | undefined,
-//   oldValue: IWeight | number | IDynamicWeight,
-//   value: IWeight | number | IDynamicWeight,
-//   opr: "+=" | "-=" | "*=" | "/=" | "=",
-// ): IWeight | number | IDynamicWeight {
-//   if (opr === "=") {
-//     return value;
-//   } else if (opr === "+=") {
-//     return Weight_op(onerm, oldValue, value, (a, b) => a + b);
-//   } else if (opr === "-=") {
-//     return Weight_op(onerm, oldValue, value, (a, b) => a - b);
-//   } else if (opr === "*=") {
-//     return Weight_op(onerm, oldValue, value, (a, b) =>
-//       MathUtils_roundTo005(a * b),
-//     );
-//   } else {
-//     return Weight_op(onerm, oldValue, value, (a, b) =>
-//       MathUtils_roundTo005(a / b),
-//     );
-//   }
-// }
-//
-// function Weight_op(
-//   onerm: IWeight | undefined,
-//   a: IWeight | number | IDynamicWeight,
-//   b: IWeight | number | IDynamicWeight,
-//   o: (x: number, y: number) => number,
-// ): IWeight | number | IDynamicWeight {
-//   if (typeof a === "number" && typeof b === "number") {
-//     return o(a, b);
-//   }
-//   if (typeof a === "number" && is(TDynamicWeight, b)) {
-//     return Weight_buildPct(o(a, b.value));
-//   }
-//   if (typeof a === "number" && is(TWeight, b)) {
-//     return Weight_operation(a, b, o);
-//   }
-//
-//   if (is(TDynamicWeight, a) && typeof b === "number") {
-//     return Weight_buildPct(o(a.value, b));
-//   }
-//   if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
-//     return Weight_buildPct(o(a.value, b.value));
-//   }
-//   if (is(TDynamicWeight, a) && is(TWeight, b)) {
-//     const aWeight = onerm
-//       ? Weight_multiply(onerm, a.value / 100)
-//       : MathUtils_roundFloat(a.value / 100, 4);
-//     return Weight_operation(aWeight, b, o);
-//   }
-//
-//   if (is(TWeight, a) && typeof b === "number") {
-//     return Weight_operation(a, b, o);
-//   }
-//   if (is(TWeight, a) && is(TDynamicWeight, b)) {
-//     const bWeight = onerm
-//       ? Weight_multiply(onerm, b.value / 100)
-//       : MathUtils_roundFloat(b.value / 100, 4);
-//     return Weight_operation(a, bWeight, o);
-//   }
-//   if (is(TWeight, a) && is(TWeight, b)) {
-//     return Weight_operation(a, b, o);
-//   }
-//
-//   throw new Error(`Can't apply operation to ${a} and ${b}`);
-// }
-//
-// function Weight_operation(
-//   weight: IWeight,
-//   value: IWeight | number,
-//   o: (a: number, b: number) => number,
-// ): IWeight;
-// function Weight_operation(
-//   weight: IWeight | number,
-//   value: IWeight,
-//   o: (a: number, b: number) => number,
-// ): IWeight;
-// function Weight_operation(
-//   weight: IWeight | number,
-//   value: IWeight | number,
-//   o: (a: number, b: number) => number,
-// ): IWeight {
-//   if (typeof weight === "number" && typeof value !== "number") {
-//     return build(o(weight, value.value), value.unit);
-//   } else if (typeof weight !== "number" && typeof value === "number") {
-//     return build(o(weight.value, value), weight.unit);
-//   } else if (typeof weight !== "number" && typeof value !== "number") {
-//     return build(
-//       o(weight.value, Weight_convertTo(value, weight.unit).value),
-//       weight.unit,
-//     );
-//   } else {
-//     throw new Error("Weight.operation should never work with numbers only");
-//   }
-// }
-//
-// function Weight_rpeMultiplier(reps: number, rpe: number): number {
-//   if (reps === 1 && rpe === 10) {
-//     return 1;
-//   }
-//   reps = Math.max(Math.min(reps, 24), 1);
-//   rpe = Math.max(Math.min(rpe, 10), 1);
-//
-//   const x = 10.0 - rpe + (reps - 1);
-//   if (x >= 16) {
-//     return 0.5;
-//   }
-//
-//   const intersection = 2.92;
-//   if (x <= intersection) {
-//     const a = 0.347619;
-//     const b = -4.60714;
-//     const c = 99.9667;
-//     return (a * x * x + b * x + c) / 100;
-//   } else {
-//     const m = -2.64249;
-//     const b = 97.0955;
-//     return (m * x + b) / 100;
-//   }
-// }
-//
-// const Weight_zero: IWeight = { value: 0, unit: "lb" } as const;
 //#endregion
 
 //#region PP
@@ -7697,7 +7104,7 @@ class ProgramToPlanner {
 
   private getExerciseName(programExercise: IPlannerProgramExercise): string {
     if (programExercise.exerciseType) {
-      const exercise = Exercise_get(
+      const exercise = getExerciseOrDefault(
         programExercise.exerciseType,
         this.settings.exercises,
       );
@@ -7726,7 +7133,7 @@ class ProgramToPlanner {
     }
     let str = "...";
     if (reuseExercise.exerciseType) {
-      const exercise = Exercise_get(
+      const exercise = getExerciseOrDefault(
         reuseExercise.exerciseType,
         this.settings.exercises,
       );
@@ -7759,7 +7166,7 @@ class ProgramToPlanner {
     }
     if (update.reuse) {
       if (update.reuse.exercise?.exerciseType) {
-        const exercise = Exercise_get(
+        const exercise = getExerciseOrDefault(
           update.reuse.exercise.exerciseType,
           settings.exercises,
         );
@@ -7842,7 +7249,7 @@ class ProgramToPlanner {
     if (progress.type === "custom") {
       if (progress.reuse) {
         if (progress.reuse.exercise?.exerciseType) {
-          const exercise = Exercise_get(
+          const exercise = getExerciseOrDefault(
             progress.reuse.exercise.exerciseType,
             settings.exercises,
           );

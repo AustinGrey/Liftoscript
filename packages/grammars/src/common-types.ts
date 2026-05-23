@@ -13,14 +13,8 @@ import {
 } from "@/quantities/weight.ts";
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { z } from "zod";
-import { TBodyPart, TMuscle, TScreenMuscle } from "@/human-body";
-import {
-  type IExerciseType,
-  TExerciseId,
-  TExerciseKind,
-  TExerciseType,
-} from "@/exercises";
-import { TEquipmentType } from "@/equipment";
+import { TMuscle, TScreenMuscle } from "@/human-body";
+import { type IExerciseType } from "@/exercises";
 import type { IBuiltinEquipment } from "@/evaluators/logic-evaluator.ts";
 import type { OpenRecord } from "@/utils/types.ts";
 
@@ -167,27 +161,6 @@ export const TSettingsTimers = z.strictObject({
 
 export type ISettingsTimers = z.infer<typeof TSettingsTimers>;
 
-export const TMetaExercises = z.strictObject({
-  bodyParts: z.array(TBodyPart),
-  targetMuscles: z.array(TMuscle),
-  synergistMuscles: z.array(TMuscle),
-  sortedEquipment: z.array(TEquipmentType).optional(),
-});
-export type IMetaExercises = z.infer<typeof TMetaExercises>;
-export const TCustomExercise = z.strictObject({
-  id: TExerciseId,
-  name: z.string(),
-  isDeleted: z.boolean(),
-  meta: TMetaExercises,
-  defaultEquipment: TEquipmentType.optional(),
-  types: z.array(TExerciseKind).optional(),
-  clonedFrom: TExerciseType.optional(),
-  reuseImageFrom: TExerciseType.optional(),
-  largeImageUrl: z.string().optional(),
-  smallImageUrl: z.string().optional(),
-});
-
-export type ICustomExercise = z.infer<typeof TCustomExercise>;
 export const TLengthUnit = z.enum(["in", "cm"] as const);
 export type ILengthUnit = z.infer<typeof TLengthUnit>;
 export const TExerciseDataValue = z.strictObject({

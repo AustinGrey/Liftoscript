@@ -1,8 +1,7 @@
 import { TUnit, TWeight } from "@/quantities/weight.ts";
-import { TExerciseId, TExerciseTypeKey } from "@/exercises";
+import { TCustomExercise, TExerciseId, TExerciseTypeKey } from "@/exercises";
 import {
   type IAllEquipment,
-  TCustomExercise,
   TExerciseDataValue,
   TExercisePickerSort,
   TLengthUnit,

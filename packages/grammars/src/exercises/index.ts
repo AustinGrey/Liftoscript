@@ -1,8 +1,10 @@
 //#region Exercise
-import type { IWeight } from "@/quantities/weight.ts";
+import { convertTo, type IWeight, w } from "@/quantities/weight.ts";
 import { z } from "zod";
 import { type IEquipmentType, TEquipmentType } from "@/equipment";
 import type { ISettings } from "@/user-settings";
+import { TBodyPart, TMuscle } from "@/human-body";
+import type { OpenRecord } from "@/utils/types.ts";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
@@ -1738,4 +1740,68 @@ export function toKey(type: IExerciseType): IExerciseTypeKey {
   // @TODO why would the unique key of an _exercise_ rely on the equipment of that exercise?
   if (type.equipment) parts.push(type.equipment);
   return TExerciseTypeKey.parse(parts.join("_"));
+}
+
+export const TMetaExercises = z.strictObject({
+  bodyParts: z.array(TBodyPart),
+  targetMuscles: z.array(TMuscle),
+  synergistMuscles: z.array(TMuscle),
+  sortedEquipment: z.array(TEquipmentType).optional(),
+});
+export type IMetaExercises = z.infer<typeof TMetaExercises>;
+export const TCustomExercise = z.strictObject({
+  id: TExerciseId,
+  name: z.string(),
+  isDeleted: z.boolean(),
+  meta: TMetaExercises,
+  defaultEquipment: TEquipmentType.optional(),
+  types: z.array(TExerciseKind).optional(),
+  clonedFrom: TExerciseType.optional(),
+  reuseImageFrom: TExerciseType.optional(),
+  largeImageUrl: z.string().optional(),
+  smallImageUrl: z.string().optional(),
+});
+export type ICustomExercise = z.infer<typeof TCustomExercise>;
+export type IAllCustomExercises = OpenRecord<ICustomExercise>;
+
+export function getExerciseOrDefault(
+  type: IExerciseType,
+  customExercises: IAllCustomExercises,
+): IExercise {
+  const exercise =
+    maybeGetExercise(type.id, customExercises) ?? allExercisesList.squat;
+  return {
+    ...exercise,
+    equipment: type.equipment,
+  };
+}
+
+export function maybeGetExercise(
+  id: IExerciseId,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  const custom = customExercises[id];
+  return custom != null
+    ? {
+        ...custom,
+        defaultWarmup: 45,
+        types: custom.types || [],
+        startingWeightKg: w`0kg`,
+        startingWeightLb: w`0lb`,
+      }
+    : allExercisesList[id];
+}
+
+export function getOrmOrStartingWeight(
+  type: IExerciseType,
+  settings: ISettings,
+): IWeight {
+  const rm = settings.exerciseData[toKey(type)]?.rm1;
+  if (rm) {
+    return convertTo(rm, settings.units);
+  }
+  const exercise = getExerciseOrDefault(type, settings.exercises);
+  return settings.units === "kg"
+    ? exercise.startingWeightKg
+    : exercise.startingWeightLb;
 }

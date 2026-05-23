@@ -38,6 +38,8 @@ Earlier layers should be imported by later layers, but never vice versa.
 ## Layer 3 - Concepts that are unique to and defined by an individual
 
 - settings
+- stats
+- dynamic quantities (see quantities-dynamic)
 
 ## Layer 4 - Liftoscript - Combine and work on all of these things
 
