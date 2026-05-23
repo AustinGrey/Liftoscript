@@ -56,7 +56,6 @@ import {
 } from "@/quantities/weight.ts";
 import {
   type IAllEquipment,
-  type IEquipmentData,
   type IExerciseDataValue,
   type IPlannerSettings,
   type IProgramState,
@@ -92,7 +91,7 @@ import {
 } from "@/equipment";
 import {
   getCurrentEquipment,
-  getCurrentGym,
+  getPreferredUnit,
   type ISettings,
 } from "@/user-settings";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
@@ -5660,73 +5659,6 @@ const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
   return acc;
 }, {});
 
-function warmupValues(
-  units: IUnit,
-  startingLbs: 10 | 45 | 95,
-): ReturnType<typeof warmup> {
-  let sets: IProgramExerciseWarmupSet[];
-  switch (startingLbs) {
-    case 10:
-      sets = [
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`60lb` : w`30kg`,
-          value: 0.3,
-        },
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`30lb` : w`15kg`,
-          value: 0.5,
-        },
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`10lb` : w`5kg`,
-          value: 0.8,
-        },
-      ];
-      break;
-    case 45:
-      sets = [
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`120lb` : w`60kg`,
-          value: 0.3,
-        },
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`90lb` : w`45kg`,
-          value: 0.5,
-        },
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`45lb` : w`20kg`,
-          value: 0.8,
-        },
-      ];
-      break;
-    case 95:
-      sets = [
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`150lb` : w`70kg`,
-          value: 0.3,
-        },
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`125lb` : w`60kg`,
-          value: 0.5,
-        },
-        {
-          reps: 5,
-          threshold: units === "lb" ? w`95lb` : w`40kg`,
-          value: 0.8,
-        },
-      ];
-      break;
-  }
-  return warmup(sets);
-}
-
 function warmup(
   programExerciseWarmupSets: IProgramExerciseWarmupSet[],
   shouldSkipThreshold: boolean = false,
@@ -5905,19 +5837,36 @@ function Exercise_getWarmupSets(
     return warmup(programExerciseWarmupSets, true)(weight, settings, exercise);
   }
 
-  const ex = getExerciseOrDefault(exercise, settings.exercises);
-  switch (ex.defaultWarmup) {
-    case 10:
-    case 45:
-    case 95:
-      return warmupValues(settings.units, ex.defaultWarmup)(
-        weight,
-        settings,
-        exercise,
-      );
-    default:
-      return [];
+  const def = getExerciseOrDefault(exercise, settings.exercises).defaultWarmup;
+  if (def !== 10 && def !== 45 && def !== 95) {
+    return [];
   }
+  const reps = 5;
+  const first = { reps, value: 0.3 };
+  const second = { reps, value: 0.5 };
+  const third = { reps, value: 0.8 };
+  const isLb = settings.units === "lb";
+  return warmup(
+    def === 10
+      ? [
+          { ...first, threshold: isLb ? w`60lb` : w`30kg` },
+          { ...second, threshold: isLb ? w`30lb` : w`15kg` },
+          { ...third, threshold: isLb ? w`10lb` : w`5kg` },
+        ]
+      : def === 45
+        ? [
+            { ...first, threshold: isLb ? w`120lb` : w`60kg` },
+            { ...second, threshold: isLb ? w`90lb` : w`45kg` },
+            { ...third, threshold: isLb ? w`45lb` : w`20kg` },
+          ]
+        : def === 95
+          ? [
+              { ...first, threshold: isLb ? w`150lb` : w`70kg` },
+              { ...second, threshold: isLb ? w`125lb` : w`60kg` },
+              { ...third, threshold: isLb ? w`95lb` : w`40kg` },
+            ]
+          : [],
+  )(weight, settings, exercise);
 }
 
 //#endregion
@@ -7491,50 +7440,5 @@ class ScriptRunner {
   }
 }
 //#endregion
-
-//#region Equipment
-/**
- * @returns The user's equipment settings for the given exercise type
- * @param settings The settings to consider
- * @param exerciseType The type to look for
- */
-function getEquipmentData(
-  settings: ISettings,
-  exerciseType: IExerciseType,
-): IEquipmentData | undefined {
-  const gym = getCurrentGym(settings);
-  // @todo what is the string value of this function supposed to represent? The two strings it might be set to seem unrelated to each other?
-  let id: string | undefined;
-  if (exerciseType) {
-    const key = toKey(exerciseType);
-    if (
-      !(
-        settings.exerciseData[key] &&
-        ("equipment" in settings.exerciseData[key] ||
-          "rounding" in settings.exerciseData[key])
-      )
-    ) {
-      id = exerciseType.equipment;
-    } else {
-      id = settings.exerciseData[key]?.equipment?.[gym.id];
-    }
-  }
-  return id ? gym.equipment[id] : undefined;
-}
-
-/**
- * @returns The user's preferred unit for a given situation. This might be a fallback default if no preferred unit can be determined for that situation.
- * @param settings The settings where any preferred units might be specified
- * @param exerciseType If getting the units in the context of an exercise type, this is the type to consider, since a user might have different preferences for different exercise types.
- */
-function getPreferredUnit(
-  settings: ISettings,
-  exerciseType: IExerciseType | undefined,
-): IUnit {
-  return (
-    (exerciseType ? getEquipmentData(settings, exerciseType) : undefined)
-      ?.unit ?? settings.units
-  );
-}
 
 //#endregion

@@ -1,7 +1,14 @@
-import { TUnit, TWeight } from "@/quantities/weight.ts";
-import { TCustomExercise, TExerciseId, TExerciseTypeKey } from "@/exercises";
+import { type IUnit, TUnit, TWeight } from "@/quantities/weight.ts";
+import {
+  type IExerciseType,
+  TCustomExercise,
+  TExerciseId,
+  TExerciseTypeKey,
+  toKey,
+} from "@/exercises";
 import {
   type IAllEquipment,
+  type IEquipmentData,
   TExerciseDataValue,
   TExercisePickerSort,
   TLengthUnit,
@@ -100,3 +107,47 @@ export const getCurrentGym = (settings: ISettings): IGym =>
 
 export const getCurrentEquipment = (settings: ISettings): IAllEquipment =>
   getCurrentGym(settings)?.equipment;
+//#region Equipment
+/**
+ * @returns The user's equipment settings for the given exercise type
+ * @param settings The settings to consider
+ * @param exerciseType The type to look for
+ */
+function getEquipmentData(
+  settings: ISettings,
+  exerciseType: IExerciseType,
+): IEquipmentData | undefined {
+  const gym = getCurrentGym(settings);
+  // @todo what is the string value of this function supposed to represent? The two strings it might be set to seem unrelated to each other?
+  let id: string | undefined;
+  if (exerciseType) {
+    const key = toKey(exerciseType);
+    if (
+      !(
+        settings.exerciseData[key] &&
+        ("equipment" in settings.exerciseData[key] ||
+          "rounding" in settings.exerciseData[key])
+      )
+    ) {
+      id = exerciseType.equipment;
+    } else {
+      id = settings.exerciseData[key]?.equipment?.[gym.id];
+    }
+  }
+  return id ? gym.equipment[id] : undefined;
+}
+
+/**
+ * @returns The user's preferred unit for a given situation. This might be a fallback default if no preferred unit can be determined for that situation.
+ * @param settings The settings where any preferred units might be specified
+ * @param exerciseType If getting the units in the context of an exercise type, this is the type to consider, since a user might have different preferences for different exercise types.
+ */
+export function getPreferredUnit(
+  settings: ISettings,
+  exerciseType: IExerciseType | undefined,
+): IUnit {
+  return (
+    (exerciseType ? getEquipmentData(settings, exerciseType) : undefined)
+      ?.unit ?? settings.units
+  );
+}
