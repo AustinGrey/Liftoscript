@@ -5,7 +5,6 @@ import {
 import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
-  Weight_applyOp,
   Weight_build,
   Weight_buildAny,
   Weight_convertToWeight,
@@ -390,7 +389,7 @@ function changeBinding(
         (setIndex === "*" || setIndex === i + 1)
       ) {
         const evalutedValue = evaluateToQuantity(expression, tools);
-        const newValue = Weight_applyOp(
+        const newValue = Weight.applyOp(
           tools.getGlobal("rm1"),
           tools.getGlobal("weights")[i] ??
             Weight_build(

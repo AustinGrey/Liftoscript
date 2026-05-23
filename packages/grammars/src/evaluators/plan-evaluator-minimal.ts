@@ -48,6 +48,9 @@ import {
   gt,
   multiply,
   print,
+  applyOp,
+  parse,
+  percentORM,
 } from "@/quantities/weight.ts";
 import {
   type IAllEquipment,
@@ -1020,7 +1023,7 @@ export function PlannerProgram_replaceWeight(
       for (const setVariation of ex.evaluatedSetVariations) {
         for (const set of setVariation.sets) {
           const weightChange = weightChanges.find((wc) =>
-            Weight_eqNull(wc.originalWeight, set.weight),
+            eq(wc.originalWeight, set.weight),
           );
           if (weightChange != null) {
             set.weight = weightChange.weight;
@@ -2098,7 +2101,7 @@ function ProgramExercise_applyVariables(
                   PlannerProgramExercise_currentEvaluatedSetVariationIndex(
                     exercise,
                   );
-                indexValue = Weight_applyOp(
+                indexValue = applyOp(
                   undefined,
                   currentSetVariationIndex,
                   update.value.value,
@@ -2123,7 +2126,7 @@ function ProgramExercise_applyVariables(
               } else {
                 const currentDescriptionIndex =
                   PlannerProgramExercise_currentDescriptionIndex(exercise);
-                indexValue = Weight_applyOp(
+                indexValue = applyOp(
                   undefined,
                   currentDescriptionIndex,
                   update.value.value,
@@ -2188,7 +2191,7 @@ function operation(
         settings,
       );
     }
-    const newValue = Weight_applyOp(onerm, oldValue ?? 0, value, op);
+    const newValue = applyOp(onerm, oldValue ?? 0, value, op);
     if (
       key === "weight" &&
       (is(TWeight, newValue) || is(TDynamicWeight, newValue))
@@ -2839,9 +2842,9 @@ export class PlannerExerciseEvaluator {
       }
       try {
         const fnArgVal = fnArgValStr.match(/(lb|kg)/)
-          ? Weight_parse(fnArgValStr)
+          ? parse(fnArgValStr)
           : fnArgValStr.match(/%/)
-            ? Weight_buildPct(parseFloat(fnArgValStr))
+            ? percentORM(parseFloat(fnArgValStr))
             : MathUtils_roundFloat(parseFloat(fnArgValStr), 2);
         state[fnArgKey] = fnArgVal ?? 0;
       } catch (e) {
@@ -5289,7 +5292,7 @@ function PlannerProgramExercise_evaluateSetVariations(
           weight: aSet.weight
             ? aSet.weight
             : aSet.percentage
-              ? Weight_buildPct(aSet.percentage)
+              ? percentORM(aSet.percentage)
               : undefined,
           timer: aSet.timer,
           rpe: aSet.rpe,
@@ -7122,7 +7125,7 @@ class ProgramToPlanner {
           }
           if (
             reuseSet
-              ? !Weight_eqNull(programSet.weight, reuseSet.weight) ||
+              ? !eq(programSet.weight, reuseSet.weight) ||
                 programSet.askWeight !== reuseSet.askWeight
               : !eq(globals.weight || w`0lb`, reusedGlobals.weight || w`0lb`) ||
                 globals.askWeight !== reusedGlobals.askWeight
@@ -7882,17 +7885,13 @@ class ProgramToPlanner {
         firstWeight != null &&
         variations.every((v) =>
           v.sets.every(
-            (s) =>
-              Weight_eqNull(s.weight, firstWeight) &&
-              s.askWeight === firstAskWeight,
+            (s) => eq(s.weight, firstWeight) && s.askWeight === firstAskWeight,
           ),
         )
           ? firstWeight
           : undefined,
       askWeight: variations.every((v) =>
-        v.sets.every(
-          (s) => Weight_eqNull(s.weight, firstWeight) && s.askWeight,
-        ),
+        v.sets.every((s) => eq(s.weight, firstWeight) && s.askWeight),
       ),
       rpe:
         firstRpe != null &&
@@ -7924,7 +7923,7 @@ class ProgramToPlanner {
           {
             maxrep: originalSets?.repRange?.maxrep || 1,
             minrep: originalSets?.repRange?.minrep,
-            weight: originalSets?.weight || Weight_zero,
+            weight: originalSets?.weight || w`0lb`,
             logRpe: originalSets?.logRpe || false,
             isAmrap: originalSets?.repRange?.isAmrap || false,
             isQuickAddSet: originalSets?.repRange?.isQuickAddSet || false,
@@ -7978,9 +7977,7 @@ class ProgramToPlanner {
         const length = group[1];
         const weight =
           first.weight ??
-          (first.percentage != null
-            ? Weight_buildPct(first.percentage)
-            : w`0lb`);
+          (first.percentage != null ? percentORM(first.percentage) : w`0lb`);
         strs.push(`${length}x${first.reps} ${print(weight)}`);
       }
       return strs.length === 0 ? "none" : strs.join(", ");
@@ -8046,7 +8043,7 @@ class ProgramToPlanner {
   }
 
   private setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
-    return `${set.maxrep}-${set.minrep}-${Weight_printNull(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
+    return `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
       set.timer
     }-${set.label}-${set.askWeight}`;
   }

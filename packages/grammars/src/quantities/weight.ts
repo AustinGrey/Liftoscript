@@ -55,7 +55,10 @@ type TOperation = (left: IWeight, right: IWeight | number) => IWeight;
 /**
  * A weight operation that allows both operands to be numbers, weights, or percentages
  */
-type TComparison = (left: Quantity, right: Quantity) => boolean;
+type TComparison = (
+  left: Quantity | undefined,
+  right: Quantity | undefined,
+) => boolean;
 
 export const add: TOperation = (l, r) => operation(l, r, (a, b) => a + b);
 export const subtract: TOperation = (l, r) => operation(l, r, (a, b) => a - b);
@@ -140,6 +143,8 @@ export function convertTo(
 /**
  * Performs the operation on the two values after making sure they are in the same units
  *
+ * Plain numbers are considered "weak" - they are treated as being in the units of the other term if that term has units.
+ *
  * If the units cannot be normalized, false is returned.
  * @TODO is that really valid? Should we return some error result to bubble up instead?
  *
@@ -148,11 +153,17 @@ export function convertTo(
  * @param o The comparison function to perform once the units are converted.
  */
 function comparison(
-  left: IWeight | number | IDynamicWeight,
-  right: IWeight | number | IDynamicWeight,
+  left: Quantity | undefined,
+  right: Quantity | undefined,
   o: (a: number, b: number) => boolean,
 ): boolean {
-  if (isNumber(left)) {
+  if (left === undefined) {
+    if (right === undefined) {
+      return true;
+    }
+  } else if (right === undefined) {
+    return false;
+  } else if (isNumber(left)) {
     if (isNumber(right)) {
       return o(left, right);
     }
@@ -645,13 +656,95 @@ export const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
 };
 
 /**
+ * Duplicate of {@link w}?
+ * @param str
+ */
+export function parse(str: string): IWeight | undefined {
+  const match = str.match(/^([\-+]?[0-9.]+)\s*(kg|lb)$/);
+  if (match) {
+    return build(
+      MathUtils_roundFloat(parseFloat(match[1]), 2),
+      match[2] as IUnit,
+    );
+  } else {
+    return undefined;
+  }
+}
+
+/**
  * Converts a quantity to text in a human-readable format
  * @param quantity The value to print
  */
-export function print(quantity: Quantity): string {
-  if (typeof quantity === "number") {
+export function print(quantity: Quantity | undefined): string {
+  if (quantity === undefined) {
+    return "";
+  } else if (typeof quantity === "number") {
     return `${n(quantity)}`;
   } else {
     return `${n(quantity.value)}${quantity.unit}`;
   }
+}
+
+export function applyOp(
+  onerm: IWeight | undefined,
+  oldValue: Quantity,
+  value: Quantity,
+  opr: "+=" | "-=" | "*=" | "/=" | "=",
+): Quantity {
+  if (opr === "=") {
+    return value;
+  } else if (opr === "+=") {
+    return op(onerm, oldValue, value, (a, b) => a + b);
+  } else if (opr === "-=") {
+    return op(onerm, oldValue, value, (a, b) => a - b);
+  } else if (opr === "*=") {
+    return op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a * b));
+  } else {
+    return op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a / b));
+  }
+}
+
+export function op(
+  onerm: IWeight | undefined,
+  a: Quantity,
+  b: Quantity,
+  o: (x: number, y: number) => number,
+): Quantity {
+  if (isNumber(a) && isNumber(b)) {
+    return o(a, b);
+  }
+  if (isNumber(a) && is(TWeight, b)) {
+    return percentORM(o(a, b.value));
+  }
+  if (isNumber(a) && is(TWeight, b)) {
+    return operation(a, b, o);
+  }
+
+  if (is(TDynamicWeight, a) && isNumber(b)) {
+    return percentORM(o(a.value, b));
+  }
+  if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
+    return percentORM(o(a.value, b.value));
+  }
+  if (is(TDynamicWeight, a) && is(TWeight, b)) {
+    const aWeight = onerm
+      ? multiply(onerm, a.value / 100)
+      : MathUtils_roundFloat(a.value / 100, 4);
+    return operation(aWeight, b, o);
+  }
+
+  if (is(TWeight, a) && isNumber(b)) {
+    return operation(a, b, o);
+  }
+  if (is(TWeight, a) && is(TDynamicWeight, b)) {
+    const bWeight = onerm
+      ? multiply(onerm, b.value / 100)
+      : MathUtils_roundFloat(b.value / 100, 4);
+    return operation(a, bWeight, o);
+  }
+  if (is(TWeight, a) && is(TWeight, b)) {
+    return operation(a, b, o);
+  }
+
+  throw new Error(`Can't apply operation to ${a} and ${b}`);
 }
