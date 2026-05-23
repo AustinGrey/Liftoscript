@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vite-plus/test";
-import { getUnitMath } from "@/quantities/index.ts";
+import { getUnitMath } from "./index.ts";
 
 describe(getUnitMath, () => {
   it("Can do math with the percent unit involved", () => {
