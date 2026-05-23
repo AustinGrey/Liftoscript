@@ -21,7 +21,8 @@ import {
 } from "@/evaluators/plan-evaluator.ts";
 import { ObjectUtils_clone } from "@/utils/object.ts";
 import type { IWeight } from "@/quantities/weight.ts";
-import type { IStats } from "@/evaluators/plan-evaluator-minimal.ts";
+
+import type { IStats } from "@/fitness-stats";
 
 type PlannerTestCase = {
   plan: string;

@@ -13,12 +13,12 @@ import {
   type ISettings,
   type IPlannerProgram,
   type IExerciseType,
-  type IStats,
   type IWeight,
   type IWeightChange,
   ProgramExercise_weightChanges,
   PlannerKey_fromFullName,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+import type { IStats } from "@/fitness-stats";
 
 export interface ICompletedEntries {
   completedReps: number[][];

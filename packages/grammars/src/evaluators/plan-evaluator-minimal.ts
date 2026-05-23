@@ -1,5 +1,5 @@
 import { memoize } from "micro-memoize";
-import { z, type ZodType } from "zod";
+import { z } from "zod";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import {
   CollectionUtils_compact,
@@ -33,10 +33,8 @@ import {
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
 import {
-  add,
   applyOp,
   build,
-  divide,
   eq,
   gt,
   type IDynamicWeight,
@@ -66,7 +64,6 @@ import {
   type IScriptFunctions,
   type ISet,
   TExercisePickerSort,
-  TLengthUnit,
   TProgramState,
   TSet,
 } from "@/common-types.ts";
@@ -75,17 +72,17 @@ import { TMuscle } from "@/human-body";
 import {
   allExercisesList,
   getExerciseOrDefault,
+  getOrmOrStartingWeight,
   type IAllCustomExercises,
   type IExercise,
   type IExerciseId,
   type IExerciseType,
   isUnilateral,
-  getOrmOrStartingWeight,
+  maybeGetExercise,
   TCustomExercise,
   TExerciseKind,
   TExerciseType,
   toKey,
-  maybeGetExercise,
 } from "@/exercises";
 import {
   builtInEquipmentTypes,
@@ -99,6 +96,10 @@ import {
 } from "@/user-settings";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";
+import {
+  type IStats,
+  Stats_getCurrentMovingAverageBodyweight,
+} from "@/fitness-stats";
 
 //#region Program
 
@@ -296,7 +297,11 @@ function Program_runFinishDayScript(
     entry,
     settings,
     programExercise.evaluatedSetVariations[setVariationIndex]?.sets.length ?? 0,
-    Stats_getCurrentMovingAverageBodyweight(stats, settings),
+    Stats_getCurrentMovingAverageBodyweight(
+      stats,
+      settings.units,
+      settings.graphOptions.weight?.movingAverageWindowSize,
+    ),
     undefined,
     setVariationIndex + 1,
     descriptionIndex + 1,
@@ -1842,59 +1847,7 @@ const TProgram = z.strictObject({
 });
 export type IProgram = z.infer<typeof TProgram>;
 
-const TLength = z.object({
-  value: z.number(),
-  unit: TLengthUnit,
-});
-
 type IExerciseData = OpenRecord<IExerciseDataValue>;
-
-/**
- * A timestamped series of samples. They may or may not be in order, but can be sorted via the time stamp
- * @param valueSchema
- */
-function dataSeries<TValue extends ZodType>(valueSchema: TValue) {
-  return z.array(
-    z.object({
-      value: valueSchema,
-      timestamp: z.number(),
-    }),
-  );
-}
-
-const TStats = z.strictObject({
-  /** The user's bodyweight */
-  weight: dataSeries(TWeight),
-  /** The measured circumference ofcalfRight */
-  neck: dataSeries(TLength),
-  /** The measured circumference of the calfRight */
-  shoulders: dataSeries(TLength),
-  /** The measured circumference of the calfRight */
-  bicepLeft: dataSeries(TLength),
-  /** The measured circumference of the bcalfRight */
-  bicepRight: dataSeries(TLength),
-  /** The measured circumference of the focalfRight */
-  forearmLeft: dataSeries(TLength),
-  /** The measured circumference of the forcalfRight */
-  forearmRight: dataSeries(TLength),
-  /** The measured circumference of calfRight */
-  chest: dataSeries(TLength),
-  /** The measured circumference of calfRight */
-  waist: dataSeries(TLength),
-  /** The measured circumference ofcalfRight */
-  hips: dataSeries(TLength),
-  /** The measured circumference of the calfRight */
-  thighLeft: dataSeries(TLength),
-  /** The measured circumference of the tcalfRight */
-  thighRight: dataSeries(TLength),
-  /** The measured circumference of thecalfRight */
-  calfLeft: dataSeries(TLength),
-  /** The measured circumference of the calfRight */
-  calfRight: dataSeries(TLength),
-  /** The measured percent weight of bodyfat */
-  bodyfat: dataSeries(TDynamicWeight),
-});
-export type IStats = z.infer<typeof TStats>;
 
 type IDayData = {
   week?: number;
@@ -2286,31 +2239,6 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
 
 //#region Stats
 
-function Stats_getCurrentBodyweight(stats: IStats): IWeight | undefined {
-  return CollectionUtils_sortBy(stats.weight || [], "timestamp", true).at(0)
-    ?.value;
-}
-
-function Stats_getCurrentMovingAverageBodyweight(
-  stats: IStats,
-  settings: ISettings,
-): IWeight | undefined {
-  const movingAverageWindowSize =
-    settings.graphOptions.weight?.movingAverageWindowSize;
-  if (!movingAverageWindowSize) {
-    return Stats_getCurrentBodyweight(stats);
-  }
-  const weights = CollectionUtils_sortBy(stats.weight || [], "timestamp", true);
-  if (weights.length < movingAverageWindowSize) {
-    return Stats_getCurrentBodyweight(stats);
-  }
-  const recentWeights = weights.slice(0, movingAverageWindowSize);
-  const totalWeight = recentWeights.reduce(
-    (sum, item) => add(sum, item.value),
-    build(0, settings.units),
-  );
-  return divide(totalWeight, recentWeights.length);
-}
 //#endregion
 
 //#region Pages Planner Model Types
@@ -6190,7 +6118,11 @@ function Progress_runUpdateScriptForEntry(
     entry,
     settings,
     programExercise.evaluatedSetVariations[setVariationIndex]?.sets.length ?? 0,
-    Stats_getCurrentMovingAverageBodyweight(stats, settings),
+    Stats_getCurrentMovingAverageBodyweight(
+      stats,
+      settings.units,
+      settings.graphOptions.weight?.movingAverageWindowSize,
+    ),
     setIndex + 1,
     setVariationIndex,
     descriptionIndex,
