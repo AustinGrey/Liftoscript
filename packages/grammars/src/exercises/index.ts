@@ -1,5 +1,5 @@
 //#region Exercise
-import type { IWeight } from "@/models/weight.ts";
+import type { IWeight } from "@/quantities/weight.ts";
 import { z } from "zod";
 import { type IEquipmentType, TEquipmentType } from "@/equipment";
 import type { ISettings } from "@/user-settings";

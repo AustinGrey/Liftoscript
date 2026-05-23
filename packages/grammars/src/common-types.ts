@@ -10,7 +10,7 @@ import {
   TDynamicWeight,
   TUnit,
   TWeight,
-} from "@/models/weight.ts";
+} from "@/quantities/weight.ts";
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { z } from "zod";
 import { TBodyPart, TMuscle, TScreenMuscle } from "@/human-body";

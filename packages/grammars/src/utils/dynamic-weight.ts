@@ -1,5 +1,5 @@
-import { type IDynamicWeight, type IWeight } from "@/models/weight.ts";
-import * as Weight from "@/models/weight.ts";
+import { type IDynamicWeight, type IWeight } from "@/quantities/weight.ts";
+import * as Weight from "@/quantities/weight.ts";
 
 /**
  * Converts a dynamic weight to a weight based on the one rep max

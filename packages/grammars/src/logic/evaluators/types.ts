@@ -8,7 +8,7 @@ import {
   type IWeight,
   TDynamicWeight,
   TWeight,
-} from "@/models/weight.ts";
+} from "@/quantities/weight.ts";
 import { z } from "zod";
 import { type IProgramMode } from "@/evaluators/logic-evaluator.ts";
 import type {

@@ -10,7 +10,7 @@ import {
   Weight_buildAny,
   Weight_convertToWeight,
 } from "@/evaluators/logic-evaluator.ts";
-import * as Weight from "@/models/weight";
+import * as Weight from "@/quantities/weight.ts";
 import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 import {
   type IAssignmentOp,
@@ -24,7 +24,7 @@ import {
   type IWeight,
   TDynamicWeight,
   TWeight,
-} from "@/models/weight.ts";
+} from "@/quantities/weight.ts";
 import { CollectionUtils_compact } from "@/utils/collection.ts";
 import { is, isNumber } from "@/utils/types.ts";
 import {

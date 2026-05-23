@@ -1,4 +1,4 @@
-import { expect, test, describe } from "vite-plus/test";
+import { describe, expect, test } from "vite-plus/test";
 import { parser } from "@/logic/parsing/logic.ts";
 import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
@@ -6,22 +6,20 @@ import type { RequireAtLeastOne } from "type-fest";
 import { toMerged } from "es-toolkit";
 
 import {
+  dw,
   type IDynamicWeight,
   type IWeight,
   TDynamicWeight,
   TWeight,
-} from "@/models/weight.ts";
+  w,
+} from "@/quantities/weight.ts";
 import type {
   IProgramState,
   IScriptBindings,
 } from "@/logic/evaluators/types.ts";
 import type { LogicResult, Quantity } from "@/logic/types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
-import { is, isNumber, isRealNumber } from "@/utils/types.ts";
-import {
-  type TaggedTemplateHandler,
-  taggedTemplateToString,
-} from "@/utils/string.ts";
+import { is, isNumber } from "@/utils/types.ts";
 import { round } from "@/utils/logic-results.ts";
 import { MathUtils_round } from "@/utils/math.ts";
 import type { IScriptFnContext } from "@/common-types.ts";
@@ -165,60 +163,6 @@ function normalizeLogicTest(test: LogicTestSpec): NormalizedLogicTest {
     cases: mergedCases as NormalizedLogicTest["cases"],
   };
 }
-
-/**
- * Parses template literal as a number with a unit, if possible
- */
-const asRealNumberWithUnit: TaggedTemplateHandler<{
-  amount: number;
-  unit: string;
-  raw: string;
-}> = (s, ...v) => {
-  const raw = taggedTemplateToString(s, v);
-  // Flatten everything into a single string before splitting the number away from the unit
-  const rawString = raw.replaceAll(/\s+/g, "").split(
-    // Finds the 0 width boundaries between the number portion, and the unit portion, splitting on that.
-    /(?<=[-0-9.])(?=[^-0-9.])/,
-  );
-  const [amountRaw, unit, ...rest] = rawString;
-  const amount = Number(amountRaw);
-  if (rest.length || !isRealNumber(amount)) {
-    throw new Error(
-      `${rawString} can not be interpreted as a single amount with a unit`,
-    );
-  }
-  return {
-    amount,
-    unit,
-    raw,
-  };
-};
-/**
- * Builds {@link IDynamicWeight} from a string
- */
-const dw: TaggedTemplateHandler<IDynamicWeight> = (s, ...v) => {
-  const { amount, unit, raw } = asRealNumberWithUnit(s, v);
-  if (unit !== "%") {
-    throw new Error(`${raw} is not a valid IDynamicWeight`);
-  }
-  return {
-    value: amount,
-    unit,
-  };
-};
-/**
- * Builds {@link IWeight} from a string
- */
-const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
-  const { amount, unit, raw } = asRealNumberWithUnit(s, v);
-  if (unit !== "kg" && unit !== "lb") {
-    throw new Error(`${raw} is not a valid IWeight`);
-  }
-  return {
-    value: amount,
-    unit,
-  };
-};
 
 const cases: LogicTestSpec[] = [
   // Literal Number

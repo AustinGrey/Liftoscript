@@ -1,7 +1,7 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
-import * as Weight from "@/models/weight.ts";
+import * as Weight from "@/quantities/weight.ts";
 import {
   type LogicResult,
   type LogicResultSingular,
@@ -12,7 +12,7 @@ import {
   percentORM,
   TDynamicWeight,
   TWeight,
-} from "@/models/weight.ts";
+} from "@/quantities/weight.ts";
 import { MathUtils_roundFloat } from "@/utils/math.ts";
 import { kgToLb, lbToKg } from "@/utils/mass.ts";
 import { equal, toQuantity } from "@/utils/logic-results.ts";

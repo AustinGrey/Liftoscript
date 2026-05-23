@@ -42,7 +42,7 @@ import {
   TDynamicWeight,
   TUnit,
   TWeight,
-} from "@/models/weight.ts";
+} from "@/quantities/weight.ts";
 import {
   type IProgramState,
   type IScriptBindings,

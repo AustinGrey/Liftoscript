@@ -1,12 +1,12 @@
 import { isQuantity, type LogicResult, type Quantity } from "@/logic/types.ts";
-import * as Weight from "@/models/weight.ts";
+import * as Weight from "@/quantities/weight.ts";
 import {
   type IDynamicWeight,
   type IWeight,
   percentORM,
   TDynamicWeight,
   TWeight,
-} from "@/models/weight.ts";
+} from "@/quantities/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { Equipment_getUnitForExerciseType } from "@/models/equipment.ts";

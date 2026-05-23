@@ -1,7 +1,7 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { type TypedLogicNode } from "@/logic/parsing/guards.ts";
-import * as Weight from "@/models/weight.ts";
-import { type IWeight, TUnit } from "@/models/weight.ts";
+import * as Weight from "@/quantities/weight.ts";
+import { type IWeight, TUnit } from "@/quantities/weight.ts";
 import { getChild } from "@/utils/grammars.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { is, isNumber } from "@/utils/types.ts";

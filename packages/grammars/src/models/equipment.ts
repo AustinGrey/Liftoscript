@@ -1,6 +1,6 @@
 import { CollectionUtils_sort } from "@/utils/collection.ts";
-import type { IUnit, IWeight } from "@/models/weight.ts";
-import * as Weight from "@/models/weight.ts";
+import type { IUnit, IWeight } from "@/quantities/weight.ts";
+import * as Weight from "@/quantities/weight.ts";
 import { Exercise_toKey } from "@/models/exercise.ts";
 import type { IEquipmentData } from "@/common-types.ts";
 import type { IExerciseType } from "@/exercises";

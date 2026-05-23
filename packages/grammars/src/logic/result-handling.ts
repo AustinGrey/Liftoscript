@@ -1,6 +1,6 @@
 import type { LogicResult } from "@/logic/types.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
-import { TDynamicWeight, TWeight } from "@/models/weight.ts";
+import { TDynamicWeight, TWeight } from "@/quantities/weight.ts";
 
 /**
  * Does it's best to convert something to a number, even if the result makes little to no sense.

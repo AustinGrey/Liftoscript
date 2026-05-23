@@ -3,7 +3,7 @@ import {
   type IWeight,
   TDynamicWeight,
   TWeight,
-} from "@/models/weight.ts";
+} from "@/quantities/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
 
 export type Quantity = number | IWeight | IDynamicWeight;
