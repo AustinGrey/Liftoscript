@@ -11,6 +11,7 @@ import {
   MathUtils_roundFloat,
   MathUtils_roundTo000005,
   MathUtils_roundTo005,
+  n,
 } from "@/utils/math.ts";
 import { CollectionUtils_sort } from "@/utils/collection.ts";
 import { Exercise_defaultRounding } from "@/models/exercise.ts";
@@ -642,3 +643,15 @@ export const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
     unit,
   };
 };
+
+/**
+ * Converts a quantity to text in a human-readable format
+ * @param quantity The value to print
+ */
+export function print(quantity: Quantity): string {
+  if (typeof quantity === "number") {
+    return `${n(quantity)}`;
+  } else {
+    return `${n(quantity.value)}${quantity.unit}`;
+  }
+}
