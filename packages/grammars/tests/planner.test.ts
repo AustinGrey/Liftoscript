@@ -17,10 +17,11 @@ import {
   PlannerSyntaxError,
   PlannerExerciseEvaluator,
   Settings_defaultEquipment,
-  type IStats,
+  type IStats as OLD_IStats,
 } from "@/evaluators/plan-evaluator.ts";
 import { ObjectUtils_clone } from "@/utils/object.ts";
 import type { IWeight } from "@/models/weight.ts";
+import type { IStats } from "@/evaluators/plan-evaluator-minimal.ts";
 
 type PlannerTestCase = {
   plan: string;
@@ -37,8 +38,14 @@ type PlannerTestCase = {
   settings?: ISettings;
   /**
    * The user's stats at the time of plan evaluation
+   * New System
    */
   stats?: IStats;
+  /**
+   * The user's stats at the time of plan evaluation
+   * Old System
+   */
+  oldSystemStats?: OLD_IStats;
   /**
    * The plan that results from evaluating the plan
    */
@@ -53,7 +60,7 @@ function makeTest(c: PlannerTestCase): TestFunction {
         completedWeights: c.completed.weights,
       },
       c.settings,
-      c.stats,
+      c.oldSystemStats,
     );
     if (!program.planner) {
       expect.fail("Old system failed to produce a program planner.");
@@ -1832,7 +1839,7 @@ Squat / 1x10 / 49% / progress: custom() {~
 Squat / 1x10 / 100lb / progress: custom() {~
   weights = bodyweight
 ~}`;
-    const stats: IStats = {
+    const stats: OLD_IStats = {
       weight: {
         weight: [
           { vtype: "stat", value: Weight_build(200, "lb"), timestamp: 10 },
