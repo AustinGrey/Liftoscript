@@ -585,6 +585,10 @@ export function rpeMultiplier(reps: number, rpe: number): number {
   }
 }
 
+export function rpePct(reps: number, rpe: number): IDynamicWeight {
+  return percentORM(MathUtils_roundTo005(rpeMultiplier(reps, rpe) * 100));
+}
+
 export function convertToWeight(
   onerm: IWeight,
   value: Quantity,
@@ -656,7 +660,7 @@ export const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
 };
 
 /**
- * Duplicate of {@link w}?
+ * @todo Duplicate of {@link w}?
  * @param str
  */
 export function parse(str: string): IWeight | undefined {
@@ -668,6 +672,22 @@ export function parse(str: string): IWeight | undefined {
     );
   } else {
     return undefined;
+  }
+}
+
+/**
+ * @todo Duplicate of {@link dw}?
+ * @param str
+ */
+export function parsePct(str?: string): IDynamicWeight | IWeight | undefined {
+  if (str == null) {
+    return undefined;
+  }
+  const match = str.match(/^([\-+]?[0-9.]+)%$/);
+  if (match) {
+    return percentORM(MathUtils_roundFloat(parseFloat(match[1]), 2));
+  } else {
+    return parse(str);
   }
 }
 
@@ -747,4 +767,31 @@ export function op(
   }
 
   throw new Error(`Can't apply operation to ${a} and ${b}`);
+}
+
+/**
+ * Returns a string explaining the type of a quantity.
+ * @param value
+ */
+export function typeOf(value: Quantity): "weight" | "percentage" | "number" {
+  if (isNumber(value)) {
+    return "number";
+  } else if (is(TDynamicWeight, value)) {
+    return "percentage";
+  } else {
+    return "weight";
+  }
+}
+
+export function Weight_evaluateWeight(
+  weight: IWeight | IDynamicWeight,
+  exerciseType: IExerciseType,
+  settings: ISettings,
+): IWeight {
+  if (is(TWeight, weight)) {
+    return weight;
+  }
+  const exercise = Exercise_get(exerciseType, settings.exercises);
+  const onerm = Exercise_onerm(exercise, settings);
+  return multiply(onerm, weight.value / 100);
 }

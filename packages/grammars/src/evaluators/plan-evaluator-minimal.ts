@@ -40,7 +40,6 @@ import {
   TDynamicWeight,
   TWeight,
   w,
-  dw,
   eq,
   roundTo005,
   add,
@@ -51,6 +50,12 @@ import {
   applyOp,
   parse,
   percentORM,
+  typeOf,
+  rpeMultiplier,
+  parsePct,
+  rpePct,
+  roundConvertTo,
+  convertTo,
 } from "@/quantities/weight.ts";
 import {
   type IAllEquipment,
@@ -4711,10 +4716,7 @@ function PlannerEvaluator_fillProgressReuses(
       const state = progress.state;
       for (const stateKey of ObjectUtils_keys(originalState)) {
         const value = originalState[stateKey];
-        if (
-          state[key] != null &&
-          Weight_type(value) !== Weight_type(state[stateKey])
-        ) {
+        if (state[key] != null && typeOf(value) !== typeOf(state[stateKey])) {
           throw PlannerSyntaxError.fromPoint(
             exercise.fullName,
             `Wrong type of state variable ${stateKey}`,
@@ -5260,7 +5262,7 @@ function PlannerProgramExercise_programWarmups(
         value = ws.weight;
       }
       if (value == null) {
-        value = MathUtils_roundTo0005(Weight_rpeMultiplier(ws.reps, 4));
+        value = MathUtils_roundTo0005(rpeMultiplier(ws.reps, 4));
       }
       sets.push({
         reps: ws.reps,
@@ -5550,8 +5552,8 @@ function PlannerProgramExercise_buildProgress(
       };
     }
     case "lp": {
-      const increment = args[0] ? Weight_parsePct(args[0]) : w`0lb`;
-      const decrement = args[3] ? Weight_parsePct(args[3]) : w`0lb`;
+      const increment = args[0] ? parsePct(args[0]) : w`0lb`;
+      const decrement = args[3] ? parsePct(args[3]) : w`0lb`;
       const state: IProgramState = {
         increment: increment ?? w`0lb`,
         successes: args[1] ? parseInt(args[1], 10) : 1,
@@ -5605,7 +5607,7 @@ if (state.decrement > 0 && state.failures > 0) {
       };
     }
     case "dp": {
-      const increment = args[0] ? Weight_parsePct(args[0]) : w`0lb`;
+      const increment = args[0] ? parsePct(args[0]) : w`0lb`;
       const state: IProgramState = {
         increment: increment ?? w`0lb`,
         minReps: args[1] ? parseInt(args[1], 10) : 0,
@@ -5623,7 +5625,7 @@ if (state.decrement > 0 && state.failures > 0) {
       };
     }
     case "sum": {
-      const increment = args[1] ? Weight_parsePct(args[1]) : w`0lb`;
+      const increment = args[1] ? parsePct(args[1]) : w`0lb`;
       const state: IProgramState = {
         reps: args[0] ? parseInt(args[0], 10) : 0,
         increment: increment ?? w`0lb`,
@@ -5712,13 +5714,13 @@ function ProgramSet_getEvaluatedWeight(
         programSet.maxrep != null &&
         programSet.rpe != null
       ? Weight_evaluateWeight(
-          Weight_rpePct(programSet.maxrep, programSet.rpe),
+          rpePct(programSet.maxrep, programSet.rpe),
           exerciseType,
           settings,
         )
       : undefined;
   return evaluatedWeight
-    ? Weight_roundConvertTo(evaluatedWeight, settings, unit, exerciseType)
+    ? roundConvertTo(evaluatedWeight, settings, unit, exerciseType)
     : undefined;
 }
 //#endregion
@@ -5860,7 +5862,7 @@ function warmup(
           if (typeof value !== "number" || weight != null) {
             const warmupWeight =
               typeof value === "number" ? multiply(weight!, value) : value;
-            const roundedWeight = Weight_roundConvertTo(
+            const roundedWeight = roundConvertTo(
               warmupWeight,
               settings,
               unit,
@@ -5907,8 +5909,7 @@ function getExercise(
   id: IExerciseId,
   customExercises: IAllCustomExercises,
 ): IExercise {
-  const exercise = maybeGetExercise(id, customExercises);
-  return exercise != null ? exercise : allExercisesList.squat;
+  return maybeGetExercise(id, customExercises) ?? allExercisesList.squat;
 }
 
 function Exercise_fullName(
@@ -5959,14 +5960,16 @@ function Exercise_get(
   type: IExerciseType,
   customExercises: IAllCustomExercises,
 ): IExercise {
-  const exercise = getExercise(type.id, customExercises);
-  return { ...exercise, equipment: type.equipment };
+  return {
+    ...getExercise(type.id, customExercises),
+    equipment: type.equipment,
+  };
 }
 
 function Exercise_onerm(type: IExerciseType, settings: ISettings): IWeight {
   const rm = settings.exerciseData[toKey(type)]?.rm1;
   if (rm) {
-    return Weight_convertTo(rm, settings.units);
+    return convertTo(rm, settings.units);
   }
   const exercise = Exercise_get(type, settings.exercises);
   return settings.units === "kg"
