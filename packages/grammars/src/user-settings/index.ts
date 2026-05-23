@@ -9,7 +9,6 @@ import {
   TMuscleGroupsSettings,
   TPlannerSettings,
   TSettingsTimers,
-  TStatsEnabled,
   TTargetType,
 } from "@/common-types.ts";
 import { z } from "zod";
@@ -46,7 +45,6 @@ export const TSettings = z
       })
       .optional(),
     exercises: z.record(z.string(), TCustomExercise),
-    statsEnabled: TStatsEnabled,
     units: TUnit,
     lengthUnits: TLengthUnit,
     volume: z.number(),
