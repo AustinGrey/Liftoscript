@@ -1,5 +1,5 @@
 import { memoize } from "micro-memoize";
-import { z } from "zod";
+import { z, type ZodTypeAny } from "zod";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import {
   CollectionUtils_compact,
@@ -1833,67 +1833,60 @@ const TLength = z.object({
   unit: TLengthUnit,
 });
 
-const TStatsWeightValue = z.strictObject({
-  value: TWeight,
-  timestamp: z.number(),
-  updatedAt: z.number().optional(),
-  appleUuid: z.string().optional(),
-});
-
-const statsWeightDef = {
-  weight: z.array(TStatsWeightValue),
-};
-const TStatsWeight = z.strictObject(statsWeightDef).partial();
-
-const TStatsLengthValue = z.strictObject({
-  value: TLength,
-  timestamp: z.number(),
-  updatedAt: z.number().optional(),
-  appleUuid: z.string().optional(),
-});
-
-const statsLengthDef = {
-  neck: z.array(TStatsLengthValue),
-  shoulders: z.array(TStatsLengthValue),
-  bicepLeft: z.array(TStatsLengthValue),
-  bicepRight: z.array(TStatsLengthValue),
-  forearmLeft: z.array(TStatsLengthValue),
-  forearmRight: z.array(TStatsLengthValue),
-  chest: z.array(TStatsLengthValue),
-  waist: z.array(TStatsLengthValue),
-  hips: z.array(TStatsLengthValue),
-  thighLeft: z.array(TStatsLengthValue),
-  thighRight: z.array(TStatsLengthValue),
-  calfLeft: z.array(TStatsLengthValue),
-  calfRight: z.array(TStatsLengthValue),
-};
-const TStatsLength = z.strictObject(statsLengthDef).partial();
-
-const TStatsPercentageValue = z.strictObject({
-  value: TDynamicWeight,
-  timestamp: z.number(),
-  updatedAt: z.number().optional(),
-  appleUuid: z.string().optional(),
-});
-
-const TStatsPercentage = z.strictObject({
-  bodyfat: z.array(TStatsPercentageValue).optional(),
-});
 type IExerciseData = OpenRecord<IExerciseDataValue>;
+
+/**
+ * A timestamped series of samples. They may or may not be in order, but can be sorted via the time stamp
+ * @param valueSchema
+ */
+function dataSeries<TValue extends ZodTypeAny>(valueSchema: TValue) {
+  return z.array(
+    z.strictObject({
+      value: valueSchema,
+      timestamp: z.number(),
+      updatedAt: z.number().optional(),
+      appleUuid: z.string().optional(),
+    }),
+  );
+}
 
 const TStats = z.strictObject({
   /**
-   * All collected stats measured in terms of mass
+   * All collected mass unit stats
    */
-  weight: TStatsWeight,
+  weight: z
+    .strictObject({
+      weight: dataSeries(TWeight),
+    })
+    .partial(),
   /**
-   * All collected stats measured in terms of length
+   * All collected length unit stats
    */
-  length: TStatsLength,
+  length: z
+    .strictObject({
+      neck: dataSeries(TLength),
+      shoulders: dataSeries(TLength),
+      bicepLeft: dataSeries(TLength),
+      bicepRight: dataSeries(TLength),
+      forearmLeft: dataSeries(TLength),
+      forearmRight: dataSeries(TLength),
+      chest: dataSeries(TLength),
+      waist: dataSeries(TLength),
+      hips: dataSeries(TLength),
+      thighLeft: dataSeries(TLength),
+      thighRight: dataSeries(TLength),
+      calfLeft: dataSeries(TLength),
+      calfRight: dataSeries(TLength),
+    })
+    .partial(),
   /**
-   * All collected stats measured in terms of percentage
+   * All collected percentage unit stats
    */
-  percentage: TStatsPercentage,
+  percentage: z
+    .strictObject({
+      bodyfat: dataSeries(TDynamicWeight),
+    })
+    .partial(),
 });
 export type IStats = z.infer<typeof TStats>;
 
