@@ -4,17 +4,13 @@ import type { SyntaxNode, Tree } from "@lezer/common";
 import {
   CollectionUtils_compact,
   CollectionUtils_findIndexReverse,
-  CollectionUtils_sort,
   CollectionUtils_sortBy,
 } from "../utils/collection";
 import { UidFactory_generateUid } from "@/utils/generator";
 import {
   MathUtils_applyOp,
-  MathUtils_round,
   MathUtils_roundFloat,
-  MathUtils_roundTo000005,
   MathUtils_roundTo0005,
-  MathUtils_roundTo005,
   n,
 } from "@/utils/math";
 import { type IEither, is, type OpenRecord } from "@/utils/types";
@@ -43,6 +39,15 @@ import {
   type IWeight,
   TDynamicWeight,
   TWeight,
+  w,
+  dw,
+  eq,
+  roundTo005,
+  add,
+  divide,
+  gt,
+  multiply,
+  print,
 } from "@/quantities/weight.ts";
 import {
   type IAllEquipment,
@@ -50,7 +55,6 @@ import {
   type IEquipmentData,
   type IExerciseDataValue,
   type IPlannerSettings,
-  type IPlate,
   type IProgramState,
   type IScriptFnContext,
   type IScriptFunctions,
@@ -328,7 +332,7 @@ function Program_runFinishDayScript(
     if (!ObjectUtils_isEqual(otherStates[key], program.states[key])) {
       memo[key] = ObjectUtils_keys(otherStates[key]).reduce<IProgramState>(
         (memo2, key2) => {
-          if (!Weight_eq(otherStates[key][key2], program.states[key][key2])) {
+          if (!eq(otherStates[key][key2], program.states[key][key2])) {
             memo2[key2] = otherStates[key][key2];
           }
           return memo2;
@@ -412,9 +416,9 @@ export function Program_runAllFinishDayScripts(
           const { state, updates, bindings, otherStates } = newStateResult.data;
           const exerciseKey = toKey(entry.exercise);
           const onerm = Exercise_onerm(entry.exercise, settings);
-          if (!Weight_eq(bindings.rm1, onerm)) {
+          if (!eq(bindings.rm1, onerm)) {
             exerciseData[exerciseKey] = {
-              rm1: Weight_roundTo005(bindings.rm1),
+              rm1: roundTo005(bindings.rm1),
             };
           }
           forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
@@ -725,22 +729,22 @@ export function Settings_defaultEquipment(): IAllEquipment {
     barbell: {
       multiplier: 2,
       bar: {
-        lb: build(45, "lb"),
-        kg: Weight_build(20, "kg"),
+        lb: w`45lb`,
+        kg: w`20kg`,
       },
       plates: [
-        { weight: Weight_build(45, "lb"), num: 8 },
-        { weight: Weight_build(25, "lb"), num: 4 },
-        { weight: Weight_build(10, "lb"), num: 4 },
-        { weight: Weight_build(5, "lb"), num: 4 },
-        { weight: Weight_build(2.5, "lb"), num: 4 },
-        { weight: Weight_build(1.25, "lb"), num: 2 },
-        { weight: Weight_build(20, "kg"), num: 8 },
-        { weight: Weight_build(10, "kg"), num: 4 },
-        { weight: Weight_build(5, "kg"), num: 4 },
-        { weight: Weight_build(2.5, "kg"), num: 4 },
-        { weight: Weight_build(1.25, "kg"), num: 4 },
-        { weight: Weight_build(0.5, "kg"), num: 2 },
+        { weight: w`45lb`, num: 8 },
+        { weight: w`25lb`, num: 4 },
+        { weight: w`10lb`, num: 4 },
+        { weight: w`5lb`, num: 4 },
+        { weight: w`2.5lb`, num: 4 },
+        { weight: w`1.25lb`, num: 2 },
+        { weight: w`20kg`, num: 8 },
+        { weight: w`10kg`, num: 4 },
+        { weight: w`5kg`, num: 4 },
+        { weight: w`2.5kg`, num: 4 },
+        { weight: w`1.25kg`, num: 4 },
+        { weight: w`0.5kg`, num: 2 },
       ],
       fixed: [],
       isFixed: false,
@@ -748,22 +752,22 @@ export function Settings_defaultEquipment(): IAllEquipment {
     trapbar: {
       multiplier: 2,
       bar: {
-        lb: Weight_build(45, "lb"),
-        kg: Weight_build(20, "kg"),
+        lb: w`45lb`,
+        kg: w`20kg`,
       },
       plates: [
-        { weight: Weight_build(45, "lb"), num: 8 },
-        { weight: Weight_build(25, "lb"), num: 4 },
-        { weight: Weight_build(10, "lb"), num: 4 },
-        { weight: Weight_build(5, "lb"), num: 4 },
-        { weight: Weight_build(2.5, "lb"), num: 4 },
-        { weight: Weight_build(1.25, "lb"), num: 2 },
-        { weight: Weight_build(20, "kg"), num: 8 },
-        { weight: Weight_build(10, "kg"), num: 4 },
-        { weight: Weight_build(5, "kg"), num: 4 },
-        { weight: Weight_build(2.5, "kg"), num: 4 },
-        { weight: Weight_build(1.25, "kg"), num: 4 },
-        { weight: Weight_build(0.5, "kg"), num: 2 },
+        { weight: w`45lb`, num: 8 },
+        { weight: w`25lb`, num: 4 },
+        { weight: w`10lb`, num: 4 },
+        { weight: w`5lb`, num: 4 },
+        { weight: w`2.5lb`, num: 4 },
+        { weight: w`1.25lb`, num: 2 },
+        { weight: w`20kg`, num: 8 },
+        { weight: w`10kg`, num: 4 },
+        { weight: w`5kg`, num: 4 },
+        { weight: w`2.5kg`, num: 4 },
+        { weight: w`1.25kg`, num: 4 },
+        { weight: w`0.5kg`, num: 2 },
       ],
       fixed: [],
       isFixed: false,
@@ -771,22 +775,22 @@ export function Settings_defaultEquipment(): IAllEquipment {
     leverageMachine: {
       multiplier: 1,
       bar: {
-        lb: Weight_build(0, "lb"),
-        kg: Weight_build(0, "kg"),
+        lb: w`0lb`,
+        kg: w`0kg`,
       },
       plates: [
-        { weight: Weight_build(45, "lb"), num: 8 },
-        { weight: Weight_build(25, "lb"), num: 4 },
-        { weight: Weight_build(10, "lb"), num: 4 },
-        { weight: Weight_build(5, "lb"), num: 4 },
-        { weight: Weight_build(2.5, "lb"), num: 4 },
-        { weight: Weight_build(1.25, "lb"), num: 2 },
-        { weight: Weight_build(20, "kg"), num: 8 },
-        { weight: Weight_build(10, "kg"), num: 4 },
-        { weight: Weight_build(5, "kg"), num: 4 },
-        { weight: Weight_build(2.5, "kg"), num: 4 },
-        { weight: Weight_build(1.25, "kg"), num: 4 },
-        { weight: Weight_build(0.5, "kg"), num: 2 },
+        { weight: w`45lb`, num: 8 },
+        { weight: w`25lb`, num: 4 },
+        { weight: w`10lb`, num: 4 },
+        { weight: w`5lb`, num: 4 },
+        { weight: w`2.5lb`, num: 4 },
+        { weight: w`1.25lb`, num: 2 },
+        { weight: w`20kg`, num: 8 },
+        { weight: w`10kg`, num: 4 },
+        { weight: w`5kg`, num: 4 },
+        { weight: w`2.5kg`, num: 4 },
+        { weight: w`1.25kg`, num: 4 },
+        { weight: w`0.5kg`, num: 2 },
       ],
       fixed: [],
       isFixed: false,
@@ -794,22 +798,22 @@ export function Settings_defaultEquipment(): IAllEquipment {
     smith: {
       multiplier: 2,
       bar: {
-        lb: Weight_build(45, "lb"),
-        kg: Weight_build(20, "kg"),
+        lb: w`45lb`,
+        kg: w`20kg`,
       },
       plates: [
-        { weight: Weight_build(45, "lb"), num: 8 },
-        { weight: Weight_build(25, "lb"), num: 4 },
-        { weight: Weight_build(10, "lb"), num: 4 },
-        { weight: Weight_build(5, "lb"), num: 4 },
-        { weight: Weight_build(2.5, "lb"), num: 4 },
-        { weight: Weight_build(1.25, "lb"), num: 2 },
-        { weight: Weight_build(20, "kg"), num: 8 },
-        { weight: Weight_build(10, "kg"), num: 4 },
-        { weight: Weight_build(5, "kg"), num: 4 },
-        { weight: Weight_build(2.5, "kg"), num: 4 },
-        { weight: Weight_build(1.25, "kg"), num: 4 },
-        { weight: Weight_build(0.5, "kg"), num: 2 },
+        { weight: w`45lb`, num: 8 },
+        { weight: w`25lb`, num: 4 },
+        { weight: w`10lb`, num: 4 },
+        { weight: w`5lb`, num: 4 },
+        { weight: w`2.5lb`, num: 4 },
+        { weight: w`1.25lb`, num: 2 },
+        { weight: w`20kg`, num: 8 },
+        { weight: w`10kg`, num: 4 },
+        { weight: w`5kg`, num: 4 },
+        { weight: w`2.5kg`, num: 4 },
+        { weight: w`1.25kg`, num: 4 },
+        { weight: w`0.5kg`, num: 2 },
       ],
       fixed: [],
       isFixed: false,
@@ -817,56 +821,56 @@ export function Settings_defaultEquipment(): IAllEquipment {
     dumbbell: {
       multiplier: 2,
       bar: {
-        lb: Weight_build(10, "lb"),
-        kg: Weight_build(5, "kg"),
+        lb: w`10lb`,
+        kg: w`5kg`,
       },
       plates: [
-        { weight: Weight_build(10, "lb"), num: 8 },
-        { weight: Weight_build(5, "lb"), num: 4 },
-        { weight: Weight_build(2.5, "lb"), num: 4 },
-        { weight: Weight_build(1.25, "lb"), num: 2 },
-        { weight: Weight_build(5, "kg"), num: 8 },
-        { weight: Weight_build(2.5, "kg"), num: 4 },
-        { weight: Weight_build(1.25, "kg"), num: 4 },
-        { weight: Weight_build(0.5, "kg"), num: 2 },
+        { weight: w`10lb`, num: 8 },
+        { weight: w`5lb`, num: 4 },
+        { weight: w`2.5lb`, num: 4 },
+        { weight: w`1.25lb`, num: 2 },
+        { weight: w`5kg`, num: 8 },
+        { weight: w`2.5kg`, num: 4 },
+        { weight: w`1.25kg`, num: 4 },
+        { weight: w`0.5kg`, num: 2 },
       ],
       fixed: [
-        Weight_build(10, "lb"),
-        Weight_build(15, "lb"),
-        Weight_build(20, "lb"),
-        Weight_build(25, "lb"),
-        Weight_build(30, "lb"),
-        Weight_build(35, "lb"),
-        Weight_build(40, "lb"),
-        Weight_build(4, "kg"),
-        Weight_build(6, "kg"),
-        Weight_build(8, "kg"),
-        Weight_build(10, "kg"),
-        Weight_build(12, "kg"),
-        Weight_build(14, "kg"),
-        Weight_build(20, "kg"),
+        w`10lb`,
+        w`15lb`,
+        w`20lb`,
+        w`25lb`,
+        w`30lb`,
+        w`35lb`,
+        w`40lb`,
+        w`4kg`,
+        w`6kg`,
+        w`8kg`,
+        w`10kg`,
+        w`12kg`,
+        w`14kg`,
+        w`20kg`,
       ],
       isFixed: false,
     },
     ezbar: {
       multiplier: 2,
       bar: {
-        lb: Weight_build(20, "lb"),
-        kg: Weight_build(10, "kg"),
+        lb: w`20lb`,
+        kg: w`10kg`,
       },
       plates: [
-        { weight: Weight_build(45, "lb"), num: 8 },
-        { weight: Weight_build(25, "lb"), num: 4 },
-        { weight: Weight_build(10, "lb"), num: 4 },
-        { weight: Weight_build(5, "lb"), num: 4 },
-        { weight: Weight_build(2.5, "lb"), num: 4 },
-        { weight: Weight_build(1.25, "lb"), num: 2 },
-        { weight: Weight_build(20, "kg"), num: 8 },
-        { weight: Weight_build(10, "kg"), num: 4 },
-        { weight: Weight_build(5, "kg"), num: 4 },
-        { weight: Weight_build(2.5, "kg"), num: 4 },
-        { weight: Weight_build(1.25, "kg"), num: 4 },
-        { weight: Weight_build(0.5, "kg"), num: 2 },
+        { weight: w`45lb`, num: 8 },
+        { weight: w`25lb`, num: 4 },
+        { weight: w`10lb`, num: 4 },
+        { weight: w`5lb`, num: 4 },
+        { weight: w`2.5lb`, num: 4 },
+        { weight: w`1.25lb`, num: 2 },
+        { weight: w`20kg`, num: 8 },
+        { weight: w`10kg`, num: 4 },
+        { weight: w`5kg`, num: 4 },
+        { weight: w`2.5kg`, num: 4 },
+        { weight: w`1.25kg`, num: 4 },
+        { weight: w`0.5kg`, num: 2 },
       ],
       fixed: [],
       isFixed: false,
@@ -874,24 +878,24 @@ export function Settings_defaultEquipment(): IAllEquipment {
     cable: {
       multiplier: 1,
       bar: {
-        lb: Weight_build(0, "lb"),
-        kg: Weight_build(0, "kg"),
+        lb: w`0lb`,
+        kg: w`0kg`,
       },
       plates: [
         {
-          weight: Weight_build(10, "lb"),
+          weight: w`10lb`,
           num: 20,
         },
         {
-          weight: Weight_build(5, "lb"),
+          weight: w`5lb`,
           num: 10,
         },
         {
-          weight: Weight_build(5, "kg"),
+          weight: w`5kg`,
           num: 20,
         },
         {
-          weight: Weight_build(2.5, "kg"),
+          weight: w`2.5kg`,
           num: 10,
         },
       ],
@@ -901,23 +905,23 @@ export function Settings_defaultEquipment(): IAllEquipment {
     kettlebell: {
       multiplier: 1,
       bar: {
-        lb: Weight_build(0, "lb"),
-        kg: Weight_build(0, "kg"),
+        lb: w`0lb`,
+        kg: w`0kg`,
       },
       plates: [],
       fixed: [
-        Weight_build(10, "lb"),
-        Weight_build(15, "lb"),
-        Weight_build(20, "lb"),
-        Weight_build(25, "lb"),
-        Weight_build(30, "lb"),
-        Weight_build(35, "lb"),
-        Weight_build(40, "lb"),
-        Weight_build(4, "kg"),
-        Weight_build(8, "kg"),
-        Weight_build(12, "kg"),
-        Weight_build(16, "kg"),
-        Weight_build(24, "kg"),
+        w`10lb`,
+        w`15lb`,
+        w`20lb`,
+        w`25lb`,
+        w`30lb`,
+        w`35lb`,
+        w`40lb`,
+        w`4kg`,
+        w`8kg`,
+        w`12kg`,
+        w`16kg`,
+        w`24kg`,
       ],
       isFixed: true,
     },
@@ -1920,7 +1924,7 @@ export function ProgramExercise_weightChanges(
         ) {
           const set = variation.sets[setIndex];
           if (set.weight) {
-            const key = Weight_print(set.weight);
+            const key = print(set.weight);
             results[key] = {
               originalWeight: set.weight,
               weight: set.weight,
@@ -1982,7 +1986,7 @@ function ProgramExercise_applyVariables(
                 );
                 const defaultSet: IPlannerProgramExerciseEvaluatedSet = {
                   maxrep: 1,
-                  weight: Weight_build(100, "lb"),
+                  weight: w`100lb`,
                   logRpe: false,
                   isAmrap: false,
                   isQuickAddSet: false,
@@ -2289,10 +2293,10 @@ function Stats_getCurrentMovingAverageBodyweight(
   }
   const recentWeights = weights.slice(0, movingAverageWindowSize);
   const totalWeight = recentWeights.reduce(
-    (sum, item) => Weight_add(sum, item.value),
-    Weight_build(0, settings.units),
+    (sum, item) => add(sum, item.value),
+    build(0, settings.units),
   );
-  return Weight_divide(totalWeight, recentWeights.length);
+  return divide(totalWeight, recentWeights.length);
 }
 //#endregion
 
@@ -2771,7 +2775,7 @@ export class PlannerExerciseEvaluator {
     ) {
       const value = this.getValue(expr).replace("+", "");
       const unit = value.indexOf("kg") !== -1 ? "kg" : "lb";
-      return Weight_build(parseFloat(value), unit);
+      return build(parseFloat(value), unit);
     } else {
       return undefined;
     }
@@ -5258,7 +5262,7 @@ function PlannerProgramExercise_programWarmups(
       sets.push({
         reps: ws.reps,
         value,
-        threshold: Weight_build(0, settings.units),
+        threshold: build(0, settings.units),
       });
     }
   }
@@ -5435,7 +5439,7 @@ function PlannerProgramExercise_getOnlyChangedState(
     state,
     (key, value) =>
       originalState[key] == null ||
-      !Weight_eq(originalState[key], value) ||
+      !eq(originalState[key], value) ||
       originalStateMetadata[key]?.userPrompted !==
         stateMetadata[key]?.userPrompted,
   ) as IProgramState;
@@ -5543,17 +5547,13 @@ function PlannerProgramExercise_buildProgress(
       };
     }
     case "lp": {
-      const increment = args[0]
-        ? Weight_parsePct(args[0])
-        : Weight_build(0, "lb");
-      const decrement = args[3]
-        ? Weight_parsePct(args[3])
-        : Weight_build(0, "lb");
+      const increment = args[0] ? Weight_parsePct(args[0]) : w`0lb`;
+      const decrement = args[3] ? Weight_parsePct(args[3]) : w`0lb`;
       const state: IProgramState = {
-        increment: increment ?? Weight_build(0, "lb"),
+        increment: increment ?? w`0lb`,
         successes: args[1] ? parseInt(args[1], 10) : 1,
         successCounter: args[2] ? parseInt(args[2], 10) : 0,
-        decrement: decrement ?? Weight_build(0, "lb"),
+        decrement: decrement ?? w`0lb`,
         failures: args[4]
           ? parseInt(args[4], 10)
           : (decrement?.value ?? 0) > 0
@@ -5602,11 +5602,9 @@ if (state.decrement > 0 && state.failures > 0) {
       };
     }
     case "dp": {
-      const increment = args[0]
-        ? Weight_parsePct(args[0])
-        : Weight_build(0, "lb");
+      const increment = args[0] ? Weight_parsePct(args[0]) : w`0lb`;
       const state: IProgramState = {
-        increment: increment ?? Weight_build(0, "lb"),
+        increment: increment ?? w`0lb`,
         minReps: args[1] ? parseInt(args[1], 10) : 0,
         maxReps: args[2] ? parseInt(args[2], 10) : 0,
       };
@@ -5622,12 +5620,10 @@ if (state.decrement > 0 && state.failures > 0) {
       };
     }
     case "sum": {
-      const increment = args[1]
-        ? Weight_parsePct(args[1])
-        : Weight_build(0, "lb");
+      const increment = args[1] ? Weight_parsePct(args[1]) : w`0lb`;
       const state: IProgramState = {
         reps: args[0] ? parseInt(args[0], 10) : 0,
-        increment: increment ?? Weight_build(0, "lb"),
+        increment: increment ?? w`0lb`,
       };
       const script = `for (var.i in completedReps) {
 if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
@@ -5779,20 +5775,17 @@ function warmupValues(
       sets = [
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(60, "lb") : Weight_build(30, "kg"),
+          threshold: units === "lb" ? w`60lb` : w`30kg`,
           value: 0.3,
         },
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(30, "lb") : Weight_build(15, "kg"),
+          threshold: units === "lb" ? w`30lb` : w`15kg`,
           value: 0.5,
         },
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(10, "lb") : Weight_build(5, "kg"),
+          threshold: units === "lb" ? w`10lb` : w`5kg`,
           value: 0.8,
         },
       ];
@@ -5801,20 +5794,17 @@ function warmupValues(
       sets = [
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(120, "lb") : Weight_build(60, "kg"),
+          threshold: units === "lb" ? w`120lb` : w`60kg`,
           value: 0.3,
         },
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(90, "lb") : Weight_build(45, "kg"),
+          threshold: units === "lb" ? w`90lb` : w`45kg`,
           value: 0.5,
         },
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(45, "lb") : Weight_build(20, "kg"),
+          threshold: units === "lb" ? w`45lb` : w`20kg`,
           value: 0.8,
         },
       ];
@@ -5823,20 +5813,17 @@ function warmupValues(
       sets = [
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(150, "lb") : Weight_build(70, "kg"),
+          threshold: units === "lb" ? w`150lb` : w`70kg`,
           value: 0.3,
         },
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(125, "lb") : Weight_build(60, "kg"),
+          threshold: units === "lb" ? w`125lb` : w`60kg`,
           value: 0.5,
         },
         {
           reps: 5,
-          threshold:
-            units === "lb" ? Weight_build(95, "lb") : Weight_build(40, "kg"),
+          threshold: units === "lb" ? w`95lb` : w`40kg`,
           value: 0.8,
         },
       ];
@@ -5863,16 +5850,13 @@ function warmup(
       (memo, programExerciseWarmupSet) => {
         if (
           shouldSkipThreshold ||
-          (weight != null &&
-            Weight_gt(weight, programExerciseWarmupSet.threshold))
+          (weight != null && gt(weight, programExerciseWarmupSet.threshold))
         ) {
           const value = programExerciseWarmupSet.value;
           const unit = getPreferredUnit(settings, exerciseType);
           if (typeof value !== "number" || weight != null) {
             const warmupWeight =
-              typeof value === "number"
-                ? Weight_multiply(weight!, value)
-                : value;
+              typeof value === "number" ? multiply(weight!, value) : value;
             const roundedWeight = Weight_roundConvertTo(
               warmupWeight,
               settings,
@@ -5910,8 +5894,8 @@ function maybeGetExercise(
         ...custom,
         defaultWarmup: 45,
         types: custom.types || [],
-        startingWeightKg: Weight_build(0, "kg"),
-        startingWeightLb: Weight_build(0, "lb"),
+        startingWeightKg: w`0kg`,
+        startingWeightLb: w`0lb`,
       }
     : allExercisesList[id];
 }
@@ -6134,9 +6118,7 @@ function Progress_createEmptyScriptBindings(
   settings: ISettings,
   exercise?: IExerciseType,
 ): IScriptBindings {
-  const rm1 = exercise
-    ? Exercise_onerm(exercise, settings)
-    : Weight_build(0, "lb");
+  const rm1 = exercise ? Exercise_onerm(exercise, settings) : w`0lb`;
   return {
     day: dayData.day,
     week: dayData.week ?? 1,
@@ -6166,7 +6148,7 @@ function Progress_createEmptyScriptBindings(
     ns: 0,
     setVariationIndex: 1,
     descriptionIndex: 1,
-    bodyweight: Weight_build(0, settings.units),
+    bodyweight: build(0, settings.units),
     setIndex: 1,
     rm1,
   };
@@ -6190,7 +6172,7 @@ function Progress_createScriptBindings(
   for (const set of entry.sets) {
     bindings.weights.push(set.weight);
     bindings.originalWeights.push(
-      set.originalWeight ?? Weight_build(0, settings.units),
+      set.originalWeight ?? build(0, settings.units),
     );
     bindings.reps.push(set.reps);
     bindings.minReps.push(set.minReps);
@@ -6219,7 +6201,7 @@ function Progress_createScriptBindings(
   bindings.setIndex = setIndex ?? 1;
   bindings.setVariationIndex = setVariationIndex ?? 1;
   bindings.descriptionIndex = descriptionIndex ?? 1;
-  bindings.bodyweight = bodyweight ?? Weight_build(0, settings.units);
+  bindings.bodyweight = bodyweight ?? build(0, settings.units);
   return bindings;
 }
 
@@ -6320,8 +6302,8 @@ function Progress_applyBindings(
           index: i,
           isUnilateral: isUnilateral(entry.exercise, settings),
           reps: 0,
-          weight: Weight_build(0, "lb"),
-          originalWeight: Weight_build(0, "lb"),
+          weight: w`0lb`,
+          originalWeight: w`0lb`,
           askWeight: false,
           isCompleted: false,
         };
@@ -6397,7 +6379,7 @@ function Progress_getEntryId(
 //   return Weight_multiply(onerm, weight.value / 100);
 // }
 //
-// function Weight_print(weight: IWeight | IDynamicWeight | number): string {
+// function print(weight: IWeight | IDynamicWeight | number): string {
 //   if (typeof weight === "number") {
 //     return `${n(weight)}`;
 //   } else {
@@ -6432,7 +6414,7 @@ function Progress_getEntryId(
 // function Weight_parse(str: string): IWeight | undefined {
 //   const match = str.match(/^([\-+]?[0-9.]+)\s*(kg|lb)$/);
 //   if (match) {
-//     return Weight_build(
+//     return build(
 //       MathUtils_roundFloat(parseFloat(match[1]), 2),
 //       match[2] as IUnit,
 //     );
@@ -6445,7 +6427,7 @@ function Progress_getEntryId(
 //   return { value, unit: "%" };
 // }
 //
-// export function Weight_build(value: number, unit: IUnit): IWeight {
+// export function build(value: number, unit: IUnit): IWeight {
 //   const key = `${value}_${unit}`;
 //   const prebuiltWeight = prebuiltWeights[key];
 //   if (prebuiltWeight != null) {
@@ -6474,11 +6456,11 @@ function Progress_getEntryId(
 // }
 //
 // function Weight_roundTo005(weight: IWeight): IWeight {
-//   return Weight_build(MathUtils_roundTo005(weight.value), weight.unit);
+//   return build(MathUtils_roundTo005(weight.value), weight.unit);
 // }
 //
 // function Weight_roundTo000005(weight: IWeight): IWeight {
-//   return Weight_build(MathUtils_roundTo000005(weight.value), weight.unit);
+//   return build(MathUtils_roundTo000005(weight.value), weight.unit);
 // }
 //
 // function Weight_calculatePlates(
@@ -6490,7 +6472,7 @@ function Progress_getEntryId(
 //   const equipmentData = getEquipmentData(settings, exerciseType);
 //   if (equipmentData == null) {
 //     const rounding = Exercise_defaultRounding(exerciseType, settings);
-//     allWeight = Weight_build(
+//     allWeight = build(
 //       MathUtils_round(allWeight.value, rounding),
 //       allWeight.unit,
 //     );
@@ -6543,25 +6525,25 @@ function Progress_getEntryId(
 //       const weightToAdd = Weight_multiply(plate.weight, plate.num);
 //       return isAssisting
 //         ? Weight_subtract(memo, weightToAdd)
-//         : Weight_add(memo, weightToAdd);
+//         : add(memo, weightToAdd);
 //     },
-//     Weight_build(0, allWeight.unit),
+//     build(0, allWeight.unit),
 //   );
 //   const totalWeight = Weight_roundTo000005(
 //     inverted
-//       ? Weight_invert(Weight_add(total, barWeight))
-//       : Weight_add(total, barWeight),
+//       ? Weight_invert(add(total, barWeight))
+//       : add(total, barWeight),
 //   );
 //   const thePlatesWeight = inverted ? Weight_invert(total) : total;
 //   return { plates, platesWeight: thePlatesWeight, totalWeight };
 // }
 //
 // function Weight_abs(weight: IWeight): IWeight {
-//   return Weight_build(Math.abs(weight.value), weight.unit);
+//   return build(Math.abs(weight.value), weight.unit);
 // }
 //
 // function Weight_invert(weight: IWeight): IWeight {
-//   return Weight_build(-weight.value, weight.unit);
+//   return build(-weight.value, weight.unit);
 // }
 //
 // function calculatePlatesInternalFast(
@@ -6758,9 +6740,9 @@ function Progress_getEntryId(
 //     if (weight.unit === unit) {
 //       return weight;
 //     } else if (weight.unit === "kg" && unit === "lb") {
-//       return Weight_build(Math.round((weight.value * 2.205) / 0.5) * 0.5, unit);
+//       return build(Math.round((weight.value * 2.205) / 0.5) * 0.5, unit);
 //     } else {
-//       return Weight_build(Math.round(weight.value / 2.205 / 0.5) * 0.5, unit);
+//       return build(Math.round(weight.value / 2.205 / 0.5) * 0.5, unit);
 //     }
 //   }
 // }
@@ -6877,11 +6859,11 @@ function Progress_getEntryId(
 //   o: (a: number, b: number) => number,
 // ): IWeight {
 //   if (typeof weight === "number" && typeof value !== "number") {
-//     return Weight_build(o(weight, value.value), value.unit);
+//     return build(o(weight, value.value), value.unit);
 //   } else if (typeof weight !== "number" && typeof value === "number") {
-//     return Weight_build(o(weight.value, value), weight.unit);
+//     return build(o(weight.value, value), weight.unit);
 //   } else if (typeof weight !== "number" && typeof value !== "number") {
-//     return Weight_build(
+//     return build(
 //       o(weight.value, Weight_convertTo(value, weight.unit).value),
 //       weight.unit,
 //     );
@@ -7142,10 +7124,8 @@ class ProgramToPlanner {
             reuseSet
               ? !Weight_eqNull(programSet.weight, reuseSet.weight) ||
                 programSet.askWeight !== reuseSet.askWeight
-              : !Weight_eq(
-                  globals.weight || Weight_zero,
-                  reusedGlobals.weight || Weight_zero,
-                ) || globals.askWeight !== reusedGlobals.askWeight
+              : !eq(globals.weight || w`0lb`, reusedGlobals.weight || w`0lb`) ||
+                globals.askWeight !== reusedGlobals.askWeight
           ) {
             if (globals.weight != null) {
               dereuseDecisions.add("weight");
@@ -7813,7 +7793,7 @@ class ProgramToPlanner {
         PlannerProgramExercise_getOnlyChangedState(programExercise);
       progressStr += `(${ObjectUtils_entries(onlyChangedState)
         .map(([k, v]) => {
-          return `${k}${stateMetadata[k]?.userPrompted ? "+" : ""}: ${Weight_print(v)}`;
+          return `${k}${stateMetadata[k]?.userPrompted ? "+" : ""}: ${print(v)}`;
         })
         .join(", ")})`;
     } else if (progress.type === "lp") {
@@ -7824,7 +7804,7 @@ class ProgramToPlanner {
       const failures = state.failures as number;
       const failureCounter = state.failureCounter as number;
       const args: string[] = [];
-      args.push(Weight_print(increment));
+      args.push(print(increment));
       if (successes > 1 || decrement.value > 0) {
         args.push(`${successes}`);
       }
@@ -7832,7 +7812,7 @@ class ProgramToPlanner {
         args.push(`${successCounter}`);
       }
       if (decrement.value > 0) {
-        args.push(Weight_print(decrement));
+        args.push(print(decrement));
       }
       if (failures > 1) {
         args.push(`${failures}`);
@@ -7845,12 +7825,12 @@ class ProgramToPlanner {
       const increment = state.increment as IWeight | IDynamicWeight;
       const minReps = state.minReps as number;
       const maxReps = state.maxReps as number;
-      const args = [Weight_print(increment), `${minReps}`, `${maxReps}`];
+      const args = [print(increment), `${minReps}`, `${maxReps}`];
       progressStr += `(${args.join(", ")})`;
     } else if (progress.type === "sum") {
       const reps = state.reps as number;
       const increment = state.increment as IWeight | IDynamicWeight;
-      const args = [`${reps}`, Weight_print(increment)];
+      const args = [`${reps}`, print(increment)];
       progressStr += `(${args.join(", ")})`;
     }
     if (progress.type === "custom") {
@@ -8000,8 +7980,8 @@ class ProgramToPlanner {
           first.weight ??
           (first.percentage != null
             ? Weight_buildPct(first.percentage)
-            : Weight_build(0, "lb"));
-        strs.push(`${length}x${first.reps} ${Weight_print(weight)}`);
+            : w`0lb`);
+        strs.push(`${length}x${first.reps} ${print(weight)}`);
       }
       return strs.length === 0 ? "none" : strs.join(", ");
     }
@@ -8010,7 +7990,7 @@ class ProgramToPlanner {
 
   private weightExprToStr(weightExpr?: IWeight | IDynamicWeight): string {
     if (weightExpr != null) {
-      return Weight_print(weightExpr);
+      return print(weightExpr);
     }
     return "";
   }
@@ -8062,7 +8042,7 @@ class ProgramToPlanner {
   }
 
   private warmupSetToKey(set: IPlannerProgramExerciseWarmupSet): string {
-    return `${set.reps}-${Weight_print(set.weight || set.percentage || 0)}`;
+    return `${set.reps}-${print(set.weight || set.percentage || 0)}`;
   }
 
   private setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
@@ -8197,10 +8177,10 @@ class ScriptRunner {
           0,
         );
       } else if (typeof result === "number") {
-        return Weight_build(result, this.units);
+        return build(result, this.units);
       } else {
         if (result.value < 0) {
-          return Weight_build(0, this.units);
+          return build(0, this.units);
         } else {
           return result;
         }
