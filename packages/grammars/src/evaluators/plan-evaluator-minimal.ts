@@ -105,7 +105,6 @@ interface IEvaluatedProgramError {
 }
 
 interface IEvaluatedProgram {
-  type: "evaluatedProgram";
   id: string;
   planner: IPlannerProgram;
   name: string;
@@ -489,7 +488,6 @@ function Program_forceEvaluate(
   const planner = program.planner;
   if (!planner) {
     return {
-      type: "evaluatedProgram",
       id: program.id,
       planner: {
         name: program.name,
@@ -558,7 +556,6 @@ function Program_forceEvaluate(
   });
 
   return {
-    type: "evaluatedProgram",
     id: program.id,
     errors,
     planner,
@@ -1507,101 +1504,87 @@ export function PlannerProgram_generateFullText(
 
 type IAllCustomExercises = OpenRecord<ICustomExercise>;
 
-const THistoryEntry = z
-  .object({
-    exercise: TExerciseType,
-    sets: z.array(TSet),
-    warmupSets: z.array(TSet),
-    index: z.number(),
-    id: z.string(),
-    programExerciseId: z.string().optional(),
-    state: TProgramState.optional(),
-    vars: TProgramState.optional(),
-    notes: z.string().optional(),
-    changed: z.boolean().optional(),
-    isSuppressed: z.boolean().optional(),
-    superset: z.string().optional(),
-    updatePrints: z
-      .array(z.array(z.union([z.number(), TWeight, TDynamicWeight])))
-      .optional(),
-  })
-  .strict();
+const THistoryEntry = z.strictObject({
+  exercise: TExerciseType,
+  sets: z.array(TSet),
+  warmupSets: z.array(TSet),
+  index: z.number(),
+  id: z.string(),
+  programExerciseId: z.string().optional(),
+  state: TProgramState.optional(),
+  vars: TProgramState.optional(),
+  notes: z.string().optional(),
+  changed: z.boolean().optional(),
+  isSuppressed: z.boolean().optional(),
+  superset: z.string().optional(),
+  updatePrints: z
+    .array(z.array(z.union([z.number(), TWeight, TDynamicWeight])))
+    .optional(),
+});
 type IHistoryEntry = z.infer<typeof THistoryEntry>;
 
-const TProgramStateMetadataValue = z
-  .object({
-    userPrompted: z.boolean().optional(),
-  })
-  .strict();
+const TProgramStateMetadataValue = z.strictObject({
+  userPrompted: z.boolean().optional(),
+});
 
 const TProgramStateMetadata = z.record(z.string(), TProgramStateMetadataValue);
 type IProgramStateMetadata = z.infer<typeof TProgramStateMetadata>;
 
-const TProgramSet = z
-  .object({
-    repsExpr: z.string(),
-    weightExpr: z.string(),
-    isAmrap: z.boolean().optional(),
-    rpeExpr: z.string().optional(),
-    minRepsExpr: z.string().optional(),
-    logRpe: z.boolean().optional(),
-    askWeight: z.boolean().optional(),
-    label: z.string().optional(),
-    timerExpr: z.string().optional(),
-  })
-  .strict();
+const TProgramSet = z.strictObject({
+  repsExpr: z.string(),
+  weightExpr: z.string(),
+  isAmrap: z.boolean().optional(),
+  rpeExpr: z.string().optional(),
+  minRepsExpr: z.string().optional(),
+  logRpe: z.boolean().optional(),
+  askWeight: z.boolean().optional(),
+  label: z.string().optional(),
+  timerExpr: z.string().optional(),
+});
 
-const TProgramExerciseVariation = z
-  .object({
-    sets: z.array(TProgramSet),
-    quickAddSets: z.boolean().optional(),
-  })
-  .strict();
+const TProgramExerciseVariation = z.strictObject({
+  sets: z.array(TProgramSet),
+  quickAddSets: z.boolean().optional(),
+});
 
-const TProgramExerciseWarmupSet = z
-  .object({
-    reps: z.number(),
-    value: z.union([TWeight, z.number()]),
-    threshold: TWeight,
-  })
-  .strict();
+const TProgramExerciseWarmupSet = z.strictObject({
+  reps: z.number(),
+  value: z.union([TWeight, z.number()]),
+  threshold: TWeight,
+});
 type IProgramExerciseWarmupSet = Readonly<
   z.infer<typeof TProgramExerciseWarmupSet>
 >;
 
-const TProgramExerciseReuseLogic = z
-  .object({
-    selected: z.union([z.string(), z.undefined()]),
-    states: z.record(z.string(), TProgramState),
-  })
-  .strict();
+const TProgramExerciseReuseLogic = z.strictObject({
+  selected: z.union([z.string(), z.undefined()]),
+  states: z.record(z.string(), TProgramState),
+});
 
-const TProgramExercise = z
-  .object({
-    exerciseType: TExerciseType,
-    id: z.string(),
-    name: z.string(),
-    variations: z.array(TProgramExerciseVariation),
-    state: TProgramState,
-    variationExpr: z.string(),
-    finishDayExpr: z.string(),
-    descriptions: z.array(z.string()),
-    tags: z.array(z.number()).optional(),
-    updateDayExpr: z.string().optional(),
-    diffPaths: z.array(z.string()).optional(),
-    description: z.string().optional(),
-    descriptionExpr: z.string().optional(),
-    quickAddSets: z.boolean().optional(),
-    enableRepRanges: z.boolean().optional(),
-    enableRpe: z.boolean().optional(),
-    stateMetadata: TProgramStateMetadata.optional(),
-    timerExpr: z.string().optional(),
-    reuseLogic: TProgramExerciseReuseLogic.optional(),
-    warmupSets: z.array(TProgramExerciseWarmupSet).optional(),
-    reuseFinishDayScript: z.string().optional(),
-    reuseUpdateDayScript: z.string().optional(),
-  })
-  .strict();
+const TProgramExercise = z.strictObject({
+  exerciseType: TExerciseType,
+  id: z.string(),
+  name: z.string(),
+  variations: z.array(TProgramExerciseVariation),
+  state: TProgramState,
+  variationExpr: z.string(),
+  finishDayExpr: z.string(),
+  descriptions: z.array(z.string()),
+  tags: z.array(z.number()).optional(),
+  updateDayExpr: z.string().optional(),
+  diffPaths: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  descriptionExpr: z.string().optional(),
+  quickAddSets: z.boolean().optional(),
+  enableRepRanges: z.boolean().optional(),
+  enableRpe: z.boolean().optional(),
+  stateMetadata: TProgramStateMetadata.optional(),
+  timerExpr: z.string().optional(),
+  reuseLogic: TProgramExerciseReuseLogic.optional(),
+  warmupSets: z.array(TProgramExerciseWarmupSet).optional(),
+  reuseFinishDayScript: z.string().optional(),
+  reuseUpdateDayScript: z.string().optional(),
+});
 
 const exercisePickerScreens = [
   "exercisePicker",
@@ -1611,39 +1594,31 @@ const exercisePickerScreens = [
 ] as const;
 const TExercisePickerScreen = z.enum(exercisePickerScreens);
 
-const TExercisePickerFilters = z
-  .object({
-    equipment: z.array(TBuiltinEquipmentTypes).optional(),
-    type: z.array(TExerciseKind).optional(),
-    muscles: z.array(TMuscle).optional(),
-    isStarred: z.boolean().optional(),
-  })
-  .strict();
+const TExercisePickerFilters = z.strictObject({
+  equipment: z.array(TBuiltinEquipmentTypes).optional(),
+  type: z.array(TExerciseKind).optional(),
+  muscles: z.array(TMuscle).optional(),
+  isStarred: z.boolean().optional(),
+});
 
-const TExercisePickerProgramExercise = z
-  .object({
-    type: z.literal("program"),
-    exerciseType: TExerciseType,
-    week: z.number(),
-    dayInWeek: z.number(),
-  })
-  .strict();
+const TExercisePickerProgramExercise = z.strictObject({
+  type: z.literal("program"),
+  exerciseType: TExerciseType,
+  week: z.number(),
+  dayInWeek: z.number(),
+});
 
-const TExercisePickerAdhocExercise = z
-  .object({
-    type: z.literal("adhoc"),
-    exerciseType: TExerciseType,
-    label: z.string().optional(),
-  })
-  .strict();
+const TExercisePickerAdhocExercise = z.strictObject({
+  type: z.literal("adhoc"),
+  exerciseType: TExerciseType,
+  label: z.string().optional(),
+});
 
-const TExercisePickerTemplate = z
-  .object({
-    type: z.literal("template"),
-    name: z.string(),
-    label: z.string().optional(),
-  })
-  .strict();
+const TExercisePickerTemplate = z.strictObject({
+  type: z.literal("template"),
+  name: z.string(),
+  label: z.string().optional(),
+});
 
 const TExercisePickerSelectedExercise = z.discriminatedUnion("type", [
   TExercisePickerProgramExercise,
@@ -1651,97 +1626,85 @@ const TExercisePickerSelectedExercise = z.discriminatedUnion("type", [
   TExercisePickerTemplate,
 ]);
 
-const TExercisePickerState = z
-  .object({
-    screenStack: z.array(TExercisePickerScreen),
-    sort: TExercisePickerSort,
-    filters: TExercisePickerFilters,
-    selectedExercises: z.array(TExercisePickerSelectedExercise),
-    mode: z.union([z.literal("workout"), z.literal("program")]),
-    showMuscles: z.boolean().optional(),
-    customExerciseName: z.string().optional(),
-    label: z.string().optional(),
-    templateName: z.string().optional(),
-    selectedTab: z.number().optional(),
-    editCustomExercise: TCustomExercise.optional(),
-    search: z.string().optional(),
-    exerciseType: TExerciseType.optional(),
-    entryIndex: z.number().optional(),
-  })
-  .strict();
+const TExercisePickerState = z.strictObject({
+  screenStack: z.array(TExercisePickerScreen),
+  sort: TExercisePickerSort,
+  filters: TExercisePickerFilters,
+  selectedExercises: z.array(TExercisePickerSelectedExercise),
+  mode: z.union([z.literal("workout"), z.literal("program")]),
+  showMuscles: z.boolean().optional(),
+  customExerciseName: z.string().optional(),
+  label: z.string().optional(),
+  templateName: z.string().optional(),
+  selectedTab: z.number().optional(),
+  editCustomExercise: TCustomExercise.optional(),
+  search: z.string().optional(),
+  exerciseType: TExerciseType.optional(),
+  entryIndex: z.number().optional(),
+});
 
-const TProgressUi = z
-  .object({
-    id: z.string().optional(),
-    amrapModal: z
-      .object({
-        entryIndex: z.number(),
-        setIndex: z.number(),
-        isAmrap: z.boolean().optional(),
-        logRpe: z.boolean().optional(),
-        askWeight: z.boolean().optional(),
-        userVars: z.boolean().optional(),
-        nonce: z.number().optional(),
-      })
-      .strict()
-      .optional(),
-    editModal: z
-      .object({
-        programExerciseId: z.string(),
-        entryIndex: z.number(),
-      })
-      .strict()
-      .optional(),
-    dateModal: z
-      .object({
-        date: z.string(),
-        time: z.number(),
-      })
-      .strict()
-      .optional(),
-    exercisePicker: z
-      .object({
-        state: TExercisePickerState.optional(),
-      })
-      .strict()
-      .optional(),
-    equipmentModal: z
-      .object({
-        exerciseType: TExerciseType.optional(),
-      })
-      .strict()
-      .optional(),
-    rm1Modal: z
-      .object({
-        exerciseType: TExerciseType.optional(),
-      })
-      .strict()
-      .optional(),
-    editSetModal: z
-      .object({
-        isWarmup: z.boolean(),
-        entryIndex: z.number(),
-        exerciseType: z.union([TExerciseType, z.undefined()]),
-        programExerciseId: z.union([z.string(), z.undefined()]),
-        set: TSet,
-        setIndex: z.union([z.number(), z.undefined()]),
-      })
-      .strict()
-      .optional(),
-    exerciseBottomSheet: z
-      .object({
-        entryIndex: z.number(),
-      })
-      .strict()
-      .optional(),
-    entryIndexEditMode: z.number().optional(),
-    currentEntryIndex: z.number().optional(),
-    showSupersetPicker: THistoryEntry.optional(),
-    forceUpdateEntryIndex: z.boolean().optional(),
-    isExternal: z.boolean().optional(),
-    nativeNotificationScheduled: z.boolean().optional(),
-  })
-  .strict();
+const TProgressUi = z.strictObject({
+  id: z.string().optional(),
+  amrapModal: z
+    .strictObject({
+      entryIndex: z.number(),
+      setIndex: z.number(),
+      isAmrap: z.boolean().optional(),
+      logRpe: z.boolean().optional(),
+      askWeight: z.boolean().optional(),
+      userVars: z.boolean().optional(),
+      nonce: z.number().optional(),
+    })
+    .optional(),
+  editModal: z
+    .strictObject({
+      programExerciseId: z.string(),
+      entryIndex: z.number(),
+    })
+    .optional(),
+  dateModal: z
+    .strictObject({
+      date: z.string(),
+      time: z.number(),
+    })
+    .optional(),
+  exercisePicker: z
+    .strictObject({
+      state: TExercisePickerState.optional(),
+    })
+    .optional(),
+  equipmentModal: z
+    .strictObject({
+      exerciseType: TExerciseType.optional(),
+    })
+    .optional(),
+  rm1Modal: z
+    .strictObject({
+      exerciseType: TExerciseType.optional(),
+    })
+    .optional(),
+  editSetModal: z
+    .strictObject({
+      isWarmup: z.boolean(),
+      entryIndex: z.number(),
+      exerciseType: z.union([TExerciseType, z.undefined()]),
+      programExerciseId: z.union([z.string(), z.undefined()]),
+      set: TSet,
+      setIndex: z.union([z.number(), z.undefined()]),
+    })
+    .optional(),
+  exerciseBottomSheet: z
+    .strictObject({
+      entryIndex: z.number(),
+    })
+    .optional(),
+  entryIndexEditMode: z.number().optional(),
+  currentEntryIndex: z.number().optional(),
+  showSupersetPicker: THistoryEntry.optional(),
+  forceUpdateEntryIndex: z.boolean().optional(),
+  isExternal: z.boolean().optional(),
+  nativeNotificationScheduled: z.boolean().optional(),
+});
 
 const TProgressMode = z.enum(["warmup", "workout"]);
 
@@ -1752,68 +1715,58 @@ const TIntervals = z.array(
 const historyRecordChange = ["order"] as const;
 const THistoryRecordChange = z.enum(historyRecordChange);
 
-const THistoryRecord = z
-  .object({
-    date: z.string(),
-    programId: z.string(),
-    programName: z.string(),
-    day: z.number(),
-    dayName: z.string(),
-    entries: z.array(THistoryEntry),
-    startTime: z.number(),
-    id: z.number(),
-    endTime: z.number().optional(),
-    week: z.number().optional(),
-    dayInWeek: z.number().optional(),
-    ui: TProgressUi.optional(),
-    intervals: TIntervals.optional(),
-    deletedProgramExercises: z
-      .record(z.string(), z.union([z.boolean(), z.undefined()]))
-      .optional(),
-    userPromptedStateVars: z
-      .record(z.string(), z.union([TProgramState, z.undefined()]))
-      .optional(),
-    changes: z.array(THistoryRecordChange).optional(),
-    timerSince: z.number().optional(),
-    timerMode: TProgressMode.optional(),
-    timer: z.number().optional(),
-    timerEntryIndex: z.number().optional(),
-    timerSetIndex: z.number().optional(),
-    notes: z.string().optional(),
-    updatedAt: z.number().optional(),
-  })
-  .strict();
+const THistoryRecord = z.strictObject({
+  date: z.string(),
+  programId: z.string(),
+  programName: z.string(),
+  day: z.number(),
+  dayName: z.string(),
+  entries: z.array(THistoryEntry),
+  startTime: z.number(),
+  id: z.number(),
+  endTime: z.number().optional(),
+  week: z.number().optional(),
+  dayInWeek: z.number().optional(),
+  ui: TProgressUi.optional(),
+  intervals: TIntervals.optional(),
+  deletedProgramExercises: z
+    .record(z.string(), z.union([z.boolean(), z.undefined()]))
+    .optional(),
+  userPromptedStateVars: z
+    .record(z.string(), z.union([TProgramState, z.undefined()]))
+    .optional(),
+  changes: z.array(THistoryRecordChange).optional(),
+  timerSince: z.number().optional(),
+  timerMode: TProgressMode.optional(),
+  timer: z.number().optional(),
+  timerEntryIndex: z.number().optional(),
+  timerSetIndex: z.number().optional(),
+  notes: z.string().optional(),
+  updatedAt: z.number().optional(),
+});
 type IHistoryRecord = z.infer<typeof THistoryRecord>;
 
-const TProgramWeek = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    days: z.array(
-      z
-        .object({
-          id: z.string(),
-        })
-        .strict(),
-    ),
-    description: z.string().optional(),
-  })
-  .strict();
+const TProgramWeek = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  days: z.array(
+    z.strictObject({
+      id: z.string(),
+    }),
+  ),
+  description: z.string().optional(),
+});
 
-const TProgramDay = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    exercises: z.array(
-      z
-        .object({
-          id: z.string(),
-        })
-        .strict(),
-    ),
-    description: z.string().optional(),
-  })
-  .strict();
+const TProgramDay = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  exercises: z.array(
+    z.strictObject({
+      id: z.string(),
+    }),
+  ),
+  description: z.string().optional(),
+});
 
 const tags = [
   "first-starter",
@@ -1828,59 +1781,51 @@ const tags = [
 
 const TProgramTag = z.enum(tags);
 
-const TPlannerProgramDay = z
-  .object({
-    name: z.string(),
-    exerciseText: z.string(),
-    id: z.string().optional(),
-    description: z.string().optional(),
-  })
-  .strict();
+const TPlannerProgramDay = z.strictObject({
+  name: z.string(),
+  exerciseText: z.string(),
+  id: z.string().optional(),
+  description: z.string().optional(),
+});
 type IPlannerProgramDay = z.infer<typeof TPlannerProgramDay>;
 
-const TPlannerProgramWeek = z
-  .object({
-    name: z.string(),
-    days: z.array(TPlannerProgramDay),
-    id: z.string().optional(),
-    description: z.string().optional(),
-  })
-  .strict();
+const TPlannerProgramWeek = z.strictObject({
+  name: z.string(),
+  days: z.array(TPlannerProgramDay),
+  id: z.string().optional(),
+  description: z.string().optional(),
+});
 type IPlannerProgramWeek = Readonly<z.infer<typeof TPlannerProgramWeek>>;
 
-const TPlannerProgram = z
-  .object({
-    name: z.string(),
-    weeks: z.array(TPlannerProgramWeek),
-  })
-  .strict();
+const TPlannerProgram = z.strictObject({
+  name: z.string(),
+  weeks: z.array(TPlannerProgramWeek),
+});
 export type IPlannerProgram = Readonly<z.infer<typeof TPlannerProgram>>;
 
-const TProgram = z
-  .object({
-    exercises: z.array(TProgramExercise),
-    id: z.string(),
-    name: z.string(),
-    description: z.string(),
-    url: z.string(),
-    author: z.string(),
-    nextDay: z.number(),
-    days: z.array(TProgramDay),
-    weeks: z.array(TProgramWeek),
-    // @todo why not just check if weeks length > 1?
-    isMultiweek: z.boolean(),
-    tags: z.array(TProgramTag),
-    deletedDays: z.array(z.string()).optional(),
-    deletedWeeks: z.array(z.string()).optional(),
-    deletedExercises: z.array(z.string()).optional(),
-    clonedAt: z.number().optional(),
-    shortDescription: z.string().optional(),
-    planner: TPlannerProgram.optional(),
-    updatedAt: z.number().optional(),
-    authorid: z.union([z.string(), z.null()]).optional(),
-    source: z.union([z.string(), z.null()]).optional(),
-  })
-  .strict();
+const TProgram = z.strictObject({
+  exercises: z.array(TProgramExercise),
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  url: z.string(),
+  author: z.string(),
+  nextDay: z.number(),
+  days: z.array(TProgramDay),
+  weeks: z.array(TProgramWeek),
+  // @todo why not just check if weeks length > 1?
+  isMultiweek: z.boolean(),
+  tags: z.array(TProgramTag),
+  deletedDays: z.array(z.string()).optional(),
+  deletedWeeks: z.array(z.string()).optional(),
+  deletedExercises: z.array(z.string()).optional(),
+  clonedAt: z.number().optional(),
+  shortDescription: z.string().optional(),
+  planner: TPlannerProgram.optional(),
+  updatedAt: z.number().optional(),
+  authorid: z.union([z.string(), z.null()]).optional(),
+  source: z.union([z.string(), z.null()]).optional(),
+});
 export type IProgram = z.infer<typeof TProgram>;
 
 const TLength = z.object({
@@ -1888,28 +1833,24 @@ const TLength = z.object({
   unit: TLengthUnit,
 });
 
-const TStatsWeightValue = z
-  .object({
-    value: TWeight,
-    timestamp: z.number(),
-    updatedAt: z.number().optional(),
-    appleUuid: z.string().optional(),
-  })
-  .strict();
+const TStatsWeightValue = z.strictObject({
+  value: TWeight,
+  timestamp: z.number(),
+  updatedAt: z.number().optional(),
+  appleUuid: z.string().optional(),
+});
 
 const statsWeightDef = {
   weight: z.array(TStatsWeightValue),
 };
-const TStatsWeight = z.object(statsWeightDef).partial().strict();
+const TStatsWeight = z.strictObject(statsWeightDef).partial();
 
-const TStatsLengthValue = z
-  .object({
-    value: TLength,
-    timestamp: z.number(),
-    updatedAt: z.number().optional(),
-    appleUuid: z.string().optional(),
-  })
-  .strict();
+const TStatsLengthValue = z.strictObject({
+  value: TLength,
+  timestamp: z.number(),
+  updatedAt: z.number().optional(),
+  appleUuid: z.string().optional(),
+});
 
 const statsLengthDef = {
   neck: z.array(TStatsLengthValue),
@@ -1926,30 +1867,34 @@ const statsLengthDef = {
   calfLeft: z.array(TStatsLengthValue),
   calfRight: z.array(TStatsLengthValue),
 };
-const TStatsLength = z.object(statsLengthDef).partial().strict();
+const TStatsLength = z.strictObject(statsLengthDef).partial();
 
-const TStatsPercentageValue = z
-  .object({
-    value: TDynamicWeight,
-    timestamp: z.number(),
-    updatedAt: z.number().optional(),
-    appleUuid: z.string().optional(),
-  })
-  .strict();
+const TStatsPercentageValue = z.strictObject({
+  value: TDynamicWeight,
+  timestamp: z.number(),
+  updatedAt: z.number().optional(),
+  appleUuid: z.string().optional(),
+});
 
-const statsPercentageDef = {
-  bodyfat: z.array(TStatsPercentageValue),
-};
-const TStatsPercentage = z.object(statsPercentageDef).partial().strict();
+const TStatsPercentage = z.strictObject({
+  bodyfat: z.array(TStatsPercentageValue).optional(),
+});
 type IExerciseData = OpenRecord<IExerciseDataValue>;
 
-const TStats = z
-  .object({
-    weight: TStatsWeight,
-    length: TStatsLength,
-    percentage: TStatsPercentage,
-  })
-  .strict();
+const TStats = z.strictObject({
+  /**
+   * All collected stats measured in terms of mass
+   */
+  weight: TStatsWeight,
+  /**
+   * All collected stats measured in terms of length
+   */
+  length: TStatsLength,
+  /**
+   * All collected stats measured in terms of percentage
+   */
+  percentage: TStatsPercentage,
+});
 export type IStats = z.infer<typeof TStats>;
 
 type IDayData = {
@@ -2340,12 +2285,11 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
 //#region Stats
 
 function Stats_getCurrentBodyweight(stats: IStats): IWeight | undefined {
-  const weights = CollectionUtils_sortBy(
+  return CollectionUtils_sortBy(
     stats.weight.weight || [],
     "timestamp",
     true,
-  );
-  return weights[0]?.value;
+  ).at(0)?.value;
 }
 
 function Stats_getCurrentMovingAverageBodyweight(
@@ -2372,15 +2316,6 @@ function Stats_getCurrentMovingAverageBodyweight(
   );
   return Weight_divide(totalWeight, recentWeights.length);
 }
-
-export function Stats_getEmpty(): IStats {
-  return {
-    weight: {},
-    percentage: {},
-    length: {},
-  };
-}
-
 //#endregion
 
 //#region Pages Planner Model Types

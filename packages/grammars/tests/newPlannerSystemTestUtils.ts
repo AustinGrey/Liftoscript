@@ -18,7 +18,6 @@ import {
   type IWeightChange,
   ProgramExercise_weightChanges,
   PlannerKey_fromFullName,
-  Stats_getEmpty,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 
 export interface ICompletedEntries {
@@ -89,14 +88,22 @@ export function PlannerTestUtils_finish(
   text: string,
   completed: ICompletedEntries,
   settings: ISettings = Settings_build(),
-  stats: IStats = Stats_getEmpty(),
+  stats: IStats = {
+    weight: {},
+    percentage: {},
+    length: {},
+  },
   dayIndex?: number,
 ): { program: IProgram } {
   const { program } = PlannerTestUtils_get(text);
   const nextHistoryRecord = Program_nextHistoryRecord(
     program,
     settings,
-    Stats_getEmpty(),
+    {
+      weight: {},
+      percentage: {},
+      length: {},
+    },
     dayIndex,
   );
   for (
