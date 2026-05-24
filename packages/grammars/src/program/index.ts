@@ -232,7 +232,7 @@ const TProgram = z.object({
   shortDescription: z.string().optional(),
   planner: TPlannerProgram.optional(),
   updatedAt: z.number().optional(),
-  authorid: z.union([z.string(), z.null()]).optional(),
-  source: z.union([z.string(), z.null()]).optional(),
+  authorid: z.string().nullish(),
+  source: z.string().nullish(),
 });
 export type IProgram = z.infer<typeof TProgram>;

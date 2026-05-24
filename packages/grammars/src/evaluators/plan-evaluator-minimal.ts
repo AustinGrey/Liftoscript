@@ -24,7 +24,7 @@ import {
   ObjectUtils_pick,
   ObjectUtils_values,
 } from "@/utils/object";
-import { StringUtils_unindent } from "@/utils/string";
+import { sameCaseInsensitive, StringUtils_unindent } from "@/utils/string";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
@@ -5581,11 +5581,11 @@ function Exercise_findByNameAndEquipment(
   let name: string | undefined;
   let equipment: IEquipmentType | undefined | null;
   if (parts.length > 1) {
-    const foundEquipment = builtInEquipmentTypes.filter(
-      (e) =>
-        equipmentName(e).toLowerCase() ===
-        parts[parts.length - 1].toLowerCase(),
-    )[0];
+    const foundEquipment = builtInEquipmentTypes
+      .filter((e) =>
+        sameCaseInsensitive(equipmentName(e), parts[parts.length - 1]),
+      )
+      .at(0);
     if (foundEquipment != null) {
       equipment = foundEquipment;
       name = parts.slice(0, parts.length - 1).join(", ");
