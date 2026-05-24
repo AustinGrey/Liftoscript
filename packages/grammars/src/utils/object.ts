@@ -1,71 +1,46 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { CollectionUtils_remove } from "./collection";
+import { isEqual } from "es-toolkit";
 
+/**
+ * @deprecated Use {@link Object.keys} instead
+ * @param obj the object to get the keys of
+ */
 export function ObjectUtils_keys<T extends {}>(obj: T): Array<keyof T> {
   return Object.keys(obj) as Array<keyof T>;
 }
 
-export function ObjectUtils_values<T extends {}>(obj: T): Array<T[keyof T]> {
-  if ("values" in Object) {
-    return Object.values(obj);
-  } else {
-    return ObjectUtils_keys(obj).map((key) => obj[key]);
-  }
-}
+/**
+ * @deprecated Use {@link Object.values} instead
+ * @param obj the object to get the values of
+ */
+export const ObjectUtils_values = <T extends {}>(obj: T): Array<T[keyof T]> =>
+  Object.values(obj);
 
 export function ObjectUtils_entries<T extends {}>(
   obj: T,
 ): Array<[keyof T, T[keyof T]]> {
-  return ObjectUtils_keys(obj).map((key) => [key, obj[key]]);
+  return Object.entries(obj) as Array<[keyof T, T[keyof T]]>;
 }
 
+/**
+ * @deprecated Use {@link isEqual} instead
+ * @param obj1 1st object to compare
+ * @param obj2 2nd object to compare
+ */
 export function ObjectUtils_isEqual<T extends Record<string, any>>(
   obj1: T,
   obj2: T,
 ): boolean {
-  // Create a stack for comparing objects
-  const stack: Array<[any, any]> = [[obj1, obj2]];
-
-  while (stack.length > 0) {
-    // Pop a pair of items from the stack
-    const [currentObj1, currentObj2] = stack.pop()!;
-    if (currentObj1 === currentObj2) {
-      continue;
-    }
-
-    // Check if both are objects
-    if (
-      typeof currentObj1 !== "object" ||
-      typeof currentObj2 !== "object" ||
-      currentObj1 == null ||
-      currentObj2 == null
-    ) {
-      if (currentObj1 !== currentObj2) {
-        return false;
-      }
-      continue;
-    }
-
-    // Get keys of both objects
-    const keys1 = Object.keys(currentObj1);
-    const keys2 = Object.keys(currentObj2);
-
-    // Iterate over keys and add nested objects to the stack
-    for (const key of new Set([...keys1, ...keys2])) {
-      stack.push([currentObj1[key], currentObj2[key]]);
-    }
-  }
-
-  // If all checks pass, the objects are equal
-  return true;
+  return isEqual(obj1, obj2);
 }
 
 export function ObjectUtils_diff<T extends Record<string, any>>(
   oldObj: T,
   newObj: T,
 ): T {
-  const chKeys = ObjectUtils_changedKeys(oldObj, newObj);
+  const chKeys = changedKeys(oldObj, newObj);
   const result: Partial<T> = {};
   for (const key of ObjectUtils_keys(chKeys)) {
     const value = chKeys[key];
@@ -76,7 +51,7 @@ export function ObjectUtils_diff<T extends Record<string, any>>(
   return result as any;
 }
 
-export function ObjectUtils_changedKeys<T extends {}>(
+function changedKeys<T extends {}>(
   oldObj: T,
   newObj: T,
   eq: (a: any, b: any) => boolean = (a, b) => a === b,
