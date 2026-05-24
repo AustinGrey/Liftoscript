@@ -1,15 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { CollectionUtils_remove } from "./collection";
 import { isEqual } from "es-toolkit";
 
 /**
- * @deprecated Use {@link Object.keys} instead
+ * Gets the well-typed keys of an object.
  * @param obj the object to get the keys of
  */
-export function ObjectUtils_keys<T extends {}>(obj: T): Array<keyof T> {
-  return Object.keys(obj) as Array<keyof T>;
-}
+export const ObjectUtils_keys = <T extends {}>(obj: T) =>
+  Object.keys(obj) as Array<keyof T>;
 
 /**
  * @deprecated Use {@link Object.values} instead
@@ -18,63 +14,57 @@ export function ObjectUtils_keys<T extends {}>(obj: T): Array<keyof T> {
 export const ObjectUtils_values = <T extends {}>(obj: T): Array<T[keyof T]> =>
   Object.values(obj);
 
-export function ObjectUtils_entries<T extends {}>(
-  obj: T,
-): Array<[keyof T, T[keyof T]]> {
-  return Object.entries(obj) as Array<[keyof T, T[keyof T]]>;
+/**
+ * Get the entries of an object with well typed keys
+ * @param obj
+ * @constructor
+ */
+export const ObjectUtils_entries = <T extends {}>(obj: T) =>
+  Object.entries(obj) as Array<[keyof T, T[keyof T]]>;
+
+/**
+ * @returns true if the two objects are equal, however it also will warn at compile time if B's type is not assignable to A -> which would likely make the return always false.
+ * @param a 1st object to compare
+ * @param b 2nd object to compare
+ */
+export const ObjectUtils_isEqual = <A, B extends A>(a: A, b: B) =>
+  isEqual(a, b);
+
+/**
+ * @deprecated Use {@link omitBy}
+ */
+export function ObjectUtils_diff<T extends Record<string, unknown>>(
+  older: T,
+  newer: T,
+): T {
+  const result: Partial<T> = {};
+  for (const [key, value] of ObjectUtils_entries(changedKeys(older, newer))) {
+    if (value === "add" || value === "update") {
+      result[key] = newer[key];
+    }
+  }
+  return result as T;
 }
 
 /**
- * @deprecated Use {@link isEqual} instead
- * @param obj1 1st object to compare
- * @param obj2 2nd object to compare
+ * @deprecated Use {@link omitBy}
  */
-export function ObjectUtils_isEqual<T extends Record<string, any>>(
-  obj1: T,
-  obj2: T,
-): boolean {
-  return isEqual(obj1, obj2);
-}
-
-export function ObjectUtils_diff<T extends Record<string, any>>(
-  oldObj: T,
-  newObj: T,
-): T {
-  const chKeys = changedKeys(oldObj, newObj);
-  const result: Partial<T> = {};
-  for (const key of ObjectUtils_keys(chKeys)) {
-    const value = chKeys[key];
-    if (value === "add" || value === "update") {
-      result[key] = newObj[key];
-    }
-  }
-  return result as any;
-}
-
 function changedKeys<T extends {}>(
-  oldObj: T,
-  newObj: T,
-  eq: (a: any, b: any) => boolean = (a, b) => a === b,
+  older: T,
+  newer: T,
 ): Partial<Record<keyof T, "delete" | "update" | "add">> {
-  let oldKeys = ObjectUtils_keys(oldObj);
-  const newKeys = ObjectUtils_keys(newObj);
+  const keys = ObjectUtils_combinedKeys(older, newer);
   const changes: Partial<Record<keyof T, "delete" | "update" | "add">> = {};
 
-  for (const newKey of newKeys) {
-    if (newObj[newKey] != null && oldObj[newKey] == null) {
-      changes[newKey] = "add";
-    } else if (newObj[newKey] == null && oldObj[newKey] != null) {
-      changes[newKey] = "delete";
-    } else if (newObj[newKey] != null && oldObj[newKey] != null) {
-      if (!eq(newObj[newKey], oldObj[newKey])) {
-        changes[newKey] = "update";
+  for (const key of keys) {
+    if (older[key] == null && newer[key] != null) {
+      changes[key] = "add";
+    } else if (older[key] != null && newer[key] == null) {
+      changes[key] = "delete";
+    } else if (older[key] != null && newer[key] != null) {
+      if (older[key] !== newer[key]) {
+        changes[key] = "update";
       }
-    }
-    oldKeys = CollectionUtils_remove(oldKeys, newKey);
-  }
-  for (const oldKey of oldKeys) {
-    if (oldObj[oldKey] != null && newObj[oldKey] == null) {
-      changes[oldKey] = "delete";
     }
   }
   return changes;
@@ -111,9 +101,9 @@ export function ObjectUtils_combinedKeys<
   T extends Record<string, unknown>,
   U extends Record<string, unknown>,
 >(obj1: T, obj2: U): Array<keyof T | keyof U> {
-  return Array.from(
-    new Set(ObjectUtils_keys(obj1).concat(ObjectUtils_keys(obj2) as any)),
-  );
+  const s1 = new Set(ObjectUtils_keys(obj1));
+  const s2 = new Set(ObjectUtils_keys(obj2));
+  return Array.from(s1.union(s2));
 }
 
 export function ObjectUtils_findMaxValue<

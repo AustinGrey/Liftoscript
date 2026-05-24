@@ -16,7 +16,6 @@ import {
 import { type IEither, is, type OpenRecord } from "@/utils/types";
 import {
   ObjectUtils_clone,
-  ObjectUtils_diff,
   ObjectUtils_entries,
   ObjectUtils_filter,
   ObjectUtils_isEqual,
@@ -104,7 +103,7 @@ import {
   type IProgramStateMetadata,
 } from "@/program";
 import { getLineAndOffset } from "@/utils/lezer.ts";
-import { isEqual, pick } from "es-toolkit";
+import { isEqual, omitBy, pick } from "es-toolkit";
 
 //#region Program
 
@@ -359,7 +358,7 @@ function Program_runFinishDayScript(
     return memo;
   }, {});
 
-  const stateDiff = ObjectUtils_diff(state, newState);
+  const stateDiff = omitBy(newState, (value, key) => state[key] === value);
   return {
     success: true,
     data: { state: stateDiff, otherStates: diffOtherStates, updates, bindings },

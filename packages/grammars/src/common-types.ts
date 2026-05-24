@@ -245,7 +245,7 @@ export type ISet = z.infer<typeof TSet>;
  */
 export const TProgramState = z.record(
   z.string(),
-  z.union([z.number(), TWeight, TDynamicWeight]),
+  z.union([z.number(), TWeight, TDynamicWeight, z.undefined()]),
 );
 /**
  * @see TProgramState

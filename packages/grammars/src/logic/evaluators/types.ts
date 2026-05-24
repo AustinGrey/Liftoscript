@@ -122,7 +122,7 @@ export type EvaluateTools = SourceTools & {
  */
 export const TProgramState = z.record(
   z.string(),
-  z.union([z.number(), TWeight, TDynamicWeight]),
+  z.union([z.number(), TWeight, TDynamicWeight, z.undefined()]),
 );
 /**
  * @see TProgramState

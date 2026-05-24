@@ -770,15 +770,20 @@ export function op(
 }
 
 /**
- * Returns a string explaining the type of a quantity.
+ * Returns a string explaining the type of a (potentially undefined) quantity.
  * @param value
  */
-export function typeOf(value: Quantity): "weight" | "percentage" | "number" {
+export function typeOf(
+  value: Quantity | undefined,
+): "weight" | "percentage" | "number" | "undefined" {
+  if (value === undefined) {
+    return "undefined";
+  }
   if (isNumber(value)) {
     return "number";
-  } else if (is(TDynamicWeight, value)) {
-    return "percentage";
-  } else {
-    return "weight";
   }
+  if (is(TDynamicWeight, value)) {
+    return "percentage";
+  }
+  return "weight";
 }
