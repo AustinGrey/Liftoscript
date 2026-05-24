@@ -215,7 +215,7 @@ const TPlannerProgram = z.strictObject({
   weeks: z.array(TPlannerProgramWeek),
 });
 export type IPlannerProgram = Readonly<z.infer<typeof TPlannerProgram>>;
-const TProgram = z.strictObject({
+const TProgram = z.object({
   exercises: z.array(TProgramExercise),
   id: z.string(),
   name: z.string(),
