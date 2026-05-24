@@ -2456,6 +2456,29 @@ const extractNameParts = memoize(
   { maxSize: 1000 },
 );
 
+// @todo used in testing? Don't delete until the test making use of this is converted
+export function changeWeightsToCompletedWeights(oldScript: string): string {
+  const node = plannerExerciseParser.parse(oldScript);
+  const cursor = node.cursor();
+  let script = oldScript;
+  let shift = 0;
+  do {
+    if (cursor.node.type.name === PlannerNodeName.Liftoscript) {
+      const value = LiftoscriptEvaluator.getValueRaw(oldScript, cursor.node);
+      const from = cursor.node.from;
+      const to = cursor.node.to;
+      const newValue =
+        LiftoscriptEvaluator.changeWeightsToCompleteWeights(value);
+      script =
+        script.substring(0, from + shift) +
+        newValue +
+        script.substring(to + shift);
+      shift = shift + newValue.length - value.length;
+    }
+  } while (cursor.next());
+  return script;
+}
+
 export class PlannerExerciseEvaluator {
   private readonly script: string;
   private readonly mode: IPlannerExerciseEvaluatorMode;
@@ -3738,28 +3761,6 @@ export class PlannerExerciseEvaluator {
       this.evaluateExerciseFullText(child);
     }
     return this.weeksFullText;
-  }
-
-  public static changeWeightsToCompletedWeights(oldScript: string): string {
-    const node = plannerExerciseParser.parse(oldScript);
-    const cursor = node.cursor();
-    let script = oldScript;
-    let shift = 0;
-    do {
-      if (cursor.node.type.name === PlannerNodeName.Liftoscript) {
-        const value = LiftoscriptEvaluator.getValueRaw(oldScript, cursor.node);
-        const from = cursor.node.from;
-        const to = cursor.node.to;
-        const newValue =
-          LiftoscriptEvaluator.changeWeightsToCompleteWeights(value);
-        script =
-          script.substring(0, from + shift) +
-          newValue +
-          script.substring(to + shift);
-        shift = shift + newValue.length - value.length;
-      }
-    } while (cursor.next());
-    return script;
   }
 
   public topLineMap(programNode: SyntaxNode): IPlannerTopLineItem[] {
@@ -5952,6 +5953,116 @@ interface IPlannerToProgramConvertOpts {
   add?: { dayData: Required<IDayData>; index: number; fullName: string }[];
 }
 
+function getUpdate(
+  programExercise: IPlannerProgramExercise,
+  settings: ISettings,
+  hideScript?: boolean,
+): string {
+  const update = programExercise.update;
+  if (!update) {
+    return "";
+  }
+  if (update.reuse) {
+    if (update.reuse.exercise?.exerciseType) {
+      const exercise = getExerciseOrDefault(
+        update.reuse.exercise.exerciseType,
+        settings.exercises,
+      );
+      const fullName = Exercise_fullName(
+        exercise,
+        settings,
+        update.reuse.exercise.label,
+      );
+      return `update: custom() { ...${fullName} }`;
+    } else {
+      return ` / update: custom() { ...${update.reuse.exercise?.fullName || update.reuse.fullName} }`;
+    }
+  } else {
+    return `update: custom() ${hideScript ? "{~ ... ~}" : update.script}`;
+  }
+}
+
+function getProgress(
+  programExercise: IPlannerProgramExercise,
+  settings: ISettings,
+  hideScript?: boolean,
+): string {
+  const progress = programExercise.progress;
+  if (!progress) {
+    return "";
+  }
+  let progressStr = `progress: ${progress.type}`;
+  const state = PlannerProgramExercise_getState(programExercise);
+  const stateMetadata =
+    PlannerProgramExercise_getStateMetadata(programExercise);
+  if (progress.type === "custom") {
+    const onlyChangedState =
+      PlannerProgramExercise_getOnlyChangedState(programExercise);
+    progressStr += `(${ObjectUtils_entries(onlyChangedState)
+      .map(([k, v]) => {
+        return `${k}${stateMetadata[k]?.userPrompted ? "+" : ""}: ${print(v)}`;
+      })
+      .join(", ")})`;
+  } else if (progress.type === "lp") {
+    const increment = state.increment as IWeight | IDynamicWeight;
+    const successes = state.successes as number;
+    const successCounter = state.successCounter as number;
+    const decrement = state.decrement as IWeight | IDynamicWeight;
+    const failures = state.failures as number;
+    const failureCounter = state.failureCounter as number;
+    const args: string[] = [];
+    args.push(print(increment));
+    if (successes > 1 || decrement.value > 0) {
+      args.push(`${successes}`);
+    }
+    if (successes > 1 || decrement.value > 0) {
+      args.push(`${successCounter}`);
+    }
+    if (decrement.value > 0) {
+      args.push(print(decrement));
+    }
+    if (failures > 1) {
+      args.push(`${failures}`);
+    }
+    if (failures > 1) {
+      args.push(`${failureCounter}`);
+    }
+    progressStr += `(${args.join(", ")})`;
+  } else if (progress.type === "dp") {
+    const increment = state.increment as IWeight | IDynamicWeight;
+    const minReps = state.minReps as number;
+    const maxReps = state.maxReps as number;
+    const args = [print(increment), `${minReps}`, `${maxReps}`];
+    progressStr += `(${args.join(", ")})`;
+  } else if (progress.type === "sum") {
+    const reps = state.reps as number;
+    const increment = state.increment as IWeight | IDynamicWeight;
+    const args = [`${reps}`, print(increment)];
+    progressStr += `(${args.join(", ")})`;
+  }
+  if (progress.type === "custom") {
+    if (progress.reuse) {
+      if (progress.reuse.exercise?.exerciseType) {
+        const exercise = getExerciseOrDefault(
+          progress.reuse.exercise.exerciseType,
+          settings.exercises,
+        );
+        const fullName = Exercise_fullName(
+          exercise,
+          settings,
+          progress.reuse.exercise.label,
+        );
+        progressStr += ` { ...${fullName} }`;
+      } else {
+        progressStr += ` { ...${progress.reuse.exercise?.fullName || progress.reuse.fullName} }`;
+      }
+    } else {
+      progressStr += hideScript ? ` {~ ... ~}` : ` ${progress.script}`;
+    }
+  }
+  return progressStr;
+}
+
 class ProgramToPlanner {
   constructor(
     private readonly program: IEvaluatedProgram,
@@ -6549,10 +6660,7 @@ class ProgramToPlanner {
                     !evalExercise.reuse ||
                     dereuseDecisions.includes("update")
                   ) {
-                    const updateStr = ProgramToPlanner.getUpdate(
-                      evalExercise,
-                      this.settings,
-                    );
+                    const updateStr = getUpdate(evalExercise, this.settings);
                     if (updateStr) {
                       plannerExercise += ` / ${updateStr}`;
                     }
@@ -6576,7 +6684,7 @@ class ProgramToPlanner {
                     !evalExercise.reuse ||
                     dereuseDecisions.includes("progress")
                   ) {
-                    const progressStr = ProgramToPlanner.getProgress(
+                    const progressStr = getProgress(
                       evalExercise,
                       this.settings,
                       false,
@@ -6680,118 +6788,8 @@ class ProgramToPlanner {
     return str;
   }
 
-  public static getUpdate(
-    programExercise: IPlannerProgramExercise,
-    settings: ISettings,
-    hideScript?: boolean,
-  ): string {
-    const update = programExercise.update;
-    if (!update) {
-      return "";
-    }
-    if (update.reuse) {
-      if (update.reuse.exercise?.exerciseType) {
-        const exercise = getExerciseOrDefault(
-          update.reuse.exercise.exerciseType,
-          settings.exercises,
-        );
-        const fullName = Exercise_fullName(
-          exercise,
-          settings,
-          update.reuse.exercise.label,
-        );
-        return `update: custom() { ...${fullName} }`;
-      } else {
-        return ` / update: custom() { ...${update.reuse.exercise?.fullName || update.reuse.fullName} }`;
-      }
-    } else {
-      return `update: custom() ${hideScript ? "{~ ... ~}" : update.script}`;
-    }
-  }
-
   private getId(programExercise: IPlannerProgramExercise): string {
     return ` / id: tags(${(programExercise.tags || []).join(", ")})`;
-  }
-
-  public static getProgress(
-    programExercise: IPlannerProgramExercise,
-    settings: ISettings,
-    hideScript?: boolean,
-  ): string {
-    const progress = programExercise.progress;
-    if (!progress) {
-      return "";
-    }
-    let progressStr = `progress: ${progress.type}`;
-    const state = PlannerProgramExercise_getState(programExercise);
-    const stateMetadata =
-      PlannerProgramExercise_getStateMetadata(programExercise);
-    if (progress.type === "custom") {
-      const onlyChangedState =
-        PlannerProgramExercise_getOnlyChangedState(programExercise);
-      progressStr += `(${ObjectUtils_entries(onlyChangedState)
-        .map(([k, v]) => {
-          return `${k}${stateMetadata[k]?.userPrompted ? "+" : ""}: ${print(v)}`;
-        })
-        .join(", ")})`;
-    } else if (progress.type === "lp") {
-      const increment = state.increment as IWeight | IDynamicWeight;
-      const successes = state.successes as number;
-      const successCounter = state.successCounter as number;
-      const decrement = state.decrement as IWeight | IDynamicWeight;
-      const failures = state.failures as number;
-      const failureCounter = state.failureCounter as number;
-      const args: string[] = [];
-      args.push(print(increment));
-      if (successes > 1 || decrement.value > 0) {
-        args.push(`${successes}`);
-      }
-      if (successes > 1 || decrement.value > 0) {
-        args.push(`${successCounter}`);
-      }
-      if (decrement.value > 0) {
-        args.push(print(decrement));
-      }
-      if (failures > 1) {
-        args.push(`${failures}`);
-      }
-      if (failures > 1) {
-        args.push(`${failureCounter}`);
-      }
-      progressStr += `(${args.join(", ")})`;
-    } else if (progress.type === "dp") {
-      const increment = state.increment as IWeight | IDynamicWeight;
-      const minReps = state.minReps as number;
-      const maxReps = state.maxReps as number;
-      const args = [print(increment), `${minReps}`, `${maxReps}`];
-      progressStr += `(${args.join(", ")})`;
-    } else if (progress.type === "sum") {
-      const reps = state.reps as number;
-      const increment = state.increment as IWeight | IDynamicWeight;
-      const args = [`${reps}`, print(increment)];
-      progressStr += `(${args.join(", ")})`;
-    }
-    if (progress.type === "custom") {
-      if (progress.reuse) {
-        if (progress.reuse.exercise?.exerciseType) {
-          const exercise = getExerciseOrDefault(
-            progress.reuse.exercise.exerciseType,
-            settings.exercises,
-          );
-          const fullName = Exercise_fullName(
-            exercise,
-            settings,
-            progress.reuse.exercise.label,
-          );
-          progressStr += ` { ...${fullName} }`;
-        } else {
-          progressStr += ` { ...${progress.reuse.exercise?.fullName || progress.reuse.fullName} }`;
-        }
-      } else {
-        progressStr += hideScript ? ` {~ ... ~}` : ` ${progress.script}`;
-      }
-    }
-    return progressStr;
   }
 
   private getGlobals(
