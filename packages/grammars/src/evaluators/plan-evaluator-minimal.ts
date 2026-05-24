@@ -21,7 +21,6 @@ import {
   ObjectUtils_filter,
   ObjectUtils_isEqual,
   ObjectUtils_keys,
-  ObjectUtils_pick,
   ObjectUtils_values,
 } from "@/utils/object";
 import { sameCaseInsensitive, StringUtils_unindent } from "@/utils/string";
@@ -105,6 +104,7 @@ import {
   type IProgramStateMetadata,
 } from "@/program";
 import { getLineAndOffset } from "@/utils/lezer.ts";
+import { isEqual, pick } from "es-toolkit";
 
 //#region Program
 
@@ -2364,14 +2364,14 @@ function isEqualProgress(
   b: IProgramExerciseProgress,
 ): boolean {
   const pickA = {
-    ...ObjectUtils_pick(a, ["type", "state", "stateMetadata", "script"]),
+    ...pick(a, ["type", "state", "stateMetadata", "script"]),
     reuse: a.reuse?.fullName,
   };
   const pickB = {
-    ...ObjectUtils_pick(b, ["type", "state", "stateMetadata", "script"]),
+    ...pick(b, ["type", "state", "stateMetadata", "script"]),
     reuse: b.reuse?.fullName,
   };
-  return ObjectUtils_isEqual(pickA, pickB);
+  return isEqual(pickA, pickB);
 }
 
 function isEqualUpdate(
@@ -2379,14 +2379,14 @@ function isEqualUpdate(
   b: IProgramExerciseUpdate,
 ): boolean {
   const pickA = {
-    ...ObjectUtils_pick(a, ["type", "script"]),
+    ...pick(a, ["type", "script"]),
     reuse: a.reuse?.fullName,
   };
   const pickB = {
-    ...ObjectUtils_pick(b, ["type", "script"]),
+    ...pick(b, ["type", "script"]),
     reuse: b.reuse?.fullName,
   };
-  return ObjectUtils_isEqual(pickA, pickB);
+  return isEqual(pickA, pickB);
 }
 
 function fnArgsToStateVars(
