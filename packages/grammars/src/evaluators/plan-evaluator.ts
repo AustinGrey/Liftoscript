@@ -26,8 +26,8 @@ import {
   ObjectUtils_keys,
   ObjectUtils_values,
   ObjectUtils_filter,
-  ObjectUtils_diff,
   ObjectUtils_entries,
+  ObjectUtils_combinedKeys,
 } from "@/utils/object";
 import { StringUtils_unindent } from "@/utils/string";
 import type { ILiftoscriptEvaluatorUpdate } from "@/logic/types";
@@ -584,6 +584,40 @@ function Program_runFinishDayScript(
     success: true,
     data: { state: stateDiff, otherStates: diffOtherStates, updates, bindings },
   };
+}
+
+export function ObjectUtils_diff<T extends Record<string, unknown>>(
+  older: T,
+  newer: T,
+): T {
+  const result: Partial<T> = {};
+  for (const [key, value] of ObjectUtils_entries(changedKeys(older, newer))) {
+    if (value === "add" || value === "update") {
+      result[key] = newer[key];
+    }
+  }
+  return result as T;
+}
+
+function changedKeys<T extends {}>(
+  older: T,
+  newer: T,
+): Partial<Record<keyof T, "delete" | "update" | "add">> {
+  const keys = ObjectUtils_combinedKeys(older, newer);
+  const changes: Partial<Record<keyof T, "delete" | "update" | "add">> = {};
+
+  for (const key of keys) {
+    if (older[key] == null && newer[key] != null) {
+      changes[key] = "add";
+    } else if (older[key] != null && newer[key] == null) {
+      changes[key] = "delete";
+    } else if (older[key] != null && newer[key] != null) {
+      if (older[key] !== newer[key]) {
+        changes[key] = "update";
+      }
+    }
+  }
+  return changes;
 }
 
 // function Program_dayAverageTimeMs(

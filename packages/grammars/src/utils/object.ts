@@ -30,46 +30,6 @@ export const ObjectUtils_entries = <T extends {}>(obj: T) =>
 export const ObjectUtils_isEqual = <A, B extends A>(a: A, b: B) =>
   isEqual(a, b);
 
-/**
- * @deprecated Use {@link omitBy}
- */
-export function ObjectUtils_diff<T extends Record<string, unknown>>(
-  older: T,
-  newer: T,
-): T {
-  const result: Partial<T> = {};
-  for (const [key, value] of ObjectUtils_entries(changedKeys(older, newer))) {
-    if (value === "add" || value === "update") {
-      result[key] = newer[key];
-    }
-  }
-  return result as T;
-}
-
-/**
- * @deprecated Use {@link omitBy}
- */
-function changedKeys<T extends {}>(
-  older: T,
-  newer: T,
-): Partial<Record<keyof T, "delete" | "update" | "add">> {
-  const keys = ObjectUtils_combinedKeys(older, newer);
-  const changes: Partial<Record<keyof T, "delete" | "update" | "add">> = {};
-
-  for (const key of keys) {
-    if (older[key] == null && newer[key] != null) {
-      changes[key] = "add";
-    } else if (older[key] != null && newer[key] == null) {
-      changes[key] = "delete";
-    } else if (older[key] != null && newer[key] != null) {
-      if (older[key] !== newer[key]) {
-        changes[key] = "update";
-      }
-    }
-  }
-  return changes;
-}
-
 export function ObjectUtils_filter<T extends {}>(
   obj: T,
   cb: (key: keyof T, value: T[keyof T]) => boolean,
