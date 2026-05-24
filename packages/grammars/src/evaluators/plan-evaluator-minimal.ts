@@ -705,7 +705,6 @@ export function Program_create(name: string, id?: string): IProgram {
     description: "",
     nextDay: 1,
     weeks: [],
-    isMultiweek: false,
     days: [{ id: generateUid(8), name: "Day 1", exercises: [] }],
     exercises: [],
     deletedDays: [],
@@ -1804,8 +1803,6 @@ const TProgram = z.strictObject({
   nextDay: z.number(),
   days: z.array(TProgramDay),
   weeks: z.array(TProgramWeek),
-  // @todo why not just check if weeks length > 1?
-  isMultiweek: z.boolean(),
   deletedDays: z.array(z.string()).optional(),
   deletedWeeks: z.array(z.string()).optional(),
   deletedExercises: z.array(z.string()).optional(),
