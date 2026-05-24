@@ -34,7 +34,7 @@ import {
   StringUtils_undashcase,
 } from "@/utils/string";
 import { SetUtils_areEqual } from "@/utils/setUtils";
-import { UidFactory_generateUid } from "@/utils/generator";
+import { generateUid } from "@/utils/uid.ts";
 import {
   type IDynamicWeight,
   type IUnit,
@@ -7262,7 +7262,7 @@ function warmup(
             memo.push({
               vtype: "set",
               index,
-              id: UidFactory_generateUid(6),
+              id: generateUid(6),
               reps: programExerciseWarmupSet.reps,
               isUnilateral: exerciseType
                 ? Exercise_getIsUnilateral(exerciseType, settings)
@@ -8087,7 +8087,7 @@ export function Exercise_createCustomExercise(
   smallImageUrl?: string,
   largeImageUrl?: string,
 ): ICustomExercise {
-  const id = UidFactory_generateUid(8);
+  const id = generateUid(8);
   const newExercise: ICustomExercise = {
     vtype: "custom_exercise",
     id,
@@ -8932,7 +8932,7 @@ export function Muscle_createMuscleGroup(
   muscleGroupSettings: IMuscleGroupsSettings,
   name: string,
 ): IMuscleGroupsSettings {
-  const id = UidFactory_generateUid(8);
+  const id = generateUid(8);
   return {
     ...muscleGroupSettings,
     data: { ...muscleGroupSettings.data, [id]: { name, muscles: [] } },

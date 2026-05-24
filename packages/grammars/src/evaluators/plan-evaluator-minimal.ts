@@ -6,7 +6,7 @@ import {
   CollectionUtils_findIndexReverse,
   CollectionUtils_sortBy,
 } from "../utils/collection";
-import { UidFactory_generateUid } from "@/utils/generator";
+import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
   MathUtils_roundFloat,
@@ -161,7 +161,7 @@ function Program_nextHistoryEntry(
       settings,
     );
     sets.push({
-      id: UidFactory_generateUid(6),
+      id: generateUid(6),
       reps: programSet.maxrep,
       index: i,
       minReps,
@@ -584,7 +584,7 @@ function Program_forceEvaluate(
 }
 
 function Program_numberOfDays(program: IEvaluatedProgram): number {
-  return program.weeks.reduce((memo, week) => memo + week.days.length, 0);
+  return program.weeks.reduce((sum, week) => sum + week.days.length, 0);
 }
 
 function Program_getWeekFromDay(
@@ -697,7 +697,7 @@ function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
 
 export function Program_create(name: string, id?: string): IProgram {
   return {
-    id: id || UidFactory_generateUid(8),
+    id: id || generateUid(8),
     name: name,
     url: "",
     author: "",
@@ -706,9 +706,8 @@ export function Program_create(name: string, id?: string): IProgram {
     nextDay: 1,
     weeks: [],
     isMultiweek: false,
-    days: [{ id: UidFactory_generateUid(8), name: "Day 1", exercises: [] }],
+    days: [{ id: generateUid(8), name: "Day 1", exercises: [] }],
     exercises: [],
-    tags: [],
     deletedDays: [],
     deletedWeeks: [],
     deletedExercises: [],
@@ -1089,7 +1088,7 @@ function PlannerProgram_replaceExercise(
     });
     if (conflictingExercises.length > 0) {
       noConflicts = false;
-      labelSuffix = UidFactory_generateUid(3);
+      labelSuffix = generateUid(3);
     } else {
       noConflicts = true;
     }
@@ -1773,19 +1772,6 @@ const TProgramDay = z.strictObject({
   description: z.string().optional(),
 });
 
-const tags = [
-  "first-starter",
-  "beginner",
-  "barbell",
-  "dumbbell",
-  "intermediate",
-  "woman",
-  "ppl",
-  "hypertrophy",
-] as const;
-
-const TProgramTag = z.enum(tags);
-
 const TPlannerProgramDay = z.strictObject({
   name: z.string(),
   exerciseText: z.string(),
@@ -1820,7 +1806,6 @@ const TProgram = z.strictObject({
   weeks: z.array(TProgramWeek),
   // @todo why not just check if weeks length > 1?
   isMultiweek: z.boolean(),
-  tags: z.array(TProgramTag),
   deletedDays: z.array(z.string()).optional(),
   deletedWeeks: z.array(z.string()).optional(),
   deletedExercises: z.array(z.string()).optional(),
@@ -3719,7 +3704,7 @@ export class PlannerExerciseEvaluator {
         : undefined;
 
       const plannerExercise: IPlannerProgramExercise = {
-        id: UidFactory_generateUid(8),
+        id: generateUid(8),
         key,
         fullName,
         shortName,
@@ -5990,7 +5975,7 @@ function Progress_applyBindings(
     for (let i = 0; i < bindings[key].length; i += 1) {
       if (entry.sets[i] == null) {
         entry.sets[i] = {
-          id: UidFactory_generateUid(6),
+          id: generateUid(6),
           index: i,
           isUnilateral: isUnilateral(entry.exercise, settings),
           reps: 0,

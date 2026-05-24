@@ -14,7 +14,7 @@ import {
 import { getPreferredUnit, type ISettings } from "@/user-settings";
 import type { ISet } from "@/common-types.ts";
 import { isNumber } from "@/utils/types.ts";
-import { UidFactory_generateUid } from "@/utils/generator.ts";
+import { generateUid } from "@/utils/uid.ts";
 import { z } from "zod";
 
 export const TProgramExerciseWarmupSet = z.strictObject({
@@ -60,7 +60,7 @@ function warmup(
             );
             memo.push({
               index,
-              id: UidFactory_generateUid(6),
+              id: generateUid(6),
               reps: programExerciseWarmupSet.reps,
               isUnilateral: exerciseType
                 ? isUnilateral(exerciseType, settings)

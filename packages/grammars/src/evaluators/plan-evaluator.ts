@@ -8,7 +8,7 @@ import {
   CollectionUtils_findIndexReverse,
   CollectionUtils_sort,
 } from "../utils/collection";
-import { UidFactory_generateUid } from "@/utils/generator";
+import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
   n,
@@ -243,7 +243,7 @@ function Program_nextHistoryEntry(
     );
     sets.push({
       vtype: "set",
-      id: UidFactory_generateUid(6),
+      id: generateUid(6),
       reps: programSet.maxrep,
       index: i,
       minReps,
@@ -1398,7 +1398,7 @@ function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
 export function Program_create(name: string, id?: string): IProgram {
   return {
     vtype: "program" as const,
-    id: id || UidFactory_generateUid(8),
+    id: id || generateUid(8),
     name: name,
     url: "",
     author: "",
@@ -1407,7 +1407,7 @@ export function Program_create(name: string, id?: string): IProgram {
     nextDay: 1,
     weeks: [],
     isMultiweek: false,
-    days: [{ id: UidFactory_generateUid(8), name: "Day 1", exercises: [] }],
+    days: [{ id: generateUid(8), name: "Day 1", exercises: [] }],
     exercises: [],
     tags: [],
     deletedDays: [],
@@ -2351,7 +2351,7 @@ function PlannerProgram_replaceExercise(
     });
     if (conflictingExercises.length > 0) {
       noConflicts = false;
-      labelSuffix = UidFactory_generateUid(3);
+      labelSuffix = generateUid(3);
     } else {
       noConflicts = true;
     }
@@ -6971,7 +6971,7 @@ export class PlannerExerciseEvaluator {
         : undefined;
 
       const plannerExercise: IPlannerProgramExercise = {
-        id: UidFactory_generateUid(8),
+        id: generateUid(8),
         key,
         fullName,
         shortName,
@@ -13067,7 +13067,7 @@ function warmup(
             memo.push({
               vtype: "set",
               index,
-              id: UidFactory_generateUid(6),
+              id: generateUid(6),
               reps: programExerciseWarmupSet.reps,
               isUnilateral: exerciseType
                 ? Exercise_getIsUnilateral(exerciseType, settings)
@@ -15151,7 +15151,7 @@ function Progress_applyBindings(
       if (entry.sets[i] == null) {
         entry.sets[i] = {
           vtype: "set",
-          id: UidFactory_generateUid(6),
+          id: generateUid(6),
           index: i,
           isUnilateral: Exercise_getIsUnilateral(entry.exercise, settings),
           reps: 0,
