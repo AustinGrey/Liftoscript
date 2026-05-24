@@ -104,6 +104,7 @@ import {
   type IProgramExerciseWarmupSet,
   type IProgramStateMetadata,
 } from "@/program";
+import { getLineAndOffset } from "@/utils/lezer.ts";
 
 //#region Program
 
@@ -2225,23 +2226,6 @@ interface IProgramExerciseUpdate {
   };
 }
 
-interface IPlannerProgramProperty {
-  name: string;
-  fnName: string;
-  fnArgs: string[];
-  script?: string;
-  body?: string;
-  reuse?: IPlannerProgramProperty;
-  liftoscriptNode?: SyntaxNode;
-  exerciseType?: IExerciseType;
-  exerciseLabel?: string;
-  exerciseKey?: string;
-  label?: string;
-  meta?: {
-    stateKeys?: Set<string>;
-  };
-}
-
 interface IPlannerProgramExerciseRepRange {
   numberOfSets: number;
   maxrep?: number;
@@ -2413,34 +2397,6 @@ export class PlannerExerciseEvaluator {
     return this.script.slice(node.from, node.to);
   }
 
-  public static applyChangesToScript(
-    script: string,
-    ranges: [number, number, string][],
-  ): string {
-    let offset = 0;
-    while (ranges.length > 0) {
-      const [from, to, replacement] = ranges.shift()!;
-      script =
-        script.slice(0, from + offset) +
-        replacement +
-        script.slice(to + offset);
-      offset += replacement.length - (to - from);
-    }
-    return script;
-  }
-
-  public static isEqualProperty(
-    a: IPlannerProgramProperty,
-    b: IPlannerProgramProperty,
-  ): boolean {
-    return (
-      a.fnName === b.fnName &&
-      a.fnArgs.join() === b.fnArgs.join() &&
-      a.script === b.script &&
-      a.body === b.body
-    );
-  }
-
   public static isEqualProgress(
     a: IProgramExerciseProgress,
     b: IProgramExerciseProgress,
@@ -2481,24 +2437,8 @@ export class PlannerExerciseEvaluator {
     throw PlannerSyntaxError.fromPoint(undefined, message, point);
   }
 
-  public static getLineAndOffset(
-    script: string,
-    node: SyntaxNode,
-  ): [number, number] {
-    const linesLengths = script.split("\n").map((l) => l.length + 1);
-    let offset = 0;
-    for (let i = 0; i < linesLengths.length; i++) {
-      const lineLength = linesLengths[i];
-      if (node.from >= offset && node.from < offset + lineLength) {
-        return [i + 1, node.from - offset];
-      }
-      offset += lineLength;
-    }
-    return [linesLengths.length, linesLengths[linesLengths.length - 1]];
-  }
-
   private getLineAndOffset(node: SyntaxNode): [number, number] {
-    return PlannerExerciseEvaluator.getLineAndOffset(this.script, node);
+    return getLineAndOffset(this.script, node);
   }
 
   public parse(expr: SyntaxNode): void {
@@ -4557,10 +4497,7 @@ function PlannerEvaluator_checkUpdateScript(
         liftoscriptEvaluator.parse();
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-          const [line] = PlannerExerciseEvaluator.getLineAndOffset(
-            script,
-            liftoscriptNode,
-          );
+          const [line] = getLineAndOffset(script, liftoscriptNode);
           throw new PlannerSyntaxError(
             e.message,
             line + e.line,

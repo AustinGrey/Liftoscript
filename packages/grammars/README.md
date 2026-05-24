@@ -20,6 +20,13 @@ To keep things clear, we try to structure the code according to the most basic l
 
 Earlier layers should be imported by later layers, but never vice versa.
 
+## Layer -1 - Programming and data structure utilities.
+
+- Type helpers
+- Data structures and helpers, including strings and arrays
+- Documentation helpers
+- External/3rd party library wrappers and helpers
+
 ## Layer 0 - Physics, biology/anatomy, hard definable realities.
 
 - human body (muscles, areas, groups, etc) (see human-body)
