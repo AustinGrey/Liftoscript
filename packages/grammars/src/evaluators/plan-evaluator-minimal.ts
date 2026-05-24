@@ -2059,8 +2059,7 @@ function PlannerKey_fromExerciseType(
 
 export const PlannerKey_fromFullName = memoize(
   (fullName: string, exercises: IAllCustomExercises): string => {
-    const { label, name, equipment } =
-      PlannerExerciseEvaluator.extractNameParts(fullName, exercises);
+    const { label, name, equipment } = extractNameParts(fullName, exercises);
     return PlannerKey_fromLabelNameAndEquipment(
       label,
       name,
@@ -2360,6 +2359,103 @@ type IPlannerNonExerciseFullTextLine = {
  */
 type IPlannerExerciseEvaluatorMode = "perday" | "full" | "fulltext";
 
+function isEqualProgress(
+  a: IProgramExerciseProgress,
+  b: IProgramExerciseProgress,
+): boolean {
+  const pickA = {
+    ...ObjectUtils_pick(a, ["type", "state", "stateMetadata", "script"]),
+    reuse: a.reuse?.fullName,
+  };
+  const pickB = {
+    ...ObjectUtils_pick(b, ["type", "state", "stateMetadata", "script"]),
+    reuse: b.reuse?.fullName,
+  };
+  return ObjectUtils_isEqual(pickA, pickB);
+}
+
+function isEqualUpdate(
+  a: IProgramExerciseUpdate,
+  b: IProgramExerciseUpdate,
+): boolean {
+  const pickA = {
+    ...ObjectUtils_pick(a, ["type", "script"]),
+    reuse: a.reuse?.fullName,
+  };
+  const pickB = {
+    ...ObjectUtils_pick(b, ["type", "script"]),
+    reuse: b.reuse?.fullName,
+  };
+  return ObjectUtils_isEqual(pickA, pickB);
+}
+
+function fnArgsToStateVars(
+  fnArgs: string[],
+  onError?: (message: string) => void,
+): {
+  state: IProgramState;
+  stateMetadata: IProgramStateMetadata;
+} {
+  const state: IProgramState = {};
+  const stateMetadata: IProgramStateMetadata = {};
+  for (const value of fnArgs) {
+    let [fnArgKey, fnArgValStr] = value.split(":").map((v) => v.trim());
+    if (onError && (!fnArgKey || !fnArgValStr)) {
+      onError(`Invalid argument ${value}`);
+    }
+    if (fnArgKey.endsWith("+")) {
+      fnArgKey = fnArgKey.replace("+", "");
+      stateMetadata[fnArgKey] = { userPrompted: true };
+    } else {
+      stateMetadata[fnArgKey] = { userPrompted: false };
+    }
+    try {
+      const fnArgVal = fnArgValStr.match(/(lb|kg)/)
+        ? parse(fnArgValStr)
+        : fnArgValStr.match(/%/)
+          ? percentORM(parseFloat(fnArgValStr))
+          : MathUtils_roundFloat(parseFloat(fnArgValStr), 2);
+      state[fnArgKey] = fnArgVal ?? 0;
+    } catch (e) {
+      if (onError) {
+        onError(`Invalid argument ${value}`);
+      } else {
+        throw e;
+      }
+    }
+  }
+  return { state, stateMetadata };
+}
+
+const extractNameParts = memoize(
+  (
+    str: string,
+    exercises: IAllCustomExercises,
+  ): { name: string; label?: string; equipment?: string } => {
+    let [label, ...nameEquipmentItems] = str.split(":");
+    if (nameEquipmentItems.length === 0) {
+      nameEquipmentItems = [label];
+      label = "";
+    } else {
+      label = label.trim();
+    }
+    const nameEquipment = nameEquipmentItems.join(":").trim();
+    const matchingExercise = Exercise_findByNameAndEquipment(
+      nameEquipment,
+      exercises,
+    );
+    if (matchingExercise) {
+      return {
+        name: matchingExercise.name,
+        label: label ? label : undefined,
+        equipment: matchingExercise.equipment,
+      };
+    }
+    return { name: nameEquipment, label: label ? label : undefined };
+  },
+  { maxSize: 1000 },
+);
+
 export class PlannerExerciseEvaluator {
   private readonly script: string;
   private readonly mode: IPlannerExerciseEvaluatorMode;
@@ -2397,36 +2493,6 @@ export class PlannerExerciseEvaluator {
     return this.script.slice(node.from, node.to);
   }
 
-  public static isEqualProgress(
-    a: IProgramExerciseProgress,
-    b: IProgramExerciseProgress,
-  ): boolean {
-    const pickA = {
-      ...ObjectUtils_pick(a, ["type", "state", "stateMetadata", "script"]),
-      reuse: a.reuse?.fullName,
-    };
-    const pickB = {
-      ...ObjectUtils_pick(b, ["type", "state", "stateMetadata", "script"]),
-      reuse: b.reuse?.fullName,
-    };
-    return ObjectUtils_isEqual(pickA, pickB);
-  }
-
-  public static isEqualUpdate(
-    a: IProgramExerciseUpdate,
-    b: IProgramExerciseUpdate,
-  ): boolean {
-    const pickA = {
-      ...ObjectUtils_pick(a, ["type", "script"]),
-      reuse: a.reuse?.fullName,
-    };
-    const pickB = {
-      ...ObjectUtils_pick(b, ["type", "script"]),
-      reuse: b.reuse?.fullName,
-    };
-    return ObjectUtils_isEqual(pickA, pickB);
-  }
-
   private getPoint(node: SyntaxNode): IPlannerSyntaxPointer {
     const [line, offset] = this.getLineAndOffset(node);
     return { line, offset, from: node.from, to: node.to };
@@ -2437,9 +2503,8 @@ export class PlannerExerciseEvaluator {
     throw PlannerSyntaxError.fromPoint(undefined, message, point);
   }
 
-  private getLineAndOffset(node: SyntaxNode): [number, number] {
-    return getLineAndOffset(this.script, node);
-  }
+  private getLineAndOffset = (node: SyntaxNode) =>
+    getLineAndOffset(this.script, node);
 
   public parse(expr: SyntaxNode): void {
     const cursor = expr.cursor();
@@ -2544,44 +2609,6 @@ export class PlannerExerciseEvaluator {
     } else {
       assert(PlannerNodeName.ExerciseSection);
     }
-  }
-
-  public static fnArgsToStateVars(
-    fnArgs: string[],
-    onError?: (message: string) => void,
-  ): {
-    state: IProgramState;
-    stateMetadata: IProgramStateMetadata;
-  } {
-    const state: IProgramState = {};
-    const stateMetadata: IProgramStateMetadata = {};
-    for (const value of fnArgs) {
-      let [fnArgKey, fnArgValStr] = value.split(":").map((v) => v.trim());
-      if (onError && (!fnArgKey || !fnArgValStr)) {
-        onError(`Invalid argument ${value}`);
-      }
-      if (fnArgKey.endsWith("+")) {
-        fnArgKey = fnArgKey.replace("+", "");
-        stateMetadata[fnArgKey] = { userPrompted: true };
-      } else {
-        stateMetadata[fnArgKey] = { userPrompted: false };
-      }
-      try {
-        const fnArgVal = fnArgValStr.match(/(lb|kg)/)
-          ? parse(fnArgValStr)
-          : fnArgValStr.match(/%/)
-            ? percentORM(parseFloat(fnArgValStr))
-            : MathUtils_roundFloat(parseFloat(fnArgValStr), 2);
-        state[fnArgKey] = fnArgVal ?? 0;
-      } catch (e) {
-        if (onError) {
-          onError(`Invalid argument ${value}`);
-        } else {
-          throw e;
-        }
-      }
-    }
-    return { state, stateMetadata };
   }
 
   private evaluateSet(expr: SyntaxNode): IPlannerProgramExerciseSet {
@@ -2927,9 +2954,8 @@ export class PlannerExerciseEvaluator {
         const script = liftoscriptNode
           ? this.getValueTrim(liftoscriptNode)
           : undefined;
-        const { state } = PlannerExerciseEvaluator.fnArgsToStateVars(
-          fnArgs,
-          (message) => this.error(message, fnNameNode),
+        const { state } = fnArgsToStateVars(fnArgs, (message) =>
+          this.error(message, fnNameNode),
         );
         if (script) {
           const liftoscriptEvaluator = new ScriptRunner(
@@ -3152,35 +3178,6 @@ export class PlannerExerciseEvaluator {
     }
   }
 
-  public static extractNameParts = memoize(
-    (
-      str: string,
-      exercises: IAllCustomExercises,
-    ): { name: string; label?: string; equipment?: string } => {
-      let [label, ...nameEquipmentItems] = str.split(":");
-      if (nameEquipmentItems.length === 0) {
-        nameEquipmentItems = [label];
-        label = "";
-      } else {
-        label = label.trim();
-      }
-      const nameEquipment = nameEquipmentItems.join(":").trim();
-      const matchingExercise = Exercise_findByNameAndEquipment(
-        nameEquipment,
-        exercises,
-      );
-      if (matchingExercise) {
-        return {
-          name: matchingExercise.name,
-          label: label ? label : undefined,
-          equipment: matchingExercise.equipment,
-        };
-      }
-      return { name: nameEquipment, label: label ? label : undefined };
-    },
-    { maxSize: 1000 },
-  );
-
   private addDescription(value: string): void {
     value = value.replace(/^\/\//, "");
     if (this.latestDescriptions.length === 0) {
@@ -3355,11 +3352,10 @@ export class PlannerExerciseEvaluator {
 
       const fullName = this.getValue(nameNode);
 
-      let { label, name, equipment } =
-        PlannerExerciseEvaluator.extractNameParts(
-          fullName,
-          this.settings.exercises,
-        );
+      let { label, name, equipment } = extractNameParts(
+        fullName,
+        this.settings.exercises,
+      );
       const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
       const shortName = PlannerProgramExercise_shortNameFromFullName(
         fullName,
@@ -3944,10 +3940,7 @@ function PlannerEvaluator_fillInMetadata(
     const existingProgress = metadata.properties.progress[exercise.key];
     if (
       existingProgress != null &&
-      !PlannerExerciseEvaluator.isEqualProgress(
-        progressProp,
-        existingProgress.property,
-      )
+      !isEqualProgress(progressProp, existingProgress.property)
     ) {
       const point = exercise.points.progressPoint || exercise.points.fullName;
       throw PlannerSyntaxError.fromPoint(
@@ -3969,10 +3962,7 @@ function PlannerEvaluator_fillInMetadata(
     const existingUpdate = metadata.properties.update[exercise.key];
     if (
       existingUpdate != null &&
-      !PlannerExerciseEvaluator.isEqualUpdate(
-        updateProp,
-        existingUpdate.property,
-      )
+      !isEqualUpdate(updateProp, existingUpdate.property)
     ) {
       const point = exercise.points.updatePoint || exercise.points.fullName;
       throw PlannerSyntaxError.fromPoint(
@@ -5371,10 +5361,9 @@ for (var.i in completedReps) {
     case "custom": {
       const script = opts.script;
       let errorMessage: string | undefined;
-      const { state, stateMetadata } =
-        PlannerExerciseEvaluator.fnArgsToStateVars(args, (message) => {
-          errorMessage = message;
-        });
+      const { state, stateMetadata } = fnArgsToStateVars(args, (message) => {
+        errorMessage = message;
+      });
       if (errorMessage) {
         return {
           success: false,
@@ -5401,10 +5390,7 @@ function PlannerProgramExercise_shortNameFromFullName(
   fullName: string,
   settings: ISettings,
 ): string {
-  const { name, equipment } = PlannerExerciseEvaluator.extractNameParts(
-    fullName,
-    settings.exercises,
-  );
+  const { name, equipment } = extractNameParts(fullName, settings.exercises);
 
   return `${name}${equipment ? `, ${equipmentName(equipment)}` : ""}`;
 }
