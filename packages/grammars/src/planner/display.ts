@@ -1,4 +1,4 @@
-import type { IPlannerProgram } from "@/evaluators/plan-evaluator-minimal.ts";
+import type { IPlannerProgram } from "@/program";
 
 /**
  * @returns the script that would represent the provided program

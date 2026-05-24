@@ -9,9 +9,7 @@ import {
   PlannerProgram_replaceWeight,
   PlannerProgram_generateFullText,
   PlannerProgram_replaceAndValidateExercise,
-  type IProgram,
   type ISettings,
-  type IPlannerProgram,
   type IExerciseType,
   type IWeight,
   type IWeightChange,
@@ -19,6 +17,7 @@ import {
   PlannerKey_fromFullName,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 import type { IStats } from "@/fitness-stats";
+import type { IPlannerProgram, IProgram } from "@/program";
 
 export interface ICompletedEntries {
   completedReps: number[][];

@@ -97,8 +97,12 @@ import { evaluateWeight } from "@/quantities-dynamic";
 import { getAverageBodyweight, type IStats } from "@/fitness-stats";
 import {
   getWarmupSets,
+  type IPlannerProgram,
+  type IPlannerProgramDay,
+  type IPlannerProgramWeek,
+  type IProgram,
   type IProgramExerciseWarmupSet,
-  TProgramExerciseWarmupSet,
+  type IProgramStateMetadata,
 } from "@/program";
 
 //#region Program
@@ -1535,60 +1539,6 @@ const THistoryEntry = z.strictObject({
 });
 type IHistoryEntry = z.infer<typeof THistoryEntry>;
 
-const TProgramStateMetadataValue = z.strictObject({
-  userPrompted: z.boolean().optional(),
-});
-
-const TProgramStateMetadata = z.record(z.string(), TProgramStateMetadataValue);
-type IProgramStateMetadata = z.infer<typeof TProgramStateMetadata>;
-
-const TProgramSet = z.strictObject({
-  repsExpr: z.string(),
-  weightExpr: z.string(),
-  isAmrap: z.boolean().optional(),
-  rpeExpr: z.string().optional(),
-  minRepsExpr: z.string().optional(),
-  logRpe: z.boolean().optional(),
-  askWeight: z.boolean().optional(),
-  label: z.string().optional(),
-  timerExpr: z.string().optional(),
-});
-
-const TProgramExerciseVariation = z.strictObject({
-  sets: z.array(TProgramSet),
-  quickAddSets: z.boolean().optional(),
-});
-
-const TProgramExerciseReuseLogic = z.strictObject({
-  selected: z.union([z.string(), z.undefined()]),
-  states: z.record(z.string(), TProgramState),
-});
-
-const TProgramExercise = z.strictObject({
-  exerciseType: TExerciseType,
-  id: z.string(),
-  name: z.string(),
-  variations: z.array(TProgramExerciseVariation),
-  state: TProgramState,
-  variationExpr: z.string(),
-  finishDayExpr: z.string(),
-  descriptions: z.array(z.string()),
-  tags: z.array(z.number()).optional(),
-  updateDayExpr: z.string().optional(),
-  diffPaths: z.array(z.string()).optional(),
-  description: z.string().optional(),
-  descriptionExpr: z.string().optional(),
-  quickAddSets: z.boolean().optional(),
-  enableRepRanges: z.boolean().optional(),
-  enableRpe: z.boolean().optional(),
-  stateMetadata: TProgramStateMetadata.optional(),
-  timerExpr: z.string().optional(),
-  reuseLogic: TProgramExerciseReuseLogic.optional(),
-  warmupSets: z.array(TProgramExerciseWarmupSet).optional(),
-  reuseFinishDayScript: z.string().optional(),
-  reuseUpdateDayScript: z.string().optional(),
-});
-
 const exercisePickerScreens = [
   "exercisePicker",
   "customExercise",
@@ -1748,72 +1698,6 @@ const THistoryRecord = z.strictObject({
   updatedAt: z.number().optional(),
 });
 type IHistoryRecord = z.infer<typeof THistoryRecord>;
-
-const TProgramWeek = z.strictObject({
-  id: z.string(),
-  name: z.string(),
-  days: z.array(
-    z.strictObject({
-      id: z.string(),
-    }),
-  ),
-  description: z.string().optional(),
-});
-
-const TProgramDay = z.strictObject({
-  id: z.string(),
-  name: z.string(),
-  exercises: z.array(
-    z.strictObject({
-      id: z.string(),
-    }),
-  ),
-  description: z.string().optional(),
-});
-
-const TPlannerProgramDay = z.strictObject({
-  name: z.string(),
-  exerciseText: z.string(),
-  id: z.string().optional(),
-  description: z.string().optional(),
-});
-type IPlannerProgramDay = z.infer<typeof TPlannerProgramDay>;
-
-const TPlannerProgramWeek = z.strictObject({
-  name: z.string(),
-  days: z.array(TPlannerProgramDay),
-  id: z.string().optional(),
-  description: z.string().optional(),
-});
-type IPlannerProgramWeek = Readonly<z.infer<typeof TPlannerProgramWeek>>;
-
-const TPlannerProgram = z.strictObject({
-  name: z.string(),
-  weeks: z.array(TPlannerProgramWeek),
-});
-export type IPlannerProgram = Readonly<z.infer<typeof TPlannerProgram>>;
-
-const TProgram = z.strictObject({
-  exercises: z.array(TProgramExercise),
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  url: z.string(),
-  author: z.string(),
-  nextDay: z.number(),
-  days: z.array(TProgramDay),
-  weeks: z.array(TProgramWeek),
-  deletedDays: z.array(z.string()).optional(),
-  deletedWeeks: z.array(z.string()).optional(),
-  deletedExercises: z.array(z.string()).optional(),
-  clonedAt: z.number().optional(),
-  shortDescription: z.string().optional(),
-  planner: TPlannerProgram.optional(),
-  updatedAt: z.number().optional(),
-  authorid: z.union([z.string(), z.null()]).optional(),
-  source: z.union([z.string(), z.null()]).optional(),
-});
-export type IProgram = z.infer<typeof TProgram>;
 
 type IExerciseData = OpenRecord<IExerciseDataValue>;
 
