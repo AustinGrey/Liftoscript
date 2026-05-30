@@ -1536,13 +1536,6 @@ const THistoryEntry = z.strictObject({
 });
 type IHistoryEntry = z.infer<typeof THistoryEntry>;
 
-const TIntervals = z.array(
-  z.tuple([z.number(), z.union([z.number(), z.undefined(), z.null()])]),
-);
-
-const historyRecordChange = ["order"] as const;
-const THistoryRecordChange = z.enum(historyRecordChange);
-
 const THistoryRecord = z.strictObject({
   date: z.string(),
   programId: z.string(),
@@ -1667,14 +1660,18 @@ const THistoryRecord = z.strictObject({
       nativeNotificationScheduled: z.boolean().optional(),
     })
     .optional(),
-  intervals: TIntervals.optional(),
+  intervals: z
+    .array(
+      z.tuple([z.number(), z.union([z.number(), z.undefined(), z.null()])]),
+    )
+    .optional(),
   deletedProgramExercises: z
     .record(z.string(), z.union([z.boolean(), z.undefined()]))
     .optional(),
   userPromptedStateVars: z
     .record(z.string(), z.union([TProgramState, z.undefined()]))
     .optional(),
-  changes: z.array(THistoryRecordChange).optional(),
+  changes: z.array(z.enum(["order"] as const)).optional(),
   timerSince: z.number().optional(),
   timerMode: z.enum(["warmup", "workout"]).optional(),
   timer: z.number().optional(),
