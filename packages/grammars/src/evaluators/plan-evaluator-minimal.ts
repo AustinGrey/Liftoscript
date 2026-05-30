@@ -21,7 +21,7 @@ import {
   ObjectUtils_keys,
   ObjectUtils_values,
 } from "@/utils/object";
-import { sameCaseInsensitive, StringUtils_unindent } from "@/utils/string";
+import { StringUtils_unindent } from "@/utils/string";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
@@ -64,26 +64,21 @@ import {
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { TMuscle } from "@/human-body";
 import {
-  allExercisesList,
+  Exercise_findByName,
+  Exercise_findByNameAndEquipment,
+  Exercise_findByNameEquipment,
   getExerciseOrDefault,
   getOrmOrStartingWeight,
   type IAllCustomExercises,
   type IExercise,
-  type IExerciseId,
   type IExerciseType,
   isUnilateral,
-  maybeGetExercise,
   TCustomExercise,
   TExerciseKind,
   TExerciseType,
   toKey,
 } from "@/exercises";
-import {
-  builtInEquipmentTypes,
-  equipmentName,
-  type IEquipmentType,
-  TBuiltinEquipmentTypes,
-} from "@/equipment";
+import { equipmentName, TBuiltinEquipmentTypes } from "@/equipment";
 import {
   getCurrentEquipment,
   getPreferredUnit,
@@ -5416,13 +5411,6 @@ function ProgramSet_getEvaluatedWeight(
 //#endregion
 
 //#region Exercise
-const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
-  OpenRecord<IExerciseId>
->((acc, key) => {
-  acc[allExercisesList[key].name.toLowerCase()] = allExercisesList[key].id;
-  return acc;
-}, {});
-
 function Exercise_fullName(
   exercise: IExercise,
   settings: ISettings,
@@ -5440,102 +5428,6 @@ function Exercise_fullName(
     str = `${label}: ${str}`;
   }
   return str;
-}
-
-function Exercise_findById(
-  id: IExerciseId,
-  customExercises: IAllCustomExercises,
-): IExercise | undefined {
-  return maybeGetExercise(id, customExercises);
-}
-
-function Exercise_findIdByName(
-  name: string,
-  customExercises: IAllCustomExercises,
-): IExerciseId | undefined {
-  const lowercaseName = name.toLowerCase();
-  return (
-    nameToIdMapping[lowercaseName] ||
-    ObjectUtils_values(customExercises).find((ce) => {
-      const thisLowercaseName = ce?.name?.toLowerCase() || "";
-      return (
-        thisLowercaseName === lowercaseName ||
-        thisLowercaseName.replace(/\s*,\s*/g, ",") ===
-          lowercaseName.replace(/\s*,\s*/g, ",")
-      );
-    })?.id
-  );
-}
-
-function Exercise_findByNameEquipment(
-  customExercises: IAllCustomExercises,
-  name: string,
-  equipment?: string,
-): IExercise | undefined {
-  const exerciseId = Exercise_findIdByName(name, customExercises);
-  const exercise = exerciseId
-    ? Exercise_findById(exerciseId, customExercises)
-    : undefined;
-  if (exercise == null) {
-    return undefined;
-  }
-  return { ...exercise, equipment };
-}
-
-function Exercise_findByNameAndEquipment(
-  nameAndEquipment: string,
-  customExercises: IAllCustomExercises,
-): IExercise | undefined {
-  const parts = nameAndEquipment.split(",").map((p) => p.trim());
-  let name: string | undefined;
-  let equipment: IEquipmentType | undefined | null;
-  if (parts.length > 1) {
-    const foundEquipment = builtInEquipmentTypes
-      .filter((e) =>
-        sameCaseInsensitive(equipmentName(e), parts[parts.length - 1]),
-      )
-      .at(0);
-    if (foundEquipment != null) {
-      equipment = foundEquipment;
-      name = parts.slice(0, parts.length - 1).join(", ");
-    } else {
-      equipment = null;
-    }
-  }
-  if (name == null) {
-    name = nameAndEquipment;
-  }
-  let exerciseId = Exercise_findIdByName(name, {});
-  if (exerciseId != null && equipment !== null) {
-    const exercise = Exercise_findById(exerciseId, {});
-    if (exercise != null) {
-      return { ...exercise, equipment: equipment || exercise.defaultEquipment };
-    }
-  } else {
-    exerciseId = Exercise_findIdByName(nameAndEquipment, customExercises);
-    if (exerciseId != null) {
-      const exercise = Exercise_findById(exerciseId, customExercises);
-      if (exercise != null) {
-        return { ...exercise };
-      }
-    }
-  }
-  return undefined;
-}
-
-function Exercise_findByName(
-  name: string,
-  customExercises: IAllCustomExercises,
-): IExercise | undefined {
-  const exerciseId = Exercise_findIdByName(name.trim(), customExercises);
-  if (exerciseId != null) {
-    const exercise = Exercise_findById(exerciseId, customExercises);
-    if (exercise) {
-      // @todo why would this find method be overriding the equipment from the found thing?
-      return { ...exercise, equipment: exercise.defaultEquipment };
-    }
-  }
-  return undefined;
 }
 
 //#endregion

@@ -1,10 +1,17 @@
 //#region Exercise
 import { convertTo, type IWeight, w } from "@/quantities/weight.ts";
 import { z } from "zod";
-import { type IEquipmentType, TEquipmentType } from "@/equipment";
+import {
+  builtInEquipmentTypes,
+  equipmentName,
+  type IEquipmentType,
+  TEquipmentType,
+} from "@/equipment";
 import type { ISettings } from "@/user-settings";
 import { TBodyPart, TMuscle } from "@/human-body";
 import type { OpenRecord } from "@/utils/types.ts";
+import { ObjectUtils_keys } from "@/utils/object.ts";
+import { sameCaseInsensitive } from "@/utils/string.ts";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
@@ -1804,4 +1811,99 @@ export function getOrmOrStartingWeight(
   return settings.units === "kg"
     ? exercise.startingWeightKg
     : exercise.startingWeightLb;
+}
+const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<
+  OpenRecord<IExerciseId>
+>((acc, key) => {
+  acc[allExercisesList[key].name.toLowerCase()] = allExercisesList[key].id;
+  return acc;
+}, {});
+
+function Exercise_findIdByName(
+  name: string,
+  customExercises: IAllCustomExercises,
+): IExerciseId | undefined {
+  const lowercaseName = name.toLowerCase();
+  return (
+    nameToIdMapping[lowercaseName] ||
+    Object.values(customExercises).find((ce) => {
+      const thisLowercaseName = ce?.name?.toLowerCase() || "";
+      return (
+        thisLowercaseName === lowercaseName ||
+        thisLowercaseName.replace(/\s*,\s*/g, ",") ===
+          lowercaseName.replace(/\s*,\s*/g, ",")
+      );
+    })?.id
+  );
+}
+
+export function Exercise_findByNameEquipment(
+  customExercises: IAllCustomExercises,
+  name: string,
+  equipment?: string,
+): IExercise | undefined {
+  const exerciseId = Exercise_findIdByName(name, customExercises);
+  const exercise = exerciseId
+    ? maybeGetExercise(exerciseId, customExercises)
+    : undefined;
+  if (exercise == null) {
+    return undefined;
+  }
+  return { ...exercise, equipment };
+}
+
+export function Exercise_findByNameAndEquipment(
+  nameAndEquipment: string,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  const parts = nameAndEquipment.split(",").map((p) => p.trim());
+  let name: string | undefined;
+  let equipment: IEquipmentType | undefined | null;
+  if (parts.length > 1) {
+    const foundEquipment = builtInEquipmentTypes
+      .filter((e) =>
+        sameCaseInsensitive(equipmentName(e), parts[parts.length - 1]),
+      )
+      .at(0);
+    if (foundEquipment != null) {
+      equipment = foundEquipment;
+      name = parts.slice(0, parts.length - 1).join(", ");
+    } else {
+      equipment = null;
+    }
+  }
+  if (name == null) {
+    name = nameAndEquipment;
+  }
+  let exerciseId = Exercise_findIdByName(name, {});
+  if (exerciseId != null && equipment !== null) {
+    const exercise = maybeGetExercise(exerciseId, {});
+    if (exercise != null) {
+      return { ...exercise, equipment: equipment || exercise.defaultEquipment };
+    }
+  } else {
+    exerciseId = Exercise_findIdByName(nameAndEquipment, customExercises);
+    if (exerciseId != null) {
+      const exercise = maybeGetExercise(exerciseId, customExercises);
+      if (exercise != null) {
+        return { ...exercise };
+      }
+    }
+  }
+  return undefined;
+}
+
+export function Exercise_findByName(
+  name: string,
+  customExercises: IAllCustomExercises,
+): IExercise | undefined {
+  const exerciseId = Exercise_findIdByName(name.trim(), customExercises);
+  if (exerciseId != null) {
+    const exercise = maybeGetExercise(exerciseId, customExercises);
+    if (exercise) {
+      // @todo why would this find method be overriding the equipment from the found thing?
+      return { ...exercise, equipment: exercise.defaultEquipment };
+    }
+  }
+  return undefined;
 }
