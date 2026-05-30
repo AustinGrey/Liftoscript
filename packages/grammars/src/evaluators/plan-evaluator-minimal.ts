@@ -6516,7 +6516,7 @@ class ProgramToPlanner {
                 }
 
                 if (!addedIdMap[key] && (evalExercise.tags || []).length > 0) {
-                  plannerExercise += this.getId(evalExercise);
+                  plannerExercise += ` / id: tags(${(evalExercise.tags || []).join(", ")})`;
                   addedIdMap[key] = true;
                 }
 
@@ -6643,10 +6643,6 @@ class ProgramToPlanner {
     return str;
   }
 
-  private getId(programExercise: IPlannerProgramExercise): string {
-    return ` / id: tags(${(programExercise.tags || []).join(", ")})`;
-  }
-
   private getGlobals(
     exercise: IPlannerProgramExercise,
   ): IPlannerToProgram2Globals {
@@ -6760,9 +6756,7 @@ class ProgramToPlanner {
     if (warmupSets) {
       const groups = this.groupWarmupsSets(warmupSets);
       const strs: string[] = [];
-      for (const group of groups) {
-        const first = group[0];
-        const length = group[1];
+      for (const [first, length] of groups) {
         const weight =
           first.weight ??
           (first.percentage != null ? percentORM(first.percentage) : w`0lb`);
@@ -6773,12 +6767,8 @@ class ProgramToPlanner {
     return undefined;
   }
 
-  private weightExprToStr(weightExpr?: IWeight | IDynamicWeight): string {
-    if (weightExpr != null) {
-      return print(weightExpr);
-    }
-    return "";
-  }
+  private weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
+    weightExpr ? print(weightExpr) : "";
 
   private variationToString(
     variation: IPlannerProgramExerciseEvaluatedSetVariation,
