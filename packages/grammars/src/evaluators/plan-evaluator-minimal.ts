@@ -1978,7 +1978,7 @@ function operation(
   op: IAssignmentOp,
 ): void {
   const oldValue =
-    set[key] == null && ProgramSet_isEligibleForInferredWeight(set)
+    set[key] === undefined
       ? ProgramSet_getEvaluatedWeight(
           set,
           programExercise.exerciseType,
@@ -5393,14 +5393,6 @@ function PlannerProgramExercise_shortNameFromFullName(
 //#endregion
 
 //#region Program Set
-
-function ProgramSet_isEligibleForInferredWeight(
-  set: IPlannerProgramExerciseEvaluatedSet,
-): set is Omit<IPlannerProgramExerciseEvaluatedSet, "weight"> &
-  Required<Pick<IPlannerProgramExerciseEvaluatedSet, "maxrep" | "rpe">> {
-  return set.weight == null && set.maxrep != null && set.rpe != null;
-}
-
 function ProgramSet_getEvaluatedWeight(
   programSet: IPlannerProgramExerciseEvaluatedSet,
   exerciseType: IExerciseType,
@@ -5408,7 +5400,9 @@ function ProgramSet_getEvaluatedWeight(
 ): IWeight | undefined {
   const evaluatedWeight = programSet.weight
     ? evaluateWeight(programSet.weight, exerciseType, settings)
-    : ProgramSet_isEligibleForInferredWeight(programSet)
+    : programSet.weight == null &&
+        programSet.maxrep != null &&
+        programSet.rpe != null
       ? evaluateWeight(
           rpePct(programSet.maxrep, programSet.rpe),
           exerciseType,
