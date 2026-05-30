@@ -1918,12 +1918,12 @@ export function Exercise_findByName(
  * Produces a human-readable name for the exercise. If the equipment is non-standard it will be included.
  * @param exercise The exercise to produce a name for.
  * @param allEquipment The information about equipment to help look up the name of the equipment.
- * @param label The label that will be prepended if given
+ * @param label The label that will be prepended, if given
  */
 export function Exercise_fullName(
   exercise: IExercise,
   allEquipment: IAllEquipment,
-  label: string,
+  label?: string,
 ): string {
   const equipmentLabel =
     exercise.equipment && exercise.defaultEquipment !== exercise.equipment

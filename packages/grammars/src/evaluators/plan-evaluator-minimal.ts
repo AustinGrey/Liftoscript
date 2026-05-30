@@ -6402,8 +6402,24 @@ class ProgramToPlanner {
                 finishedToAddDescription = false;
                 addedCurrentDescription = false;
 
-                let plannerExercise = "";
-                plannerExercise += this.getExerciseName(evalExercise);
+                let plannerExercise: string;
+
+                if (evalExercise.exerciseType) {
+                  const name = Exercise_fullName(
+                    getExerciseOrDefault(
+                      evalExercise.exerciseType,
+                      this.settings.exercises,
+                    ),
+                    getCurrentEquipment(this.settings),
+                    evalExercise.label,
+                  );
+                  plannerExercise =
+                    evalExercise.order > 0
+                      ? `${name}[${evalExercise.order}]`
+                      : name;
+                } else {
+                  plannerExercise = evalExercise.fullName;
+                }
                 plannerExercise += " / ";
                 if (evalExercise.notused) {
                   plannerExercise += "used: none / ";
@@ -6592,26 +6608,6 @@ class ProgramToPlanner {
       this.settings,
       repeatingExercises,
     );
-  }
-
-  private getExerciseName(programExercise: IPlannerProgramExercise): string {
-    if (programExercise.exerciseType) {
-      const exercise = getExerciseOrDefault(
-        programExercise.exerciseType,
-        this.settings.exercises,
-      );
-      let name = Exercise_fullName(
-        exercise,
-        getCurrentEquipment(this.settings),
-        programExercise.label,
-      );
-      if (programExercise.order > 0) {
-        name = `${name}[${programExercise.order}]`;
-      }
-      return name;
-    } else {
-      return programExercise.fullName;
-    }
   }
 
   private reuseToStr(programExercise: IPlannerProgramExercise): string {
