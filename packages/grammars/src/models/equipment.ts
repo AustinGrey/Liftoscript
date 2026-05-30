@@ -2,10 +2,10 @@ import { CollectionUtils_sort } from "@/utils/collection.ts";
 import type { IUnit, IWeight } from "@/quantities/weight.ts";
 import * as Weight from "@/quantities/weight.ts";
 import { Exercise_toKey } from "@/models/exercise.ts";
-import type { IEquipmentData } from "@/common-types.ts";
 import type { IExerciseType } from "@/exercises";
 import type { ISettings } from "@/user-settings";
 import type { IGym } from "@/gyms";
+import type { IEquipmentData } from "@/equipment";
 
 export function Equipment_smallestPlate(
   equipmentData: IEquipmentData,

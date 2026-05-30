@@ -1,5 +1,7 @@
 import { z } from "zod";
-import type { IAllEquipment } from "@/common-types.ts";
+import { TUnit, TWeight } from "@/quantities/weight.ts";
+import type { OpenRecord } from "@/utils/types.ts";
+import type { IBuiltinEquipment } from "@/evaluators/logic-evaluator.ts";
 
 export const TEquipmentType = z.string();
 export type IEquipmentType = z.infer<typeof TEquipmentType>;
@@ -22,6 +24,49 @@ export const builtInEquipmentTypes = [
   "trapbar",
 ] as const satisfies IEquipmentType[];
 export const TBuiltinEquipmentTypes = z.enum(builtInEquipmentTypes);
+
+/**
+ * Definition of how to treat a piece of equipment for calculations
+ */
+export const TEquipmentData = z.strictObject({
+  /**
+   * The weight of the bar
+   */
+  bar: z.strictObject({
+    // @todo why is this specified twice when a single TWeight can handle either?
+    lb: TWeight,
+    kg: TWeight,
+  }),
+  multiplier: z.number(),
+  /**
+   * What bar plates are available
+   */
+  plates: z.array(
+    z.strictObject({
+      weight: TWeight,
+      num: z.number(),
+    }),
+  ),
+  fixed: z.array(TWeight),
+  isFixed: z.boolean(),
+  unit: TUnit.optional(),
+  name: z.string().optional(),
+  similarTo: z.string().optional(),
+  isDeleted: z.boolean().optional(),
+  useBodyweightForBar: z.boolean().optional(),
+  isAssisting: z.boolean().optional(),
+  notes: z.string().optional(),
+});
+export type IEquipmentData = z.infer<typeof TEquipmentData>;
+/**
+ * A dictionary combining custom equipment categories with the built in ones, and the settings to use for them
+ */
+export type IAllEquipment = OpenRecord<
+  IEquipmentData,
+  | IBuiltinEquipment
+  // Because the user can specify their own equipment categories, the key could be any string
+  | string
+>;
 
 export function equipmentName(
   equipment: IEquipmentType | undefined,

@@ -1784,9 +1784,10 @@ export function getExerciseOrDefault(
 }
 
 export function maybeGetExercise(
-  id: IExerciseId,
+  id: IExerciseId | undefined,
   customExercises: IAllCustomExercises,
 ): IExercise | undefined {
+  if (id === undefined) return undefined;
   const custom = customExercises[id];
   return custom != null
     ? {
@@ -1876,18 +1877,18 @@ export function Exercise_findByNameAndEquipment(
     name = nameAndEquipment;
   }
   let exerciseId = Exercise_findIdByName(name, {});
-  if (exerciseId != null && equipment !== null) {
+  if (equipment !== null) {
     const exercise = maybeGetExercise(exerciseId, {});
     if (exercise != null) {
       return { ...exercise, equipment: equipment || exercise.defaultEquipment };
     }
   } else {
-    exerciseId = Exercise_findIdByName(nameAndEquipment, customExercises);
-    if (exerciseId != null) {
-      const exercise = maybeGetExercise(exerciseId, customExercises);
-      if (exercise != null) {
-        return { ...exercise };
-      }
+    const exercise = maybeGetExercise(
+      Exercise_findIdByName(nameAndEquipment, customExercises),
+      customExercises,
+    );
+    if (exercise != null) {
+      return { ...exercise };
     }
   }
   return undefined;
@@ -1897,13 +1898,13 @@ export function Exercise_findByName(
   name: string,
   customExercises: IAllCustomExercises,
 ): IExercise | undefined {
-  const exerciseId = Exercise_findIdByName(name, customExercises);
-  if (exerciseId != null) {
-    const exercise = maybeGetExercise(exerciseId, customExercises);
-    if (exercise) {
-      // @todo why would this find method be overriding the equipment from the found thing?
-      return { ...exercise, equipment: exercise.defaultEquipment };
-    }
+  const exercise = maybeGetExercise(
+    Exercise_findIdByName(name, customExercises),
+    customExercises,
+  );
+  if (exercise) {
+    // @todo why would this find method be overriding the equipment from the found thing?
+    return { ...exercise, equipment: exercise.defaultEquipment };
   }
   return undefined;
 }

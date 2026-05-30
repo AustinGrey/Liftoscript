@@ -8,15 +8,12 @@ import {
   type IUnit,
   type IWeight,
   TDynamicWeight,
-  TUnit,
   TWeight,
 } from "@/quantities/weight.ts";
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { z } from "zod";
 import { TMuscle, TScreenMuscle } from "@/human-body";
 import { type IExerciseType } from "@/exercises";
-import type { IBuiltinEquipment } from "@/evaluators/logic-evaluator.ts";
-import type { OpenRecord } from "@/utils/types.ts";
 
 export interface IScriptFnContext {
   prints: Quantity[][];
@@ -110,48 +107,6 @@ export interface IScriptFunctions {
   ): number;
 }
 
-/**
- * Definition of how to treat a piece of equipment for calculations
- */
-export const TEquipmentData = z.strictObject({
-  /**
-   * The weight of the bar
-   */
-  bar: z.strictObject({
-    // @todo why is this specified twice when a single TWeight can handle either?
-    lb: TWeight,
-    kg: TWeight,
-  }),
-  multiplier: z.number(),
-  /**
-   * What bar plates are available
-   */
-  plates: z.array(
-    z.strictObject({
-      weight: TWeight,
-      num: z.number(),
-    }),
-  ),
-  fixed: z.array(TWeight),
-  isFixed: z.boolean(),
-  unit: TUnit.optional(),
-  name: z.string().optional(),
-  similarTo: z.string().optional(),
-  isDeleted: z.boolean().optional(),
-  useBodyweightForBar: z.boolean().optional(),
-  isAssisting: z.boolean().optional(),
-  notes: z.string().optional(),
-});
-export type IEquipmentData = z.infer<typeof TEquipmentData>;
-/**
- * A dictionary combining custom equipment categories with the built in ones, and the settings to use for them
- */
-export type IAllEquipment = OpenRecord<
-  IEquipmentData,
-  | IBuiltinEquipment
-  // Because the user can specify their own equipment categories, the key could be any string
-  | string
->;
 export const TSettingsTimers = z.strictObject({
   warmup: z.union([z.number(), z.undefined(), z.null()]),
   workout: z.union([z.number(), z.undefined(), z.null()]),

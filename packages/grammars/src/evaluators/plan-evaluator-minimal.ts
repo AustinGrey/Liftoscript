@@ -50,7 +50,6 @@ import {
   w,
 } from "@/quantities/weight.ts";
 import {
-  type IAllEquipment,
   type IExerciseDataValue,
   type IPlannerSettings,
   type IProgramState,
@@ -78,7 +77,11 @@ import {
   TExerciseType,
   toKey,
 } from "@/exercises";
-import { equipmentName, TBuiltinEquipmentTypes } from "@/equipment";
+import {
+  equipmentName,
+  type IAllEquipment,
+  TBuiltinEquipmentTypes,
+} from "@/equipment";
 import {
   getCurrentEquipment,
   getPreferredUnit,
@@ -5413,12 +5416,11 @@ function ProgramSet_getEvaluatedWeight(
 //#region Exercise
 function Exercise_fullName(
   exercise: IExercise,
-  settings: ISettings,
+  allEquipment: IAllEquipment,
   label?: string,
 ): string {
   let str: string;
   if (exercise.equipment && exercise.defaultEquipment !== exercise.equipment) {
-    const allEquipment = getCurrentEquipment(settings);
     const equipment = equipmentName(exercise.equipment, allEquipment);
     str = `${exercise.name}, ${equipment}`;
   } else {
@@ -5847,7 +5849,7 @@ function getUpdate(
       );
       const fullName = Exercise_fullName(
         exercise,
-        settings,
+        getCurrentEquipment(settings),
         update.reuse.exercise.label,
       );
       return `update: custom() { ...${fullName} }`;
@@ -5926,7 +5928,7 @@ function getProgress(
         );
         const fullName = Exercise_fullName(
           exercise,
-          settings,
+          getCurrentEquipment(settings),
           progress.reuse.exercise.label,
         );
         progressStr += ` { ...${fullName} }`;
@@ -6620,7 +6622,7 @@ class ProgramToPlanner {
       );
       let name = Exercise_fullName(
         exercise,
-        this.settings,
+        getCurrentEquipment(this.settings),
         programExercise.label,
       );
       if (programExercise.order > 0) {
@@ -6649,7 +6651,7 @@ class ProgramToPlanner {
       );
       const reuseStr = Exercise_fullName(
         exercise,
-        this.settings,
+        getCurrentEquipment(this.settings),
         reuseExercise.label,
       );
       str += reuseStr;

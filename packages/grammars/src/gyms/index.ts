@@ -1,5 +1,4 @@
-import { TEquipmentType } from "@/equipment";
-import { TEquipmentData } from "@/common-types.ts";
+import { TEquipmentData, TEquipmentType } from "@/equipment";
 import { z } from "zod";
 
 export const TGym = z

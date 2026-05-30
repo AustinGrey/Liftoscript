@@ -7,8 +7,6 @@ import {
   toKey,
 } from "@/exercises";
 import {
-  type IAllEquipment,
-  type IEquipmentData,
   TExerciseDataValue,
   TExercisePickerSort,
   TLengthUnit,
@@ -19,6 +17,7 @@ import {
 } from "@/common-types.ts";
 import { z } from "zod";
 import { type IGym, TGym } from "@/gyms";
+import type { IAllEquipment, IEquipmentData } from "@/equipment";
 
 //@todo restore the commented out settings, or prune them entirely since they don't impact evaluating logic
 export const TSettings = z
