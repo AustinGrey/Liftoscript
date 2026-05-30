@@ -3,7 +3,7 @@ Values which represent weight. Like lbs, kg, etc.
  */
 
 import { z } from "zod";
-import { is, isNumber, isRealNumber } from "@/utils/types.ts";
+import { is, isBoolean, isNumber, isRealNumber } from "@/utils/types.ts";
 
 import type { Quantity } from "@/logic/types.ts";
 import {
@@ -705,12 +705,17 @@ export function print(quantity: Quantity | undefined): string {
   }
 }
 
+function coerceToQuantity(value: Quantity | boolean | undefined): Quantity {
+  return isBoolean(value) ? (value ? 1 : 0) : (value ?? 0);
+}
+
 export function applyOp(
   onerm: IWeight | undefined,
-  oldValue: Quantity,
+  oldValueRaw: Quantity | boolean | undefined,
   value: Quantity,
   opr: "+=" | "-=" | "*=" | "/=" | "=",
 ): Quantity {
+  const oldValue = coerceToQuantity(oldValueRaw);
   if (opr === "=") {
     return value;
   } else if (opr === "+=") {

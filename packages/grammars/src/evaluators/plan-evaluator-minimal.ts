@@ -13,7 +13,13 @@ import {
   MathUtils_roundTo0005,
   n,
 } from "@/utils/math";
-import { type IEither, is, type OpenRecord } from "@/utils/types";
+import {
+  type IEither,
+  is,
+  isBoolean,
+  isNumber,
+  type OpenRecord,
+} from "@/utils/types";
 import {
   ObjectUtils_entries,
   ObjectUtils_filter,
@@ -1977,51 +1983,47 @@ function operation(
   value: IWeight | IDynamicWeight | number,
   op: IAssignmentOp,
 ): void {
-  if (op === "=") {
-    if (key === "weight" && (is(TWeight, value) || is(TDynamicWeight, value))) {
-      set[key] = value;
-    } else if (
-      typeof value === "number" &&
-      (key === "maxrep" || key === "minrep" || key === "timer" || key === "rpe")
-    ) {
-      set[key] = value;
-    } else if (
-      typeof value === "number" &&
-      (key === "askWeight" || key === "isAmrap" || key === "logRpe")
-    ) {
-      set[key] = value !== 0;
+  const oldValue =
+    set[key] == null && ProgramSet_isEligibleForInferredWeight(set)
+      ? ProgramSet_getEvaluatedWeight(
+          set,
+          programExercise.exerciseType,
+          settings,
+        )
+      : set[key];
+  const valueToAssign = applyOp(
+    getOrmOrStartingWeight(programExercise.exerciseType, settings),
+    oldValue,
+    value,
+    op,
+  );
+
+  switch (key) {
+    case "weight": {
+      if (is(TWeight, valueToAssign) || is(TDynamicWeight, valueToAssign)) {
+        set[key] = valueToAssign;
+      }
+      break;
     }
-  } else {
-    const onerm = getOrmOrStartingWeight(
-      programExercise.exerciseType,
-      settings,
-    );
-    let oldValue =
-      typeof set[key] === "boolean" ? (set[key] ? 1 : 0) : set[key];
-    if (oldValue == null && ProgramSet_isEligibleForInferredWeight(set)) {
-      oldValue = ProgramSet_getEvaluatedWeight(
-        set,
-        programExercise.exerciseType,
-        settings,
-      );
+    case "maxrep":
+    case "minrep":
+    case "timer":
+    case "rpe": {
+      if (isNumber(valueToAssign)) {
+        set[key] = valueToAssign;
+      }
+      break;
     }
-    const newValue = applyOp(onerm, oldValue ?? 0, value, op);
-    if (
-      key === "weight" &&
-      (is(TWeight, newValue) || is(TDynamicWeight, newValue))
-    ) {
-      set[key] = newValue;
-    } else if (
-      typeof newValue === "number" &&
-      (key === "maxrep" || key === "minrep" || key === "timer" || key === "rpe")
-    ) {
-      set[key] = newValue;
-    } else if (
-      typeof newValue === "number" &&
-      (key === "askWeight" || key === "isAmrap" || key === "logRpe")
-    ) {
-      set[key] = newValue !== 0;
+    case "askWeight":
+    case "isAmrap":
+    case "logRpe": {
+      if (isNumber(valueToAssign)) {
+        set[key] = valueToAssign !== 0;
+      }
+      break;
     }
+    default:
+      key satisfies never;
   }
 }
 
