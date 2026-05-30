@@ -93,6 +93,7 @@ import {
 } from "@/program";
 import { getLineAndOffset } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
+import type { Tagged } from "type-fest";
 
 //#region Program
 
@@ -1881,10 +1882,12 @@ function operation(
 
 //#region Planner Key
 
+type PlannerKey = Tagged<string, "plannerKey">;
+
 function PlannerKey_fromPlannerExercise(
   plannerExercise: IPlannerProgramExercise,
   settings: ISettings,
-): string {
+): PlannerKey {
   if (plannerExercise.exerciseType) {
     return PlannerKey_fromExerciseType(
       plannerExercise.exerciseType,
@@ -1901,14 +1904,12 @@ function PlannerKey_fromPlannerExercise(
 function PlannerKey_fromExerciseType(
   exerciseType: IExerciseType,
   label?: string,
-): string {
-  const key = toKey(exerciseType);
-
-  return `${label ? `${label}-` : ""}${key}`.toLowerCase();
+): PlannerKey {
+  return makePlannerKey(label, toKey(exerciseType));
 }
 
 export const PlannerKey_fromFullName = memoize(
-  (fullName: string, exercises: IAllCustomExercises): string => {
+  (fullName: string, exercises: IAllCustomExercises): PlannerKey => {
     const { label, name, equipment } = extractNameParts(fullName, exercises);
     return PlannerKey_fromLabelNameAndEquipment(
       label,
@@ -1926,16 +1927,20 @@ const PlannerKey_fromLabelNameAndEquipment = memoize(
     name: string,
     equipment: string | undefined,
     exercises: IAllCustomExercises,
-  ): string => {
+  ): PlannerKey => {
     const exercise = Exercise_findByNameEquipment(exercises, name, equipment);
     const key = exercise ? toKey(exercise) : name;
 
-    return `${label ? `${label}-` : ""}${key}`.toLowerCase();
+    return makePlannerKey(label, key);
   },
   {
     maxSize: 1000,
   },
 );
+
+function makePlannerKey(label: string | undefined, key: string): PlannerKey {
+  return `${label ? `${label}-` : ""}${key}`.toLowerCase() as PlannerKey;
+}
 
 //#endregion
 
