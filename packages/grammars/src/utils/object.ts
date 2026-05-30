@@ -77,11 +77,3 @@ export function ObjectUtils_findMaxValue<
     return memo;
   }, 0);
 }
-
-/**
- * @deprecated Use {@link structuredClone} instead
- * @param obj The object to clone
- */
-export function ObjectUtils_clone<T>(obj: T): T {
-  return structuredClone(obj);
-}

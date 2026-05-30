@@ -15,7 +15,6 @@ import {
 } from "@/utils/math";
 import { type IEither, is, type OpenRecord } from "@/utils/types";
 import {
-  ObjectUtils_clone,
   ObjectUtils_entries,
   ObjectUtils_filter,
   ObjectUtils_isEqual,
@@ -311,7 +310,7 @@ function Program_runFinishDayScript(
     ...state,
     ...userPromptedStateVars,
   };
-  const otherStates = ObjectUtils_clone(program.states);
+  const otherStates = structuredClone(program.states);
 
   const script =
     PlannerProgramExercise_getProgressScript(programExercise) || "";
@@ -475,7 +474,7 @@ export function Program_runAllFinishDayScripts(
     newEvaluatedProgram,
     settings,
   ).convertToPlanner();
-  const newProgram = ObjectUtils_clone(program);
+  const newProgram = structuredClone(program);
   newProgram.nextDay = theNextDay;
   newProgram.planner = newPlanner;
 
@@ -673,7 +672,7 @@ export function Program_applyEvaluatedProgram(
   evaluatedProgram: IEvaluatedProgram,
   settings: ISettings,
 ): IProgram {
-  const newProgram = ObjectUtils_clone(program);
+  const newProgram = structuredClone(program);
   newProgram.planner = new ProgramToPlanner(
     evaluatedProgram,
     settings,
@@ -1028,7 +1027,7 @@ export function PlannerProgram_replaceWeight(
   ) {
     return program;
   }
-  const newEvalutedProgram = ObjectUtils_clone(program);
+  const newEvalutedProgram = structuredClone(program);
   forExerciseInEvaluatedWeeks(newEvalutedProgram.weeks, (ex) => {
     if (ex.key === programExerciseId) {
       for (const setVariation of ex.evaluatedSetVariations) {
@@ -1054,7 +1053,7 @@ function PlannerProgram_replaceExercise(
   settings: ISettings,
   dayData?: Required<IDayData>,
 ): IPlannerProgram {
-  const evaluatedProgram = ObjectUtils_clone(
+  const evaluatedProgram = structuredClone(
     Program_evaluate({ ...Program_create("Temp"), planner }, settings),
   );
   const allExercises = Program_getAllProgramExercises(evaluatedProgram);
@@ -1179,11 +1178,11 @@ function PlannerProgram_compact(
   let dayIndex = 0;
   const repeatingExercises = new Set<string>();
   const { evaluatedWeeks } = PlannerProgram_evaluate(
-    ObjectUtils_clone(oldPlannerProgram),
+    structuredClone(oldPlannerProgram),
     settings,
   );
   const { evaluatedWeeks: newEvaluatedWeeks } = PlannerProgram_evaluate(
-    ObjectUtils_clone(plannerProgram),
+    structuredClone(plannerProgram),
     settings,
   );
   for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
@@ -1810,7 +1809,7 @@ function ProgramExercise_applyVariables(
                 const lastSet = sets[sets.length - 1] || defaultSet;
                 sets.splice(newValue);
                 for (let i = sets.length; i < newValue; i += 1) {
-                  sets.push(ObjectUtils_clone(lastSet));
+                  sets.push(structuredClone(lastSet));
                 }
               }
             }
@@ -4245,8 +4244,8 @@ function PlannerEvaluator_fillSetReuses(
         if (other.progress == null) {
           other.progress = {
             type: originalProgress.type,
-            state: ObjectUtils_clone(originalProgress.state),
-            stateMetadata: ObjectUtils_clone(originalProgress.stateMetadata),
+            state: structuredClone(originalProgress.state),
+            stateMetadata: structuredClone(originalProgress.stateMetadata),
             reuse: sharedProgressReuse,
           };
         }
@@ -4316,7 +4315,7 @@ function PlannerEvaluator_fillDescriptions(
       (ex) => ex.descriptions != null,
     );
     if (lastWeekExercise && lastWeekExercise.descriptions) {
-      exercise.descriptions = ObjectUtils_clone(lastWeekExercise.descriptions);
+      exercise.descriptions = structuredClone(lastWeekExercise.descriptions);
     }
   }
 }
@@ -4342,7 +4341,7 @@ function PlannerEvaluator_fillDescriptionReuses(
     if (result != null) {
       const { descriptions, exercise: originalExercise } = result;
       exercise.descriptions = {
-        values: [...ObjectUtils_clone(descriptions.values)],
+        values: [...structuredClone(descriptions.values)],
         reuse: {
           fullName: originalExercise.fullName,
           exercise: originalExercise,
@@ -5041,7 +5040,7 @@ function PlannerProgramExercise_sets(
   const currentGlobals = exercise.globals;
   const sets = currentSets || reusedSets || [];
   return sets.map((aSet) => {
-    const set: IPlannerProgramExerciseSet = ObjectUtils_clone(aSet);
+    const set: IPlannerProgramExerciseSet = structuredClone(aSet);
     set.rpe =
       currentGlobals.rpe != null
         ? currentGlobals.rpe
@@ -5699,7 +5698,7 @@ function Progress_runUpdateScriptForEntry(
     return entry;
   }
   const exercise = programExercise.exerciseType;
-  const state = ObjectUtils_clone(
+  const state = structuredClone(
     PlannerProgramExercise_getState(programExercise),
   );
   const setVariationIndex =
@@ -5729,7 +5728,7 @@ function Progress_runUpdateScriptForEntry(
     const runner = new ScriptRunner(
       script,
       state,
-      ObjectUtils_clone(otherStates),
+      structuredClone(otherStates),
       bindings,
       Progress_createScriptFunctions(settings),
       settings.units,
@@ -5767,7 +5766,7 @@ function Progress_applyBindings(
     "originalWeights",
     "askweights",
   ] as const;
-  const entry = ObjectUtils_clone(oldEntry);
+  const entry = structuredClone(oldEntry);
   const lastCompletedIndex =
     CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) +
     1;

@@ -19,7 +19,6 @@ import {
   Settings_defaultEquipment,
   type IStats as OLD_IStats,
 } from "@/evaluators/plan-evaluator.ts";
-import { ObjectUtils_clone } from "@/utils/object.ts";
 import type { IWeight } from "@/quantities/weight.ts";
 
 import type { IStats } from "@/fitness-stats";
@@ -1751,7 +1750,7 @@ Squat / 2x5 / 100lb / progress: custom() {~
 Squat / 1x10 / 100lb / progress: custom() {~
   weights[1] = increment(weights[1])
 ~}`;
-    const equipment = ObjectUtils_clone(Settings_defaultEquipment());
+    const equipment = structuredClone(Settings_defaultEquipment());
     equipment.barbell!.plates = [
       { weight: Weight_build(10, "lb"), num: 2 },
       { weight: Weight_build(25, "lb"), num: 2 },
@@ -1785,7 +1784,7 @@ Squat / 1x10 / 115lb / progress: custom() {~
 Squat / 1x10 / 100lb / progress: custom() {~
   weights[1] = increment(105)
 ~}`;
-    const equipment = ObjectUtils_clone(Settings_defaultEquipment());
+    const equipment = structuredClone(Settings_defaultEquipment());
     equipment.barbell!.isFixed = true;
     equipment.barbell!.fixed = [
       Weight_build(45, "lb"),

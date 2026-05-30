@@ -22,7 +22,6 @@ import type { IEither, IArrayElement } from "@/utils/types";
 import {
   ObjectUtils_pick,
   ObjectUtils_isEqual,
-  ObjectUtils_clone,
   ObjectUtils_keys,
   ObjectUtils_values,
   ObjectUtils_filter,
@@ -456,7 +455,7 @@ function Program_nextHistoryRecordFromEvaluated(
 //   );
 //   const fns = Progress_createScriptFunctions(settings);
 //   let updates: ILiftoscriptEvaluatorUpdate[] = [];
-//   const newState: IProgramState = ObjectUtils_clone({
+//   const newState: IProgramState = structuredClone({
 //     ...state,
 //     ...userPromptedStateVars,
 //   });
@@ -470,7 +469,7 @@ function Program_nextHistoryRecordFromEvaluated(
 //     const runner = new ScriptRunner(
 //       script,
 //       newState,
-//       ObjectUtils_clone(otherStates),
+//       structuredClone(otherStates),
 //       bindings,
 //       fns,
 //       settings.units,
@@ -532,7 +531,7 @@ function Program_runFinishDayScript(
     ...state,
     ...userPromptedStateVars,
   };
-  const otherStates = ObjectUtils_clone(program.states);
+  const otherStates = structuredClone(program.states);
 
   const script =
     PlannerProgramExercise_getProgressScript(programExercise) || "";
@@ -761,7 +760,7 @@ export function Program_runAllFinishDayScripts(
     newEvaluatedProgram,
     settings,
   ).convertToPlanner();
-  const newProgram = ObjectUtils_clone(program);
+  const newProgram = structuredClone(program);
   newProgram.nextDay = theNextDay;
   newProgram.planner = newPlanner;
 
@@ -1256,7 +1255,7 @@ export function Program_applyEvaluatedProgram(
   evaluatedProgram: IEvaluatedProgram,
   settings: ISettings,
 ): IProgram {
-  const newProgram = ObjectUtils_clone(program);
+  const newProgram = structuredClone(program);
   newProgram.planner = new ProgramToPlanner(
     evaluatedProgram,
     settings,
@@ -1578,7 +1577,7 @@ export function Program_create(name: string, id?: string): IProgram {
 //     settings,
 //   ).convertToPlanner();
 //   const newProgram = {
-//     ...ObjectUtils_clone(program),
+//     ...structuredClone(program),
 //     planner: newPlanner,
 //   };
 //   return newProgram;
@@ -1627,7 +1626,7 @@ export function Program_create(name: string, id?: string): IProgram {
 //     settings,
 //   ).convertToPlanner();
 //   const newProgram = {
-//     ...ObjectUtils_clone(program),
+//     ...structuredClone(program),
 //     planner: newPlanner,
 //   };
 //   return { program: newProgram, dayData: newDayData };
@@ -2322,7 +2321,7 @@ export function PlannerProgram_replaceWeight(
   ) {
     return program;
   }
-  const newEvalutedProgram = ObjectUtils_clone(program);
+  const newEvalutedProgram = structuredClone(program);
   PP_iterate2(newEvalutedProgram.weeks, (ex) => {
     if (ex.key === programExerciseId) {
       for (const setVariation of ex.evaluatedSetVariations) {
@@ -2348,7 +2347,7 @@ function PlannerProgram_replaceExercise(
   settings: ISettings,
   dayData?: Required<IDayData>,
 ): IPlannerProgram {
-  const evaluatedProgram = ObjectUtils_clone(
+  const evaluatedProgram = structuredClone(
     Program_evaluate({ ...Program_create("Temp"), planner }, settings),
   );
   const allExercises = Program_getAllProgramExercises(evaluatedProgram);
@@ -2473,7 +2472,7 @@ export function PlannerProgram_replaceAndValidateExercise(
 //   ) => IPlannerTopLineItem,
 // ): IPlannerProgram {
 //   let dayIndex = 0;
-//   const plannerProgram = ObjectUtils_clone(aPlannerProgram);
+//   const plannerProgram = structuredClone(aPlannerProgram);
 //   const mapping = plannerProgram.weeks.map((week, weekIndex) => {
 //     return week.days.map((day, dayInWeekIndex) => {
 //       const tree = plannerExerciseParser.parse(day.exerciseText);
@@ -2573,7 +2572,7 @@ export function PlannerProgram_switchToUnit(
   plannerProgram: IPlannerProgram,
   settings: ISettings,
 ): IPlannerProgram {
-  const newPlannerProgram = ObjectUtils_clone(plannerProgram);
+  const newPlannerProgram = structuredClone(plannerProgram);
   for (const week of newPlannerProgram.weeks) {
     for (const day of week.days) {
       const evaluator = new PlannerExerciseEvaluator(
@@ -2622,11 +2621,11 @@ function PlannerProgram_compact(
   let dayIndex = 0;
   const repeatingExercises = new Set<string>();
   const { evaluatedWeeks } = PlannerProgram_evaluate(
-    ObjectUtils_clone(oldPlannerProgram),
+    structuredClone(oldPlannerProgram),
     settings,
   );
   const { evaluatedWeeks: newEvaluatedWeeks } = PlannerProgram_evaluate(
-    ObjectUtils_clone(plannerProgram),
+    structuredClone(plannerProgram),
     settings,
   );
   for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
@@ -4977,7 +4976,7 @@ function ProgramExercise_applyVariables(
                 const lastSet = sets[sets.length - 1] || defaultSet;
                 sets.splice(newValue);
                 for (let i = sets.length; i < newValue; i += 1) {
-                  sets.push(ObjectUtils_clone(lastSet));
+                  sets.push(structuredClone(lastSet));
                 }
               }
             }
@@ -7759,8 +7758,8 @@ function PlannerEvaluator_fillSetReuses(
         if (other.progress == null) {
           other.progress = {
             type: originalProgress.type,
-            state: ObjectUtils_clone(originalProgress.state),
-            stateMetadata: ObjectUtils_clone(originalProgress.stateMetadata),
+            state: structuredClone(originalProgress.state),
+            stateMetadata: structuredClone(originalProgress.stateMetadata),
             reuse: sharedProgressReuse,
           };
         }
@@ -7832,7 +7831,7 @@ function PlannerEvaluator_fillDescriptions(
       (ex) => ex.descriptions != null,
     );
     if (lastWeekExercise && lastWeekExercise.descriptions) {
-      exercise.descriptions = ObjectUtils_clone(lastWeekExercise.descriptions);
+      exercise.descriptions = structuredClone(lastWeekExercise.descriptions);
     }
   }
 }
@@ -7858,7 +7857,7 @@ function PlannerEvaluator_fillDescriptionReuses(
     if (result != null) {
       const { descriptions, exercise: originalExercise } = result;
       exercise.descriptions = {
-        values: [...ObjectUtils_clone(descriptions.values)],
+        values: [...structuredClone(descriptions.values)],
         reuse: {
           fullName: originalExercise.fullName,
           exercise: originalExercise,
@@ -8632,7 +8631,7 @@ function PlannerProgramExercise_sets(
   const currentGlobals = exercise.globals;
   const sets = currentSets || reusedSets || [];
   return sets.map((aSet) => {
-    const set: IPlannerProgramExerciseSet = ObjectUtils_clone(aSet);
+    const set: IPlannerProgramExerciseSet = structuredClone(aSet);
     set.rpe =
       currentGlobals.rpe != null
         ? currentGlobals.rpe
@@ -8866,7 +8865,7 @@ function PlannerProgramExercise_currentEvaluatedSetVariation(
 //   if (lastEvaluatedSet) {
 //     evaluatedSetVariation.sets = [
 //       ...evaluatedSetVariation.sets,
-//       ObjectUtils_clone(lastEvaluatedSet),
+//       structuredClone(lastEvaluatedSet),
 //     ];
 //   } else {
 //     const originalSets = PlannerProgramExercise_sets(ex, setVariationIndex);
@@ -8886,7 +8885,7 @@ function PlannerProgramExercise_currentEvaluatedSetVariation(
 //       };
 //       evaluatedSetVariation.sets = [
 //         ...evaluatedSetVariation.sets,
-//         ObjectUtils_clone(lastEvaluatedSet),
+//         structuredClone(lastEvaluatedSet),
 //       ];
 //     } else {
 //       evaluatedSetVariation.sets = [
@@ -15042,7 +15041,7 @@ function Progress_runUpdateScriptForEntry(
     return entry;
   }
   const exercise = programExercise.exerciseType;
-  const state = ObjectUtils_clone(
+  const state = structuredClone(
     PlannerProgramExercise_getState(programExercise),
   );
   const setVariationIndex =
@@ -15068,7 +15067,7 @@ function Progress_runUpdateScriptForEntry(
     const runner = new ScriptRunner(
       script,
       state,
-      ObjectUtils_clone(otherStates),
+      structuredClone(otherStates),
       bindings,
       Progress_createScriptFunctions(settings),
       settings.units,
@@ -15172,7 +15171,7 @@ function Progress_applyBindings(
     "originalWeights",
     "askweights",
   ] as const;
-  const entry = ObjectUtils_clone(oldEntry);
+  const entry = structuredClone(oldEntry);
   const lastCompletedIndex =
     CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) +
     1;
@@ -18666,13 +18665,13 @@ function Equipment_smallestPlate(
 //   } else {
 //     if (isWarmup) {
 //       lastSet = {
-//         ...ObjectUtils_clone(lastSet),
+//         ...structuredClone(lastSet),
 //         reps: lastSet.completedReps ?? lastSet.reps,
 //         weight: lastSet.completedWeight ?? lastSet.weight,
 //       };
 //     } else {
 //       lastSet = {
-//         ...ObjectUtils_clone(lastSet),
+//         ...structuredClone(lastSet),
 //         reps: lastSet.reps ?? lastSet.completedReps,
 //         weight: lastSet.weight ?? lastSet.completedWeight,
 //         originalWeight: lastSet.originalWeight ?? lastSet.weight ?? lastSet.completedWeight,
@@ -18687,7 +18686,7 @@ function Equipment_smallestPlate(
 //
 //   return [
 //     ...sets,
-//     { ...ObjectUtils_clone(lastSet), id: UidFactory_generateUid(6), isCompleted: false, index: maxIndex + 1 },
+//     { ...structuredClone(lastSet), id: UidFactory_generateUid(6), isCompleted: false, index: maxIndex + 1 },
 //   ];
 // }
 //

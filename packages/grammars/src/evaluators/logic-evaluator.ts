@@ -18,7 +18,6 @@ import {
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import { z } from "zod";
 import {
-  ObjectUtils_clone,
   ObjectUtils_combinedKeys,
   ObjectUtils_filter,
   ObjectUtils_findMaxValue,
@@ -8945,7 +8944,7 @@ export function Muscle_updateMuscleGroup(
   muscles: IMuscle[],
 ): IMuscleGroupsSettings {
   const isDefault = Muscle_isDefaultMuscles(muscleGroup, muscles);
-  const newMuscleGroups = ObjectUtils_clone(muscleGroupSettings);
+  const newMuscleGroups = structuredClone(muscleGroupSettings);
   if (isDefault) {
     delete newMuscleGroups.data[muscleGroup]?.muscles;
   } else {
@@ -8973,7 +8972,7 @@ export function Muscle_deleteMuscleGroup(
       },
     };
   } else {
-    const newMuscleGroups = ObjectUtils_clone(muscleGroupSettings);
+    const newMuscleGroups = structuredClone(muscleGroupSettings);
     delete newMuscleGroups.data[muscleGroup];
     return newMuscleGroups;
   }
@@ -8983,7 +8982,7 @@ export function Muscle_restoreMuscleGroup(
   muscleGroupSettings: IMuscleGroupsSettings,
   muscleGroup: IScreenMuscle,
 ): IMuscleGroupsSettings {
-  const newMuscleGroups = ObjectUtils_clone(muscleGroupSettings);
+  const newMuscleGroups = structuredClone(muscleGroupSettings);
   newMuscleGroups.data = newMuscleGroups.data || {};
   newMuscleGroups.data[muscleGroup] = newMuscleGroups.data[muscleGroup] || {};
   newMuscleGroups.data[muscleGroup].isHidden = false;
