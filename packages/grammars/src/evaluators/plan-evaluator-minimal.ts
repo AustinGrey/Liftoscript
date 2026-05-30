@@ -1536,120 +1536,6 @@ const THistoryEntry = z.strictObject({
 });
 type IHistoryEntry = z.infer<typeof THistoryEntry>;
 
-const TExercisePickerFilters = z.strictObject({
-  equipment: z.array(TBuiltinEquipmentTypes).optional(),
-  type: z.array(TExerciseKind).optional(),
-  muscles: z.array(TMuscle).optional(),
-  isStarred: z.boolean().optional(),
-});
-
-const TExercisePickerProgramExercise = z.strictObject({
-  type: z.literal("program"),
-  exerciseType: TExerciseType,
-  week: z.number(),
-  dayInWeek: z.number(),
-});
-
-const TExercisePickerAdhocExercise = z.strictObject({
-  type: z.literal("adhoc"),
-  exerciseType: TExerciseType,
-  label: z.string().optional(),
-});
-
-const TExercisePickerTemplate = z.strictObject({
-  type: z.literal("template"),
-  name: z.string(),
-  label: z.string().optional(),
-});
-
-const TExercisePickerSelectedExercise = z.discriminatedUnion("type", [
-  TExercisePickerProgramExercise,
-  TExercisePickerAdhocExercise,
-  TExercisePickerTemplate,
-]);
-
-const TExercisePickerState = z.strictObject({
-  screenStack: z.array(
-    z.enum(["exercisePicker", "customExercise", "filter", "settings"] as const),
-  ),
-  sort: TExercisePickerSort,
-  filters: TExercisePickerFilters,
-  selectedExercises: z.array(TExercisePickerSelectedExercise),
-  mode: z.union([z.literal("workout"), z.literal("program")]),
-  showMuscles: z.boolean().optional(),
-  customExerciseName: z.string().optional(),
-  label: z.string().optional(),
-  templateName: z.string().optional(),
-  selectedTab: z.number().optional(),
-  editCustomExercise: TCustomExercise.optional(),
-  search: z.string().optional(),
-  exerciseType: TExerciseType.optional(),
-  entryIndex: z.number().optional(),
-});
-
-const TProgressUi = z.strictObject({
-  id: z.string().optional(),
-  amrapModal: z
-    .strictObject({
-      entryIndex: z.number(),
-      setIndex: z.number(),
-      isAmrap: z.boolean().optional(),
-      logRpe: z.boolean().optional(),
-      askWeight: z.boolean().optional(),
-      userVars: z.boolean().optional(),
-      nonce: z.number().optional(),
-    })
-    .optional(),
-  editModal: z
-    .strictObject({
-      programExerciseId: z.string(),
-      entryIndex: z.number(),
-    })
-    .optional(),
-  dateModal: z
-    .strictObject({
-      date: z.string(),
-      time: z.number(),
-    })
-    .optional(),
-  exercisePicker: z
-    .strictObject({
-      state: TExercisePickerState.optional(),
-    })
-    .optional(),
-  equipmentModal: z
-    .strictObject({
-      exerciseType: TExerciseType.optional(),
-    })
-    .optional(),
-  rm1Modal: z
-    .strictObject({
-      exerciseType: TExerciseType.optional(),
-    })
-    .optional(),
-  editSetModal: z
-    .strictObject({
-      isWarmup: z.boolean(),
-      entryIndex: z.number(),
-      exerciseType: z.union([TExerciseType, z.undefined()]),
-      programExerciseId: z.union([z.string(), z.undefined()]),
-      set: TSet,
-      setIndex: z.union([z.number(), z.undefined()]),
-    })
-    .optional(),
-  exerciseBottomSheet: z
-    .strictObject({
-      entryIndex: z.number(),
-    })
-    .optional(),
-  entryIndexEditMode: z.number().optional(),
-  currentEntryIndex: z.number().optional(),
-  showSupersetPicker: THistoryEntry.optional(),
-  forceUpdateEntryIndex: z.boolean().optional(),
-  isExternal: z.boolean().optional(),
-  nativeNotificationScheduled: z.boolean().optional(),
-});
-
 const TIntervals = z.array(
   z.tuple([z.number(), z.union([z.number(), z.undefined(), z.null()])]),
 );
@@ -1669,7 +1555,118 @@ const THistoryRecord = z.strictObject({
   endTime: z.number().optional(),
   week: z.number().optional(),
   dayInWeek: z.number().optional(),
-  ui: TProgressUi.optional(),
+  ui: z
+    .strictObject({
+      id: z.string().optional(),
+      amrapModal: z
+        .strictObject({
+          entryIndex: z.number(),
+          setIndex: z.number(),
+          isAmrap: z.boolean().optional(),
+          logRpe: z.boolean().optional(),
+          askWeight: z.boolean().optional(),
+          userVars: z.boolean().optional(),
+          nonce: z.number().optional(),
+        })
+        .optional(),
+      editModal: z
+        .strictObject({
+          programExerciseId: z.string(),
+          entryIndex: z.number(),
+        })
+        .optional(),
+      dateModal: z
+        .strictObject({
+          date: z.string(),
+          time: z.number(),
+        })
+        .optional(),
+      exercisePicker: z
+        .strictObject({
+          state: z
+            .strictObject({
+              screenStack: z.array(
+                z.enum([
+                  "exercisePicker",
+                  "customExercise",
+                  "filter",
+                  "settings",
+                ] as const),
+              ),
+              sort: TExercisePickerSort,
+              filters: z.strictObject({
+                equipment: z.array(TBuiltinEquipmentTypes).optional(),
+                type: z.array(TExerciseKind).optional(),
+                muscles: z.array(TMuscle).optional(),
+                isStarred: z.boolean().optional(),
+              }),
+              selectedExercises: z.array(
+                z.discriminatedUnion("type", [
+                  z.strictObject({
+                    type: z.literal("program"),
+                    exerciseType: TExerciseType,
+                    week: z.number(),
+                    dayInWeek: z.number(),
+                  }),
+                  z.strictObject({
+                    type: z.literal("adhoc"),
+                    exerciseType: TExerciseType,
+                    label: z.string().optional(),
+                  }),
+                  z.strictObject({
+                    type: z.literal("template"),
+                    name: z.string(),
+                    label: z.string().optional(),
+                  }),
+                ]),
+              ),
+              mode: z.union([z.literal("workout"), z.literal("program")]),
+              showMuscles: z.boolean().optional(),
+              customExerciseName: z.string().optional(),
+              label: z.string().optional(),
+              templateName: z.string().optional(),
+              selectedTab: z.number().optional(),
+              editCustomExercise: TCustomExercise.optional(),
+              search: z.string().optional(),
+              exerciseType: TExerciseType.optional(),
+              entryIndex: z.number().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+      equipmentModal: z
+        .strictObject({
+          exerciseType: TExerciseType.optional(),
+        })
+        .optional(),
+      rm1Modal: z
+        .strictObject({
+          exerciseType: TExerciseType.optional(),
+        })
+        .optional(),
+      editSetModal: z
+        .strictObject({
+          isWarmup: z.boolean(),
+          entryIndex: z.number(),
+          exerciseType: z.union([TExerciseType, z.undefined()]),
+          programExerciseId: z.union([z.string(), z.undefined()]),
+          set: TSet,
+          setIndex: z.union([z.number(), z.undefined()]),
+        })
+        .optional(),
+      exerciseBottomSheet: z
+        .strictObject({
+          entryIndex: z.number(),
+        })
+        .optional(),
+      entryIndexEditMode: z.number().optional(),
+      currentEntryIndex: z.number().optional(),
+      showSupersetPicker: THistoryEntry.optional(),
+      forceUpdateEntryIndex: z.boolean().optional(),
+      isExternal: z.boolean().optional(),
+      nativeNotificationScheduled: z.boolean().optional(),
+    })
+    .optional(),
   intervals: TIntervals.optional(),
   deletedProgramExercises: z
     .record(z.string(), z.union([z.boolean(), z.undefined()]))
