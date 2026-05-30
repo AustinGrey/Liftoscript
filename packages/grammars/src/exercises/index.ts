@@ -1897,7 +1897,7 @@ export function Exercise_findByName(
   name: string,
   customExercises: IAllCustomExercises,
 ): IExercise | undefined {
-  const exerciseId = Exercise_findIdByName(name.trim(), customExercises);
+  const exerciseId = Exercise_findIdByName(name, customExercises);
   if (exerciseId != null) {
     const exercise = maybeGetExercise(exerciseId, customExercises);
     if (exercise) {

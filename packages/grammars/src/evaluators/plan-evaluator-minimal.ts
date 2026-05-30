@@ -4904,7 +4904,7 @@ function PlannerProgramExercise_getExercise(
   settings: ISettings,
 ): IExercise | undefined {
   const exercise = Exercise_findByName(
-    plannerExercise.name,
+    plannerExercise.name.trim(),
     settings.exercises,
   );
   if (exercise == null) {
