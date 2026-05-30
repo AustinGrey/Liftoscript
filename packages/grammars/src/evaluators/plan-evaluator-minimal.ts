@@ -13,13 +13,7 @@ import {
   MathUtils_roundTo0005,
   n,
 } from "@/utils/math";
-import {
-  type IEither,
-  is,
-  isBoolean,
-  isNumber,
-  type OpenRecord,
-} from "@/utils/types";
+import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
 import {
   ObjectUtils_entries,
   ObjectUtils_filter,
@@ -5402,7 +5396,8 @@ function PlannerProgramExercise_shortNameFromFullName(
 
 function ProgramSet_isEligibleForInferredWeight(
   set: IPlannerProgramExerciseEvaluatedSet,
-): boolean {
+): set is Omit<IPlannerProgramExerciseEvaluatedSet, "weight"> &
+  Required<Pick<IPlannerProgramExerciseEvaluatedSet, "maxrep" | "rpe">> {
   return set.weight == null && set.maxrep != null && set.rpe != null;
 }
 
@@ -5411,13 +5406,9 @@ function ProgramSet_getEvaluatedWeight(
   exerciseType: IExerciseType,
   settings: ISettings,
 ): IWeight | undefined {
-  const originalWeight = programSet.weight;
-  const unit = getPreferredUnit(settings, exerciseType);
-  const evaluatedWeight = originalWeight
-    ? evaluateWeight(originalWeight, exerciseType, settings)
-    : ProgramSet_isEligibleForInferredWeight(programSet) &&
-        programSet.maxrep != null &&
-        programSet.rpe != null
+  const evaluatedWeight = programSet.weight
+    ? evaluateWeight(programSet.weight, exerciseType, settings)
+    : ProgramSet_isEligibleForInferredWeight(programSet)
       ? evaluateWeight(
           rpePct(programSet.maxrep, programSet.rpe),
           exerciseType,
@@ -5425,7 +5416,12 @@ function ProgramSet_getEvaluatedWeight(
         )
       : undefined;
   return evaluatedWeight
-    ? roundConvertTo(evaluatedWeight, settings, unit, exerciseType)
+    ? roundConvertTo(
+        evaluatedWeight,
+        settings,
+        getPreferredUnit(settings, exerciseType),
+        exerciseType,
+      )
     : undefined;
 }
 //#endregion
