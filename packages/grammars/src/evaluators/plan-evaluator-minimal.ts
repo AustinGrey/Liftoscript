@@ -1978,13 +1978,8 @@ function operation(
   op: IAssignmentOp,
 ): void {
   const oldValue =
-    set[key] === undefined
-      ? ProgramSet_getEvaluatedWeight(
-          set,
-          programExercise.exerciseType,
-          settings,
-        )
-      : set[key];
+    set[key] ??
+    ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings);
   const valueToAssign = applyOp(
     getOrmOrStartingWeight(programExercise.exerciseType, settings),
     oldValue,
@@ -5393,21 +5388,21 @@ function PlannerProgramExercise_shortNameFromFullName(
 //#endregion
 
 //#region Program Set
+/**
+ * Gets the weight of a set as a static weight
+ * @param set The set (weight x reps) this is for
+ * @param exerciseType The exercise the set is for
+ * @param settings The settings to use for evaluation
+ */
 function ProgramSet_getEvaluatedWeight(
-  programSet: IPlannerProgramExerciseEvaluatedSet,
+  set: IPlannerProgramExerciseEvaluatedSet,
   exerciseType: IExerciseType,
   settings: ISettings,
 ): IWeight | undefined {
-  const evaluatedWeight = programSet.weight
-    ? evaluateWeight(programSet.weight, exerciseType, settings)
-    : programSet.weight == null &&
-        programSet.maxrep != null &&
-        programSet.rpe != null
-      ? evaluateWeight(
-          rpePct(programSet.maxrep, programSet.rpe),
-          exerciseType,
-          settings,
-        )
+  const evaluatedWeight = set.weight
+    ? evaluateWeight(set.weight, exerciseType, settings)
+    : set.maxrep != null && set.rpe != null
+      ? evaluateWeight(rpePct(set.maxrep, set.rpe), exerciseType, settings)
       : undefined;
   return evaluatedWeight
     ? roundConvertTo(
