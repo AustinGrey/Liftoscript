@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   builtInEquipmentTypes,
   equipmentName,
+  type IAllEquipment,
   type IEquipmentType,
   TEquipmentType,
 } from "@/equipment";
@@ -1907,4 +1908,21 @@ export function Exercise_findByName(
     return { ...exercise, equipment: exercise.defaultEquipment };
   }
   return undefined;
+}
+export function Exercise_fullName(
+  exercise: IExercise,
+  allEquipment: IAllEquipment,
+  label?: string,
+): string {
+  let str: string;
+  if (exercise.equipment && exercise.defaultEquipment !== exercise.equipment) {
+    const equipment = equipmentName(exercise.equipment, allEquipment);
+    str = `${exercise.name}, ${equipment}`;
+  } else {
+    str = exercise.name;
+  }
+  if (label) {
+    str = `${label}: ${str}`;
+  }
+  return str;
 }

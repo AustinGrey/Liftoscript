@@ -66,6 +66,7 @@ import {
   Exercise_findByName,
   Exercise_findByNameAndEquipment,
   Exercise_findByNameEquipment,
+  Exercise_fullName,
   getExerciseOrDefault,
   getOrmOrStartingWeight,
   type IAllCustomExercises,
@@ -5411,27 +5412,6 @@ function ProgramSet_getEvaluatedWeight(
       )
     : undefined;
 }
-//#endregion
-
-//#region Exercise
-function Exercise_fullName(
-  exercise: IExercise,
-  allEquipment: IAllEquipment,
-  label?: string,
-): string {
-  let str: string;
-  if (exercise.equipment && exercise.defaultEquipment !== exercise.equipment) {
-    const equipment = equipmentName(exercise.equipment, allEquipment);
-    str = `${exercise.name}, ${equipment}`;
-  } else {
-    str = exercise.name;
-  }
-  if (label) {
-    str = `${label}: ${str}`;
-  }
-  return str;
-}
-
 //#endregion
 
 //#region Progress
