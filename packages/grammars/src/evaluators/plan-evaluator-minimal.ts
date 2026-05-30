@@ -55,7 +55,6 @@ import {
   type IProgramState,
   type IScriptFnContext,
   type IScriptFunctions,
-  type ISet,
   TExercisePickerSort,
   TProgramState,
   TSet,
@@ -387,6 +386,7 @@ function Program_getProgramExerciseForKeyAndDay(
   return programExercise;
 }
 
+type IExerciseData = OpenRecord<IExerciseDataValue>;
 export function Program_runAllFinishDayScripts(
   program: IProgram,
   progress: IHistoryRecord,
@@ -1536,14 +1536,6 @@ const THistoryEntry = z.strictObject({
 });
 type IHistoryEntry = z.infer<typeof THistoryEntry>;
 
-const exercisePickerScreens = [
-  "exercisePicker",
-  "customExercise",
-  "filter",
-  "settings",
-] as const;
-const TExercisePickerScreen = z.enum(exercisePickerScreens);
-
 const TExercisePickerFilters = z.strictObject({
   equipment: z.array(TBuiltinEquipmentTypes).optional(),
   type: z.array(TExerciseKind).optional(),
@@ -1577,7 +1569,9 @@ const TExercisePickerSelectedExercise = z.discriminatedUnion("type", [
 ]);
 
 const TExercisePickerState = z.strictObject({
-  screenStack: z.array(TExercisePickerScreen),
+  screenStack: z.array(
+    z.enum(["exercisePicker", "customExercise", "filter", "settings"] as const),
+  ),
   sort: TExercisePickerSort,
   filters: TExercisePickerFilters,
   selectedExercises: z.array(TExercisePickerSelectedExercise),
@@ -1656,8 +1650,6 @@ const TProgressUi = z.strictObject({
   nativeNotificationScheduled: z.boolean().optional(),
 });
 
-const TProgressMode = z.enum(["warmup", "workout"]);
-
 const TIntervals = z.array(
   z.tuple([z.number(), z.union([z.number(), z.undefined(), z.null()])]),
 );
@@ -1687,7 +1679,7 @@ const THistoryRecord = z.strictObject({
     .optional(),
   changes: z.array(THistoryRecordChange).optional(),
   timerSince: z.number().optional(),
-  timerMode: TProgressMode.optional(),
+  timerMode: z.enum(["warmup", "workout"]).optional(),
   timer: z.number().optional(),
   timerEntryIndex: z.number().optional(),
   timerSetIndex: z.number().optional(),
@@ -1695,8 +1687,6 @@ const THistoryRecord = z.strictObject({
   updatedAt: z.number().optional(),
 });
 type IHistoryRecord = z.infer<typeof THistoryRecord>;
-
-type IExerciseData = OpenRecord<IExerciseDataValue>;
 
 type IDayData = {
   week?: number;
