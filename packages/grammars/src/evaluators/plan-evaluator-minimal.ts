@@ -143,32 +143,24 @@ function Program_nextHistoryEntry(
   stats: IStats,
   settings: ISettings,
 ): IHistoryEntry {
-  const exercise = programExercise.exerciseType;
-  const programSets =
-    PlannerProgramExercise_currentEvaluatedSetVariation(programExercise)?.sets;
-  const warmupSets = PlannerProgramExercise_programWarmups(
-    programExercise,
-    settings,
-  );
-  const sets: ISet[] = [];
-  for (let i = 0; i < programSets.length; i++) {
-    const programSet = programSets[i];
-    const minReps =
-      programSet.minrep != null && programSet.minrep !== programSet.maxrep
-        ? programSet.minrep
-        : undefined;
-    const weight = ProgramSet_getEvaluatedWeight(
-      programSet,
-      programExercise.exerciseType,
-      settings,
-    );
-    sets.push({
+  const programSets = programExercise.evaluatedSetVariations.at(
+    PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise),
+  )?.sets;
+  const sets =
+    programSets?.map((programSet, i) => ({
       id: generateUid(6),
       reps: programSet.maxrep,
       index: i,
-      minReps,
-      weight,
-      isUnilateral: isUnilateral(exercise, settings),
+      minReps:
+        programSet.minrep != null && programSet.minrep !== programSet.maxrep
+          ? programSet.minrep
+          : undefined,
+      weight: ProgramSet_getEvaluatedWeight(
+        programSet,
+        programExercise.exerciseType,
+        settings,
+      ),
+      isUnilateral: isUnilateral(programExercise.exerciseType, settings),
       rpe: programSet.rpe,
       timer: programSet.timer,
       logRpe: programSet.logRpe,
@@ -178,17 +170,24 @@ function Program_nextHistoryEntry(
       label: programSet.label,
       isCompleted: false,
       programSetIndex: i,
-    });
-  }
+    })) ?? [];
 
   const entry: IHistoryEntry = {
-    id: Progress_getEntryId(exercise, programExercise.label),
+    id: Progress_getEntryId(
+      programExercise.exerciseType,
+      programExercise.label,
+    ),
     index,
-    exercise: exercise,
+    exercise: programExercise.exerciseType,
     programExerciseId: programExercise.key,
     sets,
     superset: programExercise.superset?.name,
-    warmupSets: getWarmupSets(exercise, sets[0]?.weight, settings, warmupSets),
+    warmupSets: getWarmupSets(
+      programExercise.exerciseType,
+      sets.at(0)?.weight,
+      settings,
+      PlannerProgramExercise_programWarmups(programExercise, settings),
+    ),
   };
 
   return Progress_runUpdateScriptForEntry(
@@ -5076,14 +5075,6 @@ function PlannerProgramExercise_currentEvaluatedSetVariationIndex(
 ): number {
   const index = exercise.evaluatedSetVariations.findIndex((sv) => sv.isCurrent);
   return index === -1 ? 0 : index;
-}
-
-function PlannerProgramExercise_currentEvaluatedSetVariation(
-  exercise: IPlannerProgramExercise,
-): IPlannerProgramExerciseEvaluatedSetVariation {
-  const index =
-    PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise);
-  return exercise.evaluatedSetVariations[index];
 }
 
 function PlannerProgramExercise_currentDescriptionIndex(
