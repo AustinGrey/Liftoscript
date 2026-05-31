@@ -98,14 +98,11 @@ export type ISettings = z.infer<typeof TSettings>;
  */
 export function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
   const targetId = gymId ?? settings.currentGymId;
-  return settings.gyms.find((g) => g.id === targetId) ?? settings.gyms[0];
+  return settings.gyms.find((g) => g.id === targetId) ?? settings.gyms.at(0);
 }
 
-export const getCurrentGym = (settings: ISettings): IGym =>
-  getGymByIdOrCurrent(settings);
-
 export const getCurrentEquipment = (settings: ISettings): IAllEquipment =>
-  getCurrentGym(settings)?.equipment;
+  getGymByIdOrCurrent(settings).equipment;
 
 /**
  * @returns The user's equipment settings for the given exercise type
@@ -116,7 +113,7 @@ function getEquipmentData(
   settings: ISettings,
   exerciseType: IExerciseType,
 ): IEquipmentData | undefined {
-  const gym = getCurrentGym(settings);
+  const gym = getGymByIdOrCurrent(settings);
   // @todo what is the string value of this function supposed to represent? The two strings it might be set to seem unrelated to each other?
   let id: string | undefined;
   if (exerciseType) {
