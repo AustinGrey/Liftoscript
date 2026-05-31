@@ -1930,8 +1930,6 @@ export function Exercise_fullName(
       ? `, ${equipmentName(exercise.equipment, allEquipment)}`
       : "";
 
-  if (label) {
-    label = label + ": ";
-  }
+  label = label ? label + ": " : "";
   return label + exercise.name + equipmentLabel;
 }
