@@ -5657,32 +5657,25 @@ interface IPlannerToProgramConvertOpts {
 }
 
 function getUpdate(
-  programExercise: IPlannerProgramExercise,
+  update: IProgramExerciseUpdate,
   settings: ISettings,
-  hideScript?: boolean,
 ): string {
-  const update = programExercise.update;
-  if (!update) {
-    return "";
+  if (!update.reuse) {
+    return `update: custom() ${update.script}`;
   }
-  if (update.reuse) {
-    if (update.reuse.exercise?.exerciseType) {
-      const exercise = getExerciseOrDefault(
-        update.reuse.exercise.exerciseType,
-        settings.exercises,
-      );
-      const fullName = Exercise_fullName(
-        exercise,
-        getCurrentEquipment(settings),
-        update.reuse.exercise.label,
-      );
-      return `update: custom() { ...${fullName} }`;
-    } else {
-      return ` / update: custom() { ...${update.reuse.exercise?.fullName || update.reuse.fullName} }`;
-    }
-  } else {
-    return `update: custom() ${hideScript ? "{~ ... ~}" : update.script}`;
+  if (!update.reuse.exercise?.exerciseType) {
+    return ` / update: custom() { ...${update.reuse.exercise?.fullName || update.reuse.fullName} }`;
   }
+  const exercise = getExerciseOrDefault(
+    update.reuse.exercise.exerciseType,
+    settings.exercises,
+  );
+  const fullName = Exercise_fullName(
+    exercise,
+    getCurrentEquipment(settings),
+    update.reuse.exercise.label,
+  );
+  return `update: custom() { ...${fullName} }`;
 }
 
 function getProgress(
@@ -6379,9 +6372,9 @@ class ProgramToPlanner {
                     !evalExercise.reuse ||
                     dereuseDecisions.includes("update")
                   ) {
-                    const updateStr = getUpdate(evalExercise, this.settings);
-                    if (updateStr) {
-                      plannerExercise += ` / ${updateStr}`;
+                    if (evalExercise.update) {
+                      plannerExercise +=
+                        " / " + getUpdate(evalExercise.update, this.settings);
                     }
                     addedUpdateMap[key] = true;
                   } else if (
