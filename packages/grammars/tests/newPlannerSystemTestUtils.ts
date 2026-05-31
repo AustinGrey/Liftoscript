@@ -2,7 +2,6 @@ import {
   Program_create,
   Program_evaluate,
   Program_applyEvaluatedProgram,
-  Program_nextHistoryRecord,
   Program_runAllFinishDayScripts,
   Settings_build,
   PlannerProgram_evaluateText,
@@ -15,6 +14,7 @@ import {
   type IWeightChange,
   ProgramExercise_weightChanges,
   PlannerKey_fromFullName,
+  Program_nextHistoryRecordFromEvaluated,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 import type { IStats } from "@/fitness-stats";
 import type { IPlannerProgram, IProgram } from "@/program";
@@ -107,8 +107,8 @@ export function PlannerTestUtils_finish(
   dayIndex?: number,
 ): { program: IProgram } {
   const { program } = PlannerTestUtils_get(text);
-  const nextHistoryRecord = Program_nextHistoryRecord(
-    program,
+  const nextHistoryRecord = Program_nextHistoryRecordFromEvaluated(
+    Program_evaluate(program, settings),
     settings,
     {
       weight: [],

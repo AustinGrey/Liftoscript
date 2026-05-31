@@ -193,22 +193,7 @@ function Program_nextHistoryEntry(
   );
 }
 
-export function Program_nextHistoryRecord(
-  aProgram: IProgram,
-  settings: ISettings,
-  stats: IStats,
-  dayIndex?: number,
-): IHistoryRecord {
-  const program = Program_evaluate(aProgram, settings);
-  return Program_nextHistoryRecordFromEvaluated(
-    program,
-    settings,
-    stats,
-    dayIndex,
-  );
-}
-
-function Program_nextHistoryRecordFromEvaluated(
+export function Program_nextHistoryRecordFromEvaluated(
   program: IEvaluatedProgram,
   settings: ISettings,
   stats: IStats,
