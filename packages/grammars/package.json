@@ -32,6 +32,7 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
+    "@danielx/civet": "catalog:",
     "@lezer/common": "catalog:",
     "@lezer/generator": "catalog:",
     "@lezer/lr": "catalog:",

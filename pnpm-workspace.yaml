@@ -8,6 +8,7 @@ catalog:
   "@codemirror/language": ^6.12.3
   "@codemirror/state": ^6.6.0
   "@codemirror/view": ^6.41.1
+  '@danielx/civet': ^0.11.12
   "@lezer/common": ^1.5.2
   "@lezer/generator": ^1.8.0
   "@lezer/highlight": ^1.2.3

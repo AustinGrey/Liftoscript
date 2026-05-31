@@ -24,6 +24,14 @@ import { round } from "@/utils/logic-results.ts";
 import { MathUtils_round } from "@/utils/math.ts";
 import type { IScriptFnContext } from "@/common-types.ts";
 import type { ISettings } from "@/user-settings";
+import * as example from "./example.civet";
+
+describe("example", () => {
+  test("example", () => {
+    const result = example.f(1);
+    expect(result).toBe(4);
+  });
+});
 
 function emptyGlobalData(): IScriptBindings {
   return {

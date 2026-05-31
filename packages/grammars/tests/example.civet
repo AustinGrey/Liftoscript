@@ -1,0 +1,1 @@
+export f := (a: number) => a |> & + 1 |> & + 2
