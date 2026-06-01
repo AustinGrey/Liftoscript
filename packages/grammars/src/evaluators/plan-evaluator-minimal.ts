@@ -6006,27 +6006,28 @@ function getCurrentDescriptionExercise(
   );
 }
 
+function getCurrentDescriptionIndex(
+  program: IEvaluatedProgram,
+  key: string,
+  weekIndex: number,
+  dayInWeekIndex: number,
+): number {
+  const exercise = getCurrentDescriptionExercise(
+    program,
+    key,
+    weekIndex,
+    dayInWeekIndex,
+  );
+  const descriptions = exercise?.descriptions.values || [];
+  const index = descriptions.findIndex((s) => s.isCurrent);
+  return index === -1 ? 0 : index;
+}
+
 class ProgramToPlanner {
   constructor(
     private readonly program: IEvaluatedProgram,
     private readonly settings: ISettings,
   ) {}
-
-  private getCurrentDescriptionIndex(
-    key: string,
-    weekIndex: number,
-    dayInWeekIndex: number,
-  ): number {
-    const exercise = getCurrentDescriptionExercise(
-      this.program,
-      key,
-      weekIndex,
-      dayInWeekIndex,
-    );
-    const descriptions = exercise?.descriptions.values || [];
-    const index = descriptions.findIndex((s) => s.isCurrent);
-    return index === -1 ? 0 : index;
-  }
 
   private addExerciseDescriptions(
     exercise: IPlannerProgramExercise | undefined,
@@ -6045,7 +6046,8 @@ class ProgramToPlanner {
       )
     ) {
       const lines: string[] = [];
-      const currentIndex = this.getCurrentDescriptionIndex(
+      const currentIndex = getCurrentDescriptionIndex(
+        this.program,
         exercise.key,
         weekIndex,
         dayInWeekIndex,
@@ -6204,7 +6206,8 @@ class ProgramToPlanner {
                     addedCurrentDescription = result.addedCurrentDescription;
                     finishedToAddDescription = true;
                   } else {
-                    const currentIndex = this.getCurrentDescriptionIndex(
+                    const currentIndex = getCurrentDescriptionIndex(
+                      this.program,
                       key,
                       weekIndex,
                       dayInWeekIndex,
