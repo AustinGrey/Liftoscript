@@ -6308,7 +6308,7 @@ class ProgramToPlanner {
                   ? getDereuseDecisions(evalExercise)
                   : [];
                 if (shouldReuseSets) {
-                  plannerExercise += this.reuseToStr(evalExercise);
+                  plannerExercise += reuseToStr(evalExercise, this.settings);
 
                   if (dereuseDecisions.includes("sets")) {
                     plannerExercise +=
@@ -6480,39 +6480,42 @@ class ProgramToPlanner {
       repeatingExercises,
     );
   }
+}
 
-  private reuseToStr(programExercise: IPlannerProgramExercise): string {
-    const reuseExercise = programExercise.reuse?.exercise;
-    if (!reuseExercise) {
-      throw new Error("reuse.exercise is required");
-    }
-    const reuse = programExercise.reuse;
-    if (!reuse) {
-      throw new Error("reuse is required");
-    }
-    let str = "...";
-    if (reuseExercise.exerciseType) {
-      const exercise = getExerciseOrDefault(
-        reuseExercise.exerciseType,
-        this.settings.exercises,
-      );
-      const reuseStr = Exercise_fullName(
-        exercise,
-        getCurrentEquipment(this.settings),
-        reuseExercise.label,
-      );
-      str += reuseStr;
-    } else {
-      str += reuseExercise.fullName;
-    }
-    if (reuse.week || reuse.day) {
-      const weekAndDay = CollectionUtils_compact([reuse.week, reuse.day]).join(
-        ":",
-      );
-      str += `[${weekAndDay}]`;
-    }
-    return str;
+function reuseToStr(
+  programExercise: IPlannerProgramExercise,
+  settings: ISettings,
+): string {
+  const reuseExercise = programExercise.reuse?.exercise;
+  if (!reuseExercise) {
+    throw new Error("reuse.exercise is required");
   }
+  const reuse = programExercise.reuse;
+  if (!reuse) {
+    throw new Error("reuse is required");
+  }
+  let str = "...";
+  if (reuseExercise.exerciseType) {
+    const exercise = getExerciseOrDefault(
+      reuseExercise.exerciseType,
+      settings.exercises,
+    );
+    const reuseStr = Exercise_fullName(
+      exercise,
+      getCurrentEquipment(settings),
+      reuseExercise.label,
+    );
+    str += reuseStr;
+  } else {
+    str += reuseExercise.fullName;
+  }
+  if (reuse.week || reuse.day) {
+    const weekAndDay = CollectionUtils_compact([reuse.week, reuse.day]).join(
+      ":",
+    );
+    str += `[${weekAndDay}]`;
+  }
+  return str;
 }
 
 function getWarmupSets(
