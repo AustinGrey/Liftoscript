@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import {
   CollectionUtils_compact,
-  CollectionUtils_findIndexReverse,
   CollectionUtils_sortBy,
 } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
@@ -5473,8 +5472,7 @@ function Progress_applyBindings(
   ] as const;
   const entry = structuredClone(oldEntry);
   const lastCompletedIndex =
-    CollectionUtils_findIndexReverse(bindings.completedReps, (r) => r != null) +
-    1;
+    bindings.completedReps.findLastIndex((r) => r != null) + 1;
   entry.sets = entry.sets.slice(
     0,
     Math.max(lastCompletedIndex, bindings.numberOfSets, 0),

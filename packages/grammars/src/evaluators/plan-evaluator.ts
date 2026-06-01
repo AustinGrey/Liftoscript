@@ -5,7 +5,6 @@ import { unsafeCoerce } from "fp-ts/lib/function";
 import {
   CollectionUtils_compact,
   CollectionUtils_sortBy,
-  CollectionUtils_findIndexReverse,
   CollectionUtils_sort,
 } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
@@ -15154,6 +15153,18 @@ function Progress_runUpdateScriptForEntry(
 //   const progress = lf(aProgress).p("entries").i(entryIndex).set(newEntry);
 //   return progress;
 // }
+
+export function CollectionUtils_findIndexReverse<T>(
+  from: T[],
+  cb: (item: T) => boolean,
+): number {
+  for (let i = from.length - 1; i >= 0; i -= 1) {
+    if (cb(from[i])) {
+      return i;
+    }
+  }
+  return -1;
+}
 
 function Progress_applyBindings(
   oldEntry: IHistoryEntry,

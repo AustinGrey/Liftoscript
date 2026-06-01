@@ -43,18 +43,6 @@ export function CollectionUtils_sortBy<T extends {}, K extends keyof T>(
   return arrCopy as any;
 }
 
-export function CollectionUtils_findIndexReverse<T>(
-  from: T[],
-  cb: (item: T) => boolean,
-): number {
-  for (let i = from.length - 1; i >= 0; i -= 1) {
-    if (cb(from[i])) {
-      return i;
-    }
-  }
-  return -1;
-}
-
 export function CollectionUtils_compressArray(
   arr: number[],
   threshold: number,
