@@ -22,9 +22,7 @@ export function CollectionUtils_sort<T>(
   arr: T[],
   compareFn?: (a: T, b: T) => number,
 ): T[] {
-  const arrCopy = [...arr];
-  arrCopy.sort(compareFn);
-  return arrCopy;
+  return arr.toSorted(compareFn);
 }
 
 export function CollectionUtils_sortBy<T extends {}, K extends keyof T>(

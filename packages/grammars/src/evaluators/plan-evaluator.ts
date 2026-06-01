@@ -5,7 +5,6 @@ import { unsafeCoerce } from "fp-ts/lib/function";
 import {
   CollectionUtils_compact,
   CollectionUtils_sortBy,
-  CollectionUtils_sort,
 } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
@@ -36,6 +35,15 @@ import {
   LiftoscriptSyntaxError,
 } from "@/evaluators/logic-evaluator.ts";
 import type { IAssignmentOp } from "@/logic/types";
+
+export function CollectionUtils_sort<T>(
+  arr: T[],
+  compareFn?: (a: T, b: T) => number,
+): T[] {
+  const arrCopy = [...arr];
+  arrCopy.sort(compareFn);
+  return arrCopy;
+}
 
 //#region Program
 

@@ -4,7 +4,6 @@ import {
   CollectionUtils_compressArray,
   CollectionUtils_concatBy,
   CollectionUtils_flat,
-  CollectionUtils_sort,
 } from "@/utils/collection";
 import {
   MathUtils_applyOp,
@@ -58,6 +57,15 @@ import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 // import { EditProgram_updateProgram } from "./editProgram";
 // import { lb } from "lens-shmens";
 // import { updateSettings } from "./state";
+
+export function CollectionUtils_sort<T>(
+  arr: T[],
+  compareFn?: (a: T, b: T) => number,
+): T[] {
+  const arrCopy = [...arr];
+  arrCopy.sort(compareFn);
+  return arrCopy;
+}
 
 export const TEquipment = z.string();
 export type IEquipment = z.infer<typeof TEquipment>;
