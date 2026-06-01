@@ -5757,6 +5757,150 @@ function getProgress(
   return progressStr;
 }
 
+function getDereuseDecisions(
+  programExercise: IPlannerProgramExercise,
+): IDereuseDecision[] {
+  const dereuseDecisions: Set<IDereuseDecision> = new Set();
+  const reuseExercise = programExercise.reuse?.exercise;
+  if (!reuseExercise) {
+    return Array.from(dereuseDecisions);
+  }
+  const globals = getGlobals(programExercise);
+  const reusedGlobals = getGlobals(reuseExercise);
+  if (
+    programExercise.evaluatedSetVariations.length !==
+    reuseExercise.evaluatedSetVariations.length
+  ) {
+    dereuseDecisions.add("sets");
+  }
+  if (
+    PlannerProgramExercise_currentEvaluatedSetVariationIndex(
+      programExercise,
+    ) !==
+    PlannerProgramExercise_currentEvaluatedSetVariationIndex(reuseExercise)
+  ) {
+    dereuseDecisions.add("sets");
+  }
+  if (reuseExercise.progress != null || programExercise.progress != null) {
+    if (
+      programExercise.progress == null ||
+      programExercise.progress.type !== reuseExercise.progress?.type ||
+      (programExercise.progress.reuse
+        ? programExercise.progress.reuse?.fullName !== reuseExercise.fullName
+        : programExercise.progress.script !== reuseExercise.progress.script) ||
+      Object.keys(PlannerProgramExercise_getOnlyChangedState(programExercise))
+        .length > 0
+    ) {
+      dereuseDecisions.add("progress");
+    }
+  }
+  if (reuseExercise.update != null || programExercise.update != null) {
+    if (
+      programExercise.update == null ||
+      (programExercise.update.reuse
+        ? programExercise.update.reuse?.fullName !== reuseExercise.fullName
+        : programExercise.update.script !== reuseExercise.update?.script)
+    ) {
+      dereuseDecisions.add("update");
+    }
+  }
+  if (
+    programExercise.evaluatedSetVariations.length ===
+    reuseExercise.evaluatedSetVariations.length
+  ) {
+    for (let i = 0; i < programExercise.evaluatedSetVariations.length; i += 1) {
+      const programVariation = programExercise.evaluatedSetVariations[i];
+      const reuseVariation = reuseExercise.evaluatedSetVariations[i];
+      if (programVariation.sets.length !== reuseVariation.sets.length) {
+        dereuseDecisions.add("sets");
+      }
+      for (let j = 0; j < programVariation.sets.length; j += 1) {
+        const programSet = programVariation.sets[j];
+        const reuseSet = reuseVariation.sets[j];
+        if (
+          programSet.maxrep !== reuseSet?.maxrep ||
+          programSet.minrep !== reuseSet?.minrep
+        ) {
+          dereuseDecisions.add("sets");
+        }
+        if (
+          reuseSet
+            ? !eq(programSet.weight, reuseSet.weight) ||
+              programSet.askWeight !== reuseSet.askWeight
+            : !eq(globals.weight || w`0lb`, reusedGlobals.weight || w`0lb`) ||
+              globals.askWeight !== reusedGlobals.askWeight
+        ) {
+          if (globals.weight != null) {
+            dereuseDecisions.add("weight");
+          } else {
+            dereuseDecisions.add("sets");
+          }
+        }
+        if (
+          reuseSet
+            ? programSet.rpe !== reuseSet.rpe ||
+              programSet.logRpe !== reuseSet.logRpe
+            : globals.rpe !== reusedGlobals.rpe ||
+              globals.logRpe !== reusedGlobals.logRpe
+        ) {
+          if (globals.rpe != null) {
+            dereuseDecisions.add("rpe");
+          } else {
+            dereuseDecisions.add("sets");
+          }
+        }
+        if (
+          reuseSet
+            ? programSet.timer !== reuseSet.timer
+            : globals.timer !== reusedGlobals.timer
+        ) {
+          if (globals.timer != null) {
+            dereuseDecisions.add("timer");
+          } else {
+            dereuseDecisions.add("sets");
+          }
+        }
+      }
+    }
+  }
+  return Array.from(dereuseDecisions);
+}
+
+function reorderGroupedTopLine(
+  groupedTopLine: IPlannerTopLineItem[][][][],
+  reorders: IPlannerToProgramConvertOpts["reorder"],
+): IPlannerTopLineItem[][][][] {
+  if (!reorders) {
+    return groupedTopLine;
+  }
+  for (const reorder of reorders) {
+    const groupedDay =
+      groupedTopLine[reorder.dayData.week - 1]?.[reorder.dayData.dayInWeek - 1];
+    if (groupedDay) {
+      const indexMap = groupedDay.reduce<{
+        result: Record<number, number>;
+        i: number;
+      }>(
+        ({ result, i }, group, index) => {
+          const exercise = group.find((item) => item.type === "exercise");
+          if (exercise && !exercise.notused) {
+            result[i] = index;
+            i += 1;
+          }
+          return { result, i };
+        },
+        { result: {}, i: 0 },
+      ).result;
+      const from = groupedDay[indexMap[reorder.fromIndex]];
+      if (from) {
+        groupedDay.splice(indexMap[reorder.fromIndex], 1);
+        groupedDay.splice(indexMap[reorder.toIndex], 0, from);
+      }
+    }
+  }
+  return groupedTopLine;
+}
+
 class ProgramToPlanner {
   constructor(
     private readonly program: IEvaluatedProgram,
@@ -5786,161 +5930,6 @@ class ProgramToPlanner {
     const descriptions = exercise?.descriptions.values || [];
     const index = descriptions.findIndex((s) => s.isCurrent);
     return index === -1 ? 0 : index;
-  }
-
-  private shouldReuseSets(programExercise: IPlannerProgramExercise): boolean {
-    return !!programExercise.reuse;
-  }
-
-  private getDereuseDecisions(
-    programExercise: IPlannerProgramExercise,
-  ): IDereuseDecision[] {
-    const dereuseDecisions: Set<IDereuseDecision> = new Set();
-    const reuseExercise = programExercise.reuse?.exercise;
-    if (!reuseExercise) {
-      return Array.from(dereuseDecisions);
-    }
-    const globals = getGlobals(programExercise);
-    const reusedGlobals = getGlobals(reuseExercise);
-    if (
-      programExercise.evaluatedSetVariations.length !==
-      reuseExercise.evaluatedSetVariations.length
-    ) {
-      dereuseDecisions.add("sets");
-    }
-    if (
-      PlannerProgramExercise_currentEvaluatedSetVariationIndex(
-        programExercise,
-      ) !==
-      PlannerProgramExercise_currentEvaluatedSetVariationIndex(reuseExercise)
-    ) {
-      dereuseDecisions.add("sets");
-    }
-    if (reuseExercise.progress != null || programExercise.progress != null) {
-      if (
-        programExercise.progress == null ||
-        programExercise.progress.type !== reuseExercise.progress?.type ||
-        (programExercise.progress.reuse
-          ? programExercise.progress.reuse?.fullName !== reuseExercise.fullName
-          : programExercise.progress.script !==
-            reuseExercise.progress.script) ||
-        Object.keys(PlannerProgramExercise_getOnlyChangedState(programExercise))
-          .length > 0
-      ) {
-        dereuseDecisions.add("progress");
-      }
-    }
-    if (reuseExercise.update != null || programExercise.update != null) {
-      if (
-        programExercise.update == null ||
-        (programExercise.update.reuse
-          ? programExercise.update.reuse?.fullName !== reuseExercise.fullName
-          : programExercise.update.script !== reuseExercise.update?.script)
-      ) {
-        dereuseDecisions.add("update");
-      }
-    }
-    if (
-      programExercise.evaluatedSetVariations.length ===
-      reuseExercise.evaluatedSetVariations.length
-    ) {
-      for (
-        let i = 0;
-        i < programExercise.evaluatedSetVariations.length;
-        i += 1
-      ) {
-        const programVariation = programExercise.evaluatedSetVariations[i];
-        const reuseVariation = reuseExercise.evaluatedSetVariations[i];
-        if (programVariation.sets.length !== reuseVariation.sets.length) {
-          dereuseDecisions.add("sets");
-        }
-        for (let j = 0; j < programVariation.sets.length; j += 1) {
-          const programSet = programVariation.sets[j];
-          const reuseSet = reuseVariation.sets[j];
-          if (
-            programSet.maxrep !== reuseSet?.maxrep ||
-            programSet.minrep !== reuseSet?.minrep
-          ) {
-            dereuseDecisions.add("sets");
-          }
-          if (
-            reuseSet
-              ? !eq(programSet.weight, reuseSet.weight) ||
-                programSet.askWeight !== reuseSet.askWeight
-              : !eq(globals.weight || w`0lb`, reusedGlobals.weight || w`0lb`) ||
-                globals.askWeight !== reusedGlobals.askWeight
-          ) {
-            if (globals.weight != null) {
-              dereuseDecisions.add("weight");
-            } else {
-              dereuseDecisions.add("sets");
-            }
-          }
-          if (
-            reuseSet
-              ? programSet.rpe !== reuseSet.rpe ||
-                programSet.logRpe !== reuseSet.logRpe
-              : globals.rpe !== reusedGlobals.rpe ||
-                globals.logRpe !== reusedGlobals.logRpe
-          ) {
-            if (globals.rpe != null) {
-              dereuseDecisions.add("rpe");
-            } else {
-              dereuseDecisions.add("sets");
-            }
-          }
-          if (
-            reuseSet
-              ? programSet.timer !== reuseSet.timer
-              : globals.timer !== reusedGlobals.timer
-          ) {
-            if (globals.timer != null) {
-              dereuseDecisions.add("timer");
-            } else {
-              dereuseDecisions.add("sets");
-            }
-          }
-        }
-      }
-    }
-    return Array.from(dereuseDecisions);
-  }
-
-  private reorderGroupedTopLine(
-    groupedTopLine: IPlannerTopLineItem[][][][],
-    reorders: IPlannerToProgramConvertOpts["reorder"],
-  ): IPlannerTopLineItem[][][][] {
-    if (!reorders) {
-      return groupedTopLine;
-    }
-    for (const reorder of reorders) {
-      const groupedDay =
-        groupedTopLine[reorder.dayData.week - 1]?.[
-          reorder.dayData.dayInWeek - 1
-        ];
-      if (groupedDay) {
-        const indexMap = groupedDay.reduce<{
-          result: Record<number, number>;
-          i: number;
-        }>(
-          ({ result, i }, group, index) => {
-            const exercise = group.find((item) => item.type === "exercise");
-            if (exercise && !exercise.notused) {
-              result[i] = index;
-              i += 1;
-            }
-            return { result, i };
-          },
-          { result: {}, i: 0 },
-        ).result;
-        const from = groupedDay[indexMap[reorder.fromIndex]];
-        if (from) {
-          groupedDay.splice(indexMap[reorder.fromIndex], 1);
-          groupedDay.splice(indexMap[reorder.toIndex], 0, from);
-        }
-      }
-    }
-    return groupedTopLine;
   }
 
   private addGroupedTopLine(
@@ -6075,7 +6064,7 @@ class ProgramToPlanner {
     );
     let groupedTopLineMap = PlannerProgram_groupedTopLines(topLineMap);
     groupedTopLineMap = opts.reorder
-      ? this.reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
+      ? reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
       : groupedTopLineMap;
     groupedTopLineMap = opts.add
       ? this.addGroupedTopLine(groupedTopLineMap, opts.add)
@@ -6262,9 +6251,9 @@ class ProgramToPlanner {
                 const variations = evalExercise.evaluatedSetVariations;
                 const globals = getGlobals(evalExercise);
 
-                const shouldReuseSets = this.shouldReuseSets(evalExercise);
+                const shouldReuseSets = !!evalExercise.reuse;
                 const dereuseDecisions = shouldReuseSets
-                  ? this.getDereuseDecisions(evalExercise)
+                  ? getDereuseDecisions(evalExercise)
                   : [];
                 if (shouldReuseSets) {
                   plannerExercise += this.reuseToStr(evalExercise);
