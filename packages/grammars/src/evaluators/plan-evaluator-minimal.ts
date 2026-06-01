@@ -82,7 +82,7 @@ import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";
 import { getAverageBodyweight, type IStats } from "@/fitness-stats";
 import {
-  getWarmupSets,
+  getWarmupSets as getProgramWarmupSets,
   type IPlannerProgram,
   type IPlannerProgramDay,
   type IPlannerProgramWeek,
@@ -173,7 +173,7 @@ function Program_nextHistoryEntry(
     programExerciseId: programExercise.key,
     sets,
     superset: programExercise.superset?.name,
-    warmupSets: getWarmupSets(
+    warmupSets: getProgramWarmupSets(
       programExercise.exerciseType,
       sets.at(0)?.weight,
       settings,
@@ -6315,12 +6315,7 @@ class ProgramToPlanner {
                       ` / ` +
                       variations
                         .map((v, i) => {
-                          return this.variationToString(
-                            v,
-                            globals,
-                            i,
-                            evalExercise,
-                          );
+                          return variationToString(v, globals, i, evalExercise);
                         })
                         .join(" / ");
                   }
@@ -6357,7 +6352,7 @@ class ProgramToPlanner {
                   if (evalExercise.setVariations.length > 0) {
                     plannerExercise += variations
                       .map((v, i) =>
-                        this.variationToString(v, globals, i, evalExercise),
+                        variationToString(v, globals, i, evalExercise),
                       )
                       .join(" / ");
                   }
@@ -6384,7 +6379,7 @@ class ProgramToPlanner {
                 }
 
                 if (!addedWarmupsMap[key] && evalExercise?.warmupSets) {
-                  const warmupSets = this.getWarmupSets(evalExercise);
+                  const warmupSets = getWarmupSets(evalExercise);
                   if (warmupSets != null) {
                     plannerExercise += ` / warmup: ${warmupSets}`;
                     addedWarmupsMap[key] = true;
@@ -6518,71 +6513,72 @@ class ProgramToPlanner {
     }
     return str;
   }
-
-  private getWarmupSets(
-    programExercise: IPlannerProgramExercise,
-  ): string | undefined {
-    const warmupSets = programExercise.warmupSets;
-    if (warmupSets) {
-      const groups = groupWarmupsSets(warmupSets);
-      const strs: string[] = [];
-      for (const [first, length] of groups) {
-        const weight =
-          first.weight ??
-          (first.percentage != null ? percentORM(first.percentage) : w`0lb`);
-        strs.push(`${length}x${first.reps} ${print(weight)}`);
-      }
-      return strs.length === 0 ? "none" : strs.join(", ");
-    }
-    return undefined;
-  }
-
-  private variationToString(
-    variation: IPlannerProgramExerciseEvaluatedSetVariation,
-    globals: IPlannerToProgram2Globals,
-    index: number,
-    exercise: IPlannerProgramExercise,
-  ): string {
-    const groupedVariationSets = groupVariationSets(
-      variation.sets,
-      exercise,
-      index,
-    );
-    const result: string[] = [];
-    for (const group of groupedVariationSets) {
-      const set = group[0];
-      let setStr = "";
-      setStr += `${group[1]}${set.isQuickAddSet ? "+" : ""}x`;
-      setStr += set.minrep != null ? `${n(Math.max(0, set.minrep))}-` : "";
-      setStr += `${n(Math.max(0, set.maxrep ?? 0))}`;
-      setStr += set.isAmrap ? "+" : "";
-      if (globals.weight == null && !globals.askWeight) {
-        const weightValue = weightExprToStr(set.weight);
-        if (weightValue) {
-          setStr += ` ${weightValue}${set.askWeight ? "+" : ""}`;
-        } else if (set.askWeight) {
-          setStr += " ?+";
-        }
-      }
-      if (globals.rpe == null) {
-        setStr += set.rpe != null ? ` @${n(Math.max(0, set.rpe))}` : "";
-        setStr += set.rpe != null && set.logRpe ? "+" : "";
-      }
-      if (globals.timer == null) {
-        setStr += set.timer ? ` ${n(Math.max(0, set.timer))}s` : "";
-      }
-      if (set.label) {
-        setStr += ` (${set.label})`;
-      }
-      result.push(setStr);
-    }
-    let resultStr = "";
-    if (index > 0 && variation.isCurrent) {
-      resultStr += "! ";
-    }
-    return resultStr + result.map((r) => r.trim()).join(", ");
-  }
 }
+
+function getWarmupSets(
+  programExercise: IPlannerProgramExercise,
+): string | undefined {
+  const warmupSets = programExercise.warmupSets;
+  if (warmupSets) {
+    const groups = groupWarmupsSets(warmupSets);
+    const strs: string[] = [];
+    for (const [first, length] of groups) {
+      const weight =
+        first.weight ??
+        (first.percentage != null ? percentORM(first.percentage) : w`0lb`);
+      strs.push(`${length}x${first.reps} ${print(weight)}`);
+    }
+    return strs.length === 0 ? "none" : strs.join(", ");
+  }
+  return undefined;
+}
+
+function variationToString(
+  variation: IPlannerProgramExerciseEvaluatedSetVariation,
+  globals: IPlannerToProgram2Globals,
+  index: number,
+  exercise: IPlannerProgramExercise,
+): string {
+  const groupedVariationSets = groupVariationSets(
+    variation.sets,
+    exercise,
+    index,
+  );
+  const result: string[] = [];
+  for (const group of groupedVariationSets) {
+    const set = group[0];
+    let setStr = "";
+    setStr += `${group[1]}${set.isQuickAddSet ? "+" : ""}x`;
+    setStr += set.minrep != null ? `${n(Math.max(0, set.minrep))}-` : "";
+    setStr += `${n(Math.max(0, set.maxrep ?? 0))}`;
+    setStr += set.isAmrap ? "+" : "";
+    if (globals.weight == null && !globals.askWeight) {
+      const weightValue = weightExprToStr(set.weight);
+      if (weightValue) {
+        setStr += ` ${weightValue}${set.askWeight ? "+" : ""}`;
+      } else if (set.askWeight) {
+        setStr += " ?+";
+      }
+    }
+    if (globals.rpe == null) {
+      setStr += set.rpe != null ? ` @${n(Math.max(0, set.rpe))}` : "";
+      setStr += set.rpe != null && set.logRpe ? "+" : "";
+    }
+    if (globals.timer == null) {
+      setStr += set.timer ? ` ${n(Math.max(0, set.timer))}s` : "";
+    }
+    if (set.label) {
+      setStr += ` (${set.label})`;
+    }
+    result.push(setStr);
+  }
+  let resultStr = "";
+  if (index > 0 && variation.isCurrent) {
+    resultStr += "! ";
+  }
+  return resultStr + result.map((r) => r.trim()).join(", ");
+}
+
 function getGlobals(
   exercise: IPlannerProgramExercise,
 ): IPlannerToProgram2Globals {
