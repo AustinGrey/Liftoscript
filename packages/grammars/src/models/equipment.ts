@@ -1,4 +1,3 @@
-import { CollectionUtils_sort } from "@/utils/collection.ts";
 import type { IUnit, IWeight } from "@/quantities/weight.ts";
 import * as Weight from "@/quantities/weight.ts";
 import { Exercise_toKey } from "@/models/exercise.ts";
@@ -12,10 +11,10 @@ export function Equipment_smallestPlate(
   unit: IUnit,
 ): IWeight {
   return (
-    CollectionUtils_sort(
-      equipmentData.plates.filter((p) => p.weight.unit === unit),
-      (a, b) => Weight.compare(a.weight, b.weight),
-    )[0]?.weight || Weight.build(1, unit)
+    equipmentData.plates
+      .filter((p) => p.weight.unit === unit)
+      .toSorted((a, b) => Weight.compare(a.weight, b.weight))
+      .at(0)?.weight || Weight.build(1, unit)
   );
 }
 

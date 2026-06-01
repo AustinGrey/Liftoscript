@@ -18,13 +18,6 @@ export function CollectionUtils_flat<T>(from: T[][]): T[] {
   return from.reduce((acc, val) => acc.concat(val), []);
 }
 
-export function CollectionUtils_sort<T>(
-  arr: T[],
-  compareFn?: (a: T, b: T) => number,
-): T[] {
-  return arr.toSorted(compareFn);
-}
-
 export function CollectionUtils_sortBy<T extends {}, K extends keyof T>(
   arr: T[],
   key: K,

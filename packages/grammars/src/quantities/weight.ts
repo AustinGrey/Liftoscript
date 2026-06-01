@@ -13,7 +13,6 @@ import {
   MathUtils_roundTo005,
   n,
 } from "@/utils/math.ts";
-import { CollectionUtils_sort } from "@/utils/collection.ts";
 import { Exercise_defaultRounding } from "@/models/exercise.ts";
 import {
   Equipment_getEquipmentDataForExerciseType,
@@ -243,10 +242,9 @@ export function increment(
     const unit = equipmentData.unit ?? weight.unit;
     const roundWeight = round(weight, settings, unit, exerciseType);
     if (equipmentData.isFixed) {
-      const items = CollectionUtils_sort(
-        equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => compare(a, b),
-      );
+      const items = equipmentData.fixed
+        .filter((e) => e.unit === unit)
+        .toSorted(compare);
       const item = items.find((i) => gt(i, roundWeight));
       return item ?? items[items.length - 1] ?? roundWeight;
     } else {
@@ -286,10 +284,9 @@ export function decrement(
     const unit = equipmentData.unit ?? weight.unit;
     const roundWeight = round(weight, settings, unit, exerciseType);
     if (equipmentData.isFixed) {
-      const items = CollectionUtils_sort(
-        equipmentData.fixed.filter((e) => e.unit === unit),
-        (a, b) => compareReverse(a, b),
-      );
+      const items = equipmentData.fixed
+        .filter((e) => e.unit === unit)
+        .toSorted(compareReverse);
       const item = items.find((i) => lt(i, roundWeight));
       return item ?? items[items.length - 1] ?? roundWeight;
     } else {
@@ -352,12 +349,9 @@ export function calculatePlates(
   const absAllWeight = abs(allWeight);
   const inverted = allWeight.value < 0;
   if (equipmentData.isFixed) {
-    const fixed = CollectionUtils_sort(
-      equipmentData.fixed.filter(
-        (w) => w.unit === (equipmentData.unit ?? units),
-      ),
-      (a, b) => b.value - a.value,
-    );
+    const fixed = equipmentData.fixed
+      .filter((w) => w.unit === (equipmentData.unit ?? units))
+      .toSorted((a, b) => b.value - a.value);
     const weight =
       fixed.find((w) => lte(w, absAllWeight)) ||
       fixed[fixed.length - 1] ||
