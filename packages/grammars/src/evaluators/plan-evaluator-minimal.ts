@@ -5901,6 +5901,77 @@ function reorderGroupedTopLine(
   return groupedTopLine;
 }
 
+function getRenamedValue(
+  opts: IPlannerToProgramConvertOpts,
+  line: IPlannerTopLineItem,
+  weekIndex: number,
+  dayInWeekIndex: number,
+): string {
+  const renamedValue = opts.renameMapping?.[line.value];
+  if (
+    renamedValue &&
+    (!renamedValue.dayData ||
+      (renamedValue.dayData.week === weekIndex + 1 &&
+        renamedValue.dayData.dayInWeek === dayInWeekIndex + 1))
+  ) {
+    return renamedValue.to;
+  } else {
+    return line.value;
+  }
+}
+function groupVariationSets(
+  sets: IPlannerProgramExerciseEvaluatedSet[],
+  exercise: IPlannerProgramExercise,
+  index: number,
+): [IPlannerProgramExerciseEvaluatedSet, number][] {
+  if (sets.length === 0) {
+    const originalSets = PlannerProgramExercise_sets(exercise, index)[0];
+    return [
+      [
+        {
+          maxrep: originalSets?.repRange?.maxrep || 1,
+          minrep: originalSets?.repRange?.minrep,
+          weight: originalSets?.weight || w`0lb`,
+          logRpe: originalSets?.logRpe || false,
+          isAmrap: originalSets?.repRange?.isAmrap || false,
+          isQuickAddSet: originalSets?.repRange?.isQuickAddSet || false,
+          askWeight: originalSets?.askWeight || false,
+          rpe: originalSets?.rpe,
+          timer: originalSets?.timer,
+          label: originalSets?.label,
+        },
+        0,
+      ],
+    ];
+  }
+  let lastKey: string | undefined;
+  const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = [];
+  for (const set of sets) {
+    const key = setToKey(set);
+    if (lastKey == null || lastKey !== key) {
+      groups.push([set, 0]);
+    }
+    groups[groups.length - 1][1] += 1;
+    lastKey = key;
+  }
+  return groups;
+}
+function groupWarmupsSets(
+  sets: IPlannerProgramExerciseWarmupSet[],
+): [IPlannerProgramExerciseWarmupSet, number][] {
+  let lastKey: string | undefined;
+  const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
+  for (const set of sets) {
+    const key = warmupSetToKey(set);
+    if (lastKey == null || lastKey !== key) {
+      groups.push([set, 0]);
+    }
+    groups[groups.length - 1][1] += set.numberOfSets;
+    lastKey = key;
+  }
+  return groups;
+}
+
 class ProgramToPlanner {
   constructor(
     private readonly program: IEvaluatedProgram,
@@ -5955,25 +6026,6 @@ class ProgramToPlanner {
       }
     }
     return groupedTopLine;
-  }
-
-  private getRenamedValue(
-    opts: IPlannerToProgramConvertOpts,
-    line: IPlannerTopLineItem,
-    weekIndex: number,
-    dayInWeekIndex: number,
-  ): string {
-    const renamedValue = opts.renameMapping?.[line.value];
-    if (
-      renamedValue &&
-      (!renamedValue.dayData ||
-        (renamedValue.dayData.week === weekIndex + 1 &&
-          renamedValue.dayData.dayInWeek === dayInWeekIndex + 1))
-    ) {
-      return renamedValue.to;
-    } else {
-      return line.value;
-    }
   }
 
   private addExerciseDescriptions(
@@ -6119,7 +6171,7 @@ class ProgramToPlanner {
                 let key: string | undefined;
                 for (let i = lineIndex; i < group.length; i += 1) {
                   if (group[i].type === "exercise") {
-                    key = this.getRenamedValue(
+                    key = getRenamedValue(
                       opts,
                       group[i],
                       weekIndex,
@@ -6189,7 +6241,7 @@ class ProgramToPlanner {
               }
               case "exercise": {
                 descriptionIndex = undefined;
-                const value = this.getRenamedValue(
+                const value = getRenamedValue(
                   opts,
                   line,
                   weekIndex,
@@ -6467,66 +6519,12 @@ class ProgramToPlanner {
     return str;
   }
 
-  private groupVariationSets(
-    sets: IPlannerProgramExerciseEvaluatedSet[],
-    exercise: IPlannerProgramExercise,
-    index: number,
-  ): [IPlannerProgramExerciseEvaluatedSet, number][] {
-    if (sets.length === 0) {
-      const originalSets = PlannerProgramExercise_sets(exercise, index)[0];
-      return [
-        [
-          {
-            maxrep: originalSets?.repRange?.maxrep || 1,
-            minrep: originalSets?.repRange?.minrep,
-            weight: originalSets?.weight || w`0lb`,
-            logRpe: originalSets?.logRpe || false,
-            isAmrap: originalSets?.repRange?.isAmrap || false,
-            isQuickAddSet: originalSets?.repRange?.isQuickAddSet || false,
-            askWeight: originalSets?.askWeight || false,
-            rpe: originalSets?.rpe,
-            timer: originalSets?.timer,
-            label: originalSets?.label,
-          },
-          0,
-        ],
-      ];
-    }
-    let lastKey: string | undefined;
-    const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = [];
-    for (const set of sets) {
-      const key = setToKey(set);
-      if (lastKey == null || lastKey !== key) {
-        groups.push([set, 0]);
-      }
-      groups[groups.length - 1][1] += 1;
-      lastKey = key;
-    }
-    return groups;
-  }
-
-  private groupWarmupsSets(
-    sets: IPlannerProgramExerciseWarmupSet[],
-  ): [IPlannerProgramExerciseWarmupSet, number][] {
-    let lastKey: string | undefined;
-    const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
-    for (const set of sets) {
-      const key = warmupSetToKey(set);
-      if (lastKey == null || lastKey !== key) {
-        groups.push([set, 0]);
-      }
-      groups[groups.length - 1][1] += set.numberOfSets;
-      lastKey = key;
-    }
-    return groups;
-  }
-
   private getWarmupSets(
     programExercise: IPlannerProgramExercise,
   ): string | undefined {
     const warmupSets = programExercise.warmupSets;
     if (warmupSets) {
-      const groups = this.groupWarmupsSets(warmupSets);
+      const groups = groupWarmupsSets(warmupSets);
       const strs: string[] = [];
       for (const [first, length] of groups) {
         const weight =
@@ -6545,7 +6543,7 @@ class ProgramToPlanner {
     index: number,
     exercise: IPlannerProgramExercise,
   ): string {
-    const groupedVariationSets = this.groupVariationSets(
+    const groupedVariationSets = groupVariationSets(
       variation.sets,
       exercise,
       index,
