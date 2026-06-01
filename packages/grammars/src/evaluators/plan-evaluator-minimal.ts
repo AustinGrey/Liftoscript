@@ -5800,8 +5800,8 @@ class ProgramToPlanner {
     if (!reuseExercise) {
       return Array.from(dereuseDecisions);
     }
-    const globals = this.getGlobals(programExercise);
-    const reusedGlobals = this.getGlobals(reuseExercise);
+    const globals = getGlobals(programExercise);
+    const reusedGlobals = getGlobals(reuseExercise);
     if (
       programExercise.evaluatedSetVariations.length !==
       reuseExercise.evaluatedSetVariations.length
@@ -6260,7 +6260,7 @@ class ProgramToPlanner {
                   plannerExercise += "used: none / ";
                 }
                 const variations = evalExercise.evaluatedSetVariations;
-                const globals = this.getGlobals(evalExercise);
+                const globals = getGlobals(evalExercise);
 
                 const shouldReuseSets = this.shouldReuseSets(evalExercise);
                 const dereuseDecisions = shouldReuseSets
@@ -6290,7 +6290,7 @@ class ProgramToPlanner {
                     globals.weight != null
                   ) {
                     overriddenGlobals.push(
-                      `${this.weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+                      `${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
                     );
                   } else if (
                     dereuseDecisions.includes("weight") &&
@@ -6324,7 +6324,7 @@ class ProgramToPlanner {
                   const globalsStr: string[] = [];
                   if (globals.weight != null) {
                     globalsStr.push(
-                      `${this.weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+                      `${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
                     );
                   } else if (globals.askWeight) {
                     globalsStr.push("?+");
@@ -6478,58 +6478,6 @@ class ProgramToPlanner {
     return str;
   }
 
-  private getGlobals(
-    exercise: IPlannerProgramExercise,
-  ): IPlannerToProgram2Globals {
-    const variations = exercise.evaluatedSetVariations;
-    if (variations.length === 0 || variations[0].sets.length === 0) {
-      const globals = exercise.globals;
-      const reusedGlobals = exercise.reuse?.exercise?.globals || {};
-      return {
-        weight: globals?.weight ?? reusedGlobals.weight,
-        rpe: globals?.rpe ?? reusedGlobals.rpe,
-        timer: globals?.timer ?? reusedGlobals.timer,
-        logRpe: globals?.logRpe ?? reusedGlobals.logRpe,
-        askWeight: globals?.askWeight ?? reusedGlobals.askWeight,
-      };
-    }
-    const first = variations.at(0)?.sets.at(0);
-    const firstWeight = first?.weight;
-    const firstRpe = first?.rpe;
-    const firstLogRpe = !!first?.logRpe;
-    const firstAskWeight = !!first?.askWeight;
-    const firstTimer = first?.timer;
-    return {
-      weight:
-        firstWeight != null &&
-        variations.every((v) =>
-          v.sets.every(
-            (s) => eq(s.weight, firstWeight) && s.askWeight === firstAskWeight,
-          ),
-        )
-          ? firstWeight
-          : undefined,
-      askWeight: variations.every((v) =>
-        v.sets.every((s) => eq(s.weight, firstWeight) && s.askWeight),
-      ),
-      rpe:
-        firstRpe != null &&
-        variations.every((v) =>
-          v.sets.every((s) => s.rpe === firstRpe && s.logRpe === firstLogRpe),
-        )
-          ? firstRpe
-          : undefined,
-      logRpe: variations.every((v) =>
-        v.sets.every((s) => s.rpe === firstRpe && s.logRpe),
-      ),
-      timer:
-        firstTimer != null &&
-        variations.every((v) => v.sets.every((s) => s.timer === firstTimer))
-          ? firstTimer
-          : undefined,
-    };
-  }
-
   private groupVariationSets(
     sets: IPlannerProgramExerciseEvaluatedSet[],
     exercise: IPlannerProgramExercise,
@@ -6602,9 +6550,6 @@ class ProgramToPlanner {
     return undefined;
   }
 
-  private weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
-    weightExpr ? print(weightExpr) : "";
-
   private variationToString(
     variation: IPlannerProgramExerciseEvaluatedSetVariation,
     globals: IPlannerToProgram2Globals,
@@ -6625,7 +6570,7 @@ class ProgramToPlanner {
       setStr += `${n(Math.max(0, set.maxrep ?? 0))}`;
       setStr += set.isAmrap ? "+" : "";
       if (globals.weight == null && !globals.askWeight) {
-        const weightValue = this.weightExprToStr(set.weight);
+        const weightValue = weightExprToStr(set.weight);
         if (weightValue) {
           setStr += ` ${weightValue}${set.askWeight ? "+" : ""}`;
         } else if (set.askWeight) {
@@ -6651,6 +6596,60 @@ class ProgramToPlanner {
     return resultStr + result.map((r) => r.trim()).join(", ");
   }
 }
+function getGlobals(
+  exercise: IPlannerProgramExercise,
+): IPlannerToProgram2Globals {
+  const variations = exercise.evaluatedSetVariations;
+  if (variations.length === 0 || variations[0].sets.length === 0) {
+    const globals = exercise.globals;
+    const reusedGlobals = exercise.reuse?.exercise?.globals || {};
+    return {
+      weight: globals?.weight ?? reusedGlobals.weight,
+      rpe: globals?.rpe ?? reusedGlobals.rpe,
+      timer: globals?.timer ?? reusedGlobals.timer,
+      logRpe: globals?.logRpe ?? reusedGlobals.logRpe,
+      askWeight: globals?.askWeight ?? reusedGlobals.askWeight,
+    };
+  }
+  const first = variations.at(0)?.sets.at(0);
+  const firstWeight = first?.weight;
+  const firstRpe = first?.rpe;
+  const firstLogRpe = !!first?.logRpe;
+  const firstAskWeight = !!first?.askWeight;
+  const firstTimer = first?.timer;
+  return {
+    weight:
+      firstWeight != null &&
+      variations.every((v) =>
+        v.sets.every(
+          (s) => eq(s.weight, firstWeight) && s.askWeight === firstAskWeight,
+        ),
+      )
+        ? firstWeight
+        : undefined,
+    askWeight: variations.every((v) =>
+      v.sets.every((s) => eq(s.weight, firstWeight) && s.askWeight),
+    ),
+    rpe:
+      firstRpe != null &&
+      variations.every((v) =>
+        v.sets.every((s) => s.rpe === firstRpe && s.logRpe === firstLogRpe),
+      )
+        ? firstRpe
+        : undefined,
+    logRpe: variations.every((v) =>
+      v.sets.every((s) => s.rpe === firstRpe && s.logRpe),
+    ),
+    timer:
+      firstTimer != null &&
+      variations.every((v) => v.sets.every((s) => s.timer === firstTimer))
+        ? firstTimer
+        : undefined,
+  };
+}
+
+const weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
+  weightExpr ? print(weightExpr) : "";
 function warmupSetToKey(set: IPlannerProgramExerciseWarmupSet): string {
   return `${set.reps}-${print(set.weight || set.percentage || 0)}`;
 }
