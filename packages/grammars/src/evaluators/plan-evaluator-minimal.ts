@@ -5664,14 +5664,14 @@ function getUpdate(
     return `update: custom() ${update.script}`;
   }
   if (!update.reuse.exercise?.exerciseType) {
+    // @todo this branch seems to double pre-fix the "/". Is that a mistake?
     return ` / update: custom() { ...${update.reuse.exercise?.fullName || update.reuse.fullName} }`;
   }
-  const exercise = getExerciseOrDefault(
-    update.reuse.exercise.exerciseType,
-    settings.exercises,
-  );
   const fullName = Exercise_fullName(
-    exercise,
+    getExerciseOrDefault(
+      update.reuse.exercise.exerciseType,
+      settings.exercises,
+    ),
     getCurrentEquipment(settings),
     update.reuse.exercise.label,
   );
