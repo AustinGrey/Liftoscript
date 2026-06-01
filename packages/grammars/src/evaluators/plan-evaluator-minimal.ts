@@ -5972,28 +5972,53 @@ function groupWarmupsSets(
   return groups;
 }
 
+function addGroupedTopLine(
+  groupedTopLine: IPlannerTopLineItem[][][][],
+  adds: IPlannerToProgramConvertOpts["add"],
+  settings: ISettings,
+): IPlannerTopLineItem[][][][] {
+  if (!adds) {
+    return groupedTopLine;
+  }
+  for (const add of adds) {
+    const groupedDay =
+      groupedTopLine[add.dayData.week - 1]?.[add.dayData.dayInWeek - 1];
+    if (groupedDay) {
+      groupedDay.splice(add.index, 0, [
+        {
+          type: "exercise",
+          value: PlannerKey_fromFullName(add.fullName, settings.exercises),
+        },
+      ]);
+    }
+  }
+  return groupedTopLine;
+}
+
+function getCurrentDescriptionExercise(
+  program: IEvaluatedProgram,
+  key: string,
+  weekIndex: number,
+  dayInWeekIndex: number,
+): IPlannerProgramExercise | undefined {
+  return program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find(
+    (e) => e.key === key,
+  );
+}
+
 class ProgramToPlanner {
   constructor(
     private readonly program: IEvaluatedProgram,
     private readonly settings: ISettings,
   ) {}
 
-  private getCurrentDescriptionExercise(
-    key: string,
-    weekIndex: number,
-    dayInWeekIndex: number,
-  ): IPlannerProgramExercise | undefined {
-    return this.program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find(
-      (e) => e.key === key,
-    );
-  }
-
   private getCurrentDescriptionIndex(
     key: string,
     weekIndex: number,
     dayInWeekIndex: number,
   ): number {
-    const exercise = this.getCurrentDescriptionExercise(
+    const exercise = getCurrentDescriptionExercise(
+      this.program,
       key,
       weekIndex,
       dayInWeekIndex,
@@ -6001,31 +6026,6 @@ class ProgramToPlanner {
     const descriptions = exercise?.descriptions.values || [];
     const index = descriptions.findIndex((s) => s.isCurrent);
     return index === -1 ? 0 : index;
-  }
-
-  private addGroupedTopLine(
-    groupedTopLine: IPlannerTopLineItem[][][][],
-    adds: IPlannerToProgramConvertOpts["add"],
-  ): IPlannerTopLineItem[][][][] {
-    if (!adds) {
-      return groupedTopLine;
-    }
-    for (const add of adds) {
-      const groupedDay =
-        groupedTopLine[add.dayData.week - 1]?.[add.dayData.dayInWeek - 1];
-      if (groupedDay) {
-        groupedDay.splice(add.index, 0, [
-          {
-            type: "exercise",
-            value: PlannerKey_fromFullName(
-              add.fullName,
-              this.settings.exercises,
-            ),
-          },
-        ]);
-      }
-    }
-    return groupedTopLine;
   }
 
   private addExerciseDescriptions(
@@ -6119,7 +6119,7 @@ class ProgramToPlanner {
       ? reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
       : groupedTopLineMap;
     groupedTopLineMap = opts.add
-      ? this.addGroupedTopLine(groupedTopLineMap, opts.add)
+      ? addGroupedTopLine(groupedTopLineMap, opts.add, this.settings)
       : groupedTopLineMap;
     let dayIndex = 0;
     const addedProgressMap: Record<string, boolean> = {};
@@ -6187,7 +6187,8 @@ class ProgramToPlanner {
                   break;
                 }
                 if (key != null) {
-                  const exercise = this.getCurrentDescriptionExercise(
+                  const exercise = getCurrentDescriptionExercise(
+                    this.program,
                     key,
                     weekIndex,
                     dayInWeekIndex,
