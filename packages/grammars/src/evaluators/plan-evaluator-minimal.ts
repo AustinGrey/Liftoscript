@@ -6558,7 +6558,7 @@ class ProgramToPlanner {
     let lastKey: string | undefined;
     const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = [];
     for (const set of sets) {
-      const key = this.setToKey(set);
+      const key = setToKey(set);
       if (lastKey == null || lastKey !== key) {
         groups.push([set, 0]);
       }
@@ -6574,7 +6574,7 @@ class ProgramToPlanner {
     let lastKey: string | undefined;
     const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
     for (const set of sets) {
-      const key = this.warmupSetToKey(set);
+      const key = warmupSetToKey(set);
       if (lastKey == null || lastKey !== key) {
         groups.push([set, 0]);
       }
@@ -6650,16 +6650,15 @@ class ProgramToPlanner {
     }
     return resultStr + result.map((r) => r.trim()).join(", ");
   }
+}
+function warmupSetToKey(set: IPlannerProgramExerciseWarmupSet): string {
+  return `${set.reps}-${print(set.weight || set.percentage || 0)}`;
+}
 
-  private warmupSetToKey(set: IPlannerProgramExerciseWarmupSet): string {
-    return `${set.reps}-${print(set.weight || set.percentage || 0)}`;
-  }
-
-  private setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
-    return `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
-      set.timer
-    }-${set.label}-${set.askWeight}`;
-  }
+function setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
+  return `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
+    set.timer
+  }-${set.label}-${set.askWeight}`;
 }
 //#endregion
 

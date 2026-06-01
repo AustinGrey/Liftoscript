@@ -10,9 +10,8 @@ export function CollectionUtils_concatBy<T>(
   return Object.keys(map).map((key) => map[key]);
 }
 
-export function CollectionUtils_compact<T>(arr: (T | undefined)[]): T[] {
-  return arr.filter((i) => i) as T[];
-}
+export const CollectionUtils_compact = <T>(arr: (T | undefined)[]): T[] =>
+  arr.filter((i) => i !== undefined);
 
 export function CollectionUtils_flat<T>(from: T[][]): T[] {
   return from.reduce((acc, val) => acc.concat(val), []);
