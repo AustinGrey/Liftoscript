@@ -6023,83 +6023,84 @@ function getCurrentDescriptionIndex(
   return index === -1 ? 0 : index;
 }
 
+function addExerciseDescriptions(
+  program: IEvaluatedProgram,
+  exercise: IPlannerProgramExercise | undefined,
+  weekIndex: number,
+  dayInWeekIndex: number,
+  addedCurrentDescription: boolean,
+): { lines: string[]; addedCurrentDescription: boolean } | undefined {
+  if (!exercise) {
+    return undefined;
+  }
+  if (
+    exercise?.descriptions.reuse == null ||
+    !ObjectUtils_isEqual(
+      exercise.descriptions.values || [],
+      exercise.descriptions.reuse.exercise?.descriptions.values || [],
+    )
+  ) {
+    const lines: string[] = [];
+    const currentIndex = getCurrentDescriptionIndex(
+      program,
+      exercise.key,
+      weekIndex,
+      dayInWeekIndex,
+    );
+    for (let i = 0; i < exercise.descriptions.values.length; i += 1) {
+      if (i > 0) {
+        lines.push("");
+      }
+      const description = exercise.descriptions.values[i];
+      const parts = description.value.split("\n");
+      for (const part of parts) {
+        if (
+          currentIndex !== 0 &&
+          currentIndex === i &&
+          !addedCurrentDescription
+        ) {
+          lines.push(`// ! ${part}`);
+          addedCurrentDescription = true;
+        } else {
+          lines.push(`// ${part}`);
+        }
+      }
+    }
+    return { lines, addedCurrentDescription };
+  } else if (exercise?.descriptions.reuse?.exercise) {
+    const reusedExercise = exercise.descriptions.reuse.exercise;
+    const reusedDayData = reusedExercise.dayData;
+    const currentWeekReusedExercisesCount = program.weeks[
+      weekIndex
+    ]?.days.filter((day) => {
+      return day.exercises.some((e) => e.key === reusedExercise.key);
+    }).length;
+    if (
+      currentWeekReusedExercisesCount === 1 &&
+      reusedDayData.week === weekIndex + 1
+    ) {
+      return {
+        lines: [`// ...${reusedExercise.fullName}`],
+        addedCurrentDescription,
+      };
+    } else {
+      return {
+        lines: [
+          `// ...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`,
+        ],
+        addedCurrentDescription,
+      };
+    }
+  } else {
+    return undefined;
+  }
+}
+
 class ProgramToPlanner {
   constructor(
     private readonly program: IEvaluatedProgram,
     private readonly settings: ISettings,
   ) {}
-
-  private addExerciseDescriptions(
-    exercise: IPlannerProgramExercise | undefined,
-    weekIndex: number,
-    dayInWeekIndex: number,
-    addedCurrentDescription: boolean,
-  ): { lines: string[]; addedCurrentDescription: boolean } | undefined {
-    if (!exercise) {
-      return undefined;
-    }
-    if (
-      exercise?.descriptions.reuse == null ||
-      !ObjectUtils_isEqual(
-        exercise.descriptions.values || [],
-        exercise.descriptions.reuse.exercise?.descriptions.values || [],
-      )
-    ) {
-      const lines: string[] = [];
-      const currentIndex = getCurrentDescriptionIndex(
-        this.program,
-        exercise.key,
-        weekIndex,
-        dayInWeekIndex,
-      );
-      for (let i = 0; i < exercise.descriptions.values.length; i += 1) {
-        if (i > 0) {
-          lines.push("");
-        }
-        const description = exercise.descriptions.values[i];
-        const parts = description.value.split("\n");
-        for (const part of parts) {
-          if (
-            currentIndex !== 0 &&
-            currentIndex === i &&
-            !addedCurrentDescription
-          ) {
-            lines.push(`// ! ${part}`);
-            addedCurrentDescription = true;
-          } else {
-            lines.push(`// ${part}`);
-          }
-        }
-      }
-      return { lines, addedCurrentDescription };
-    } else if (exercise?.descriptions.reuse?.exercise) {
-      const reusedExercise = exercise.descriptions.reuse.exercise;
-      const reusedDayData = reusedExercise.dayData;
-      const currentWeekReusedExercisesCount = this.program.weeks[
-        weekIndex
-      ]?.days.filter((day) => {
-        return day.exercises.some((e) => e.key === reusedExercise.key);
-      }).length;
-      if (
-        currentWeekReusedExercisesCount === 1 &&
-        reusedDayData.week === weekIndex + 1
-      ) {
-        return {
-          lines: [`// ...${reusedExercise.fullName}`],
-          addedCurrentDescription,
-        };
-      } else {
-        return {
-          lines: [
-            `// ...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`,
-          ],
-          addedCurrentDescription,
-        };
-      }
-    } else {
-      return undefined;
-    }
-  }
 
   public convertToPlanner(
     opts: IPlannerToProgramConvertOpts = {},
@@ -6195,7 +6196,8 @@ class ProgramToPlanner {
                     weekIndex,
                     dayInWeekIndex,
                   );
-                  const result = this.addExerciseDescriptions(
+                  const result = addExerciseDescriptions(
+                    this.program,
                     exercise,
                     weekIndex,
                     dayInWeekIndex,
@@ -6268,7 +6270,8 @@ class ProgramToPlanner {
                   (evalExercise.descriptions.reuse ||
                     evalExercise.descriptions.values.length > 0)
                 ) {
-                  const result = this.addExerciseDescriptions(
+                  const result = addExerciseDescriptions(
+                    this.program,
                     evalExercise,
                     weekIndex,
                     dayInWeekIndex,
