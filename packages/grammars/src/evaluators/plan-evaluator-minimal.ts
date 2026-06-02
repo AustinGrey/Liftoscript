@@ -444,10 +444,7 @@ export function Program_runAllFinishDayScripts(
     }
   }
   const theNextDay = Program_nextDay(newEvaluatedProgram, progress.day);
-  const newPlanner = new ProgramToPlanner(
-    newEvaluatedProgram,
-    settings,
-  ).convertToPlanner();
+  const newPlanner = convertToPlanner(newEvaluatedProgram, settings);
   const newProgram = structuredClone(program);
   newProgram.nextDay = theNextDay;
   newProgram.planner = newPlanner;
@@ -647,10 +644,7 @@ export function Program_applyEvaluatedProgram(
   settings: ISettings,
 ): IProgram {
   const newProgram = structuredClone(program);
-  newProgram.planner = new ProgramToPlanner(
-    evaluatedProgram,
-    settings,
-  ).convertToPlanner();
+  newProgram.planner = convertToPlanner(evaluatedProgram, settings);
   newProgram.nextDay = evaluatedProgram.nextDay;
   return newProgram;
 }
@@ -1106,7 +1100,7 @@ function PlannerProgram_replaceExercise(
       }
     },
   );
-  return new ProgramToPlanner(evaluatedProgram, settings).convertToPlanner({
+  return convertToPlanner(evaluatedProgram, settings, {
     renameMapping,
   });
 }
@@ -6096,397 +6090,384 @@ function addExerciseDescriptions(
   }
 }
 
-class ProgramToPlanner {
-  constructor(
-    private readonly program: IEvaluatedProgram,
-    private readonly settings: ISettings,
-  ) {}
+function convertToPlanner(
+  program: IEvaluatedProgram,
+  settings: ISettings,
+  opts: IPlannerToProgramConvertOpts = {},
+): IPlannerProgram {
+  const plannerWeeks: IPlannerProgramWeek[] = [];
+  if (program.errors.length > 0) {
+    const error = program.errors[0];
+    console.log(PlannerProgram_generateFullText(program.planner.weeks));
 
-  public convertToPlanner(
-    opts: IPlannerToProgramConvertOpts = {},
-  ): IPlannerProgram {
-    const plannerWeeks: IPlannerProgramWeek[] = [];
-    const plannerProgram = this.program.planner;
-    if (this.program.errors.length > 0) {
-      const error = this.program.errors[0];
-      console.log(PlannerProgram_generateFullText(plannerProgram.weeks));
+    throw error.error;
+  }
+  const topLineMap = PlannerProgram_topLineItems(program.planner, settings);
+  let groupedTopLineMap = PlannerProgram_groupedTopLines(topLineMap);
+  groupedTopLineMap = opts.reorder
+    ? reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
+    : groupedTopLineMap;
+  groupedTopLineMap = opts.add
+    ? addGroupedTopLine(groupedTopLineMap, opts.add, settings)
+    : groupedTopLineMap;
+  let dayIndex = 0;
+  const addedProgressMap: Record<string, boolean> = {};
+  const addedUpdateMap: Record<string, boolean> = {};
+  const addedWarmupsMap: Record<string, boolean> = {};
+  const addedIdMap: Record<string, boolean> = {};
 
-      throw error.error;
-    }
-    const topLineMap = PlannerProgram_topLineItems(
-      plannerProgram,
-      this.settings,
-    );
-    let groupedTopLineMap = PlannerProgram_groupedTopLines(topLineMap);
-    groupedTopLineMap = opts.reorder
-      ? reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
-      : groupedTopLineMap;
-    groupedTopLineMap = opts.add
-      ? addGroupedTopLine(groupedTopLineMap, opts.add, this.settings)
-      : groupedTopLineMap;
-    let dayIndex = 0;
-    const addedProgressMap: Record<string, boolean> = {};
-    const addedUpdateMap: Record<string, boolean> = {};
-    const addedWarmupsMap: Record<string, boolean> = {};
-    const addedIdMap: Record<string, boolean> = {};
-
+  for (let weekIndex = 0; weekIndex < program.weeks.length; weekIndex += 1) {
+    const week = program.weeks[weekIndex];
+    const plannerWeek: IPlannerProgramWeek = {
+      name: week.name,
+      days: [],
+      description: week.description,
+    };
     for (
-      let weekIndex = 0;
-      weekIndex < this.program.weeks.length;
-      weekIndex += 1
+      let dayInWeekIndex = 0;
+      dayInWeekIndex < week.days.length;
+      dayInWeekIndex += 1
     ) {
-      const week = this.program.weeks[weekIndex];
-      const plannerWeek: IPlannerProgramWeek = {
-        name: week.name,
-        days: [],
-        description: week.description,
+      const programDay = week.days[dayInWeekIndex];
+      const plannerDay: IPlannerProgramDay = {
+        name: programDay.name,
+        exerciseText: "",
       };
-      for (
-        let dayInWeekIndex = 0;
-        dayInWeekIndex < week.days.length;
-        dayInWeekIndex += 1
+      let descriptionIndex: number | undefined = undefined;
+      let addedCurrentDescription = false;
+      let finishedToAddDescription = false;
+      const groupedTopLines = groupedTopLineMap[weekIndex][dayInWeekIndex];
+      let groupTextArr: string[] = [];
+      groupLoop: for (
+        let groupIndex = 0;
+        groupIndex < groupedTopLines.length;
+        groupIndex += 1
       ) {
-        const programDay = week.days[dayInWeekIndex];
-        const plannerDay: IPlannerProgramDay = {
-          name: programDay.name,
-          exerciseText: "",
-        };
-        let descriptionIndex: number | undefined = undefined;
-        let addedCurrentDescription = false;
-        let finishedToAddDescription = false;
-        const groupedTopLines = groupedTopLineMap[weekIndex][dayInWeekIndex];
-        let groupTextArr: string[] = [];
-        groupLoop: for (
-          let groupIndex = 0;
-          groupIndex < groupedTopLines.length;
-          groupIndex += 1
-        ) {
-          const exerciseTextArr: string[] = [];
-          const group = groupedTopLines[groupIndex];
-          for (let lineIndex = 0; lineIndex < group.length; lineIndex += 1) {
-            const line = group[lineIndex];
-            switch (line.type) {
-              case "comment": {
-                exerciseTextArr.push(line.value);
-                break;
-              }
-              case "description": {
-                let key: string | undefined;
-                for (let i = lineIndex; i < group.length; i += 1) {
-                  if (group[i].type === "exercise") {
-                    key = getRenamedValue(
-                      opts,
-                      group[i],
-                      weekIndex,
-                      dayInWeekIndex,
-                    );
-                    break;
-                  }
-                }
-                if (descriptionIndex == null) {
-                  descriptionIndex = 0;
-                }
-                if (finishedToAddDescription) {
+        const exerciseTextArr: string[] = [];
+        const group = groupedTopLines[groupIndex];
+        for (let lineIndex = 0; lineIndex < group.length; lineIndex += 1) {
+          const line = group[lineIndex];
+          switch (line.type) {
+            case "comment": {
+              exerciseTextArr.push(line.value);
+              break;
+            }
+            case "description": {
+              let key: string | undefined;
+              for (let i = lineIndex; i < group.length; i += 1) {
+                if (group[i].type === "exercise") {
+                  key = getRenamedValue(
+                    opts,
+                    group[i],
+                    weekIndex,
+                    dayInWeekIndex,
+                  );
                   break;
                 }
-                if (key != null) {
-                  const exercise = getCurrentDescriptionExercise(
-                    this.program,
+              }
+              if (descriptionIndex == null) {
+                descriptionIndex = 0;
+              }
+              if (finishedToAddDescription) {
+                break;
+              }
+              if (key != null) {
+                const exercise = getCurrentDescriptionExercise(
+                  program,
+                  key,
+                  weekIndex,
+                  dayInWeekIndex,
+                );
+                const result = addExerciseDescriptions(
+                  program,
+                  exercise,
+                  weekIndex,
+                  dayInWeekIndex,
+                  addedCurrentDescription,
+                );
+                if (result) {
+                  exerciseTextArr.push(...result.lines);
+                  addedCurrentDescription = result.addedCurrentDescription;
+                  finishedToAddDescription = true;
+                } else {
+                  const currentIndex = getCurrentDescriptionIndex(
+                    program,
                     key,
                     weekIndex,
                     dayInWeekIndex,
                   );
-                  const result = addExerciseDescriptions(
-                    this.program,
-                    exercise,
-                    weekIndex,
-                    dayInWeekIndex,
-                    addedCurrentDescription,
-                  );
-                  if (result) {
-                    exerciseTextArr.push(...result.lines);
-                    addedCurrentDescription = result.addedCurrentDescription;
-                    finishedToAddDescription = true;
-                  } else {
-                    const currentIndex = getCurrentDescriptionIndex(
-                      this.program,
-                      key,
-                      weekIndex,
-                      dayInWeekIndex,
+                  if (
+                    currentIndex !== 0 &&
+                    currentIndex === descriptionIndex &&
+                    !addedCurrentDescription
+                  ) {
+                    exerciseTextArr.push(
+                      line.value.replace(/^\/\/\s*!?\s*/, "// ! "),
                     );
-                    if (
-                      currentIndex !== 0 &&
-                      currentIndex === descriptionIndex &&
-                      !addedCurrentDescription
-                    ) {
-                      exerciseTextArr.push(
-                        line.value.replace(/^\/\/\s*!?\s*/, "// ! "),
-                      );
-                      addedCurrentDescription = true;
-                    } else {
-                      exerciseTextArr.push(
-                        line.value.replace(/^(\/\/\s*)!\s*/, "$1"),
-                      );
-                    }
-                  }
-                } else {
-                  exerciseTextArr.push(
-                    line.value.replace(/^(\/\/\s*)!\s*/, "$1"),
-                  );
-                }
-                break;
-              }
-              case "empty": {
-                if (!finishedToAddDescription) {
-                  exerciseTextArr.push("");
-                  if (descriptionIndex != null) {
-                    descriptionIndex += 1;
+                    addedCurrentDescription = true;
+                  } else {
+                    exerciseTextArr.push(
+                      line.value.replace(/^(\/\/\s*)!\s*/, "$1"),
+                    );
                   }
                 }
-                break;
+              } else {
+                exerciseTextArr.push(
+                  line.value.replace(/^(\/\/\s*)!\s*/, "$1"),
+                );
               }
-              case "exercise": {
-                descriptionIndex = undefined;
-                const value = getRenamedValue(
-                  opts,
-                  line,
+              break;
+            }
+            case "empty": {
+              if (!finishedToAddDescription) {
+                exerciseTextArr.push("");
+                if (descriptionIndex != null) {
+                  descriptionIndex += 1;
+                }
+              }
+              break;
+            }
+            case "exercise": {
+              descriptionIndex = undefined;
+              const value = getRenamedValue(
+                opts,
+                line,
+                weekIndex,
+                dayInWeekIndex,
+              );
+              const evalExercise = Program_getProgramExercise(
+                dayIndex + 1,
+                program,
+                value,
+              )!;
+
+              if (evalExercise == null) {
+                continue groupLoop;
+              }
+
+              const key = evalExercise.key;
+
+              if (
+                !finishedToAddDescription &&
+                (evalExercise.descriptions.reuse ||
+                  evalExercise.descriptions.values.length > 0)
+              ) {
+                const result = addExerciseDescriptions(
+                  program,
+                  evalExercise,
                   weekIndex,
                   dayInWeekIndex,
+                  addedCurrentDescription,
                 );
-                const evalExercise = Program_getProgramExercise(
-                  dayIndex + 1,
-                  this.program,
-                  value,
-                )!;
-
-                if (evalExercise == null) {
-                  continue groupLoop;
+                if (result) {
+                  exerciseTextArr.push(...result.lines);
                 }
-
-                const key = evalExercise.key;
-
-                if (
-                  !finishedToAddDescription &&
-                  (evalExercise.descriptions.reuse ||
-                    evalExercise.descriptions.values.length > 0)
-                ) {
-                  const result = addExerciseDescriptions(
-                    this.program,
-                    evalExercise,
-                    weekIndex,
-                    dayInWeekIndex,
-                    addedCurrentDescription,
-                  );
-                  if (result) {
-                    exerciseTextArr.push(...result.lines);
-                  }
-                }
-
-                finishedToAddDescription = false;
-                addedCurrentDescription = false;
-
-                let plannerExercise: string;
-
-                if (evalExercise.exerciseType) {
-                  const name = Exercise_fullName(
-                    getExerciseOrDefault(
-                      evalExercise.exerciseType,
-                      this.settings.exercises,
-                    ),
-                    getCurrentEquipment(this.settings),
-                    evalExercise.label,
-                  );
-                  plannerExercise =
-                    evalExercise.order > 0
-                      ? `${name}[${evalExercise.order}]`
-                      : name;
-                } else {
-                  plannerExercise = evalExercise.fullName;
-                }
-                plannerExercise += " / ";
-                if (evalExercise.notused) {
-                  plannerExercise += "used: none / ";
-                }
-                const variations = evalExercise.evaluatedSetVariations;
-                const globals = getGlobals(evalExercise);
-
-                const shouldReuseSets = !!evalExercise.reuse;
-                const dereuseDecisions = shouldReuseSets
-                  ? getDereuseDecisions(evalExercise)
-                  : [];
-                if (shouldReuseSets) {
-                  plannerExercise += reuseToStr(evalExercise, this.settings);
-
-                  if (dereuseDecisions.includes("sets")) {
-                    plannerExercise +=
-                      ` / ` +
-                      variations
-                        .map((v, i) => {
-                          return variationToString(v, globals, i, evalExercise);
-                        })
-                        .join(" / ");
-                  }
-
-                  const overriddenGlobals: string[] = [];
-                  if (
-                    dereuseDecisions.includes("weight") &&
-                    globals.weight != null
-                  ) {
-                    overriddenGlobals.push(
-                      `${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
-                    );
-                  } else if (
-                    dereuseDecisions.includes("weight") &&
-                    globals.askWeight
-                  ) {
-                    overriddenGlobals.push("?+");
-                  }
-                  if (dereuseDecisions.includes("rpe") && globals.rpe != null) {
-                    overriddenGlobals.push(
-                      `@${n(globals.rpe)}${globals.logRpe ? "+" : ""}`,
-                    );
-                  }
-                  if (
-                    dereuseDecisions.includes("timer") &&
-                    globals.timer != null
-                  ) {
-                    overriddenGlobals.push(`${n(globals.timer)}s`);
-                  }
-                  if (overriddenGlobals.length > 0) {
-                    plannerExercise += ` / ${overriddenGlobals.join(" ")}`;
-                  }
-                } else {
-                  if (evalExercise.setVariations.length > 0) {
-                    plannerExercise += variations
-                      .map((v, i) =>
-                        variationToString(v, globals, i, evalExercise),
-                      )
-                      .join(" / ");
-                  }
-
-                  const globalsStr: string[] = [];
-                  if (globals.weight != null) {
-                    globalsStr.push(
-                      `${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
-                    );
-                  } else if (globals.askWeight) {
-                    globalsStr.push("?+");
-                  }
-                  if (globals.rpe != null) {
-                    globalsStr.push(
-                      `@${globals.rpe}${globals.logRpe ? "+" : ""}`,
-                    );
-                  }
-                  if (globals.timer != null) {
-                    globalsStr.push(`${globals.timer}s`);
-                  }
-                  if (globalsStr.length > 0) {
-                    plannerExercise += ` / ${globalsStr.join(" ")}`;
-                  }
-                }
-
-                if (!addedWarmupsMap[key] && evalExercise?.warmupSets) {
-                  const warmupSets = getWarmupSets(evalExercise);
-                  if (warmupSets != null) {
-                    plannerExercise += ` / warmup: ${warmupSets}`;
-                    addedWarmupsMap[key] = true;
-                  }
-                }
-
-                if (!addedIdMap[key] && (evalExercise.tags || []).length > 0) {
-                  plannerExercise += ` / id: tags(${(evalExercise.tags || []).join(", ")})`;
-                  addedIdMap[key] = true;
-                }
-
-                const superset = evalExercise.superset?.name;
-                if (superset) {
-                  plannerExercise += ` / superset: ${superset}`;
-                }
-
-                const update = evalExercise.update;
-                if (
-                  !addedUpdateMap[key] &&
-                  update &&
-                  (update.reuse || update.script)
-                ) {
-                  if (
-                    !evalExercise.reuse ||
-                    dereuseDecisions.includes("update")
-                  ) {
-                    if (evalExercise.update) {
-                      plannerExercise +=
-                        " / " + getUpdate(evalExercise.update, this.settings);
-                    }
-                    addedUpdateMap[key] = true;
-                  } else if (
-                    update.reuse?.fullName === evalExercise.reuse.fullName
-                  ) {
-                    addedUpdateMap[key] = true;
-                  }
-                }
-
-                const progress = evalExercise.progress;
-                if (progress && progress.type === "none") {
-                  plannerExercise += ` / progress: none`;
-                } else if (
-                  !addedProgressMap[key] &&
-                  progress &&
-                  (progress.reuse || progress.script)
-                ) {
-                  if (
-                    !evalExercise.reuse ||
-                    dereuseDecisions.includes("progress")
-                  ) {
-                    const progressStr = getProgress(
-                      evalExercise,
-                      this.settings,
-                      false,
-                    );
-                    if (progressStr) {
-                      plannerExercise += ` / ${progressStr}`;
-                    }
-                    addedProgressMap[key] = true;
-                  } else if (
-                    progress.reuse?.fullName === evalExercise.reuse.fullName
-                  ) {
-                    addedProgressMap[key] = true;
-                  }
-                }
-                exerciseTextArr.push(plannerExercise);
-                break;
               }
+
+              finishedToAddDescription = false;
+              addedCurrentDescription = false;
+
+              let plannerExercise: string;
+
+              if (evalExercise.exerciseType) {
+                const name = Exercise_fullName(
+                  getExerciseOrDefault(
+                    evalExercise.exerciseType,
+                    settings.exercises,
+                  ),
+                  getCurrentEquipment(settings),
+                  evalExercise.label,
+                );
+                plannerExercise =
+                  evalExercise.order > 0
+                    ? `${name}[${evalExercise.order}]`
+                    : name;
+              } else {
+                plannerExercise = evalExercise.fullName;
+              }
+              plannerExercise += " / ";
+              if (evalExercise.notused) {
+                plannerExercise += "used: none / ";
+              }
+              const variations = evalExercise.evaluatedSetVariations;
+              const globals = getGlobals(evalExercise);
+
+              const shouldReuseSets = !!evalExercise.reuse;
+              const dereuseDecisions = shouldReuseSets
+                ? getDereuseDecisions(evalExercise)
+                : [];
+              if (shouldReuseSets) {
+                plannerExercise += reuseToStr(evalExercise, settings);
+
+                if (dereuseDecisions.includes("sets")) {
+                  plannerExercise +=
+                    ` / ` +
+                    variations
+                      .map((v, i) => {
+                        return variationToString(v, globals, i, evalExercise);
+                      })
+                      .join(" / ");
+                }
+
+                const overriddenGlobals: string[] = [];
+                if (
+                  dereuseDecisions.includes("weight") &&
+                  globals.weight != null
+                ) {
+                  overriddenGlobals.push(
+                    `${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+                  );
+                } else if (
+                  dereuseDecisions.includes("weight") &&
+                  globals.askWeight
+                ) {
+                  overriddenGlobals.push("?+");
+                }
+                if (dereuseDecisions.includes("rpe") && globals.rpe != null) {
+                  overriddenGlobals.push(
+                    `@${n(globals.rpe)}${globals.logRpe ? "+" : ""}`,
+                  );
+                }
+                if (
+                  dereuseDecisions.includes("timer") &&
+                  globals.timer != null
+                ) {
+                  overriddenGlobals.push(`${n(globals.timer)}s`);
+                }
+                if (overriddenGlobals.length > 0) {
+                  plannerExercise += ` / ${overriddenGlobals.join(" ")}`;
+                }
+              } else {
+                if (evalExercise.setVariations.length > 0) {
+                  plannerExercise += variations
+                    .map((v, i) =>
+                      variationToString(v, globals, i, evalExercise),
+                    )
+                    .join(" / ");
+                }
+
+                const globalsStr: string[] = [];
+                if (globals.weight != null) {
+                  globalsStr.push(
+                    `${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+                  );
+                } else if (globals.askWeight) {
+                  globalsStr.push("?+");
+                }
+                if (globals.rpe != null) {
+                  globalsStr.push(
+                    `@${globals.rpe}${globals.logRpe ? "+" : ""}`,
+                  );
+                }
+                if (globals.timer != null) {
+                  globalsStr.push(`${globals.timer}s`);
+                }
+                if (globalsStr.length > 0) {
+                  plannerExercise += ` / ${globalsStr.join(" ")}`;
+                }
+              }
+
+              if (!addedWarmupsMap[key] && evalExercise?.warmupSets) {
+                const warmupSets = getWarmupSets(evalExercise);
+                if (warmupSets != null) {
+                  plannerExercise += ` / warmup: ${warmupSets}`;
+                  addedWarmupsMap[key] = true;
+                }
+              }
+
+              if (!addedIdMap[key] && (evalExercise.tags || []).length > 0) {
+                plannerExercise += ` / id: tags(${(evalExercise.tags || []).join(", ")})`;
+                addedIdMap[key] = true;
+              }
+
+              const superset = evalExercise.superset?.name;
+              if (superset) {
+                plannerExercise += ` / superset: ${superset}`;
+              }
+
+              const update = evalExercise.update;
+              if (
+                !addedUpdateMap[key] &&
+                update &&
+                (update.reuse || update.script)
+              ) {
+                if (
+                  !evalExercise.reuse ||
+                  dereuseDecisions.includes("update")
+                ) {
+                  if (evalExercise.update) {
+                    plannerExercise +=
+                      " / " + getUpdate(evalExercise.update, settings);
+                  }
+                  addedUpdateMap[key] = true;
+                } else if (
+                  update.reuse?.fullName === evalExercise.reuse.fullName
+                ) {
+                  addedUpdateMap[key] = true;
+                }
+              }
+
+              const progress = evalExercise.progress;
+              if (progress && progress.type === "none") {
+                plannerExercise += ` / progress: none`;
+              } else if (
+                !addedProgressMap[key] &&
+                progress &&
+                (progress.reuse || progress.script)
+              ) {
+                if (
+                  !evalExercise.reuse ||
+                  dereuseDecisions.includes("progress")
+                ) {
+                  const progressStr = getProgress(
+                    evalExercise,
+                    settings,
+                    false,
+                  );
+                  if (progressStr) {
+                    plannerExercise += ` / ${progressStr}`;
+                  }
+                  addedProgressMap[key] = true;
+                } else if (
+                  progress.reuse?.fullName === evalExercise.reuse.fullName
+                ) {
+                  addedProgressMap[key] = true;
+                }
+              }
+              exerciseTextArr.push(plannerExercise);
+              break;
             }
           }
-          if (exerciseTextArr.length > 0) {
-            groupTextArr = groupTextArr.concat(exerciseTextArr);
-          }
         }
-        plannerDay.exerciseText = groupTextArr.join("\n");
-        plannerDay.description = programDay.description;
-        plannerWeek.days.push(plannerDay);
-        dayIndex += 1;
+        if (exerciseTextArr.length > 0) {
+          groupTextArr = groupTextArr.concat(exerciseTextArr);
+        }
       }
-      plannerWeeks.push(plannerWeek);
+      plannerDay.exerciseText = groupTextArr.join("\n");
+      plannerDay.description = programDay.description;
+      plannerWeek.days.push(plannerDay);
+      dayIndex += 1;
     }
-    const result: IPlannerProgram = {
-      name: this.program.name,
-      weeks: plannerWeeks,
-    };
-    const repeatingExercises = new Set<string>();
-    forExerciseInEvaluatedWeeks(this.program.weeks, (exercise) => {
-      if (exercise.repeat != null && exercise.repeat.length > 0) {
-        const key = PlannerKey_fromPlannerExercise(exercise, this.settings);
-        repeatingExercises.add(key);
-      }
-    });
-
-    return PlannerProgram_compact(
-      this.program.planner,
-      result,
-      this.settings,
-      repeatingExercises,
-    );
+    plannerWeeks.push(plannerWeek);
   }
+  const result: IPlannerProgram = {
+    name: program.name,
+    weeks: plannerWeeks,
+  };
+  const repeatingExercises = new Set<string>();
+  forExerciseInEvaluatedWeeks(program.weeks, (exercise) => {
+    if (exercise.repeat != null && exercise.repeat.length > 0) {
+      const key = PlannerKey_fromPlannerExercise(exercise, settings);
+      repeatingExercises.add(key);
+    }
+  });
+
+  return PlannerProgram_compact(
+    program.planner,
+    result,
+    settings,
+    repeatingExercises,
+  );
 }
 
 function reuseToStr(
