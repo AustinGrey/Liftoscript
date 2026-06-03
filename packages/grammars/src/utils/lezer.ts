@@ -1,7 +1,14 @@
 /**
  * Tools for working with Lezer grammars and parsers.
  */
-import type { SyntaxNode } from "@lezer/common";
+import {
+  IterMode,
+  NodeProp,
+  type SyntaxNode,
+  Tree,
+  TreeCursor,
+} from "@lezer/common";
+import { LRParser } from "@lezer/lr";
 
 /**
  * @returns Line/offset in script that tells where the node given starts.
@@ -23,4 +30,131 @@ export function getLineAndOffset(
     offset += lineLength;
   }
   return [linesLengths.length, linesLengths[linesLengths.length - 1]];
+}
+export interface SourcedSyntaxNode extends SyntaxNode {
+  /**
+   * The full source code this node was parsed from
+   */
+  getSource: () => string;
+  /**
+   * The slice of the full source that this node represents
+   */
+  source: string;
+  parent: SourcedSyntaxNode | null;
+  firstChild: SourcedSyntaxNode | null;
+  lastChild: SourcedSyntaxNode | null;
+  childAfter(pos: number): SourcedSyntaxNode | null;
+  childBefore(pos: number): SourcedSyntaxNode | null;
+  enter(
+    pos: number,
+    side: -1 | 0 | 1,
+    mode?: IterMode,
+  ): SourcedSyntaxNode | null;
+  nextSibling: SourcedSyntaxNode | null;
+  prevSibling: SourcedSyntaxNode | null;
+  prop<T>(prop: NodeProp<T>): T | undefined;
+  cursor(mode?: IterMode): SourcedTreeCursor;
+  resolve(pos: number, side?: -1 | 0 | 1): SourcedSyntaxNode;
+  resolveInner(pos: number, side?: -1 | 0 | 1): SourcedSyntaxNode;
+  enterUnfinishedNodesBefore(pos: number): SourcedSyntaxNode;
+  toTree(): Tree;
+  getChild(
+    type: string | number,
+    before?: string | number | null,
+    after?: string | number | null,
+  ): SourcedSyntaxNode | null;
+  getChildren(
+    type: string | number,
+    before?: string | number | null,
+    after?: string | number | null,
+  ): SourcedSyntaxNode[];
+}
+
+export class SourcedTreeCursor extends TreeCursor {
+  constructor(
+    cursor: TreeCursor,
+    private getSource: () => string,
+  ) {
+    super();
+  }
+
+  get node(): SourcedSyntaxNode {
+    return bindNode(super.node, this.getSource);
+  }
+}
+
+export function bindNode(
+  node: SyntaxNode,
+  getSource: () => string,
+): SourcedSyntaxNode {
+  const recurse = (node: SyntaxNode | null) => bindMaybeNode(node, getSource);
+  const recurseSure = (node: SyntaxNode) => bindNode(node, getSource);
+  return {
+    getSource,
+    get source() {
+      return this.getSource().slice(node.from, node.to);
+    },
+    childAfter: (...args) => recurse(node.childAfter(...args)),
+    childBefore: (...args) => recurse(node.childBefore(...args)),
+    enter: (...args) => recurse(node.enter(...args)),
+    get nextSibling() {
+      return recurse(node.nextSibling);
+    },
+    get prevSibling() {
+      return recurse(node.prevSibling);
+    },
+    get parent() {
+      return recurse(node.parent);
+    },
+    get firstChild() {
+      return recurse(node.firstChild);
+    },
+    get lastChild() {
+      return recurse(node.lastChild);
+    },
+    resolve: (...args) => recurseSure(node.resolve(...args)),
+    resolveInner: (...args) => recurseSure(node.resolveInner(...args)),
+    enterUnfinishedNodesBefore: (...args) =>
+      recurseSure(node.enterUnfinishedNodesBefore(...args)),
+    getChild: (...args) => recurse(node.getChild(...args)),
+    getChildren: (...args) => node.getChildren(...args).map(recurseSure),
+    cursor: (...args) => new SourcedTreeCursor(node.cursor(...args), getSource),
+    get type() {
+      return node.type;
+    },
+    get from() {
+      return node.from;
+    },
+    get name() {
+      return node.name;
+    },
+    get node() {
+      return node.node;
+    },
+    get to() {
+      return node.to;
+    },
+    get tree() {
+      return node.tree;
+    },
+    matchContext: (...args) => node.matchContext(...args),
+    prop: (...args) => node.prop(...args),
+    toTree: (...args) => node.toTree(...args),
+  };
+}
+
+const bindMaybeNode = (node: SyntaxNode | null, getSource: () => string) =>
+  node ? bindNode(node, getSource) : null;
+
+/**
+ * Parses the given script, using the given parser, and binds the script to the returned nodes so that it can be accessed later when needed.
+ * Lezer parsers normally require you to store the original script and use it to get the original text a node covers, but this simplifies all that storage.
+ * @param parser The parser to use
+ * @param script The script to parse
+ */
+export function parseBound(
+  parser: LRParser,
+  script: string,
+): SourcedSyntaxNode {
+  return bindNode(parser.parse(script).topNode, () => script);
 }
