@@ -10,19 +10,22 @@ export interface SourcedSyntaxNode extends SyntaxNode {
   /**
    * The source code that this node was parsed from
    */
-  readonly source: string;
+  getSource: () => string;
 }
 
 export function parse(workoutPlan: string): SourcedSyntaxNode {
-  return bindNode(parser.parse(workoutPlan).topNode, workoutPlan);
+  return bindNode(parser.parse(workoutPlan).topNode, () => workoutPlan);
 }
 
-function bindNode(node: SyntaxNode, source: string): SourcedSyntaxNode {
-  const recurse = (node: SyntaxNode | null) => bindMaybeNode(node, source);
-  const recurseSure = (node: SyntaxNode) => bindNode(node, source);
+function bindNode(
+  node: SyntaxNode,
+  getSource: () => string,
+): SourcedSyntaxNode {
+  const recurse = (node: SyntaxNode | null) => bindMaybeNode(node, getSource);
+  const recurseSure = (node: SyntaxNode) => bindNode(node, getSource);
   return {
     ...node,
-    source: source,
+    getSource,
     childAfter: (...args) => recurse(node.childAfter(...args)),
     childBefore: (...args) => recurse(node.childBefore(...args)),
     enter: (...args) => recurse(node.enter(...args)),
@@ -50,5 +53,5 @@ function bindNode(node: SyntaxNode, source: string): SourcedSyntaxNode {
   };
 }
 
-const bindMaybeNode = (node: SyntaxNode | null, source: string) =>
-  node ? bindNode(node, source) : null;
+const bindMaybeNode = (node: SyntaxNode | null, getSource: () => string) =>
+  node ? bindNode(node, getSource) : null;
