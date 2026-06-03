@@ -2424,7 +2424,7 @@ export class PlannerExerciseEvaluator {
   }
 
   private getValueTrim(node: SourcedSyntaxNode): string {
-    return node.getSource();
+    return node.source;
   }
 
   private getPoint(node: SourcedSyntaxNode): IPlannerSyntaxPointer {
