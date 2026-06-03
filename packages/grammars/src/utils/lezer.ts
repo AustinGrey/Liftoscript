@@ -7,6 +7,8 @@ import {
   type SyntaxNode,
   Tree,
   TreeCursor,
+  type SyntaxNodeRef,
+  NodeType,
 } from "@lezer/common";
 import { LRParser } from "@lezer/lr";
 
@@ -31,7 +33,12 @@ export function getLineAndOffset(
   }
   return [linesLengths.length, linesLengths[linesLengths.length - 1]];
 }
-export interface SourcedSyntaxNode extends SyntaxNode {
+
+/**
+ * Provide an interface that is like {@link SyntaxNode}, but don't extend since the type returned by cursor is a tree class that doesn't
+ * extend SyntaxTree, making them technically incompatible
+ */
+export interface SourcedSyntaxNode {
   /**
    * The full source code this node was parsed from
    */
@@ -68,18 +75,99 @@ export interface SourcedSyntaxNode extends SyntaxNode {
     before?: string | number | null,
     after?: string | number | null,
   ): SourcedSyntaxNode[];
+  readonly from: number;
+  readonly to: number;
+  readonly type: NodeType;
+  readonly name: string;
+  readonly tree: Tree | null;
+  readonly node: SyntaxNode;
+  matchContext(context: readonly string[]): boolean;
 }
 
-export class SourcedTreeCursor extends TreeCursor {
+export class SourcedTreeCursor {
   constructor(
-    cursor: TreeCursor,
+    private cursor: TreeCursor,
     private getSource: () => string,
-  ) {
-    super();
+  ) {}
+
+  get type() {
+    return this.cursor.type;
+  }
+
+  get name() {
+    return this.cursor.name;
+  }
+
+  get from() {
+    return this.cursor.from;
+  }
+
+  get to() {
+    return this.cursor.to;
+  }
+
+  get tree() {
+    return this.cursor.tree;
   }
 
   get node(): SourcedSyntaxNode {
-    return bindNode(super.node, this.getSource);
+    return bindNode(this.cursor.node, this.getSource);
+  }
+
+  firstChild() {
+    return this.cursor.firstChild();
+  }
+
+  lastChild() {
+    return this.cursor.lastChild();
+  }
+
+  childAfter(pos: number) {
+    return this.cursor.childAfter(pos);
+  }
+
+  childBefore(pos: number) {
+    return this.cursor.childBefore(pos);
+  }
+
+  enter(pos: number, side: -1 | 0 | 1, mode?: IterMode) {
+    return this.cursor.enter(pos, side, mode);
+  }
+
+  parent() {
+    return this.cursor.parent();
+  }
+
+  nextSibling() {
+    return this.cursor.nextSibling();
+  }
+
+  prevSibling() {
+    return this.cursor.prevSibling();
+  }
+
+  next(enter = true) {
+    return this.cursor.next(enter);
+  }
+
+  prev(enter = true) {
+    return this.cursor.prev(enter);
+  }
+
+  moveTo(pos: number, side: -1 | 0 | 1 = 0): this {
+    this.cursor.moveTo(pos, side);
+    return this;
+  }
+
+  iterate(
+    enter: (node: SyntaxNodeRef) => boolean | void,
+    leave?: (node: SyntaxNodeRef) => void,
+  ) {
+    return this.cursor.iterate(enter, leave);
+  }
+
+  matchContext(context: readonly string[]) {
+    return this.cursor.matchContext(context);
   }
 }
 
