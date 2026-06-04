@@ -3251,7 +3251,6 @@ function getWeekDayDescriptionAndFillLastDayFullText(
 }
 
 export class PlannerExerciseEvaluator {
-  private dayData: Required<IDayData>;
   private weeks: IPlannerExerciseEvaluatorWeek[] = [];
   private exerciseIndex: number = 0;
   private latestDescriptions: string[][] = [];
@@ -3262,15 +3261,15 @@ export class PlannerExerciseEvaluator {
     settings: ISettings,
     mode: IPlannerExerciseEvaluatorMode,
     dayData?: Required<IDayData>,
-  ) {
-    this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
-  }
+  ) {}
 
   public evaluate(
     programNode: SourcedSyntaxNode,
     settings: ISettings,
     mode: IPlannerExerciseEvaluatorMode,
+    dayData: Required<IDayData> | undefined,
   ): IPlannerEvalFullResult {
+    dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
     try {
       parse(programNode);
       if (programNode.type.name !== PlannerNodeName.Program) {
@@ -3300,8 +3299,8 @@ export class PlannerExerciseEvaluator {
           const weekName = child.source.replace(/^#+/, "").trim();
           const [line] = child.getLineAndOffset();
           this.weeks.push({ name: weekName, line, days: [] });
-          this.dayData = {
-            day: this.dayData.day,
+          dayData = {
+            day: dayData.day,
             week: this.weeks.length + 1,
             dayInWeek: 0,
           };
@@ -3325,10 +3324,10 @@ export class PlannerExerciseEvaluator {
             line,
             exercises: [],
           });
-          this.dayData = {
-            day: this.dayData.day + 1,
-            week: this.dayData.week,
-            dayInWeek: (this.dayData.dayInWeek || 0) + 1,
+          dayData = {
+            day: dayData.day + 1,
+            week: dayData.week,
+            dayInWeek: (dayData.dayInWeek || 0) + 1,
           };
           this.exerciseIndex = 0;
         } else if (child.type.name === PlannerNodeName.LineComment) {
@@ -3395,7 +3394,7 @@ export class PlannerExerciseEvaluator {
             const section = evaluateSection(
               sectionNode,
               settings,
-              this.dayData,
+              dayData,
               exercise ? { id: exercise.id, equipment } : undefined,
             );
             if (section.type === "sets") {
@@ -3540,7 +3539,7 @@ export class PlannerExerciseEvaluator {
             shortName,
             exerciseType: exercise,
             label,
-            dayData: this.dayData,
+            dayData,
             text,
             repeat,
             repeating: [...repeat],
@@ -3846,6 +3845,7 @@ function PlannerEvaluator_evaluateDay(
     parseBound(plannerExerciseParser, day.exerciseText),
     settings,
     "perday",
+    dayData,
   );
   if (result.success) {
     const exercises = result.data[0]?.days[0]?.exercises || [];
