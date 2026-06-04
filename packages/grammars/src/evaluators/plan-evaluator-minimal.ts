@@ -289,7 +289,7 @@ function Program_runFinishDayScript(
     PlannerProgramExercise_getProgressScript(programExercise) || "";
   let updates: ILiftoscriptEvaluatorUpdate[] = [];
   try {
-    const [resultingUpdates] = execute(
+    updates = execute(
       settings.units,
       script,
       newState,
@@ -303,7 +303,6 @@ function Program_runFinishDayScript(
       },
       "planner",
     );
-    updates = resultingUpdates;
   } catch (e) {
     if (e instanceof SyntaxError) {
       return { success: false, error: e.message };
@@ -6648,10 +6647,7 @@ function execute(
   context: IScriptFnContext,
   mode: IProgramMode,
   type?: "reps" | "weight" | "timer" | "rpe",
-): [
-  ILiftoscriptEvaluatorUpdate[],
-  number | IWeight | IDynamicWeight | boolean,
-] {
+): ILiftoscriptEvaluatorUpdate[] {
   const liftoscriptTree = LiftoscriptParser.parse(script);
   const liftoscriptEvaluator = new LiftoscriptEvaluator(
     script,
@@ -6664,10 +6660,8 @@ function execute(
     mode,
   );
   liftoscriptEvaluator.parse(liftoscriptTree.topNode);
-  const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
-  let result = (Array.isArray(rawResult) ? rawResult[0] : rawResult) ?? 0;
-
-  return [liftoscriptEvaluator.updates, convertResult(type, result, units)];
+  liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
+  return liftoscriptEvaluator.updates;
 }
 
 function convertResult(
