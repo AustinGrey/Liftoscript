@@ -3226,6 +3226,29 @@ function getWeekDayOngoingLinesFullText(
   return { linesToPreviousExercise, nextLines };
 }
 
+function getWeekDayDescriptionAndFillLastDayFullText(
+  ongoingLinesFullText: Readonly<IPlannerNonExerciseFullTextLine[]>,
+  weeksFullText: IPlannerExerciseEvaluatorTextWeek[],
+): string | undefined {
+  const { linesToPreviousExercise, nextLines } =
+    getWeekDayOngoingLinesFullText(ongoingLinesFullText);
+  if (linesToPreviousExercise.length > 0) {
+    const lastWeek = weeksFullText.at(-1);
+    const lastDay = lastWeek?.days.at(-1);
+    if (lastDay) {
+      lastDay.exercises.push(
+        ...linesToPreviousExercise.map((line) => line.line),
+      );
+    }
+  }
+  return nextLines.length > 0
+    ? nextLines
+        .map((line) => line.line.replace(/^\s*\/\/\/?\s*/, "").trim())
+        .join("\n")
+        .trim()
+    : undefined;
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -3248,26 +3271,6 @@ export class PlannerExerciseEvaluator {
   ) {
     this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
     this.mode = mode;
-  }
-
-  private getWeekDayDescriptionAndFillLastDayFullText(): string | undefined {
-    const { linesToPreviousExercise, nextLines } =
-      getWeekDayOngoingLinesFullText(this.ongoingLinesFullText);
-    if (linesToPreviousExercise.length > 0) {
-      const lastWeek = this.weeksFullText[this.weeksFullText.length - 1];
-      const lastDay = lastWeek?.days[lastWeek.days.length - 1];
-      if (lastDay) {
-        lastDay.exercises.push(
-          ...linesToPreviousExercise.map((line) => line.line),
-        );
-      }
-    }
-    return nextLines.length > 0
-      ? nextLines
-          .map((line) => line.line.replace(/^\s*\/\/\/?\s*/, "").trim())
-          .join("\n")
-          .trim()
-      : undefined;
   }
 
   public evaluate(
@@ -3627,12 +3630,18 @@ export class PlannerExerciseEvaluator {
     for (const child of CollectionUtils_compact(getChildren(programNode))) {
       if (child.type.name === PlannerNodeName.Week) {
         const weekName = child.source.replace(/^#+/, "").trim();
-        const description = this.getWeekDayDescriptionAndFillLastDayFullText();
+        const description = getWeekDayDescriptionAndFillLastDayFullText(
+          this.ongoingLinesFullText,
+          this.weeksFullText,
+        );
         this.weeksFullText.push({ name: weekName, description, days: [] });
         this.ongoingLinesFullText = [];
       } else if (child.type.name === PlannerNodeName.Day) {
         const dayName = child.source.replace(/^#+/, "").trim();
-        const description = this.getWeekDayDescriptionAndFillLastDayFullText();
+        const description = getWeekDayDescriptionAndFillLastDayFullText(
+          this.ongoingLinesFullText,
+          this.weeksFullText,
+        );
         this.weeksFullText[this.weeksFullText.length - 1].days.push({
           name: dayName,
           exercises: [],
