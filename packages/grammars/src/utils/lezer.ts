@@ -18,10 +18,7 @@ import { LRParser } from "@lezer/lr";
  * @param script The script the node came from
  * @param node The node to get the line and offest for
  */
-export function getLineAndOffset(
-  script: string,
-  node: SyntaxNode,
-): [number, number] {
+function getLineAndOffset(script: string, node: SyntaxNode): [number, number] {
   const linesLengths = script.split("\n").map((l) => l.length + 1);
   let offset = 0;
   for (let i = 0; i < linesLengths.length; i++) {
@@ -47,6 +44,7 @@ export interface SourcedSyntaxNode {
    * The slice of the full source that this node represents
    */
   source: string;
+  getLineAndOffset: () => [number, number];
   parent: SourcedSyntaxNode | null;
   firstChild: SourcedSyntaxNode | null;
   lastChild: SourcedSyntaxNode | null;
@@ -228,6 +226,7 @@ export function bindNode(
     matchContext: (...args) => node.matchContext(...args),
     prop: (...args) => node.prop(...args),
     toTree: (...args) => node.toTree(...args),
+    getLineAndOffset: () => getLineAndOffset(getSource(), node),
   };
 }
 

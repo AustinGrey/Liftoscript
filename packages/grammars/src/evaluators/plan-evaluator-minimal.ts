@@ -90,11 +90,7 @@ import {
   type IProgramExerciseWarmupSet,
   type IProgramStateMetadata,
 } from "@/program";
-import {
-  getLineAndOffset,
-  parseBound,
-  type SourcedSyntaxNode,
-} from "@/utils/lezer.ts";
+import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 
@@ -1183,16 +1179,11 @@ function PlannerProgram_compact(
 
   const mapping = plannerProgram.weeks.map((week, weekIndex) => {
     return week.days.map((day, dayInWeekIndex) => {
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-        {
-          day: dayIndex + 1,
-          dayInWeek: dayInWeekIndex + 1,
-          week: weekIndex + 1,
-        },
-      );
+      const evaluator = new PlannerExerciseEvaluator(settings, "perday", {
+        day: dayIndex + 1,
+        dayInWeek: dayInWeekIndex + 1,
+        week: weekIndex + 1,
+      });
       dayIndex += 1;
 
       return evaluator.topLineMap(
@@ -1374,16 +1365,11 @@ function PlannerProgram_topLineItems(
 
   const mapping = plannerProgram.weeks.map((week, weekIndex) => {
     return week.days.map((day, dayInWeekIndex) => {
-      const evaluator = new PlannerExerciseEvaluator(
-        day.exerciseText,
-        settings,
-        "perday",
-        {
-          day: dayIndex + 1,
-          dayInWeek: dayInWeekIndex + 1,
-          week: weekIndex + 1,
-        },
-      );
+      const evaluator = new PlannerExerciseEvaluator(settings, "perday", {
+        day: dayIndex + 1,
+        dayInWeek: dayInWeekIndex + 1,
+        week: weekIndex + 1,
+      });
       dayIndex += 1;
 
       return evaluator.topLineMap(
@@ -1434,11 +1420,7 @@ export function PlannerProgram_evaluate(
 export function PlannerProgram_evaluateText(
   fullProgramText: string,
 ): IPlannerProgramWeek[] {
-  const evaluator = new PlannerExerciseEvaluator(
-    fullProgramText,
-    Settings_build(),
-    "fulltext",
-  );
+  const evaluator = new PlannerExerciseEvaluator(Settings_build(), "fulltext");
   const data = evaluator.evaluatePreservingSource(
     parseBound(plannerExerciseParser, fullProgramText),
   );
@@ -2059,7 +2041,7 @@ interface IProgramExerciseUpdate {
   type: IProgramExerciseUpdateType;
   script?: string;
   reuse?: IPlannerProgramReuse;
-  liftoscriptNode?: SyntaxNode;
+  liftoscriptNode?: SourcedSyntaxNode;
   meta?: {
     stateKeys?: Set<string>;
   };
@@ -2391,7 +2373,6 @@ function getRepeatRanges(numbers: number[]): string[] {
 }
 
 export class PlannerExerciseEvaluator {
-  private readonly script: string;
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
   private readonly settings: ISettings;
@@ -2408,12 +2389,10 @@ export class PlannerExerciseEvaluator {
   private ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
 
   constructor(
-    script: string,
     settings: ISettings,
     mode: IPlannerExerciseEvaluatorMode,
     dayData?: Required<IDayData>,
   ) {
-    this.script = script;
     this.settings = settings;
     this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
     this.mode = mode;
@@ -2424,16 +2403,13 @@ export class PlannerExerciseEvaluator {
   }
 
   private getPoint(node: SourcedSyntaxNode): IPlannerSyntaxPointer {
-    const [line, offset] = this.getLineAndOffset(node);
+    const [line, offset] = node.getLineAndOffset();
     return { line, offset, from: node.from, to: node.to };
   }
 
   private error(message: string, node: SourcedSyntaxNode): never {
     throw PlannerSyntaxError.fromPoint(undefined, message, this.getPoint(node));
   }
-
-  private getLineAndOffset = (node: SourcedSyntaxNode) =>
-    getLineAndOffset(this.script, node);
 
   public parse(expr: SourcedSyntaxNode): void {
     const cursor = expr.cursor();
@@ -2848,7 +2824,7 @@ export class PlannerExerciseEvaluator {
             liftoscriptEvaluator.parse();
           } catch (e) {
             if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-              const [line] = this.getLineAndOffset(liftoscriptNode);
+              const [line] = liftoscriptNode.getLineAndOffset();
               throw new PlannerSyntaxError(
                 e.message,
                 line + e.line,
@@ -3148,7 +3124,7 @@ export class PlannerExerciseEvaluator {
         );
       }
       const weekName = expr.source.replace(/^#+/, "").trim();
-      const [line] = this.getLineAndOffset(expr);
+      const [line] = expr.getLineAndOffset();
       this.weeks.push({ name: weekName, line, days: [] });
       this.dayData = {
         day: this.dayData.day,
@@ -3166,7 +3142,7 @@ export class PlannerExerciseEvaluator {
         this.error(`You need to specify a week before a day`, expr);
       }
       const dayName = expr.source.replace(/^#+/, "").trim();
-      const [line] = this.getLineAndOffset(expr);
+      const [line] = expr.getLineAndOffset();
       this.weeks[this.weeks.length - 1].days.push({
         name: dayName,
         line,
@@ -3282,7 +3258,7 @@ export class PlannerExerciseEvaluator {
       const askWeight = allSets.find(
         (set) => set.repRange == null && set.askWeight != null,
       )?.askWeight;
-      const [line] = this.getLineAndOffset(expr);
+      const [line] = expr.getLineAndOffset();
       const rawDescriptions: string[] = this.latestDescriptions.map((d) =>
         d.join("\n"),
       );
@@ -3848,12 +3824,7 @@ function PlannerEvaluator_evaluateDay(
   dayData: Required<IDayData>,
   settings: ISettings,
 ): IPlannerEvalResult {
-  const evaluator = new PlannerExerciseEvaluator(
-    day.exerciseText,
-    settings,
-    "perday",
-    dayData,
-  );
+  const evaluator = new PlannerExerciseEvaluator(settings, "perday", dayData);
   const result = evaluator.evaluate(
     parseBound(plannerExerciseParser, day.exerciseText),
   );
@@ -4316,7 +4287,7 @@ function PlannerEvaluator_checkUpdateScript(
         liftoscriptEvaluator.parse();
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-          const [line] = getLineAndOffset(script, liftoscriptNode);
+          const [line] = liftoscriptNode.getLineAndOffset();
           throw new PlannerSyntaxError(
             e.message,
             line + e.line,
