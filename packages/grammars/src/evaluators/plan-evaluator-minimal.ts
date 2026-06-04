@@ -3252,7 +3252,6 @@ function getWeekDayDescriptionAndFillLastDayFullText(
 
 export class PlannerExerciseEvaluator {
   private weeks: IPlannerExerciseEvaluatorWeek[] = [];
-  private exerciseIndex: number = 0;
   private latestDescriptions: string[][] = [];
   private weeksFullText: IPlannerExerciseEvaluatorTextWeek[] = [];
   private ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
@@ -3280,7 +3279,7 @@ export class PlannerExerciseEvaluator {
       }
 
       this.weeks = [];
-      this.exerciseIndex = 0;
+      let exerciseIndex = 0;
       for (const child of CollectionUtils_compact(getChildren(programNode))) {
         if (
           child.type.name === PlannerNodeName.EmptyExpression ||
@@ -3329,7 +3328,7 @@ export class PlannerExerciseEvaluator {
             week: dayData.week,
             dayInWeek: (dayData.dayInWeek || 0) + 1,
           };
-          this.exerciseIndex = 0;
+          exerciseIndex = 0;
         } else if (child.type.name === PlannerNodeName.LineComment) {
           const value = child.source.trim();
           if (this.latestDescriptions.length === 0) {
@@ -3547,7 +3546,7 @@ export class PlannerExerciseEvaluator {
             superset,
             name,
             equipment,
-            exerciseIndex: this.exerciseIndex,
+            exerciseIndex,
             line,
             tags,
             notused: notused,
@@ -3582,7 +3581,7 @@ export class PlannerExerciseEvaluator {
             this.weeks[this.weeks.length - 1].days.length - 1
           ].exercises.push(plannerExercise);
           if (!notused) {
-            this.exerciseIndex += 1;
+            exerciseIndex += 1;
           }
         } else {
           errorPlannerSyntax(
