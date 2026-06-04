@@ -3252,7 +3252,6 @@ function getWeekDayDescriptionAndFillLastDayFullText(
 
 export class PlannerExerciseEvaluator {
   private weeks: IPlannerExerciseEvaluatorWeek[] = [];
-  private latestDescriptions: string[][] = [];
 
   constructor(
     settings: ISettings,
@@ -3278,13 +3277,14 @@ export class PlannerExerciseEvaluator {
 
       this.weeks = [];
       let exerciseIndex = 0;
+      let latestDescriptions: string[][] = [];
       for (const child of CollectionUtils_compact(getChildren(programNode))) {
         if (
           child.type.name === PlannerNodeName.EmptyExpression ||
           child.type.name === PlannerNodeName.TripleLineComment
         ) {
-          if (this.latestDescriptions.length > 0) {
-            this.latestDescriptions.push([]);
+          if (latestDescriptions.length > 0) {
+            latestDescriptions.push([]);
           }
         } else if (child.type.name === PlannerNodeName.Week) {
           if (mode === "perday") {
@@ -3329,10 +3329,10 @@ export class PlannerExerciseEvaluator {
           exerciseIndex = 0;
         } else if (child.type.name === PlannerNodeName.LineComment) {
           const value = child.source.trim();
-          if (this.latestDescriptions.length === 0) {
-            this.latestDescriptions.push([]);
+          if (latestDescriptions.length === 0) {
+            latestDescriptions.push([]);
           }
-          this.latestDescriptions[this.latestDescriptions.length - 1].push(
+          latestDescriptions[latestDescriptions.length - 1].push(
             value.replace(/^\/\//, ""),
           );
         } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
@@ -3440,7 +3440,7 @@ export class PlannerExerciseEvaluator {
             (set) => set.repRange == null && set.askWeight != null,
           )?.askWeight;
           const [line] = child.getLineAndOffset();
-          const rawDescriptions: string[] = this.latestDescriptions.map((d) =>
+          const rawDescriptions: string[] = latestDescriptions.map((d) =>
             d.join("\n"),
           );
           const currentDescriptionIndex = rawDescriptions.findIndex((d) =>
@@ -3457,7 +3457,7 @@ export class PlannerExerciseEvaluator {
             ...d,
             value: StringUtils_unindent(d.value),
           }));
-          this.latestDescriptions = [];
+          latestDescriptions = [];
           const fullNamePoint = getPoint(nameNode);
 
           const reuseSetsNode = child
