@@ -3178,6 +3178,54 @@ function evaluateSection(
   }
 }
 
+function getWeekDayOngoingLinesFullText(
+  ongoingLinesFullText: Readonly<IPlannerNonExerciseFullTextLine[]>,
+): {
+  linesToPreviousExercise: IPlannerNonExerciseFullTextLine[];
+  nextLines: IPlannerNonExerciseFullTextLine[];
+} {
+  const ongoingLines = [...ongoingLinesFullText];
+  let anyCommentStarted = false;
+  let commentStarted = false;
+  const linesToPreviousExercise: IPlannerNonExerciseFullTextLine[] = [];
+  const nextLines: IPlannerNonExerciseFullTextLine[] = [];
+  for (let i = 0; i < ongoingLines.length; i++) {
+    const line = ongoingLines[i];
+    if (!anyCommentStarted && line?.type === "empty") {
+      continue;
+    }
+    if (line?.type === "comment" || line?.type === "triplelinecomment") {
+      anyCommentStarted = true;
+    }
+    if (line?.type === "comment") {
+      commentStarted = true;
+    }
+    if (anyCommentStarted && !commentStarted) {
+      linesToPreviousExercise.push(line);
+    }
+    if (commentStarted && line?.type === "comment") {
+      nextLines.push(line);
+    }
+  }
+  for (let i = nextLines.length - 1; i >= 0; i--) {
+    const line = nextLines[i];
+    if (line.type === "empty") {
+      nextLines.pop();
+    } else {
+      break;
+    }
+  }
+  for (let i = linesToPreviousExercise.length - 1; i >= 0; i--) {
+    const line = linesToPreviousExercise[i];
+    if (line.type === "empty") {
+      linesToPreviousExercise.pop();
+    } else {
+      break;
+    }
+  }
+  return { linesToPreviousExercise, nextLines };
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -3500,55 +3548,9 @@ export class PlannerExerciseEvaluator {
     }
   }
 
-  private getWeekDayOngoingLinesFullText(): {
-    linesToPreviousExercise: IPlannerNonExerciseFullTextLine[];
-    nextLines: IPlannerNonExerciseFullTextLine[];
-  } {
-    const ongoingLines = [...this.ongoingLinesFullText];
-    let anyCommentStarted = false;
-    let commentStarted = false;
-    const linesToPreviousExercise: IPlannerNonExerciseFullTextLine[] = [];
-    const nextLines: IPlannerNonExerciseFullTextLine[] = [];
-    for (let i = 0; i < ongoingLines.length; i++) {
-      const line = ongoingLines[i];
-      if (!anyCommentStarted && line?.type === "empty") {
-        continue;
-      }
-      if (line?.type === "comment" || line?.type === "triplelinecomment") {
-        anyCommentStarted = true;
-      }
-      if (line?.type === "comment") {
-        commentStarted = true;
-      }
-      if (anyCommentStarted && !commentStarted) {
-        linesToPreviousExercise.push(line);
-      }
-      if (commentStarted && line?.type === "comment") {
-        nextLines.push(line);
-      }
-    }
-    for (let i = nextLines.length - 1; i >= 0; i--) {
-      const line = nextLines[i];
-      if (line.type === "empty") {
-        nextLines.pop();
-      } else {
-        break;
-      }
-    }
-    for (let i = linesToPreviousExercise.length - 1; i >= 0; i--) {
-      const line = linesToPreviousExercise[i];
-      if (line.type === "empty") {
-        linesToPreviousExercise.pop();
-      } else {
-        break;
-      }
-    }
-    return { linesToPreviousExercise, nextLines };
-  }
-
   private getWeekDayDescriptionAndFillLastDayFullText(): string | undefined {
     const { linesToPreviousExercise, nextLines } =
-      this.getWeekDayOngoingLinesFullText();
+      getWeekDayOngoingLinesFullText(this.ongoingLinesFullText);
     if (linesToPreviousExercise.length > 0) {
       const lastWeek = this.weeksFullText[this.weeksFullText.length - 1];
       const lastDay = lastWeek?.days[lastWeek.days.length - 1];
