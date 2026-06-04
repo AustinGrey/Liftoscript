@@ -2613,7 +2613,7 @@ export class PlannerExerciseEvaluator {
     this.mode = mode;
   }
 
-  private error(message: string, node: SourcedSyntaxNode): never {
+  private errorPlannerSyntax(message: string, node: SourcedSyntaxNode): never {
     throw PlannerSyntaxError.fromPoint(undefined, message, getPoint(node));
   }
 
@@ -2621,7 +2621,7 @@ export class PlannerExerciseEvaluator {
     const cursor = expr.cursor();
     do {
       if (cursor.node.type.isError) {
-        this.error("Syntax error", cursor.node);
+        this.errorPlannerSyntax("Syntax error", cursor.node);
       }
     } while (cursor.next());
   }
@@ -2683,7 +2683,10 @@ export class PlannerExerciseEvaluator {
             .join(" ")
         : undefined;
       if (labelNode && label && label.length > 8) {
-        this.error("Label length should be 8 chars max", labelNode);
+        this.errorPlannerSyntax(
+          "Label length should be 8 chars max",
+          labelNode,
+        );
       }
       return {
         repRange,
@@ -2704,7 +2707,10 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.ExerciseProperty) {
       const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
       if (valueNode == null) {
-        throw this.error(`Missing value for the property 'id'`, expr);
+        throw this.errorPlannerSyntax(
+          `Missing value for the property 'id'`,
+          expr,
+        );
       }
       const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
       if (fnNameNode == null) {
@@ -2712,14 +2718,17 @@ export class PlannerExerciseEvaluator {
       }
       const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
       if (["tags"].indexOf(fnName) === -1) {
-        this.error(`There's no such id type - '${fnName}'`, fnNameNode);
+        this.errorPlannerSyntax(
+          `There's no such id type - '${fnName}'`,
+          fnNameNode,
+        );
       }
       const fnArgs = valueNode
         .getChildren(PlannerNodeName.FunctionArgument)
         .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
       if (fnName === "tags") {
         if (fnArgs.length === 0) {
-          this.error(
+          this.errorPlannerSyntax(
             `You should provide the list of numbers in "tags"`,
             fnNameNode,
           );
@@ -2738,7 +2747,10 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.ExerciseProperty) {
       const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
       if (valueNode == null) {
-        throw this.error(`Missing value for the property 'update'`, expr);
+        throw this.errorPlannerSyntax(
+          `Missing value for the property 'update'`,
+          expr,
+        );
       }
       const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
       if (fnNameNode == null) {
@@ -2757,7 +2769,7 @@ export class PlannerExerciseEvaluator {
           valueNode.getChild(PlannerNodeName.Liftoscript) || undefined;
         script = liftoscriptNode ? liftoscriptNode.source : undefined;
         if (fnArgs.length > 0) {
-          this.error(
+          this.errorPlannerSyntax(
             `State variables for the update script are taken from "progress" block`,
             fnNameNode,
           );
@@ -2784,7 +2796,7 @@ export class PlannerExerciseEvaluator {
           meta = { stateKeys };
         }
         if (!script && !body) {
-          this.error(
+          this.errorPlannerSyntax(
             `'custom' update requires either to specify Liftoscript block or specify which one to reuse`,
             valueNode,
           );
@@ -2797,7 +2809,7 @@ export class PlannerExerciseEvaluator {
           reuse: body ? { fullName: body, source: "specific" } : undefined,
         };
       } else {
-        this.error(
+        this.errorPlannerSyntax(
           `There's no such update progression exists - '${fnName}'`,
           fnNameNode,
         );
@@ -2814,14 +2826,14 @@ export class PlannerExerciseEvaluator {
     valueNode: SourcedSyntaxNode,
   ): void {
     if (["lp", "sum", "dp", "custom", "none"].indexOf(fnName) === -1) {
-      this.error(
+      this.errorPlannerSyntax(
         `There's no such progression exists - '${fnName}'`,
         fnNameNode,
       );
     }
     if (fnName === "lp") {
       if (fnArgs.length > 6) {
-        this.error(
+        this.errorPlannerSyntax(
           `Linear Progression 'lp' only has 6 arguments max`,
           valueNode,
         );
@@ -2831,17 +2843,17 @@ export class PlannerExerciseEvaluator {
         !fnArgs[0].endsWith("kg") &&
         !fnArgs[0].endsWith("%")
       ) {
-        this.error(
+        this.errorPlannerSyntax(
           `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
           valueNode,
         );
       } else if (fnArgs[1] != null && isNaN(parseInt(fnArgs[1], 10))) {
-        this.error(
+        this.errorPlannerSyntax(
           `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
           valueNode,
         );
       } else if (fnArgs[2] != null && isNaN(parseInt(fnArgs[2], 10))) {
-        this.error(
+        this.errorPlannerSyntax(
           `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
           valueNode,
         );
@@ -2851,29 +2863,29 @@ export class PlannerExerciseEvaluator {
         !fnArgs[3].endsWith("kg") &&
         !fnArgs[3].endsWith("%")
       ) {
-        this.error(
+        this.errorPlannerSyntax(
           `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
           valueNode,
         );
       } else if (fnArgs[4] != null && isNaN(parseInt(fnArgs[4], 10))) {
-        this.error(
+        this.errorPlannerSyntax(
           `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
           valueNode,
         );
       } else if (fnArgs[5] != null && isNaN(parseInt(fnArgs[5], 10))) {
-        this.error(
+        this.errorPlannerSyntax(
           `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
           valueNode,
         );
       }
     } else if (fnName === "sum") {
       if (fnArgs.length > 2) {
-        this.error(
+        this.errorPlannerSyntax(
           `Reps Sum Progression 'sum' only has 2 arguments max`,
           valueNode,
         );
       } else if (fnArgs[0] == null || isNaN(parseInt(fnArgs[0], 10))) {
-        this.error(
+        this.errorPlannerSyntax(
           `1st argument of 'sum' should be a number of reps - i.e. a number`,
           valueNode,
         );
@@ -2883,14 +2895,14 @@ export class PlannerExerciseEvaluator {
           !fnArgs[1].endsWith("kg") &&
           !fnArgs[1].endsWith("%"))
       ) {
-        this.error(
+        this.errorPlannerSyntax(
           `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
           valueNode,
         );
       }
     } else if (fnName === "dp") {
       if (fnArgs.length !== 3) {
-        this.error(
+        this.errorPlannerSyntax(
           `Double Progression 'dp' should have 3 arguments`,
           valueNode,
         );
@@ -2900,17 +2912,17 @@ export class PlannerExerciseEvaluator {
           !fnArgs[0].endsWith("kg") &&
           !fnArgs[0].endsWith("%"))
       ) {
-        this.error(
+        this.errorPlannerSyntax(
           `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
           valueNode,
         );
       } else if (fnArgs[1] == null || isNaN(parseInt(fnArgs[1], 10))) {
-        this.error(
+        this.errorPlannerSyntax(
           `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
           valueNode,
         );
       } else if (fnArgs[2] == null || isNaN(parseInt(fnArgs[2], 10))) {
-        this.error(
+        this.errorPlannerSyntax(
           `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
           valueNode,
         );
@@ -2926,7 +2938,7 @@ export class PlannerExerciseEvaluator {
         ? reuseLiftoscriptNode.source
         : undefined;
       if (!script && !body) {
-        this.error(
+        this.errorPlannerSyntax(
           `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
           valueNode,
         );
@@ -2942,7 +2954,7 @@ export class PlannerExerciseEvaluator {
     if (result.success) {
       return result.data;
     } else {
-      throw this.error(result.error, expr);
+      throw this.errorPlannerSyntax(result.error, expr);
     }
   }
 
@@ -2957,7 +2969,10 @@ export class PlannerExerciseEvaluator {
         if (none != null) {
           return PlannerProgramExercise_buildProgress("none", []);
         } else {
-          throw this.error(`Missing value for the property 'progress'`, expr);
+          throw this.errorPlannerSyntax(
+            `Missing value for the property 'progress'`,
+            expr,
+          );
         }
       }
       const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
@@ -2975,7 +2990,7 @@ export class PlannerExerciseEvaluator {
         const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
         const script = liftoscriptNode ? liftoscriptNode.source : undefined;
         const { state } = fnArgsToStateVars(fnArgs, (message) =>
-          this.error(message, fnNameNode),
+          this.errorPlannerSyntax(message, fnNameNode),
         );
         if (script) {
           const liftoscriptEvaluator = new ScriptRunner(
@@ -3056,7 +3071,10 @@ export class PlannerExerciseEvaluator {
       } else if (name === "used") {
         return { type: "used", data: "" };
       } else {
-        this.error(`There's no such property exists - '${name}'`, nameNode);
+        this.errorPlannerSyntax(
+          `There's no such property exists - '${name}'`,
+          nameNode,
+        );
       }
     } else {
       assert(PlannerNodeName.ExerciseProperty);
@@ -3127,7 +3145,7 @@ export class PlannerExerciseEvaluator {
       return;
     } else if (expr.type.name === PlannerNodeName.Week) {
       if (this.mode === "perday") {
-        this.error(
+        this.errorPlannerSyntax(
           `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
           expr,
         );
@@ -3142,13 +3160,16 @@ export class PlannerExerciseEvaluator {
       };
     } else if (expr.type.name === PlannerNodeName.Day) {
       if (this.mode === "perday") {
-        this.error(
+        this.errorPlannerSyntax(
           `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
           expr,
         );
       }
       if (this.weeks.length === 0) {
-        this.error(`You need to specify a week before a day`, expr);
+        this.errorPlannerSyntax(
+          `You need to specify a week before a day`,
+          expr,
+        );
       }
       const dayName = expr.source.replace(/^#+/, "").trim();
       const [line] = expr.getLineAndOffset();
@@ -3173,7 +3194,7 @@ export class PlannerExerciseEvaluator {
         (this.weeks.length === 0 ||
           this.weeks[this.weeks.length - 1].days.length === 0)
       ) {
-        this.error(
+        this.errorPlannerSyntax(
           `You should first define a week and a day before listing exercises.`,
           expr,
         );
@@ -3400,7 +3421,10 @@ export class PlannerExerciseEvaluator {
         this.exerciseIndex += 1;
       }
     } else {
-      this.error(`Unexpected node type ${expr.node.type.name}`, expr);
+      this.errorPlannerSyntax(
+        `Unexpected node type ${expr.node.type.name}`,
+        expr,
+      );
     }
   }
 
@@ -3527,7 +3551,10 @@ export class PlannerExerciseEvaluator {
       }
       return this.weeks;
     } else {
-      this.error(`Unexpected node type ${expr.node.type.name}`, expr);
+      this.errorPlannerSyntax(
+        `Unexpected node type ${expr.node.type.name}`,
+        expr,
+      );
     }
   }
 
@@ -3571,7 +3598,7 @@ export class PlannerExerciseEvaluator {
 
   public topLineMap(programNode: SourcedSyntaxNode): IPlannerTopLineItem[] {
     if (programNode.type.name !== PlannerNodeName.Program) {
-      this.error(
+      this.errorPlannerSyntax(
         `Unexpected node type ${programNode.type.name} - should be Program`,
         programNode,
       );
@@ -3653,7 +3680,7 @@ export class PlannerExerciseEvaluator {
           lastDescriptions.push([]);
         }
       } else {
-        this.error(
+        this.errorPlannerSyntax(
           `Unexpected node type ${child.type.name}, should be only exercise, comment, description or empty line`,
           child,
         );
