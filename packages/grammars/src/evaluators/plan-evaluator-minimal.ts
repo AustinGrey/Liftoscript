@@ -2951,7 +2951,7 @@ function evaluateUpdate(
         ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
         : undefined;
       if (script) {
-        const liftoscriptEvaluator = new ScriptRunner(
+        const stateKeys = new ScriptRunner(
           script,
           {},
           {},
@@ -2959,10 +2959,7 @@ function evaluateUpdate(
           Progress_createScriptFunctions(settings),
           { exerciseType, unit: settings.units, prints: [] },
           "update",
-        );
-        const stateKeys = liftoscriptEvaluator.getStateVariableKeys(
-          settings.units,
-        );
+        ).getStateVariableKeys(settings.units);
         meta = { stateKeys };
       }
       if (!script && !body) {
@@ -3026,17 +3023,16 @@ function evaluateProgressImpl(
         errorPlannerSyntax(message, fnNameNode),
       );
       if (script) {
-        const liftoscriptEvaluator = new ScriptRunner(
-          script,
-          state,
-          {},
-          Progress_createEmptyScriptBindings(dayData, settings),
-          Progress_createScriptFunctions(settings),
-          { exerciseType, unit: settings.units, prints: [] },
-          "planner",
-        );
         try {
-          liftoscriptEvaluator.parse(settings.units);
+          new ScriptRunner(
+            script,
+            state,
+            {},
+            Progress_createEmptyScriptBindings(dayData, settings),
+            Progress_createScriptFunctions(settings),
+            { exerciseType, unit: settings.units, prints: [] },
+            "planner",
+          ).parse(settings.units);
         } catch (e) {
           if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
             const [line] = liftoscriptNode.getLineAndOffset();
@@ -4263,17 +4259,16 @@ function PlannerEvaluator_checkUpdateScript(
         settings,
       );
       const state = PlannerProgramExercise_getState(exercise);
-      const liftoscriptEvaluator = new ScriptRunner(
-        script,
-        state,
-        {},
-        Progress_createEmptyScriptBindings(dayData, settings),
-        Progress_createScriptFunctions(settings),
-        { exerciseType, unit: settings.units, prints: [] },
-        "update",
-      );
       try {
-        liftoscriptEvaluator.parse(settings.units);
+        new ScriptRunner(
+          script,
+          state,
+          {},
+          Progress_createEmptyScriptBindings(dayData, settings),
+          Progress_createScriptFunctions(settings),
+          { exerciseType, unit: settings.units, prints: [] },
+          "update",
+        ).parse(settings.units);
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
           const [line] = liftoscriptNode.getLineAndOffset();
