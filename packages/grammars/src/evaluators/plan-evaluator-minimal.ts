@@ -3024,7 +3024,8 @@ function evaluateProgressImpl(
       );
       if (script) {
         try {
-          new ScriptRunner(
+          parseScript(
+            settings.units,
             script,
             state,
             {},
@@ -3032,7 +3033,7 @@ function evaluateProgressImpl(
             Progress_createScriptFunctions(settings),
             { exerciseType, unit: settings.units, prints: [] },
             "planner",
-          ).parse(settings.units);
+          );
         } catch (e) {
           if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
             const [line] = liftoscriptNode.getLineAndOffset();
@@ -4260,7 +4261,8 @@ function PlannerEvaluator_checkUpdateScript(
       );
       const state = PlannerProgramExercise_getState(exercise);
       try {
-        new ScriptRunner(
+        parseScript(
+          settings.units,
           script,
           state,
           {},
@@ -4268,7 +4270,7 @@ function PlannerEvaluator_checkUpdateScript(
           Progress_createScriptFunctions(settings),
           { exerciseType, unit: settings.units, prints: [] },
           "update",
-        ).parse(settings.units);
+        );
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
           const [line] = liftoscriptNode.getLineAndOffset();
@@ -6585,6 +6587,30 @@ function setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
 
 //#region ScriptRunner
 
+function parseScript(
+  units: IUnit,
+  script: string,
+  state: IProgramState,
+  otherStates: Record<number, IProgramState>,
+  bindings: IScriptBindings,
+  fns: IScriptFunctions,
+  context: IScriptFnContext,
+  mode: IProgramMode,
+): void {
+  const liftoscriptTree = LiftoscriptParser.parse(script);
+  const liftoscriptEvaluator = new LiftoscriptEvaluator(
+    script,
+    state,
+    otherStates,
+    bindings,
+    fns,
+    context,
+    units,
+    mode,
+  );
+  liftoscriptEvaluator.parse(liftoscriptTree.topNode);
+}
+
 class ScriptRunner {
   private readonly script: string;
   private readonly state: IProgramState;
@@ -6610,21 +6636,6 @@ class ScriptRunner {
     this.fns = fns;
     this.context = context;
     this.mode = mode;
-  }
-
-  public parse(units: IUnit): void {
-    const liftoscriptTree = LiftoscriptParser.parse(this.script);
-    const liftoscriptEvaluator = new LiftoscriptEvaluator(
-      this.script,
-      this.state,
-      this.otherStates,
-      this.bindings,
-      this.fns,
-      this.context,
-      units,
-      this.mode,
-    );
-    liftoscriptEvaluator.parse(liftoscriptTree.topNode);
   }
 
   public getStateVariableKeys(units: IUnit): Set<string> {
