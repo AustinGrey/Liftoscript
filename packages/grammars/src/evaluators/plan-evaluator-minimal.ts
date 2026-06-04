@@ -303,8 +303,8 @@ function Program_runFinishDayScript(
       },
       "planner",
     );
-    runner.execute();
-    updates = runner.getUpdates();
+    const [resultingUpdates] = runner.execute(settings.units);
+    updates = resultingUpdates;
   } catch (e) {
     if (e instanceof SyntaxError) {
       return { success: false, error: e.message };
@@ -5391,7 +5391,7 @@ function Progress_runUpdateScriptForEntry(
       fnContext,
       "update",
     );
-    runner.execute();
+    runner.execute(settings.units);
     const newEntry = Progress_applyBindings(entry, bindings, settings);
     newEntry.state = { ...newEntry.state, ...state };
     if (fnContext.prints.length > 0) {
@@ -6657,24 +6657,20 @@ class ScriptRunner {
     return liftoscriptEvaluator.getStateVariableKeys(liftoscriptTree.topNode);
   }
 
-  public execute(type?: undefined): number | IWeight | boolean;
   public execute(
+    units: IUnit,
     type?: "reps" | "weight" | "timer" | "rpe",
-  ): number | IWeight | IDynamicWeight | boolean {
+  ): [ ILiftoscriptEvaluatorUpdate[], number | IWeight | IDynamicWeight | boolean] {
     const [liftoscriptEvaluator, liftoscriptTree] = this.parse();
     const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
     let result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
     if (result == null) {
       result = 0;
     }
-    const output = convertResult(type, result, this.units);
+    const output = convertResult(type, result, units);
     this.updates = liftoscriptEvaluator.updates;
 
-    return output;
-  }
-
-  public getUpdates(): ILiftoscriptEvaluatorUpdate[] {
-    return this.updates;
+    return [this.updates, output];
   }
 }
 
