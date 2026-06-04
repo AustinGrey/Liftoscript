@@ -3251,8 +3251,6 @@ function getWeekDayDescriptionAndFillLastDayFullText(
 }
 
 export class PlannerExerciseEvaluator {
-  private weeks: IPlannerExerciseEvaluatorWeek[] = [];
-
   constructor(
     settings: ISettings,
     mode: IPlannerExerciseEvaluatorMode,
@@ -3275,7 +3273,7 @@ export class PlannerExerciseEvaluator {
         );
       }
 
-      this.weeks = [];
+      let weeks: IPlannerExerciseEvaluatorWeek[] = [];
       let exerciseIndex = 0;
       let latestDescriptions: string[][] = [];
       for (const child of CollectionUtils_compact(getChildren(programNode))) {
@@ -3295,10 +3293,10 @@ export class PlannerExerciseEvaluator {
           }
           const weekName = child.source.replace(/^#+/, "").trim();
           const [line] = child.getLineAndOffset();
-          this.weeks.push({ name: weekName, line, days: [] });
+          weeks.push({ name: weekName, line, days: [] });
           dayData = {
             day: dayData.day,
-            week: this.weeks.length + 1,
+            week: weeks.length + 1,
             dayInWeek: 0,
           };
         } else if (child.type.name === PlannerNodeName.Day) {
@@ -3308,7 +3306,7 @@ export class PlannerExerciseEvaluator {
               child,
             );
           }
-          if (this.weeks.length === 0) {
+          if (weeks.length === 0) {
             errorPlannerSyntax(
               `You need to specify a week before a day`,
               child,
@@ -3316,7 +3314,7 @@ export class PlannerExerciseEvaluator {
           }
           const dayName = child.source.replace(/^#+/, "").trim();
           const [line] = child.getLineAndOffset();
-          this.weeks[this.weeks.length - 1].days.push({
+          weeks[weeks.length - 1].days.push({
             name: dayName,
             line,
             exercises: [],
@@ -3338,15 +3336,14 @@ export class PlannerExerciseEvaluator {
         } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
           if (
             mode === "full" &&
-            (this.weeks.length === 0 ||
-              this.weeks[this.weeks.length - 1].days.length === 0)
+            (weeks.length === 0 || weeks[weeks.length - 1].days.length === 0)
           ) {
             errorPlannerSyntax(
               `You should first define a week and a day before listing exercises.`,
               child,
             );
-          } else if (this.weeks.length === 0) {
-            this.weeks.push({
+          } else if (weeks.length === 0) {
+            weeks.push({
               name: "Week 1",
               line: 1,
               days: [{ name: "Day 1", line: 1, exercises: [] }],
@@ -3575,8 +3572,8 @@ export class PlannerExerciseEvaluator {
               warmupPoint,
             },
           };
-          this.weeks[this.weeks.length - 1].days[
-            this.weeks[this.weeks.length - 1].days.length - 1
+          weeks[weeks.length - 1].days[
+            weeks[weeks.length - 1].days.length - 1
           ].exercises.push(plannerExercise);
           if (!notused) {
             exerciseIndex += 1;
@@ -3588,8 +3585,7 @@ export class PlannerExerciseEvaluator {
           );
         }
       }
-      const program = this.weeks;
-      return { data: program, success: true };
+      return { data: weeks, success: true };
     } catch (e) {
       if (e instanceof PlannerSyntaxError) {
         return { error: e, success: false };
