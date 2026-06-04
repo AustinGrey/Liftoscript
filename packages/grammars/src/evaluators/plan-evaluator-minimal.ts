@@ -3250,14 +3250,6 @@ export class PlannerExerciseEvaluator {
     this.mode = mode;
   }
 
-  private addDescription(value: string): void {
-    value = value.replace(/^\/\//, "");
-    if (this.latestDescriptions.length === 0) {
-      this.latestDescriptions.push([]);
-    }
-    this.latestDescriptions[this.latestDescriptions.length - 1].push(value);
-  }
-
   private getWeekDayDescriptionAndFillLastDayFullText(): string | undefined {
     const { linesToPreviousExercise, nextLines } =
       getWeekDayOngoingLinesFullText(this.ongoingLinesFullText);
@@ -3301,7 +3293,6 @@ export class PlannerExerciseEvaluator {
           if (this.latestDescriptions.length > 0) {
             this.latestDescriptions.push([]);
           }
-          continue;
         } else if (child.type.name === PlannerNodeName.Week) {
           if (this.mode === "perday") {
             errorPlannerSyntax(
@@ -3345,8 +3336,12 @@ export class PlannerExerciseEvaluator {
           this.exerciseIndex = 0;
         } else if (child.type.name === PlannerNodeName.LineComment) {
           const value = child.source.trim();
-          this.addDescription(value);
-          continue;
+          if (this.latestDescriptions.length === 0) {
+            this.latestDescriptions.push([]);
+          }
+          this.latestDescriptions[this.latestDescriptions.length - 1].push(
+            value.replace(/^\/\//, ""),
+          );
         } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
           if (
             this.mode === "full" &&
