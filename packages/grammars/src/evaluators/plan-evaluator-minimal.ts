@@ -35,7 +35,7 @@ import {
   type IDynamicWeight,
   type IUnit,
   type IWeight,
-  parse,
+  parse as parseWeight,
   parsePct,
   percentORM,
   print,
@@ -2233,7 +2233,7 @@ function fnArgsToStateVars(
     }
     try {
       const fnArgVal = fnArgValStr.match(/(lb|kg)/)
-        ? parse(fnArgValStr)
+        ? parseWeight(fnArgValStr)
         : fnArgValStr.match(/%/)
           ? percentORM(parseFloat(fnArgValStr))
           : MathUtils_roundFloat(parseFloat(fnArgValStr), 2);
@@ -2591,6 +2591,241 @@ function errorPlannerSyntax(message: string, node: SourcedSyntaxNode): never {
   throw PlannerSyntaxError.fromPoint(undefined, message, getPoint(node));
 }
 
+function parse(expr: SourcedSyntaxNode): void {
+  const cursor = expr.cursor();
+  do {
+    if (cursor.node.type.isError) {
+      errorPlannerSyntax("Syntax error", cursor.node);
+    }
+  } while (cursor.next());
+}
+
+function evaluateSet(expr: SourcedSyntaxNode): IPlannerProgramExerciseSet {
+  if (expr.type.name === PlannerNodeName.ExerciseSet) {
+    const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
+    const setParts = setPartNodes
+      .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
+      .join("");
+    const repRange = getRepRange(setParts);
+    const rpeNode = expr.getChild(PlannerNodeName.Rpe);
+    const timerNode = expr.getChild(PlannerNodeName.Timer);
+    const percentageNode = expr.getChild(PlannerNodeName.PercentageWithPlus);
+    const weightNode = expr.getChild(PlannerNodeName.WeightWithPlus);
+    const labelNode = expr.getChild(PlannerNodeName.SetLabel);
+    const askWeightNode = expr.getChild(PlannerNodeName.AskWeight);
+    const askWeight =
+      askWeightNode != null ||
+      (weightNode != null &&
+        getNodeSourceEscapedWhiteSpace(weightNode).indexOf("+") !== -1) ||
+      (percentageNode != null &&
+        getNodeSourceEscapedWhiteSpace(percentageNode).indexOf("+") !== -1);
+    const logRpe =
+      rpeNode == null
+        ? undefined
+        : getNodeSourceEscapedWhiteSpace(rpeNode).indexOf("+") !== -1;
+    let rpe =
+      rpeNode == null
+        ? undefined
+        : parseFloat(
+            getNodeSourceEscapedWhiteSpace(rpeNode)
+              .replace("@", "")
+              .replace("+", ""),
+          );
+    if (rpe != null && isNaN(rpe)) {
+      rpe = undefined;
+    }
+    const timer =
+      timerNode == null
+        ? undefined
+        : parseInt(
+            getNodeSourceEscapedWhiteSpace(timerNode).replace("s", ""),
+            10,
+          );
+    const percentage =
+      percentageNode == null
+        ? undefined
+        : parseFloat(
+            getNodeSourceEscapedWhiteSpace(percentageNode).replace(/[%+]/, ""),
+          );
+    const weight = getWeight(weightNode);
+    const label = labelNode
+      ? getChildren(labelNode)
+          .map((n) => getNodeSourceEscapedWhiteSpace(n))
+          .join(" ")
+      : undefined;
+    if (labelNode && label && label.length > 8) {
+      errorPlannerSyntax("Label length should be 8 chars max", labelNode);
+    }
+    return {
+      repRange,
+      timer,
+      logRpe,
+      rpe,
+      weight,
+      percentage,
+      label,
+      askWeight,
+    };
+  } else {
+    assert(PlannerNodeName.ExerciseSection);
+  }
+}
+
+function evaluateId(expr: SourcedSyntaxNode): number[] {
+  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
+    const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
+    if (valueNode == null) {
+      throw errorPlannerSyntax(`Missing value for the property 'id'`, expr);
+    }
+    const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
+    if (fnNameNode == null) {
+      assert(PlannerNodeName.FunctionName);
+    }
+    const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
+    if (["tags"].indexOf(fnName) === -1) {
+      errorPlannerSyntax(`There's no such id type - '${fnName}'`, fnNameNode);
+    }
+    const fnArgs = valueNode
+      .getChildren(PlannerNodeName.FunctionArgument)
+      .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
+    if (fnName === "tags") {
+      if (fnArgs.length === 0) {
+        errorPlannerSyntax(
+          `You should provide the list of numbers in "tags"`,
+          fnNameNode,
+        );
+      }
+    }
+    return fnArgs.map((t) => parseInt(t, 10)).filter((t) => !isNaN(t));
+  } else {
+    assert(PlannerNodeName.ExerciseProperty);
+  }
+}
+function validateProgress(
+  fnName: string,
+  fnArgs: string[],
+  fnNameNode: SourcedSyntaxNode,
+  valueNode: SourcedSyntaxNode,
+): void {
+  if (["lp", "sum", "dp", "custom", "none"].indexOf(fnName) === -1) {
+    errorPlannerSyntax(
+      `There's no such progression exists - '${fnName}'`,
+      fnNameNode,
+    );
+  }
+  if (fnName === "lp") {
+    if (fnArgs.length > 6) {
+      errorPlannerSyntax(
+        `Linear Progression 'lp' only has 6 arguments max`,
+        valueNode,
+      );
+    } else if (
+      fnArgs[0] &&
+      !fnArgs[0].endsWith("lb") &&
+      !fnArgs[0].endsWith("kg") &&
+      !fnArgs[0].endsWith("%")
+    ) {
+      errorPlannerSyntax(
+        `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+        valueNode,
+      );
+    } else if (fnArgs[1] != null && isNaN(parseInt(fnArgs[1], 10))) {
+      errorPlannerSyntax(
+        `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
+        valueNode,
+      );
+    } else if (fnArgs[2] != null && isNaN(parseInt(fnArgs[2], 10))) {
+      errorPlannerSyntax(
+        `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
+        valueNode,
+      );
+    } else if (
+      fnArgs[3] != null &&
+      !fnArgs[3].endsWith("lb") &&
+      !fnArgs[3].endsWith("kg") &&
+      !fnArgs[3].endsWith("%")
+    ) {
+      errorPlannerSyntax(
+        `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+        valueNode,
+      );
+    } else if (fnArgs[4] != null && isNaN(parseInt(fnArgs[4], 10))) {
+      errorPlannerSyntax(
+        `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
+        valueNode,
+      );
+    } else if (fnArgs[5] != null && isNaN(parseInt(fnArgs[5], 10))) {
+      errorPlannerSyntax(
+        `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
+        valueNode,
+      );
+    }
+  } else if (fnName === "sum") {
+    if (fnArgs.length > 2) {
+      errorPlannerSyntax(
+        `Reps Sum Progression 'sum' only has 2 arguments max`,
+        valueNode,
+      );
+    } else if (fnArgs[0] == null || isNaN(parseInt(fnArgs[0], 10))) {
+      errorPlannerSyntax(
+        `1st argument of 'sum' should be a number of reps - i.e. a number`,
+        valueNode,
+      );
+    } else if (
+      fnArgs[1] == null ||
+      (!fnArgs[1].endsWith("lb") &&
+        !fnArgs[1].endsWith("kg") &&
+        !fnArgs[1].endsWith("%"))
+    ) {
+      errorPlannerSyntax(
+        `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+        valueNode,
+      );
+    }
+  } else if (fnName === "dp") {
+    if (fnArgs.length !== 3) {
+      errorPlannerSyntax(
+        `Double Progression 'dp' should have 3 arguments`,
+        valueNode,
+      );
+    } else if (
+      fnArgs[0] == null ||
+      (!fnArgs[0].endsWith("lb") &&
+        !fnArgs[0].endsWith("kg") &&
+        !fnArgs[0].endsWith("%"))
+    ) {
+      errorPlannerSyntax(
+        `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+        valueNode,
+      );
+    } else if (fnArgs[1] == null || isNaN(parseInt(fnArgs[1], 10))) {
+      errorPlannerSyntax(
+        `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
+        valueNode,
+      );
+    } else if (fnArgs[2] == null || isNaN(parseInt(fnArgs[2], 10))) {
+      errorPlannerSyntax(
+        `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
+        valueNode,
+      );
+    }
+  } else if (fnName === "custom") {
+    const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
+    const script = liftoscriptNode ? liftoscriptNode.source : undefined;
+    const reuseLiftoscriptNode = valueNode
+      .getChild(PlannerNodeName.ReuseLiftoscript)
+      ?.getChild(PlannerNodeName.ReuseSection)
+      ?.getChild(PlannerNodeName.ExerciseName);
+    const body = reuseLiftoscriptNode ? reuseLiftoscriptNode.source : undefined;
+    if (!script && !body) {
+      errorPlannerSyntax(
+        `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
+        valueNode,
+      );
+    }
+  }
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -2615,120 +2850,6 @@ export class PlannerExerciseEvaluator {
     this.settings = settings;
     this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
     this.mode = mode;
-  }
-
-  public parse(expr: SourcedSyntaxNode): void {
-    const cursor = expr.cursor();
-    do {
-      if (cursor.node.type.isError) {
-        errorPlannerSyntax("Syntax error", cursor.node);
-      }
-    } while (cursor.next());
-  }
-
-  private evaluateSet(expr: SourcedSyntaxNode): IPlannerProgramExerciseSet {
-    if (expr.type.name === PlannerNodeName.ExerciseSet) {
-      const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
-      const setParts = setPartNodes
-        .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
-        .join("");
-      const repRange = getRepRange(setParts);
-      const rpeNode = expr.getChild(PlannerNodeName.Rpe);
-      const timerNode = expr.getChild(PlannerNodeName.Timer);
-      const percentageNode = expr.getChild(PlannerNodeName.PercentageWithPlus);
-      const weightNode = expr.getChild(PlannerNodeName.WeightWithPlus);
-      const labelNode = expr.getChild(PlannerNodeName.SetLabel);
-      const askWeightNode = expr.getChild(PlannerNodeName.AskWeight);
-      const askWeight =
-        askWeightNode != null ||
-        (weightNode != null &&
-          getNodeSourceEscapedWhiteSpace(weightNode).indexOf("+") !== -1) ||
-        (percentageNode != null &&
-          getNodeSourceEscapedWhiteSpace(percentageNode).indexOf("+") !== -1);
-      const logRpe =
-        rpeNode == null
-          ? undefined
-          : getNodeSourceEscapedWhiteSpace(rpeNode).indexOf("+") !== -1;
-      let rpe =
-        rpeNode == null
-          ? undefined
-          : parseFloat(
-              getNodeSourceEscapedWhiteSpace(rpeNode)
-                .replace("@", "")
-                .replace("+", ""),
-            );
-      if (rpe != null && isNaN(rpe)) {
-        rpe = undefined;
-      }
-      const timer =
-        timerNode == null
-          ? undefined
-          : parseInt(
-              getNodeSourceEscapedWhiteSpace(timerNode).replace("s", ""),
-              10,
-            );
-      const percentage =
-        percentageNode == null
-          ? undefined
-          : parseFloat(
-              getNodeSourceEscapedWhiteSpace(percentageNode).replace(
-                /[%+]/,
-                "",
-              ),
-            );
-      const weight = getWeight(weightNode);
-      const label = labelNode
-        ? getChildren(labelNode)
-            .map((n) => getNodeSourceEscapedWhiteSpace(n))
-            .join(" ")
-        : undefined;
-      if (labelNode && label && label.length > 8) {
-        errorPlannerSyntax("Label length should be 8 chars max", labelNode);
-      }
-      return {
-        repRange,
-        timer,
-        logRpe,
-        rpe,
-        weight,
-        percentage,
-        label,
-        askWeight,
-      };
-    } else {
-      assert(PlannerNodeName.ExerciseSection);
-    }
-  }
-
-  private evaluateId(expr: SourcedSyntaxNode): number[] {
-    if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-      const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
-      if (valueNode == null) {
-        throw errorPlannerSyntax(`Missing value for the property 'id'`, expr);
-      }
-      const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
-      if (fnNameNode == null) {
-        assert(PlannerNodeName.FunctionName);
-      }
-      const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
-      if (["tags"].indexOf(fnName) === -1) {
-        errorPlannerSyntax(`There's no such id type - '${fnName}'`, fnNameNode);
-      }
-      const fnArgs = valueNode
-        .getChildren(PlannerNodeName.FunctionArgument)
-        .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
-      if (fnName === "tags") {
-        if (fnArgs.length === 0) {
-          errorPlannerSyntax(
-            `You should provide the list of numbers in "tags"`,
-            fnNameNode,
-          );
-        }
-      }
-      return fnArgs.map((t) => parseInt(t, 10)).filter((t) => !isNaN(t));
-    } else {
-      assert(PlannerNodeName.ExerciseProperty);
-    }
   }
 
   private evaluateUpdate(
@@ -2810,133 +2931,6 @@ export class PlannerExerciseEvaluator {
     }
   }
 
-  private validateProgress(
-    fnName: string,
-    fnArgs: string[],
-    fnNameNode: SourcedSyntaxNode,
-    valueNode: SourcedSyntaxNode,
-  ): void {
-    if (["lp", "sum", "dp", "custom", "none"].indexOf(fnName) === -1) {
-      errorPlannerSyntax(
-        `There's no such progression exists - '${fnName}'`,
-        fnNameNode,
-      );
-    }
-    if (fnName === "lp") {
-      if (fnArgs.length > 6) {
-        errorPlannerSyntax(
-          `Linear Progression 'lp' only has 6 arguments max`,
-          valueNode,
-        );
-      } else if (
-        fnArgs[0] &&
-        !fnArgs[0].endsWith("lb") &&
-        !fnArgs[0].endsWith("kg") &&
-        !fnArgs[0].endsWith("%")
-      ) {
-        errorPlannerSyntax(
-          `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      } else if (fnArgs[1] != null && isNaN(parseInt(fnArgs[1], 10))) {
-        errorPlannerSyntax(
-          `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
-          valueNode,
-        );
-      } else if (fnArgs[2] != null && isNaN(parseInt(fnArgs[2], 10))) {
-        errorPlannerSyntax(
-          `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
-          valueNode,
-        );
-      } else if (
-        fnArgs[3] != null &&
-        !fnArgs[3].endsWith("lb") &&
-        !fnArgs[3].endsWith("kg") &&
-        !fnArgs[3].endsWith("%")
-      ) {
-        errorPlannerSyntax(
-          `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      } else if (fnArgs[4] != null && isNaN(parseInt(fnArgs[4], 10))) {
-        errorPlannerSyntax(
-          `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
-          valueNode,
-        );
-      } else if (fnArgs[5] != null && isNaN(parseInt(fnArgs[5], 10))) {
-        errorPlannerSyntax(
-          `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
-          valueNode,
-        );
-      }
-    } else if (fnName === "sum") {
-      if (fnArgs.length > 2) {
-        errorPlannerSyntax(
-          `Reps Sum Progression 'sum' only has 2 arguments max`,
-          valueNode,
-        );
-      } else if (fnArgs[0] == null || isNaN(parseInt(fnArgs[0], 10))) {
-        errorPlannerSyntax(
-          `1st argument of 'sum' should be a number of reps - i.e. a number`,
-          valueNode,
-        );
-      } else if (
-        fnArgs[1] == null ||
-        (!fnArgs[1].endsWith("lb") &&
-          !fnArgs[1].endsWith("kg") &&
-          !fnArgs[1].endsWith("%"))
-      ) {
-        errorPlannerSyntax(
-          `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      }
-    } else if (fnName === "dp") {
-      if (fnArgs.length !== 3) {
-        errorPlannerSyntax(
-          `Double Progression 'dp' should have 3 arguments`,
-          valueNode,
-        );
-      } else if (
-        fnArgs[0] == null ||
-        (!fnArgs[0].endsWith("lb") &&
-          !fnArgs[0].endsWith("kg") &&
-          !fnArgs[0].endsWith("%"))
-      ) {
-        errorPlannerSyntax(
-          `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      } else if (fnArgs[1] == null || isNaN(parseInt(fnArgs[1], 10))) {
-        errorPlannerSyntax(
-          `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
-          valueNode,
-        );
-      } else if (fnArgs[2] == null || isNaN(parseInt(fnArgs[2], 10))) {
-        errorPlannerSyntax(
-          `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
-          valueNode,
-        );
-      }
-    } else if (fnName === "custom") {
-      const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-      const script = liftoscriptNode ? liftoscriptNode.source : undefined;
-      const reuseLiftoscriptNode = valueNode
-        .getChild(PlannerNodeName.ReuseLiftoscript)
-        ?.getChild(PlannerNodeName.ReuseSection)
-        ?.getChild(PlannerNodeName.ExerciseName);
-      const body = reuseLiftoscriptNode
-        ? reuseLiftoscriptNode.source
-        : undefined;
-      if (!script && !body) {
-        errorPlannerSyntax(
-          `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
-          valueNode,
-        );
-      }
-    }
-  }
-
   private evaluateProgress(
     expr: SourcedSyntaxNode,
     exerciseType?: IExerciseType,
@@ -2974,7 +2968,7 @@ export class PlannerExerciseEvaluator {
       const fnArgs = valueNode
         .getChildren(PlannerNodeName.FunctionArgument)
         .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
-      this.validateProgress(fnName, fnArgs, fnNameNode, valueNode);
+      validateProgress(fnName, fnArgs, fnNameNode, valueNode);
 
       const type = fnName as IProgramExerciseProgressType;
       if (type === "custom") {
@@ -3058,7 +3052,7 @@ export class PlannerExerciseEvaluator {
       } else if (name === "warmup") {
         return { type: "warmup", data: evaluateWarmup(expr) };
       } else if (name === "id") {
-        return { type: "id", data: this.evaluateId(expr) };
+        return { type: "id", data: evaluateId(expr) };
       } else if (name === "used") {
         return { type: "used", data: "" };
       } else {
@@ -3097,7 +3091,7 @@ export class PlannerExerciseEvaluator {
         if (sets.length > 0) {
           return {
             type: "sets",
-            data: sets.map((set) => this.evaluateSet(set)),
+            data: sets.map((set) => evaluateSet(set)),
             isCurrent,
           };
         }
@@ -3542,7 +3536,7 @@ export class PlannerExerciseEvaluator {
 
   public evaluate(programNode: SourcedSyntaxNode): IPlannerEvalFullResult {
     try {
-      this.parse(programNode);
+      parse(programNode);
       const program = this.evaluateProgram(programNode);
       return { data: program, success: true };
     } catch (e) {
@@ -3569,7 +3563,7 @@ export class PlannerExerciseEvaluator {
     if (programNode.type.name !== PlannerNodeName.Program) {
       throw new Error(`Unexpected node type ${programNode.type.name}`);
     }
-    this.parse(programNode);
+    parse(programNode);
     this.ongoingLinesFullText = [];
     this.weeksFullText = [];
     for (const child of CollectionUtils_compact(getChildren(programNode))) {
