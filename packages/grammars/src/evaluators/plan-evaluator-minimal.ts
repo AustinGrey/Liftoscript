@@ -2431,6 +2431,73 @@ function getPoint(node: SourcedSyntaxNode): IPlannerSyntaxPointer {
   return { line, offset, from: node.from, to: node.to };
 }
 
+function evaluateWarmup(
+  expr: SourcedSyntaxNode,
+): IPlannerProgramExerciseWarmupSet[] {
+  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
+    const none = expr.getChild(PlannerNodeName.None);
+    if (none != null) {
+      return [];
+    }
+    const setsNode = expr.getChild(PlannerNodeName.WarmupExerciseSets);
+    if (setsNode != null) {
+      const sets = setsNode.getChildren(PlannerNodeName.WarmupExerciseSet);
+      if (sets.length > 0) {
+        return sets.map((set) => evaluateWarmupSet(set));
+      }
+    }
+    return [];
+  } else {
+    assert(PlannerNodeName.ExerciseProperty);
+  }
+}
+
+function evaluateSuperset(expr: SourcedSyntaxNode): {
+  type: "superset";
+  data: IPlannerProgramExerciseSuperset;
+} {
+  if (expr.type.name === PlannerNodeName.Superset) {
+    const exerciseNameNode = expr.getChild(PlannerNodeName.ExerciseName);
+    if (exerciseNameNode != null) {
+      const name = getNodeSourceEscapedWhiteSpace(exerciseNameNode);
+      return {
+        type: "superset",
+        data: { name },
+      };
+    } else {
+      assert(PlannerNodeName.ExerciseName);
+    }
+  } else {
+    assert(PlannerNodeName.Superset);
+  }
+}
+function getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
+  week?: number;
+  day?: number;
+} {
+  let week: number | undefined;
+  let day: number | undefined;
+  if (weekDayNode != null) {
+    const result = weekDayNode
+      .getChildren(PlannerNodeName.WeekOrDay)
+      .map((n) => {
+        const child = getChildren(n)[0];
+        if (child.type.name === PlannerNodeName.Int) {
+          return parseInt(getNodeSourceEscapedWhiteSpace(child), 10);
+        } else {
+          return undefined;
+        }
+      });
+    if (result.length === 1) {
+      day = result[0];
+    } else {
+      week = result[0];
+      day = result[1];
+    }
+  }
+  return { week, day };
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -2868,47 +2935,6 @@ export class PlannerExerciseEvaluator {
     }
   }
 
-  private evaluateWarmup(
-    expr: SourcedSyntaxNode,
-  ): IPlannerProgramExerciseWarmupSet[] {
-    if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-      const none = expr.getChild(PlannerNodeName.None);
-      if (none != null) {
-        return [];
-      }
-      const setsNode = expr.getChild(PlannerNodeName.WarmupExerciseSets);
-      if (setsNode != null) {
-        const sets = setsNode.getChildren(PlannerNodeName.WarmupExerciseSet);
-        if (sets.length > 0) {
-          return sets.map((set) => evaluateWarmupSet(set));
-        }
-      }
-      return [];
-    } else {
-      assert(PlannerNodeName.ExerciseProperty);
-    }
-  }
-
-  private evaluateSuperset(expr: SourcedSyntaxNode): {
-    type: "superset";
-    data: IPlannerProgramExerciseSuperset;
-  } {
-    if (expr.type.name === PlannerNodeName.Superset) {
-      const exerciseNameNode = expr.getChild(PlannerNodeName.ExerciseName);
-      if (exerciseNameNode != null) {
-        const name = getNodeSourceEscapedWhiteSpace(exerciseNameNode);
-        return {
-          type: "superset",
-          data: { name },
-        };
-      } else {
-        assert(PlannerNodeName.ExerciseName);
-      }
-    } else {
-      assert(PlannerNodeName.Superset);
-    }
-  }
-
   private evaluateProperty(
     expr: SourcedSyntaxNode,
     exerciseType?: IExerciseType,
@@ -2935,7 +2961,7 @@ export class PlannerExerciseEvaluator {
           data: this.evaluateUpdate(expr, exerciseType),
         };
       } else if (name === "warmup") {
-        return { type: "warmup", data: this.evaluateWarmup(expr) };
+        return { type: "warmup", data: evaluateWarmup(expr) };
       } else if (name === "id") {
         return { type: "id", data: this.evaluateId(expr) };
       } else if (name === "used") {
@@ -2946,33 +2972,6 @@ export class PlannerExerciseEvaluator {
     } else {
       assert(PlannerNodeName.ExerciseProperty);
     }
-  }
-
-  private getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
-    week?: number;
-    day?: number;
-  } {
-    let week: number | undefined;
-    let day: number | undefined;
-    if (weekDayNode != null) {
-      const result = weekDayNode
-        .getChildren(PlannerNodeName.WeekOrDay)
-        .map((n) => {
-          const child = getChildren(n)[0];
-          if (child.type.name === PlannerNodeName.Int) {
-            return parseInt(getNodeSourceEscapedWhiteSpace(child), 10);
-          } else {
-            return undefined;
-          }
-        });
-      if (result.length === 1) {
-        day = result[0];
-      } else {
-        week = result[0];
-        day = result[1];
-      }
-    }
-    return { week, day };
   }
 
   private evaluateReuseNode(expr: SourcedSyntaxNode): {
@@ -2987,7 +2986,7 @@ export class PlannerExerciseEvaluator {
         assert(PlannerNodeName.ExerciseName);
       }
       const name = getNodeSourceEscapedWhiteSpace(nameNode);
-      const { week, day } = this.getReuseWeekDay(
+      const { week, day } = getReuseWeekDay(
         expr.getChild(PlannerNodeName.WeekDay),
       );
       return {
@@ -3031,7 +3030,7 @@ export class PlannerExerciseEvaluator {
       }
       const superset = expr.getChild(PlannerNodeName.Superset);
       if (superset != null) {
-        return this.evaluateSuperset(superset);
+        return evaluateSuperset(superset);
       }
       const property = expr.getChild(PlannerNodeName.ExerciseProperty);
       if (property != null) {
