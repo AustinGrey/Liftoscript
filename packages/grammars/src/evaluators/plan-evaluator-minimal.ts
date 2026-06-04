@@ -2389,6 +2389,44 @@ function getWeight(expr?: SourcedSyntaxNode | null): IWeight | undefined {
   }
 }
 
+function evaluateWarmupSet(
+  expr: SourcedSyntaxNode,
+): IPlannerProgramExerciseWarmupSet {
+  if (expr.type.name === PlannerNodeName.WarmupExerciseSet) {
+    const setPartNodes = expr.getChildren(PlannerNodeName.WarmupSetPart);
+    const setParts = setPartNodes
+      .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
+      .join("");
+    const { numberOfSets, reps } = getWarmupReps(setParts);
+    const percentageNode = expr.getChild(PlannerNodeName.Percentage);
+    const weightNode = expr.getChild(PlannerNodeName.Weight);
+    const percentage =
+      percentageNode == null
+        ? undefined
+        : parseFloat(
+            getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
+          );
+    const weight = getWeight(weightNode);
+    if (percentage) {
+      return {
+        type: "warmup",
+        reps,
+        numberOfSets,
+        percentage,
+      };
+    } else {
+      return {
+        type: "warmup",
+        reps,
+        numberOfSets,
+        weight: weight!,
+      };
+    }
+  } else {
+    assert(PlannerNodeName.ExerciseSection);
+  }
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -2431,44 +2469,6 @@ export class PlannerExerciseEvaluator {
         this.error("Syntax error", cursor.node);
       }
     } while (cursor.next());
-  }
-
-  private evaluateWarmupSet(
-    expr: SourcedSyntaxNode,
-  ): IPlannerProgramExerciseWarmupSet {
-    if (expr.type.name === PlannerNodeName.WarmupExerciseSet) {
-      const setPartNodes = expr.getChildren(PlannerNodeName.WarmupSetPart);
-      const setParts = setPartNodes
-        .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
-        .join("");
-      const { numberOfSets, reps } = getWarmupReps(setParts);
-      const percentageNode = expr.getChild(PlannerNodeName.Percentage);
-      const weightNode = expr.getChild(PlannerNodeName.Weight);
-      const percentage =
-        percentageNode == null
-          ? undefined
-          : parseFloat(
-              getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
-            );
-      const weight = getWeight(weightNode);
-      if (percentage) {
-        return {
-          type: "warmup",
-          reps,
-          numberOfSets,
-          percentage,
-        };
-      } else {
-        return {
-          type: "warmup",
-          reps,
-          numberOfSets,
-          weight: weight!,
-        };
-      }
-    } else {
-      assert(PlannerNodeName.ExerciseSection);
-    }
   }
 
   private evaluateSet(expr: SourcedSyntaxNode): IPlannerProgramExerciseSet {
@@ -2881,7 +2881,7 @@ export class PlannerExerciseEvaluator {
       if (setsNode != null) {
         const sets = setsNode.getChildren(PlannerNodeName.WarmupExerciseSet);
         if (sets.length > 0) {
-          return sets.map((set) => this.evaluateWarmupSet(set));
+          return sets.map((set) => evaluateWarmupSet(set));
         }
       }
       return [];
