@@ -3258,296 +3258,6 @@ export class PlannerExerciseEvaluator {
     this.latestDescriptions[this.latestDescriptions.length - 1].push(value);
   }
 
-  private evaluateExercise(expr: SourcedSyntaxNode, settings: ISettings): void {
-    if (
-      expr.type.name === PlannerNodeName.EmptyExpression ||
-      expr.type.name === PlannerNodeName.TripleLineComment
-    ) {
-      if (this.latestDescriptions.length > 0) {
-        this.latestDescriptions.push([]);
-      }
-      return;
-    } else if (expr.type.name === PlannerNodeName.Week) {
-      if (this.mode === "perday") {
-        errorPlannerSyntax(
-          `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
-          expr,
-        );
-      }
-      const weekName = expr.source.replace(/^#+/, "").trim();
-      const [line] = expr.getLineAndOffset();
-      this.weeks.push({ name: weekName, line, days: [] });
-      this.dayData = {
-        day: this.dayData.day,
-        week: this.weeks.length + 1,
-        dayInWeek: 0,
-      };
-    } else if (expr.type.name === PlannerNodeName.Day) {
-      if (this.mode === "perday") {
-        errorPlannerSyntax(
-          `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
-          expr,
-        );
-      }
-      if (this.weeks.length === 0) {
-        errorPlannerSyntax(`You need to specify a week before a day`, expr);
-      }
-      const dayName = expr.source.replace(/^#+/, "").trim();
-      const [line] = expr.getLineAndOffset();
-      this.weeks[this.weeks.length - 1].days.push({
-        name: dayName,
-        line,
-        exercises: [],
-      });
-      this.dayData = {
-        day: this.dayData.day + 1,
-        week: this.dayData.week,
-        dayInWeek: (this.dayData.dayInWeek || 0) + 1,
-      };
-      this.exerciseIndex = 0;
-    } else if (expr.type.name === PlannerNodeName.LineComment) {
-      const value = expr.source.trim();
-      this.addDescription(value);
-      return undefined;
-    } else if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-      if (
-        this.mode === "full" &&
-        (this.weeks.length === 0 ||
-          this.weeks[this.weeks.length - 1].days.length === 0)
-      ) {
-        errorPlannerSyntax(
-          `You should first define a week and a day before listing exercises.`,
-          expr,
-        );
-      } else if (this.weeks.length === 0) {
-        this.weeks.push({
-          name: "Week 1",
-          line: 1,
-          days: [{ name: "Day 1", line: 1, exercises: [] }],
-        });
-      }
-      const nameNode = expr.getChild(PlannerNodeName.ExerciseName);
-      if (nameNode == null) {
-        assert("ExerciseName");
-      }
-
-      const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
-
-      let { label, name, equipment } = extractNameParts(
-        fullName,
-        settings.exercises,
-      );
-      const key = PlannerKey_fromFullName(fullName, settings.exercises);
-      const shortName = PlannerProgramExercise_shortNameFromFullName(
-        fullName,
-        settings,
-      );
-      const exercise = Exercise_findByNameAndEquipment(
-        shortName,
-        settings.exercises,
-      );
-      let notused = getIsNotUsed(expr);
-      const sectionNodes = expr.getChildren(PlannerNodeName.ExerciseSection);
-      const setVariations: IPlannerProgramExerciseSetVariation[] = [];
-      const allSets: IPlannerProgramExerciseSet[] = [];
-      let allWarmupSets: IPlannerProgramExerciseWarmupSet[] | undefined;
-      let reuse: IPlannerProgramReuse | undefined;
-      const repeat = getRepeat(expr);
-      const order = getOrder(expr);
-      const text = expr.source.trim();
-      let tags: number[] = [];
-      let progress: IProgramExerciseProgress | undefined;
-      let update: IProgramExerciseUpdate | undefined;
-      let superset: IPlannerProgramExerciseSuperset | undefined;
-      for (const sectionNode of sectionNodes) {
-        const section = evaluateSection(
-          sectionNode,
-          settings,
-          this.dayData,
-          exercise ? { id: exercise.id, equipment } : undefined,
-        );
-        if (section.type === "sets") {
-          allSets.push(...section.data);
-          if (section.data.some((set) => set.repRange != null)) {
-            setVariations.push({
-              sets: section.data,
-              isCurrent: section.isCurrent,
-            });
-          }
-        } else if (section.type === "warmup") {
-          allWarmupSets = allWarmupSets || [];
-          allWarmupSets.push(...section.data);
-        } else if (section.type === "progress") {
-          progress = section.data;
-        } else if (section.type === "update") {
-          update = section.data;
-        } else if (section.type === "reuse") {
-          reuse = section.data;
-        } else if (section.type === "id") {
-          tags = tags.concat(section.data);
-        } else if (section.type === "superset") {
-          superset = section.data;
-        } else if (section.type === "used") {
-          notused = true;
-        } else {
-          throw new Error(`Unexpected section type`);
-        }
-      }
-      const rpe = allSets.find(
-        (set) => set.repRange == null && set.rpe != null,
-      )?.rpe;
-      const timer = allSets.find(
-        (set) => set.repRange == null && set.timer != null,
-      )?.timer;
-      const percentage = allSets.find(
-        (set) => set.repRange == null && set.percentage != null,
-      )?.percentage;
-      const weight = allSets.find(
-        (set) => set.repRange == null && set.weight != null,
-      )?.weight;
-      const logRpe = allSets.find(
-        (set) => set.repRange == null && set.logRpe != null,
-      )?.logRpe;
-      const askWeight = allSets.find(
-        (set) => set.repRange == null && set.askWeight != null,
-      )?.askWeight;
-      const [line] = expr.getLineAndOffset();
-      const rawDescriptions: string[] = this.latestDescriptions.map((d) =>
-        d.join("\n"),
-      );
-      const currentDescriptionIndex = rawDescriptions.findIndex((d) =>
-        /^\s*!/.test(d),
-      );
-      let descriptions = rawDescriptions.map((d, i) => ({
-        value: d.replace(/^\s*!/, ""),
-        isCurrent: i === currentDescriptionIndex,
-      }));
-      if (descriptions.length > 1) {
-        descriptions = descriptions.filter((d) => d.value);
-      }
-      descriptions = descriptions.map((d) => ({
-        ...d,
-        value: StringUtils_unindent(d.value),
-      }));
-      this.latestDescriptions = [];
-      const fullNamePoint = getPoint(nameNode);
-
-      const reuseSetsNode = expr
-        .getChildren(PlannerNodeName.ExerciseSection)
-        .map((n) => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
-        .filter((n) => n)[0];
-      const reuseSetPoint = reuseSetsNode ? getPoint(reuseSetsNode) : undefined;
-
-      const progressNode = expr
-        .getChildren(PlannerNodeName.ExerciseSection)
-        .map((n) => {
-          const node = n
-            .getChild(PlannerNodeName.ExerciseProperty)
-            ?.getChild(PlannerNodeName.ExercisePropertyName);
-          return node != null && node.source === "progress" ? node : undefined;
-        })
-        .flat(2)
-        .filter((n) => n)[0];
-      const progressPoint = progressNode ? getPoint(progressNode) : undefined;
-
-      const updateNode = expr
-        .getChildren(PlannerNodeName.ExerciseSection)
-        .map((n) => {
-          const node = n
-            .getChild(PlannerNodeName.ExerciseProperty)
-            ?.getChild(PlannerNodeName.ExercisePropertyName);
-          return node != null && node.source === "update" ? node : undefined;
-        })
-        .flat(2)
-        .filter((n) => n)[0];
-      const updatePoint = updateNode ? getPoint(updateNode) : undefined;
-
-      const idNode = expr
-        .getChildren(PlannerNodeName.ExerciseSection)
-        .map((n) => {
-          const node = n
-            .getChild(PlannerNodeName.ExerciseProperty)
-            ?.getChild(PlannerNodeName.ExercisePropertyName);
-          return node != null && node.source === "id" ? node : undefined;
-        })
-        .flat(2)
-        .filter((n) => n)[0];
-      const idPoint = idNode ? getPoint(idNode) : undefined;
-
-      const warmupNode = expr
-        .getChildren(PlannerNodeName.ExerciseSection)
-        .map((n) =>
-          n
-            .getChild(PlannerNodeName.ExerciseProperty)
-            ?.getChild(PlannerNodeName.WarmupExerciseSets),
-        )
-        .flat(2)
-        .filter((n) => n)[0];
-      const warmupPoint = warmupNode ? getPoint(warmupNode) : undefined;
-
-      const supersetNode = expr
-        .getChildren(PlannerNodeName.ExerciseSection)
-        .map((n) => n.getChild(PlannerNodeName.Superset))
-        .filter((n) => n)[0];
-      const supersetPoint = supersetNode ? getPoint(supersetNode) : undefined;
-
-      const plannerExercise: IPlannerProgramExercise = {
-        id: generateUid(8),
-        key,
-        fullName,
-        shortName,
-        exerciseType: exercise,
-        label,
-        dayData: this.dayData,
-        text,
-        repeat,
-        repeating: [...repeat],
-        order,
-        superset,
-        name,
-        equipment,
-        exerciseIndex: this.exerciseIndex,
-        line,
-        tags,
-        notused: notused,
-        evaluatedSetVariations: [],
-        setVariations,
-        descriptions: {
-          values: descriptions,
-        },
-        warmupSets: allWarmupSets,
-        reuse,
-        progress,
-        update,
-        globals: {
-          rpe,
-          logRpe,
-          askWeight,
-          timer,
-          percentage,
-          weight,
-        },
-        points: {
-          fullName: fullNamePoint,
-          supersetPoint,
-          reuseSetPoint,
-          progressPoint,
-          idPoint,
-          updatePoint,
-          warmupPoint,
-        },
-      };
-      this.weeks[this.weeks.length - 1].days[
-        this.weeks[this.weeks.length - 1].days.length - 1
-      ].exercises.push(plannerExercise);
-      if (!notused) {
-        this.exerciseIndex += 1;
-      }
-    } else {
-      errorPlannerSyntax(`Unexpected node type ${expr.node.type.name}`, expr);
-    }
-  }
-
   private getWeekDayDescriptionAndFillLastDayFullText(): string | undefined {
     const { linesToPreviousExercise, nextLines } =
       getWeekDayOngoingLinesFullText(this.ongoingLinesFullText);
@@ -3584,7 +3294,311 @@ export class PlannerExerciseEvaluator {
       this.weeks = [];
       this.exerciseIndex = 0;
       for (const child of CollectionUtils_compact(getChildren(programNode))) {
-        this.evaluateExercise(child, settings);
+        if (
+          child.type.name === PlannerNodeName.EmptyExpression ||
+          child.type.name === PlannerNodeName.TripleLineComment
+        ) {
+          if (this.latestDescriptions.length > 0) {
+            this.latestDescriptions.push([]);
+          }
+          continue;
+        } else if (child.type.name === PlannerNodeName.Week) {
+          if (this.mode === "perday") {
+            errorPlannerSyntax(
+              `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
+              child,
+            );
+          }
+          const weekName = child.source.replace(/^#+/, "").trim();
+          const [line] = child.getLineAndOffset();
+          this.weeks.push({ name: weekName, line, days: [] });
+          this.dayData = {
+            day: this.dayData.day,
+            week: this.weeks.length + 1,
+            dayInWeek: 0,
+          };
+        } else if (child.type.name === PlannerNodeName.Day) {
+          if (this.mode === "perday") {
+            errorPlannerSyntax(
+              `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
+              child,
+            );
+          }
+          if (this.weeks.length === 0) {
+            errorPlannerSyntax(
+              `You need to specify a week before a day`,
+              child,
+            );
+          }
+          const dayName = child.source.replace(/^#+/, "").trim();
+          const [line] = child.getLineAndOffset();
+          this.weeks[this.weeks.length - 1].days.push({
+            name: dayName,
+            line,
+            exercises: [],
+          });
+          this.dayData = {
+            day: this.dayData.day + 1,
+            week: this.dayData.week,
+            dayInWeek: (this.dayData.dayInWeek || 0) + 1,
+          };
+          this.exerciseIndex = 0;
+        } else if (child.type.name === PlannerNodeName.LineComment) {
+          const value = child.source.trim();
+          this.addDescription(value);
+          continue;
+        } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
+          if (
+            this.mode === "full" &&
+            (this.weeks.length === 0 ||
+              this.weeks[this.weeks.length - 1].days.length === 0)
+          ) {
+            errorPlannerSyntax(
+              `You should first define a week and a day before listing exercises.`,
+              child,
+            );
+          } else if (this.weeks.length === 0) {
+            this.weeks.push({
+              name: "Week 1",
+              line: 1,
+              days: [{ name: "Day 1", line: 1, exercises: [] }],
+            });
+          }
+          const nameNode = child.getChild(PlannerNodeName.ExerciseName);
+          if (nameNode == null) {
+            assert("ExerciseName");
+          }
+
+          const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
+
+          let { label, name, equipment } = extractNameParts(
+            fullName,
+            settings.exercises,
+          );
+          const key = PlannerKey_fromFullName(fullName, settings.exercises);
+          const shortName = PlannerProgramExercise_shortNameFromFullName(
+            fullName,
+            settings,
+          );
+          const exercise = Exercise_findByNameAndEquipment(
+            shortName,
+            settings.exercises,
+          );
+          let notused = getIsNotUsed(child);
+          const sectionNodes = child.getChildren(
+            PlannerNodeName.ExerciseSection,
+          );
+          const setVariations: IPlannerProgramExerciseSetVariation[] = [];
+          const allSets: IPlannerProgramExerciseSet[] = [];
+          let allWarmupSets: IPlannerProgramExerciseWarmupSet[] | undefined;
+          let reuse: IPlannerProgramReuse | undefined;
+          const repeat = getRepeat(child);
+          const order = getOrder(child);
+          const text = child.source.trim();
+          let tags: number[] = [];
+          let progress: IProgramExerciseProgress | undefined;
+          let update: IProgramExerciseUpdate | undefined;
+          let superset: IPlannerProgramExerciseSuperset | undefined;
+          for (const sectionNode of sectionNodes) {
+            const section = evaluateSection(
+              sectionNode,
+              settings,
+              this.dayData,
+              exercise ? { id: exercise.id, equipment } : undefined,
+            );
+            if (section.type === "sets") {
+              allSets.push(...section.data);
+              if (section.data.some((set) => set.repRange != null)) {
+                setVariations.push({
+                  sets: section.data,
+                  isCurrent: section.isCurrent,
+                });
+              }
+            } else if (section.type === "warmup") {
+              allWarmupSets = allWarmupSets || [];
+              allWarmupSets.push(...section.data);
+            } else if (section.type === "progress") {
+              progress = section.data;
+            } else if (section.type === "update") {
+              update = section.data;
+            } else if (section.type === "reuse") {
+              reuse = section.data;
+            } else if (section.type === "id") {
+              tags = tags.concat(section.data);
+            } else if (section.type === "superset") {
+              superset = section.data;
+            } else if (section.type === "used") {
+              notused = true;
+            } else {
+              throw new Error(`Unexpected section type`);
+            }
+          }
+          const rpe = allSets.find(
+            (set) => set.repRange == null && set.rpe != null,
+          )?.rpe;
+          const timer = allSets.find(
+            (set) => set.repRange == null && set.timer != null,
+          )?.timer;
+          const percentage = allSets.find(
+            (set) => set.repRange == null && set.percentage != null,
+          )?.percentage;
+          const weight = allSets.find(
+            (set) => set.repRange == null && set.weight != null,
+          )?.weight;
+          const logRpe = allSets.find(
+            (set) => set.repRange == null && set.logRpe != null,
+          )?.logRpe;
+          const askWeight = allSets.find(
+            (set) => set.repRange == null && set.askWeight != null,
+          )?.askWeight;
+          const [line] = child.getLineAndOffset();
+          const rawDescriptions: string[] = this.latestDescriptions.map((d) =>
+            d.join("\n"),
+          );
+          const currentDescriptionIndex = rawDescriptions.findIndex((d) =>
+            /^\s*!/.test(d),
+          );
+          let descriptions = rawDescriptions.map((d, i) => ({
+            value: d.replace(/^\s*!/, ""),
+            isCurrent: i === currentDescriptionIndex,
+          }));
+          if (descriptions.length > 1) {
+            descriptions = descriptions.filter((d) => d.value);
+          }
+          descriptions = descriptions.map((d) => ({
+            ...d,
+            value: StringUtils_unindent(d.value),
+          }));
+          this.latestDescriptions = [];
+          const fullNamePoint = getPoint(nameNode);
+
+          const reuseSetsNode = child
+            .getChildren(PlannerNodeName.ExerciseSection)
+            .map((n) => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
+            .filter((n) => n)[0];
+          const reuseSetPoint = reuseSetsNode
+            ? getPoint(reuseSetsNode)
+            : undefined;
+
+          const progressNode = child
+            .getChildren(PlannerNodeName.ExerciseSection)
+            .map((n) => {
+              const node = n
+                .getChild(PlannerNodeName.ExerciseProperty)
+                ?.getChild(PlannerNodeName.ExercisePropertyName);
+              return node != null && node.source === "progress"
+                ? node
+                : undefined;
+            })
+            .flat(2)
+            .filter((n) => n)[0];
+          const progressPoint = progressNode
+            ? getPoint(progressNode)
+            : undefined;
+
+          const updateNode = child
+            .getChildren(PlannerNodeName.ExerciseSection)
+            .map((n) => {
+              const node = n
+                .getChild(PlannerNodeName.ExerciseProperty)
+                ?.getChild(PlannerNodeName.ExercisePropertyName);
+              return node != null && node.source === "update"
+                ? node
+                : undefined;
+            })
+            .flat(2)
+            .filter((n) => n)[0];
+          const updatePoint = updateNode ? getPoint(updateNode) : undefined;
+
+          const idNode = child
+            .getChildren(PlannerNodeName.ExerciseSection)
+            .map((n) => {
+              const node = n
+                .getChild(PlannerNodeName.ExerciseProperty)
+                ?.getChild(PlannerNodeName.ExercisePropertyName);
+              return node != null && node.source === "id" ? node : undefined;
+            })
+            .flat(2)
+            .filter((n) => n)[0];
+          const idPoint = idNode ? getPoint(idNode) : undefined;
+
+          const warmupNode = child
+            .getChildren(PlannerNodeName.ExerciseSection)
+            .map((n) =>
+              n
+                .getChild(PlannerNodeName.ExerciseProperty)
+                ?.getChild(PlannerNodeName.WarmupExerciseSets),
+            )
+            .flat(2)
+            .filter((n) => n)[0];
+          const warmupPoint = warmupNode ? getPoint(warmupNode) : undefined;
+
+          const supersetNode = child
+            .getChildren(PlannerNodeName.ExerciseSection)
+            .map((n) => n.getChild(PlannerNodeName.Superset))
+            .filter((n) => n)[0];
+          const supersetPoint = supersetNode
+            ? getPoint(supersetNode)
+            : undefined;
+
+          const plannerExercise: IPlannerProgramExercise = {
+            id: generateUid(8),
+            key,
+            fullName,
+            shortName,
+            exerciseType: exercise,
+            label,
+            dayData: this.dayData,
+            text,
+            repeat,
+            repeating: [...repeat],
+            order,
+            superset,
+            name,
+            equipment,
+            exerciseIndex: this.exerciseIndex,
+            line,
+            tags,
+            notused: notused,
+            evaluatedSetVariations: [],
+            setVariations,
+            descriptions: {
+              values: descriptions,
+            },
+            warmupSets: allWarmupSets,
+            reuse,
+            progress,
+            update,
+            globals: {
+              rpe,
+              logRpe,
+              askWeight,
+              timer,
+              percentage,
+              weight,
+            },
+            points: {
+              fullName: fullNamePoint,
+              supersetPoint,
+              reuseSetPoint,
+              progressPoint,
+              idPoint,
+              updatePoint,
+              warmupPoint,
+            },
+          };
+          this.weeks[this.weeks.length - 1].days[
+            this.weeks[this.weeks.length - 1].days.length - 1
+          ].exercises.push(plannerExercise);
+          if (!notused) {
+            this.exerciseIndex += 1;
+          }
+        } else {
+          errorPlannerSyntax(
+            `Unexpected node type ${child.node.type.name}`,
+            child,
+          );
+        }
       }
       const program = this.weeks;
       return { data: program, success: true };
