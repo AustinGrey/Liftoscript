@@ -2498,6 +2498,95 @@ function getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
   return { week, day };
 }
 
+function evaluateReuseNode(expr: SourcedSyntaxNode): {
+  type: "reuse";
+  data: IPlannerProgramReuse;
+} {
+  if (expr.type.name === PlannerNodeName.ReuseSectionWithWeekDay) {
+    const nameNode = expr
+      .getChild(PlannerNodeName.ReuseSection)
+      ?.getChild(PlannerNodeName.ExerciseName);
+    if (nameNode == null) {
+      assert(PlannerNodeName.ExerciseName);
+    }
+    const name = getNodeSourceEscapedWhiteSpace(nameNode);
+    const { week, day } = getReuseWeekDay(
+      expr.getChild(PlannerNodeName.WeekDay),
+    );
+    return {
+      type: "reuse",
+      data: { fullName: name, week, day, source: "overall" },
+    };
+  } else {
+    assert(PlannerNodeName.ReuseSectionWithWeekDay);
+  }
+}
+
+function getOrder(expr: SourcedSyntaxNode): number {
+  if (expr.type.name === PlannerNodeName.ExerciseExpression) {
+    const repeatNode = expr.getChild(PlannerNodeName.Repeat);
+    if (repeatNode == null) {
+      return 0;
+    }
+    const children = getChildren(repeatNode);
+    for (const childNode of children) {
+      if (childNode.type.name === PlannerNodeName.Rep) {
+        return parseInt(getNodeSourceEscapedWhiteSpace(childNode), 10);
+      }
+    }
+    return 0;
+  } else {
+    assert(PlannerNodeName.ExerciseExpression);
+  }
+}
+
+function getRepeat(expr: SourcedSyntaxNode): number[] {
+  if (expr.type.name === PlannerNodeName.ExerciseExpression) {
+    const repeatNode = expr.getChild(PlannerNodeName.Repeat);
+    if (repeatNode == null) {
+      return [];
+    }
+    const result: Set<number> = new Set();
+    const children = getChildren(repeatNode);
+    for (const childNode of children) {
+      if (childNode.type.name === PlannerNodeName.RepRange) {
+        const [from, to] = getChildren(childNode).map((n) =>
+          parseInt(getNodeSourceEscapedWhiteSpace(n), 10),
+        );
+        for (let i = from; i <= to; i += 1) {
+          result.add(i);
+        }
+        break;
+      }
+    }
+    return Array.from(result).sort((a, b) => a - b);
+  } else {
+    assert(PlannerNodeName.ExerciseExpression);
+  }
+}
+
+function getIsNotUsed(expr: SourcedSyntaxNode): boolean {
+  if (expr.type.name === PlannerNodeName.ExerciseExpression) {
+    const sections = expr.getChildren(PlannerNodeName.ExerciseSection);
+    for (const section of sections) {
+      const properties = section.getChildren(PlannerNodeName.ExerciseProperty);
+      for (const property of properties) {
+        const nameNode = property.getChild(
+          PlannerNodeName.ExercisePropertyName,
+        );
+        const name = nameNode ? nameNode.source : undefined;
+        const valueNode = property.getChild(PlannerNodeName.None);
+        if (name === "used" && valueNode != null) {
+          return true;
+        }
+      }
+    }
+    return false;
+  } else {
+    assert(PlannerNodeName.ExerciseSection);
+  }
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -2974,30 +3063,6 @@ export class PlannerExerciseEvaluator {
     }
   }
 
-  private evaluateReuseNode(expr: SourcedSyntaxNode): {
-    type: "reuse";
-    data: IPlannerProgramReuse;
-  } {
-    if (expr.type.name === PlannerNodeName.ReuseSectionWithWeekDay) {
-      const nameNode = expr
-        .getChild(PlannerNodeName.ReuseSection)
-        ?.getChild(PlannerNodeName.ExerciseName);
-      if (nameNode == null) {
-        assert(PlannerNodeName.ExerciseName);
-      }
-      const name = getNodeSourceEscapedWhiteSpace(nameNode);
-      const { week, day } = getReuseWeekDay(
-        expr.getChild(PlannerNodeName.WeekDay),
-      );
-      return {
-        type: "reuse",
-        data: { fullName: name, week, day, source: "overall" },
-      };
-    } else {
-      assert(PlannerNodeName.ReuseSectionWithWeekDay);
-    }
-  }
-
   private evaluateSection(
     expr: SourcedSyntaxNode,
     exerciseType?: IExerciseType,
@@ -3013,7 +3078,7 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.ExerciseSection) {
       const reuseNode = expr.getChild(PlannerNodeName.ReuseSectionWithWeekDay);
       if (reuseNode != null) {
-        return this.evaluateReuseNode(reuseNode);
+        return evaluateReuseNode(reuseNode);
       }
       const setsNode = expr.getChild(PlannerNodeName.ExerciseSets);
       if (setsNode != null) {
@@ -3049,73 +3114,6 @@ export class PlannerExerciseEvaluator {
       this.latestDescriptions.push([]);
     }
     this.latestDescriptions[this.latestDescriptions.length - 1].push(value);
-  }
-
-  private getOrder(expr: SourcedSyntaxNode): number {
-    if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-      const repeatNode = expr.getChild(PlannerNodeName.Repeat);
-      if (repeatNode == null) {
-        return 0;
-      }
-      const children = getChildren(repeatNode);
-      for (const childNode of children) {
-        if (childNode.type.name === PlannerNodeName.Rep) {
-          return parseInt(getNodeSourceEscapedWhiteSpace(childNode), 10);
-        }
-      }
-      return 0;
-    } else {
-      assert(PlannerNodeName.ExerciseExpression);
-    }
-  }
-
-  private getRepeat(expr: SourcedSyntaxNode): number[] {
-    if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-      const repeatNode = expr.getChild(PlannerNodeName.Repeat);
-      if (repeatNode == null) {
-        return [];
-      }
-      const result: Set<number> = new Set();
-      const children = getChildren(repeatNode);
-      for (const childNode of children) {
-        if (childNode.type.name === PlannerNodeName.RepRange) {
-          const [from, to] = getChildren(childNode).map((n) =>
-            parseInt(getNodeSourceEscapedWhiteSpace(n), 10),
-          );
-          for (let i = from; i <= to; i += 1) {
-            result.add(i);
-          }
-          break;
-        }
-      }
-      return Array.from(result).sort((a, b) => a - b);
-    } else {
-      assert(PlannerNodeName.ExerciseExpression);
-    }
-  }
-
-  private getIsNotUsed(expr: SourcedSyntaxNode): boolean {
-    if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-      const sections = expr.getChildren(PlannerNodeName.ExerciseSection);
-      for (const section of sections) {
-        const properties = section.getChildren(
-          PlannerNodeName.ExerciseProperty,
-        );
-        for (const property of properties) {
-          const nameNode = property.getChild(
-            PlannerNodeName.ExercisePropertyName,
-          );
-          const name = nameNode ? nameNode.source : undefined;
-          const valueNode = property.getChild(PlannerNodeName.None);
-          if (name === "used" && valueNode != null) {
-            return true;
-          }
-        }
-      }
-      return false;
-    } else {
-      assert(PlannerNodeName.ExerciseSection);
-    }
   }
 
   private evaluateExercise(expr: SourcedSyntaxNode): void {
@@ -3206,14 +3204,14 @@ export class PlannerExerciseEvaluator {
         shortName,
         this.settings.exercises,
       );
-      let notused = this.getIsNotUsed(expr);
+      let notused = getIsNotUsed(expr);
       const sectionNodes = expr.getChildren(PlannerNodeName.ExerciseSection);
       const setVariations: IPlannerProgramExerciseSetVariation[] = [];
       const allSets: IPlannerProgramExerciseSet[] = [];
       let allWarmupSets: IPlannerProgramExerciseWarmupSet[] | undefined;
       let reuse: IPlannerProgramReuse | undefined;
-      const repeat = this.getRepeat(expr);
-      const order = this.getOrder(expr);
+      const repeat = getRepeat(expr);
+      const order = getOrder(expr);
       const text = expr.source.trim();
       let tags: number[] = [];
       let progress: IProgramExerciseProgress | undefined;
@@ -3589,10 +3587,10 @@ export class PlannerExerciseEvaluator {
         const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
         const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
         const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
-        const repeat = this.getRepeat(child);
+        const repeat = getRepeat(child);
         const repeatRanges = getRepeatRanges(repeat);
-        const order = this.getOrder(child);
-        const isUsed = !this.getIsNotUsed(child);
+        const order = getOrder(child);
+        const isUsed = !getIsNotUsed(child);
         const sectionsNode = child.getChildren(PlannerNodeName.ExerciseSection);
         const sections = sectionsNode
           .map((section) => section.source.trim())
