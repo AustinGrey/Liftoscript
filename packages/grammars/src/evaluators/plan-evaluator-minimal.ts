@@ -1188,6 +1188,7 @@ function PlannerProgram_compact(
 
       return evaluator.topLineMap(
         parseBound(plannerExerciseParser, day.exerciseText),
+        settings,
       );
     });
   });
@@ -1374,6 +1375,7 @@ function PlannerProgram_topLineItems(
 
       return evaluator.topLineMap(
         parseBound(plannerExerciseParser, day.exerciseText),
+        settings,
       );
     });
   });
@@ -2829,7 +2831,6 @@ function validateProgress(
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
-  private readonly settings: ISettings;
   private weeks: IPlannerExerciseEvaluatorWeek[] = [];
   private exerciseIndex: number = 0;
 
@@ -2847,13 +2848,13 @@ export class PlannerExerciseEvaluator {
     mode: IPlannerExerciseEvaluatorMode,
     dayData?: Required<IDayData>,
   ) {
-    this.settings = settings;
     this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
     this.mode = mode;
   }
 
   private evaluateUpdate(
     expr: SourcedSyntaxNode,
+    settings: ISettings,
     exerciseType?: IExerciseType,
   ): IProgramExerciseUpdate {
     if (expr.type.name === PlannerNodeName.ExerciseProperty) {
@@ -2898,10 +2899,10 @@ export class PlannerExerciseEvaluator {
             script,
             {},
             {},
-            Progress_createEmptyScriptBindings(this.dayData, this.settings),
-            Progress_createScriptFunctions(this.settings),
-            this.settings.units,
-            { exerciseType, unit: this.settings.units, prints: [] },
+            Progress_createEmptyScriptBindings(this.dayData, settings),
+            Progress_createScriptFunctions(settings),
+            settings.units,
+            { exerciseType, unit: settings.units, prints: [] },
             "update",
           );
           const stateKeys = liftoscriptEvaluator.getStateVariableKeys();
@@ -2933,9 +2934,10 @@ export class PlannerExerciseEvaluator {
 
   private evaluateProgress(
     expr: SourcedSyntaxNode,
+    settings: ISettings,
     exerciseType?: IExerciseType,
   ): IProgramExerciseProgress {
-    const result = this.evaluateProgressImpl(expr, exerciseType);
+    const result = this.evaluateProgressImpl(expr, settings, exerciseType);
     if (result.success) {
       return result.data;
     } else {
@@ -2945,6 +2947,7 @@ export class PlannerExerciseEvaluator {
 
   private evaluateProgressImpl(
     expr: SourcedSyntaxNode,
+    settings: ISettings,
     exerciseType?: IExerciseType,
   ): IEither<IProgramExerciseProgress, string> {
     if (expr.type.name === PlannerNodeName.ExerciseProperty) {
@@ -2982,10 +2985,10 @@ export class PlannerExerciseEvaluator {
             script,
             state,
             {},
-            Progress_createEmptyScriptBindings(this.dayData, this.settings),
-            Progress_createScriptFunctions(this.settings),
-            this.settings.units,
-            { exerciseType, unit: this.settings.units, prints: [] },
+            Progress_createEmptyScriptBindings(this.dayData, settings),
+            Progress_createScriptFunctions(settings),
+            settings.units,
+            { exerciseType, unit: settings.units, prints: [] },
             "planner",
           );
           try {
@@ -3026,6 +3029,7 @@ export class PlannerExerciseEvaluator {
 
   private evaluateProperty(
     expr: SourcedSyntaxNode,
+    settings: ISettings,
     exerciseType?: IExerciseType,
   ):
     | { type: "progress"; data: IProgramExerciseProgress }
@@ -3042,12 +3046,12 @@ export class PlannerExerciseEvaluator {
       if (name === "progress") {
         return {
           type: "progress",
-          data: this.evaluateProgress(expr, exerciseType),
+          data: this.evaluateProgress(expr, settings, exerciseType),
         };
       } else if (name === "update") {
         return {
           type: "update",
-          data: this.evaluateUpdate(expr, exerciseType),
+          data: this.evaluateUpdate(expr, settings, exerciseType),
         };
       } else if (name === "warmup") {
         return { type: "warmup", data: evaluateWarmup(expr) };
@@ -3068,6 +3072,7 @@ export class PlannerExerciseEvaluator {
 
   private evaluateSection(
     expr: SourcedSyntaxNode,
+    settings: ISettings,
     exerciseType?: IExerciseType,
   ):
     | { type: "sets"; data: IPlannerProgramExerciseSet[]; isCurrent: boolean }
@@ -3102,7 +3107,7 @@ export class PlannerExerciseEvaluator {
       }
       const property = expr.getChild(PlannerNodeName.ExerciseProperty);
       if (property != null) {
-        return this.evaluateProperty(property, exerciseType);
+        return this.evaluateProperty(property, settings, exerciseType);
       } else {
         assert(PlannerNodeName.ExerciseProperty);
       }
@@ -3119,7 +3124,7 @@ export class PlannerExerciseEvaluator {
     this.latestDescriptions[this.latestDescriptions.length - 1].push(value);
   }
 
-  private evaluateExercise(expr: SourcedSyntaxNode): void {
+  private evaluateExercise(expr: SourcedSyntaxNode, settings: ISettings): void {
     if (
       expr.type.name === PlannerNodeName.EmptyExpression ||
       expr.type.name === PlannerNodeName.TripleLineComment
@@ -3196,16 +3201,16 @@ export class PlannerExerciseEvaluator {
 
       let { label, name, equipment } = extractNameParts(
         fullName,
-        this.settings.exercises,
+        settings.exercises,
       );
-      const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
+      const key = PlannerKey_fromFullName(fullName, settings.exercises);
       const shortName = PlannerProgramExercise_shortNameFromFullName(
         fullName,
-        this.settings,
+        settings,
       );
       const exercise = Exercise_findByNameAndEquipment(
         shortName,
-        this.settings.exercises,
+        settings.exercises,
       );
       let notused = getIsNotUsed(expr);
       const sectionNodes = expr.getChildren(PlannerNodeName.ExerciseSection);
@@ -3223,6 +3228,7 @@ export class PlannerExerciseEvaluator {
       for (const sectionNode of sectionNodes) {
         const section = this.evaluateSection(
           sectionNode,
+          settings,
           exercise ? { id: exercise.id, equipment } : undefined,
         );
         if (section.type === "sets") {
@@ -3521,12 +3527,13 @@ export class PlannerExerciseEvaluator {
 
   private evaluateProgram(
     expr: SourcedSyntaxNode,
+    settings: ISettings,
   ): IPlannerExerciseEvaluatorWeek[] {
     if (expr.type.name === PlannerNodeName.Program) {
       this.weeks = [];
       this.exerciseIndex = 0;
       for (const child of CollectionUtils_compact(getChildren(expr))) {
-        this.evaluateExercise(child);
+        this.evaluateExercise(child, settings);
       }
       return this.weeks;
     } else {
@@ -3534,10 +3541,13 @@ export class PlannerExerciseEvaluator {
     }
   }
 
-  public evaluate(programNode: SourcedSyntaxNode): IPlannerEvalFullResult {
+  public evaluate(
+    programNode: SourcedSyntaxNode,
+    settings: ISettings,
+  ): IPlannerEvalFullResult {
     try {
       parse(programNode);
-      const program = this.evaluateProgram(programNode);
+      const program = this.evaluateProgram(programNode, settings);
       return { data: program, success: true };
     } catch (e) {
       if (e instanceof PlannerSyntaxError) {
@@ -3572,7 +3582,10 @@ export class PlannerExerciseEvaluator {
     return this.weeksFullText;
   }
 
-  public topLineMap(programNode: SourcedSyntaxNode): IPlannerTopLineItem[] {
+  public topLineMap(
+    programNode: SourcedSyntaxNode,
+    settings: ISettings,
+  ): IPlannerTopLineItem[] {
     if (programNode.type.name !== PlannerNodeName.Program) {
       errorPlannerSyntax(
         `Unexpected node type ${programNode.type.name} - should be Program`,
@@ -3589,7 +3602,7 @@ export class PlannerExerciseEvaluator {
         ongoingDescriptions = false;
         const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
         const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
-        const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
+        const key = PlannerKey_fromFullName(fullName, settings.exercises);
         const repeat = getRepeat(child);
         const repeatRanges = getRepeatRanges(repeat);
         const order = getOrder(child);
@@ -3833,6 +3846,7 @@ function PlannerEvaluator_evaluateDay(
   const evaluator = new PlannerExerciseEvaluator(settings, "perday", dayData);
   const result = evaluator.evaluate(
     parseBound(plannerExerciseParser, day.exerciseText),
+    settings,
   );
   if (result.success) {
     const exercises = result.data[0]?.days[0]?.exercises || [];
