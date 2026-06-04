@@ -3253,8 +3253,6 @@ function getWeekDayDescriptionAndFillLastDayFullText(
 export class PlannerExerciseEvaluator {
   private weeks: IPlannerExerciseEvaluatorWeek[] = [];
   private latestDescriptions: string[][] = [];
-  private weeksFullText: IPlannerExerciseEvaluatorTextWeek[] = [];
-  private ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
 
   constructor(
     settings: ISettings,
@@ -3618,60 +3616,61 @@ export class PlannerExerciseEvaluator {
       throw new Error(`Unexpected node type ${programNode.type.name}`);
     }
     parse(programNode);
-    this.ongoingLinesFullText = [];
-    this.weeksFullText = [];
+
+    let weeksFullText: IPlannerExerciseEvaluatorTextWeek[] = [];
+    let ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
     for (const child of CollectionUtils_compact(getChildren(programNode))) {
       if (child.type.name === PlannerNodeName.Week) {
         const weekName = child.source.replace(/^#+/, "").trim();
         const description = getWeekDayDescriptionAndFillLastDayFullText(
-          this.ongoingLinesFullText,
-          this.weeksFullText,
+          ongoingLinesFullText,
+          weeksFullText,
         );
-        this.weeksFullText.push({ name: weekName, description, days: [] });
-        this.ongoingLinesFullText = [];
+        weeksFullText.push({ name: weekName, description, days: [] });
+        ongoingLinesFullText = [];
       } else if (child.type.name === PlannerNodeName.Day) {
         const dayName = child.source.replace(/^#+/, "").trim();
         const description = getWeekDayDescriptionAndFillLastDayFullText(
-          this.ongoingLinesFullText,
-          this.weeksFullText,
+          ongoingLinesFullText,
+          weeksFullText,
         );
-        this.weeksFullText[this.weeksFullText.length - 1].days.push({
+        weeksFullText[weeksFullText.length - 1].days.push({
           name: dayName,
           exercises: [],
           description,
         });
-        this.ongoingLinesFullText = [];
+        ongoingLinesFullText = [];
       } else if (child.type.name === PlannerNodeName.EmptyExpression) {
-        this.ongoingLinesFullText.push({
+        ongoingLinesFullText.push({
           type: "empty",
           line: child.source,
         });
       } else if (child.type.name === PlannerNodeName.LineComment) {
-        this.ongoingLinesFullText.push({
+        ongoingLinesFullText.push({
           type: "comment",
           line: child.source,
         });
       } else if (child.type.name === PlannerNodeName.TripleLineComment) {
-        this.ongoingLinesFullText.push({
+        ongoingLinesFullText.push({
           type: "triplelinecomment",
           line: child.source,
         });
       } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
-        const lastWeek = this.weeksFullText[this.weeksFullText.length - 1];
+        const lastWeek = weeksFullText[weeksFullText.length - 1];
         const lastDay = lastWeek
           ? lastWeek.days[lastWeek.days.length - 1]
           : undefined;
         const exercises = lastDay?.exercises;
         if (exercises) {
-          for (const line of this.ongoingLinesFullText) {
+          for (const line of ongoingLinesFullText) {
             exercises.push(line.line);
           }
           exercises.push(child.source);
-          this.ongoingLinesFullText = [];
+          ongoingLinesFullText = [];
         }
       }
     }
-    return this.weeksFullText;
+    return weeksFullText;
   }
 }
 
