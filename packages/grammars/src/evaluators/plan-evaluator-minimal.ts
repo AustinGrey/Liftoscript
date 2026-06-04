@@ -1,6 +1,6 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
-import type { SyntaxNode, Tree } from "@lezer/common";
+import type { SyntaxNode } from "@lezer/common";
 import {
   CollectionUtils_compact,
   CollectionUtils_sortBy,
@@ -289,7 +289,7 @@ function Program_runFinishDayScript(
     PlannerProgramExercise_getProgressScript(programExercise) || "";
   let updates: ILiftoscriptEvaluatorUpdate[] = [];
   try {
-    const runner = new ScriptRunner(
+    const [resultingUpdates] = new ScriptRunner(
       script,
       newState,
       otherStates,
@@ -301,8 +301,7 @@ function Program_runFinishDayScript(
         prints: [],
       },
       "planner",
-    );
-    const [resultingUpdates] = runner.execute(settings.units);
+    ).execute(settings.units);
     updates = resultingUpdates;
   } catch (e) {
     if (e instanceof SyntaxError) {
@@ -5379,7 +5378,7 @@ function Progress_runUpdateScriptForEntry(
       unit: settings.units,
       prints: [],
     };
-    const runner = new ScriptRunner(
+    new ScriptRunner(
       script,
       state,
       structuredClone(otherStates),
@@ -5387,8 +5386,7 @@ function Progress_runUpdateScriptForEntry(
       Progress_createScriptFunctions(settings),
       fnContext,
       "update",
-    );
-    runner.execute(settings.units);
+    ).execute(settings.units);
     const newEntry = Progress_applyBindings(entry, bindings, settings);
     newEntry.state = { ...newEntry.state, ...state };
     if (fnContext.prints.length > 0) {
