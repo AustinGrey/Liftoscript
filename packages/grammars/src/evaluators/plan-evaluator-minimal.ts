@@ -295,7 +295,6 @@ function Program_runFinishDayScript(
       otherStates,
       bindings,
       fns,
-      settings.units,
       {
         exerciseType: programExercise.exerciseType,
         unit: settings.units,
@@ -2959,11 +2958,12 @@ function evaluateUpdate(
           {},
           Progress_createEmptyScriptBindings(dayData, settings),
           Progress_createScriptFunctions(settings),
-          settings.units,
           { exerciseType, unit: settings.units, prints: [] },
           "update",
         );
-        const stateKeys = liftoscriptEvaluator.getStateVariableKeys();
+        const stateKeys = liftoscriptEvaluator.getStateVariableKeys(
+          settings.units,
+        );
         meta = { stateKeys };
       }
       if (!script && !body) {
@@ -3033,12 +3033,11 @@ function evaluateProgressImpl(
           {},
           Progress_createEmptyScriptBindings(dayData, settings),
           Progress_createScriptFunctions(settings),
-          settings.units,
           { exerciseType, unit: settings.units, prints: [] },
           "planner",
         );
         try {
-          liftoscriptEvaluator.parse();
+          liftoscriptEvaluator.parse(settings.units);
         } catch (e) {
           if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
             const [line] = liftoscriptNode.getLineAndOffset();
@@ -4271,12 +4270,11 @@ function PlannerEvaluator_checkUpdateScript(
         {},
         Progress_createEmptyScriptBindings(dayData, settings),
         Progress_createScriptFunctions(settings),
-        settings.units,
         { exerciseType, unit: settings.units, prints: [] },
         "update",
       );
       try {
-        liftoscriptEvaluator.parse();
+        liftoscriptEvaluator.parse(settings.units);
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
           const [line] = liftoscriptNode.getLineAndOffset();
@@ -5387,7 +5385,6 @@ function Progress_runUpdateScriptForEntry(
       structuredClone(otherStates),
       bindings,
       Progress_createScriptFunctions(settings),
-      settings.units,
       fnContext,
       "update",
     );
@@ -6601,7 +6598,6 @@ class ScriptRunner {
   private readonly otherStates: Record<number, IProgramState>;
   private readonly bindings: IScriptBindings;
   private readonly fns: IScriptFunctions;
-  private readonly units: IUnit;
   private readonly context: IScriptFnContext;
   private readonly mode: IProgramMode;
   private updates: ILiftoscriptEvaluatorUpdate[] = [];
@@ -6612,7 +6608,6 @@ class ScriptRunner {
     otherStates: Record<number, IProgramState>,
     bindings: IScriptBindings,
     fns: IScriptFunctions,
-    units: IUnit,
     context: IScriptFnContext,
     mode: IProgramMode,
   ) {
@@ -6621,12 +6616,11 @@ class ScriptRunner {
     this.otherStates = otherStates;
     this.bindings = bindings;
     this.fns = fns;
-    this.units = units;
     this.context = context;
     this.mode = mode;
   }
 
-  public parse(): [LiftoscriptEvaluator, Tree] {
+  public parse(units: IUnit): [LiftoscriptEvaluator, Tree] {
     const liftoscriptTree = LiftoscriptParser.parse(this.script);
     const liftoscriptEvaluator = new LiftoscriptEvaluator(
       this.script,
@@ -6635,14 +6629,14 @@ class ScriptRunner {
       this.bindings,
       this.fns,
       this.context,
-      this.units,
+      units,
       this.mode,
     );
     liftoscriptEvaluator.parse(liftoscriptTree.topNode);
     return [liftoscriptEvaluator, liftoscriptTree];
   }
 
-  public getStateVariableKeys(): Set<string> {
+  public getStateVariableKeys(units: IUnit): Set<string> {
     const liftoscriptTree = LiftoscriptParser.parse(this.script);
     const liftoscriptEvaluator = new LiftoscriptEvaluator(
       this.script,
@@ -6651,7 +6645,7 @@ class ScriptRunner {
       this.bindings,
       this.fns,
       this.context,
-      this.units,
+      units,
       this.mode,
     );
     return liftoscriptEvaluator.getStateVariableKeys(liftoscriptTree.topNode);
@@ -6660,8 +6654,11 @@ class ScriptRunner {
   public execute(
     units: IUnit,
     type?: "reps" | "weight" | "timer" | "rpe",
-  ): [ ILiftoscriptEvaluatorUpdate[], number | IWeight | IDynamicWeight | boolean] {
-    const [liftoscriptEvaluator, liftoscriptTree] = this.parse();
+  ): [
+    ILiftoscriptEvaluatorUpdate[],
+    number | IWeight | IDynamicWeight | boolean,
+  ] {
+    const [liftoscriptEvaluator, liftoscriptTree] = this.parse(units);
     const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
     let result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
     if (result == null) {
