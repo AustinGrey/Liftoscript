@@ -3568,52 +3568,6 @@ export class PlannerExerciseEvaluator {
       : undefined;
   }
 
-  private evaluateExerciseFullText(expr: SourcedSyntaxNode): void {
-    if (expr.type.name === PlannerNodeName.Week) {
-      const weekName = expr.source.replace(/^#+/, "").trim();
-      const description = this.getWeekDayDescriptionAndFillLastDayFullText();
-      this.weeksFullText.push({ name: weekName, description, days: [] });
-      this.ongoingLinesFullText = [];
-    } else if (expr.type.name === PlannerNodeName.Day) {
-      const dayName = expr.source.replace(/^#+/, "").trim();
-      const description = this.getWeekDayDescriptionAndFillLastDayFullText();
-      this.weeksFullText[this.weeksFullText.length - 1].days.push({
-        name: dayName,
-        exercises: [],
-        description,
-      });
-      this.ongoingLinesFullText = [];
-    } else if (expr.type.name === PlannerNodeName.EmptyExpression) {
-      this.ongoingLinesFullText.push({
-        type: "empty",
-        line: expr.source,
-      });
-    } else if (expr.type.name === PlannerNodeName.LineComment) {
-      this.ongoingLinesFullText.push({
-        type: "comment",
-        line: expr.source,
-      });
-    } else if (expr.type.name === PlannerNodeName.TripleLineComment) {
-      this.ongoingLinesFullText.push({
-        type: "triplelinecomment",
-        line: expr.source,
-      });
-    } else if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-      const lastWeek = this.weeksFullText[this.weeksFullText.length - 1];
-      const lastDay = lastWeek
-        ? lastWeek.days[lastWeek.days.length - 1]
-        : undefined;
-      const exercises = lastDay?.exercises;
-      if (exercises) {
-        for (const line of this.ongoingLinesFullText) {
-          exercises.push(line.line);
-        }
-        exercises.push(expr.source);
-        this.ongoingLinesFullText = [];
-      }
-    }
-  }
-
   public evaluate(
     programNode: SourcedSyntaxNode,
     settings: ISettings,
@@ -3662,7 +3616,49 @@ export class PlannerExerciseEvaluator {
     this.ongoingLinesFullText = [];
     this.weeksFullText = [];
     for (const child of CollectionUtils_compact(getChildren(programNode))) {
-      this.evaluateExerciseFullText(child);
+      if (child.type.name === PlannerNodeName.Week) {
+        const weekName = child.source.replace(/^#+/, "").trim();
+        const description = this.getWeekDayDescriptionAndFillLastDayFullText();
+        this.weeksFullText.push({ name: weekName, description, days: [] });
+        this.ongoingLinesFullText = [];
+      } else if (child.type.name === PlannerNodeName.Day) {
+        const dayName = child.source.replace(/^#+/, "").trim();
+        const description = this.getWeekDayDescriptionAndFillLastDayFullText();
+        this.weeksFullText[this.weeksFullText.length - 1].days.push({
+          name: dayName,
+          exercises: [],
+          description,
+        });
+        this.ongoingLinesFullText = [];
+      } else if (child.type.name === PlannerNodeName.EmptyExpression) {
+        this.ongoingLinesFullText.push({
+          type: "empty",
+          line: child.source,
+        });
+      } else if (child.type.name === PlannerNodeName.LineComment) {
+        this.ongoingLinesFullText.push({
+          type: "comment",
+          line: child.source,
+        });
+      } else if (child.type.name === PlannerNodeName.TripleLineComment) {
+        this.ongoingLinesFullText.push({
+          type: "triplelinecomment",
+          line: child.source,
+        });
+      } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
+        const lastWeek = this.weeksFullText[this.weeksFullText.length - 1];
+        const lastDay = lastWeek
+          ? lastWeek.days[lastWeek.days.length - 1]
+          : undefined;
+        const exercises = lastDay?.exercises;
+        if (exercises) {
+          for (const line of this.ongoingLinesFullText) {
+            exercises.push(line.line);
+          }
+          exercises.push(child.source);
+          this.ongoingLinesFullText = [];
+        }
+      }
     }
     return this.weeksFullText;
   }
