@@ -2376,6 +2376,19 @@ function getNodeSourceEscapedWhiteSpace(node: SourcedSyntaxNode): string {
   return node.source.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
 }
 
+function getWeight(expr?: SourcedSyntaxNode | null): IWeight | undefined {
+  if (
+    expr?.type.name === PlannerNodeName.WeightWithPlus ||
+    expr?.type.name === PlannerNodeName.Weight
+  ) {
+    const value = getNodeSourceEscapedWhiteSpace(expr).replace("+", "");
+    const unit = value.indexOf("kg") !== -1 ? "kg" : "lb";
+    return build(parseFloat(value), unit);
+  } else {
+    return undefined;
+  }
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -2420,19 +2433,6 @@ export class PlannerExerciseEvaluator {
     } while (cursor.next());
   }
 
-  private getWeight(expr?: SourcedSyntaxNode | null): IWeight | undefined {
-    if (
-      expr?.type.name === PlannerNodeName.WeightWithPlus ||
-      expr?.type.name === PlannerNodeName.Weight
-    ) {
-      const value = getNodeSourceEscapedWhiteSpace(expr).replace("+", "");
-      const unit = value.indexOf("kg") !== -1 ? "kg" : "lb";
-      return build(parseFloat(value), unit);
-    } else {
-      return undefined;
-    }
-  }
-
   private evaluateWarmupSet(
     expr: SourcedSyntaxNode,
   ): IPlannerProgramExerciseWarmupSet {
@@ -2450,7 +2450,7 @@ export class PlannerExerciseEvaluator {
           : parseFloat(
               getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
             );
-      const weight = this.getWeight(weightNode);
+      const weight = getWeight(weightNode);
       if (percentage) {
         return {
           type: "warmup",
@@ -2521,7 +2521,7 @@ export class PlannerExerciseEvaluator {
                 "",
               ),
             );
-      const weight = this.getWeight(weightNode);
+      const weight = getWeight(weightNode);
       const label = labelNode
         ? getChildren(labelNode)
             .map((n) => getNodeSourceEscapedWhiteSpace(n))
