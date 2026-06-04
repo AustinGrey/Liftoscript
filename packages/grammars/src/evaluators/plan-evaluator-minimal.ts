@@ -6667,7 +6667,7 @@ class ScriptRunner {
     if (result == null) {
       result = 0;
     }
-    const output = this.convertResult(type, result);
+    const output = convertResult(type, result, this.units);
     this.updates = liftoscriptEvaluator.updates;
 
     return output;
@@ -6676,58 +6676,59 @@ class ScriptRunner {
   public getUpdates(): ILiftoscriptEvaluatorUpdate[] {
     return this.updates;
   }
+}
 
-  private convertResult(
-    type: "reps" | "weight" | "timer" | "rpe" | undefined,
-    result: number | IWeight | IDynamicWeight | boolean,
-  ): number | IWeight | IDynamicWeight | boolean {
-    if (type === "reps" || type === "timer") {
-      if (typeof result !== "number") {
-        throw new LiftoscriptSyntaxError(
-          "Expected to get number as a result",
-          0,
-          0,
-          0,
-          0,
-        );
-      } else if (result < 0) {
-        return 0;
-      } else {
-        return result;
-      }
-    } else if (type === "rpe") {
-      if (typeof result !== "number") {
-        throw new LiftoscriptSyntaxError(
-          "Expected to get number as a result",
-          0,
-          0,
-          0,
-          0,
-        );
-      } else {
-        return Math.round(Math.min(10, Math.max(0, result)) / 0.5) * 0.5;
-      }
-    } else if (type === "weight") {
-      if (typeof result === "boolean") {
-        throw new LiftoscriptSyntaxError(
-          "Expected to get number, percentage or weight as a result",
-          0,
-          0,
-          0,
-          0,
-        );
-      } else if (typeof result === "number") {
-        return build(result, this.units);
-      } else {
-        if (result.value < 0) {
-          return build(0, this.units);
-        } else {
-          return result;
-        }
-      }
+function convertResult(
+  type: "reps" | "weight" | "timer" | "rpe" | undefined,
+  result: number | IWeight | IDynamicWeight | boolean,
+  units: IUnit,
+): number | IWeight | IDynamicWeight | boolean {
+  if (type === "reps" || type === "timer") {
+    if (typeof result !== "number") {
+      throw new LiftoscriptSyntaxError(
+        "Expected to get number as a result",
+        0,
+        0,
+        0,
+        0,
+      );
+    } else if (result < 0) {
+      return 0;
     } else {
       return result;
     }
+  } else if (type === "rpe") {
+    if (typeof result !== "number") {
+      throw new LiftoscriptSyntaxError(
+        "Expected to get number as a result",
+        0,
+        0,
+        0,
+        0,
+      );
+    } else {
+      return Math.round(Math.min(10, Math.max(0, result)) / 0.5) * 0.5;
+    }
+  } else if (type === "weight") {
+    if (typeof result === "boolean") {
+      throw new LiftoscriptSyntaxError(
+        "Expected to get number, percentage or weight as a result",
+        0,
+        0,
+        0,
+        0,
+      );
+    } else if (typeof result === "number") {
+      return build(result, units);
+    } else {
+      if (result.value < 0) {
+        return build(0, units);
+      } else {
+        return result;
+      }
+    }
+  } else {
+    return result;
   }
 }
 //#endregion
