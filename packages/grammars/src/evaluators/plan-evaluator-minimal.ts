@@ -3073,6 +3073,111 @@ function evaluateProgressImpl(
   }
 }
 
+function evaluateProgress(
+  expr: SourcedSyntaxNode,
+  settings: ISettings,
+  dayData: Required<IDayData>,
+  exerciseType?: IExerciseType,
+): IProgramExerciseProgress {
+  const result = evaluateProgressImpl(expr, settings, dayData, exerciseType);
+  if (result.success) {
+    return result.data;
+  } else {
+    throw errorPlannerSyntax(result.error, expr);
+  }
+}
+
+function evaluateProperty(
+  expr: SourcedSyntaxNode,
+  settings: ISettings,
+  dayData: Required<IDayData>,
+  exerciseType?: IExerciseType,
+):
+  | { type: "progress"; data: IProgramExerciseProgress }
+  | { type: "update"; data: IProgramExerciseUpdate }
+  | { type: "warmup"; data: IPlannerProgramExerciseWarmupSet[] }
+  | { type: "id"; data: number[] }
+  | { type: "used"; data: "" } {
+  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
+    const nameNode = expr.getChild(PlannerNodeName.ExercisePropertyName);
+    if (nameNode == null) {
+      assert(PlannerNodeName.ExercisePropertyName);
+    }
+    const name = getNodeSourceEscapedWhiteSpace(nameNode);
+    if (name === "progress") {
+      return {
+        type: "progress",
+        data: evaluateProgress(expr, settings, dayData, exerciseType),
+      };
+    } else if (name === "update") {
+      return {
+        type: "update",
+        data: evaluateUpdate(expr, settings, dayData, exerciseType),
+      };
+    } else if (name === "warmup") {
+      return { type: "warmup", data: evaluateWarmup(expr) };
+    } else if (name === "id") {
+      return { type: "id", data: evaluateId(expr) };
+    } else if (name === "used") {
+      return { type: "used", data: "" };
+    } else {
+      errorPlannerSyntax(
+        `There's no such property exists - '${name}'`,
+        nameNode,
+      );
+    }
+  } else {
+    assert(PlannerNodeName.ExerciseProperty);
+  }
+}
+
+function evaluateSection(
+  expr: SourcedSyntaxNode,
+  settings: ISettings,
+  dayData: Required<IDayData>,
+  exerciseType?: IExerciseType,
+):
+  | { type: "sets"; data: IPlannerProgramExerciseSet[]; isCurrent: boolean }
+  | { type: "progress"; data: IProgramExerciseProgress }
+  | { type: "update"; data: IProgramExerciseUpdate }
+  | { type: "id"; data: number[] }
+  | { type: "reuse"; data: IPlannerProgramReuse }
+  | { type: "warmup"; data: IPlannerProgramExerciseWarmupSet[] }
+  | { type: "superset"; data: IPlannerProgramExerciseSuperset }
+  | { type: "used"; data: "" } {
+  if (expr.type.name === PlannerNodeName.ExerciseSection) {
+    const reuseNode = expr.getChild(PlannerNodeName.ReuseSectionWithWeekDay);
+    if (reuseNode != null) {
+      return evaluateReuseNode(reuseNode);
+    }
+    const setsNode = expr.getChild(PlannerNodeName.ExerciseSets);
+    if (setsNode != null) {
+      const sets = setsNode.getChildren(PlannerNodeName.ExerciseSet);
+      const isCurrent =
+        setsNode.getChild(PlannerNodeName.CurrentVariation) != null;
+      if (sets.length > 0) {
+        return {
+          type: "sets",
+          data: sets.map((set) => evaluateSet(set)),
+          isCurrent,
+        };
+      }
+    }
+    const superset = expr.getChild(PlannerNodeName.Superset);
+    if (superset != null) {
+      return evaluateSuperset(superset);
+    }
+    const property = expr.getChild(PlannerNodeName.ExerciseProperty);
+    if (property != null) {
+      return evaluateProperty(property, settings, dayData, exerciseType);
+    } else {
+      assert(PlannerNodeName.ExerciseProperty);
+    }
+  } else {
+    assert(PlannerNodeName.ExerciseSection);
+  }
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -3095,113 +3200,6 @@ export class PlannerExerciseEvaluator {
   ) {
     this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
     this.mode = mode;
-  }
-
-  private evaluateProgress(
-    expr: SourcedSyntaxNode,
-    settings: ISettings,
-    exerciseType?: IExerciseType,
-  ): IProgramExerciseProgress {
-    const result = evaluateProgressImpl(
-      expr,
-      settings,
-      this.dayData,
-      exerciseType,
-    );
-    if (result.success) {
-      return result.data;
-    } else {
-      throw errorPlannerSyntax(result.error, expr);
-    }
-  }
-
-  private evaluateProperty(
-    expr: SourcedSyntaxNode,
-    settings: ISettings,
-    exerciseType?: IExerciseType,
-  ):
-    | { type: "progress"; data: IProgramExerciseProgress }
-    | { type: "update"; data: IProgramExerciseUpdate }
-    | { type: "warmup"; data: IPlannerProgramExerciseWarmupSet[] }
-    | { type: "id"; data: number[] }
-    | { type: "used"; data: "" } {
-    if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-      const nameNode = expr.getChild(PlannerNodeName.ExercisePropertyName);
-      if (nameNode == null) {
-        assert(PlannerNodeName.ExercisePropertyName);
-      }
-      const name = getNodeSourceEscapedWhiteSpace(nameNode);
-      if (name === "progress") {
-        return {
-          type: "progress",
-          data: this.evaluateProgress(expr, settings, exerciseType),
-        };
-      } else if (name === "update") {
-        return {
-          type: "update",
-          data: evaluateUpdate(expr, settings, this.dayData, exerciseType),
-        };
-      } else if (name === "warmup") {
-        return { type: "warmup", data: evaluateWarmup(expr) };
-      } else if (name === "id") {
-        return { type: "id", data: evaluateId(expr) };
-      } else if (name === "used") {
-        return { type: "used", data: "" };
-      } else {
-        errorPlannerSyntax(
-          `There's no such property exists - '${name}'`,
-          nameNode,
-        );
-      }
-    } else {
-      assert(PlannerNodeName.ExerciseProperty);
-    }
-  }
-
-  private evaluateSection(
-    expr: SourcedSyntaxNode,
-    settings: ISettings,
-    exerciseType?: IExerciseType,
-  ):
-    | { type: "sets"; data: IPlannerProgramExerciseSet[]; isCurrent: boolean }
-    | { type: "progress"; data: IProgramExerciseProgress }
-    | { type: "update"; data: IProgramExerciseUpdate }
-    | { type: "id"; data: number[] }
-    | { type: "reuse"; data: IPlannerProgramReuse }
-    | { type: "warmup"; data: IPlannerProgramExerciseWarmupSet[] }
-    | { type: "superset"; data: IPlannerProgramExerciseSuperset }
-    | { type: "used"; data: "" } {
-    if (expr.type.name === PlannerNodeName.ExerciseSection) {
-      const reuseNode = expr.getChild(PlannerNodeName.ReuseSectionWithWeekDay);
-      if (reuseNode != null) {
-        return evaluateReuseNode(reuseNode);
-      }
-      const setsNode = expr.getChild(PlannerNodeName.ExerciseSets);
-      if (setsNode != null) {
-        const sets = setsNode.getChildren(PlannerNodeName.ExerciseSet);
-        const isCurrent =
-          setsNode.getChild(PlannerNodeName.CurrentVariation) != null;
-        if (sets.length > 0) {
-          return {
-            type: "sets",
-            data: sets.map((set) => evaluateSet(set)),
-            isCurrent,
-          };
-        }
-      }
-      const superset = expr.getChild(PlannerNodeName.Superset);
-      if (superset != null) {
-        return evaluateSuperset(superset);
-      }
-      const property = expr.getChild(PlannerNodeName.ExerciseProperty);
-      if (property != null) {
-        return this.evaluateProperty(property, settings, exerciseType);
-      } else {
-        assert(PlannerNodeName.ExerciseProperty);
-      }
-    } else {
-      assert(PlannerNodeName.ExerciseSection);
-    }
   }
 
   private addDescription(value: string): void {
@@ -3314,9 +3312,10 @@ export class PlannerExerciseEvaluator {
       let update: IProgramExerciseUpdate | undefined;
       let superset: IPlannerProgramExerciseSuperset | undefined;
       for (const sectionNode of sectionNodes) {
-        const section = this.evaluateSection(
+        const section = evaluateSection(
           sectionNode,
           settings,
+          this.dayData,
           exercise ? { id: exercise.id, equipment } : undefined,
         );
         if (section.type === "sets") {
