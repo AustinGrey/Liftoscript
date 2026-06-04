@@ -289,7 +289,8 @@ function Program_runFinishDayScript(
     PlannerProgramExercise_getProgressScript(programExercise) || "";
   let updates: ILiftoscriptEvaluatorUpdate[] = [];
   try {
-    const [resultingUpdates] = new ScriptRunner(
+    const [resultingUpdates] = execute(
+      settings.units,
       script,
       newState,
       otherStates,
@@ -301,7 +302,7 @@ function Program_runFinishDayScript(
         prints: [],
       },
       "planner",
-    ).execute(settings.units);
+    );
     updates = resultingUpdates;
   } catch (e) {
     if (e instanceof SyntaxError) {
@@ -5376,7 +5377,8 @@ function Progress_runUpdateScriptForEntry(
       unit: settings.units,
       prints: [],
     };
-    new ScriptRunner(
+    execute(
+      settings.units,
       script,
       state,
       structuredClone(otherStates),
@@ -5384,7 +5386,7 @@ function Progress_runUpdateScriptForEntry(
       Progress_createScriptFunctions(settings),
       fnContext,
       "update",
-    ).execute(settings.units);
+    );
     const newEntry = Progress_applyBindings(entry, bindings, settings);
     newEntry.state = { ...newEntry.state, ...state };
     if (fnContext.prints.length > 0) {
@@ -6636,57 +6638,36 @@ function getStateVariableKeys(
   return liftoscriptEvaluator.getStateVariableKeys(liftoscriptTree.topNode);
 }
 
-class ScriptRunner {
-  private readonly script: string;
-  private readonly state: IProgramState;
-  private readonly otherStates: Record<number, IProgramState>;
-  private readonly bindings: IScriptBindings;
-  private readonly fns: IScriptFunctions;
-  private readonly context: IScriptFnContext;
-  private readonly mode: IProgramMode;
+function execute(
+  units: IUnit,
+  script: string,
+  state: IProgramState,
+  otherStates: Record<number, IProgramState>,
+  bindings: IScriptBindings,
+  fns: IScriptFunctions,
+  context: IScriptFnContext,
+  mode: IProgramMode,
+  type?: "reps" | "weight" | "timer" | "rpe",
+): [
+  ILiftoscriptEvaluatorUpdate[],
+  number | IWeight | IDynamicWeight | boolean,
+] {
+  const liftoscriptTree = LiftoscriptParser.parse(script);
+  const liftoscriptEvaluator = new LiftoscriptEvaluator(
+    script,
+    state,
+    otherStates,
+    bindings,
+    fns,
+    context,
+    units,
+    mode,
+  );
+  liftoscriptEvaluator.parse(liftoscriptTree.topNode);
+  const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
+  let result = (Array.isArray(rawResult) ? rawResult[0] : rawResult) ?? 0;
 
-  constructor(
-    script: string,
-    state: IProgramState,
-    otherStates: Record<number, IProgramState>,
-    bindings: IScriptBindings,
-    fns: IScriptFunctions,
-    context: IScriptFnContext,
-    mode: IProgramMode,
-  ) {
-    this.script = script;
-    this.state = state;
-    this.otherStates = otherStates;
-    this.bindings = bindings;
-    this.fns = fns;
-    this.context = context;
-    this.mode = mode;
-  }
-
-  public execute(
-    units: IUnit,
-    type?: "reps" | "weight" | "timer" | "rpe",
-  ): [
-    ILiftoscriptEvaluatorUpdate[],
-    number | IWeight | IDynamicWeight | boolean,
-  ] {
-    const liftoscriptTree = LiftoscriptParser.parse(this.script);
-    const liftoscriptEvaluator = new LiftoscriptEvaluator(
-      this.script,
-      this.state,
-      this.otherStates,
-      this.bindings,
-      this.fns,
-      this.context,
-      units,
-      this.mode,
-    );
-    liftoscriptEvaluator.parse(liftoscriptTree.topNode);
-    const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
-    let result = (Array.isArray(rawResult) ? rawResult[0] : rawResult) ?? 0;
-
-    return [liftoscriptEvaluator.updates, convertResult(type, result, units)];
-  }
+  return [liftoscriptEvaluator.updates, convertResult(type, result, units)];
 }
 
 function convertResult(
