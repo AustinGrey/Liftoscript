@@ -2372,6 +2372,10 @@ function getRepeatRanges(numbers: number[]): string[] {
   return ranges;
 }
 
+function getNodeSourceEscapedWhiteSpace(node: SourcedSyntaxNode): string {
+  return node.source.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+}
+
 export class PlannerExerciseEvaluator {
   private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
@@ -2398,10 +2402,6 @@ export class PlannerExerciseEvaluator {
     this.mode = mode;
   }
 
-  private getNodeSourceEscapedWhiteSpace(node: SourcedSyntaxNode): string {
-    return node.source.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-  }
-
   private getPoint(node: SourcedSyntaxNode): IPlannerSyntaxPointer {
     const [line, offset] = node.getLineAndOffset();
     return { line, offset, from: node.from, to: node.to };
@@ -2425,7 +2425,7 @@ export class PlannerExerciseEvaluator {
       expr?.type.name === PlannerNodeName.WeightWithPlus ||
       expr?.type.name === PlannerNodeName.Weight
     ) {
-      const value = this.getNodeSourceEscapedWhiteSpace(expr).replace("+", "");
+      const value = getNodeSourceEscapedWhiteSpace(expr).replace("+", "");
       const unit = value.indexOf("kg") !== -1 ? "kg" : "lb";
       return build(parseFloat(value), unit);
     } else {
@@ -2439,7 +2439,7 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.WarmupExerciseSet) {
       const setPartNodes = expr.getChildren(PlannerNodeName.WarmupSetPart);
       const setParts = setPartNodes
-        .map((setPartNode) => this.getNodeSourceEscapedWhiteSpace(setPartNode))
+        .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
         .join("");
       const { numberOfSets, reps } = getWarmupReps(setParts);
       const percentageNode = expr.getChild(PlannerNodeName.Percentage);
@@ -2448,10 +2448,7 @@ export class PlannerExerciseEvaluator {
         percentageNode == null
           ? undefined
           : parseFloat(
-              this.getNodeSourceEscapedWhiteSpace(percentageNode).replace(
-                "%",
-                "",
-              ),
+              getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
             );
       const weight = this.getWeight(weightNode);
       if (percentage) {
@@ -2478,7 +2475,7 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.ExerciseSet) {
       const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
       const setParts = setPartNodes
-        .map((setPartNode) => this.getNodeSourceEscapedWhiteSpace(setPartNode))
+        .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
         .join("");
       const repRange = getRepRange(setParts);
       const rpeNode = expr.getChild(PlannerNodeName.Rpe);
@@ -2490,20 +2487,18 @@ export class PlannerExerciseEvaluator {
       const askWeight =
         askWeightNode != null ||
         (weightNode != null &&
-          this.getNodeSourceEscapedWhiteSpace(weightNode).indexOf("+") !==
-            -1) ||
+          getNodeSourceEscapedWhiteSpace(weightNode).indexOf("+") !== -1) ||
         (percentageNode != null &&
-          this.getNodeSourceEscapedWhiteSpace(percentageNode).indexOf("+") !==
-            -1);
+          getNodeSourceEscapedWhiteSpace(percentageNode).indexOf("+") !== -1);
       const logRpe =
         rpeNode == null
           ? undefined
-          : this.getNodeSourceEscapedWhiteSpace(rpeNode).indexOf("+") !== -1;
+          : getNodeSourceEscapedWhiteSpace(rpeNode).indexOf("+") !== -1;
       let rpe =
         rpeNode == null
           ? undefined
           : parseFloat(
-              this.getNodeSourceEscapedWhiteSpace(rpeNode)
+              getNodeSourceEscapedWhiteSpace(rpeNode)
                 .replace("@", "")
                 .replace("+", ""),
             );
@@ -2514,14 +2509,14 @@ export class PlannerExerciseEvaluator {
         timerNode == null
           ? undefined
           : parseInt(
-              this.getNodeSourceEscapedWhiteSpace(timerNode).replace("s", ""),
+              getNodeSourceEscapedWhiteSpace(timerNode).replace("s", ""),
               10,
             );
       const percentage =
         percentageNode == null
           ? undefined
           : parseFloat(
-              this.getNodeSourceEscapedWhiteSpace(percentageNode).replace(
+              getNodeSourceEscapedWhiteSpace(percentageNode).replace(
                 /[%+]/,
                 "",
               ),
@@ -2529,7 +2524,7 @@ export class PlannerExerciseEvaluator {
       const weight = this.getWeight(weightNode);
       const label = labelNode
         ? getChildren(labelNode)
-            .map((n) => this.getNodeSourceEscapedWhiteSpace(n))
+            .map((n) => getNodeSourceEscapedWhiteSpace(n))
             .join(" ")
         : undefined;
       if (labelNode && label && label.length > 8) {
@@ -2560,13 +2555,13 @@ export class PlannerExerciseEvaluator {
       if (fnNameNode == null) {
         assert(PlannerNodeName.FunctionName);
       }
-      const fnName = this.getNodeSourceEscapedWhiteSpace(fnNameNode);
+      const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
       if (["tags"].indexOf(fnName) === -1) {
         this.error(`There's no such id type - '${fnName}'`, fnNameNode);
       }
       const fnArgs = valueNode
         .getChildren(PlannerNodeName.FunctionArgument)
-        .map((argNode) => this.getNodeSourceEscapedWhiteSpace(argNode));
+        .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
       if (fnName === "tags") {
         if (fnArgs.length === 0) {
           this.error(
@@ -2594,10 +2589,10 @@ export class PlannerExerciseEvaluator {
       if (fnNameNode == null) {
         assert(PlannerNodeName.FunctionName);
       }
-      const fnName = this.getNodeSourceEscapedWhiteSpace(fnNameNode);
+      const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
       const fnArgs = valueNode
         .getChildren(PlannerNodeName.FunctionArgument)
-        .map((argNode) => this.getNodeSourceEscapedWhiteSpace(argNode));
+        .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
       let script: string | undefined;
       let body: string | undefined;
       let meta: { stateKeys: Set<string> } | undefined;
@@ -2617,7 +2612,7 @@ export class PlannerExerciseEvaluator {
           ?.getChild(PlannerNodeName.ReuseSection)
           ?.getChild(PlannerNodeName.ExerciseName);
         body = reuseLiftoscriptNode
-          ? this.getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
+          ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
           : undefined;
         if (script) {
           const liftoscriptEvaluator = new ScriptRunner(
@@ -2814,10 +2809,10 @@ export class PlannerExerciseEvaluator {
       if (fnNameNode == null) {
         assert(PlannerNodeName.FunctionName);
       }
-      const fnName = this.getNodeSourceEscapedWhiteSpace(fnNameNode);
+      const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
       const fnArgs = valueNode
         .getChildren(PlannerNodeName.FunctionArgument)
-        .map((argNode) => this.getNodeSourceEscapedWhiteSpace(argNode));
+        .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
       this.validateProgress(fnName, fnArgs, fnNameNode, valueNode);
 
       const type = fnName as IProgramExerciseProgressType;
@@ -2860,7 +2855,7 @@ export class PlannerExerciseEvaluator {
           ?.getChild(PlannerNodeName.ReuseSection)
           ?.getChild(PlannerNodeName.ExerciseName);
         const body = reuseLiftoscriptNode
-          ? this.getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
+          ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
           : undefined;
         return PlannerProgramExercise_buildProgress(type, fnArgs, {
           script,
@@ -2902,7 +2897,7 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.Superset) {
       const exerciseNameNode = expr.getChild(PlannerNodeName.ExerciseName);
       if (exerciseNameNode != null) {
-        const name = this.getNodeSourceEscapedWhiteSpace(exerciseNameNode);
+        const name = getNodeSourceEscapedWhiteSpace(exerciseNameNode);
         return {
           type: "superset",
           data: { name },
@@ -2929,7 +2924,7 @@ export class PlannerExerciseEvaluator {
       if (nameNode == null) {
         assert(PlannerNodeName.ExercisePropertyName);
       }
-      const name = this.getNodeSourceEscapedWhiteSpace(nameNode);
+      const name = getNodeSourceEscapedWhiteSpace(nameNode);
       if (name === "progress") {
         return {
           type: "progress",
@@ -2966,7 +2961,7 @@ export class PlannerExerciseEvaluator {
         .map((n) => {
           const child = getChildren(n)[0];
           if (child.type.name === PlannerNodeName.Int) {
-            return parseInt(this.getNodeSourceEscapedWhiteSpace(child), 10);
+            return parseInt(getNodeSourceEscapedWhiteSpace(child), 10);
           } else {
             return undefined;
           }
@@ -2992,7 +2987,7 @@ export class PlannerExerciseEvaluator {
       if (nameNode == null) {
         assert(PlannerNodeName.ExerciseName);
       }
-      const name = this.getNodeSourceEscapedWhiteSpace(nameNode);
+      const name = getNodeSourceEscapedWhiteSpace(nameNode);
       const { week, day } = this.getReuseWeekDay(
         expr.getChild(PlannerNodeName.WeekDay),
       );
@@ -3067,7 +3062,7 @@ export class PlannerExerciseEvaluator {
       const children = getChildren(repeatNode);
       for (const childNode of children) {
         if (childNode.type.name === PlannerNodeName.Rep) {
-          return parseInt(this.getNodeSourceEscapedWhiteSpace(childNode), 10);
+          return parseInt(getNodeSourceEscapedWhiteSpace(childNode), 10);
         }
       }
       return 0;
@@ -3087,7 +3082,7 @@ export class PlannerExerciseEvaluator {
       for (const childNode of children) {
         if (childNode.type.name === PlannerNodeName.RepRange) {
           const [from, to] = getChildren(childNode).map((n) =>
-            parseInt(this.getNodeSourceEscapedWhiteSpace(n), 10),
+            parseInt(getNodeSourceEscapedWhiteSpace(n), 10),
           );
           for (let i = from; i <= to; i += 1) {
             result.add(i);
@@ -3198,7 +3193,7 @@ export class PlannerExerciseEvaluator {
         assert("ExerciseName");
       }
 
-      const fullName = this.getNodeSourceEscapedWhiteSpace(nameNode);
+      const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
 
       let { label, name, equipment } = extractNameParts(
         fullName,
@@ -3600,7 +3595,7 @@ export class PlannerExerciseEvaluator {
       if (child.type.name === PlannerNodeName.ExerciseExpression) {
         ongoingDescriptions = false;
         const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
-        const fullName = this.getNodeSourceEscapedWhiteSpace(nameNode);
+        const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
         const key = PlannerKey_fromFullName(fullName, this.settings.exercises);
         const repeat = this.getRepeat(child);
         const repeatRanges = getRepeatRanges(repeat);
@@ -3622,7 +3617,7 @@ export class PlannerExerciseEvaluator {
               PlannerNodeName.ExercisePropertyName,
             );
             const propertyName = propertyNameNode
-              ? this.getNodeSourceEscapedWhiteSpace(propertyNameNode)
+              ? getNodeSourceEscapedWhiteSpace(propertyNameNode)
               : undefined;
             if (propertyName === "progress") {
               const none = properties.getChild(PlannerNodeName.None);
