@@ -2951,7 +2951,8 @@ function evaluateUpdate(
         ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
         : undefined;
       if (script) {
-        const stateKeys = new ScriptRunner(
+        const stateKeys = getStateVariableKeys(
+          settings.units,
           script,
           {},
           {},
@@ -2959,7 +2960,7 @@ function evaluateUpdate(
           Progress_createScriptFunctions(settings),
           { exerciseType, unit: settings.units, prints: [] },
           "update",
-        ).getStateVariableKeys(settings.units);
+        );
         meta = { stateKeys };
       }
       if (!script && !body) {
@@ -6611,6 +6612,30 @@ function parseScript(
   liftoscriptEvaluator.parse(liftoscriptTree.topNode);
 }
 
+function getStateVariableKeys(
+  units: IUnit,
+  script: string,
+  state: IProgramState,
+  otherStates: Record<number, IProgramState>,
+  bindings: IScriptBindings,
+  fns: IScriptFunctions,
+  context: IScriptFnContext,
+  mode: IProgramMode,
+): Set<string> {
+  const liftoscriptTree = LiftoscriptParser.parse(script);
+  const liftoscriptEvaluator = new LiftoscriptEvaluator(
+    script,
+    state,
+    otherStates,
+    bindings,
+    fns,
+    context,
+    units,
+    mode,
+  );
+  return liftoscriptEvaluator.getStateVariableKeys(liftoscriptTree.topNode);
+}
+
 class ScriptRunner {
   private readonly script: string;
   private readonly state: IProgramState;
@@ -6636,21 +6661,6 @@ class ScriptRunner {
     this.fns = fns;
     this.context = context;
     this.mode = mode;
-  }
-
-  public getStateVariableKeys(units: IUnit): Set<string> {
-    const liftoscriptTree = LiftoscriptParser.parse(this.script);
-    const liftoscriptEvaluator = new LiftoscriptEvaluator(
-      this.script,
-      this.state,
-      this.otherStates,
-      this.bindings,
-      this.fns,
-      this.context,
-      units,
-      this.mode,
-    );
-    return liftoscriptEvaluator.getStateVariableKeys(liftoscriptTree.topNode);
   }
 
   public execute(
