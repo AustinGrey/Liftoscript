@@ -1415,6 +1415,7 @@ export function PlannerProgram_evaluateText(
   const evaluator = new PlannerExerciseEvaluator(Settings_build(), "fulltext");
   const data = evaluator.evaluatePreservingSource(
     parseBound(plannerExerciseParser, fullProgramText),
+    "fulltext",
   );
   const weeks: IPlannerProgramWeek[] = data.map((week) => {
     return {
@@ -3250,17 +3251,10 @@ function getWeekDayDescriptionAndFillLastDayFullText(
 }
 
 export class PlannerExerciseEvaluator {
-  private readonly mode: IPlannerExerciseEvaluatorMode;
   private dayData: Required<IDayData>;
   private weeks: IPlannerExerciseEvaluatorWeek[] = [];
   private exerciseIndex: number = 0;
-
   private latestDescriptions: string[][] = [];
-
-  /**
-   *
-   * @private
-   */
   private weeksFullText: IPlannerExerciseEvaluatorTextWeek[] = [];
   private ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
 
@@ -3270,12 +3264,12 @@ export class PlannerExerciseEvaluator {
     dayData?: Required<IDayData>,
   ) {
     this.dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
-    this.mode = mode;
   }
 
   public evaluate(
     programNode: SourcedSyntaxNode,
     settings: ISettings,
+    mode: IPlannerExerciseEvaluatorMode,
   ): IPlannerEvalFullResult {
     try {
       parse(programNode);
@@ -3297,7 +3291,7 @@ export class PlannerExerciseEvaluator {
             this.latestDescriptions.push([]);
           }
         } else if (child.type.name === PlannerNodeName.Week) {
-          if (this.mode === "perday") {
+          if (mode === "perday") {
             errorPlannerSyntax(
               `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
               child,
@@ -3312,7 +3306,7 @@ export class PlannerExerciseEvaluator {
             dayInWeek: 0,
           };
         } else if (child.type.name === PlannerNodeName.Day) {
-          if (this.mode === "perday") {
+          if (mode === "perday") {
             errorPlannerSyntax(
               `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
               child,
@@ -3347,7 +3341,7 @@ export class PlannerExerciseEvaluator {
           );
         } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
           if (
-            this.mode === "full" &&
+            mode === "full" &&
             (this.weeks.length === 0 ||
               this.weeks[this.weeks.length - 1].days.length === 0)
           ) {
@@ -3615,8 +3609,9 @@ export class PlannerExerciseEvaluator {
    */
   public evaluatePreservingSource(
     programNode: SourcedSyntaxNode,
+    mode: IPlannerExerciseEvaluatorMode,
   ): IPlannerExerciseEvaluatorTextWeek[] {
-    if (this.mode !== "fulltext") {
+    if (mode !== "fulltext") {
       throw new Error(
         'PlannerExerciseEvaluator.evaluatePreservingSource requires mode "fulltext"',
       );
@@ -3850,6 +3845,7 @@ function PlannerEvaluator_evaluateDay(
   const result = evaluator.evaluate(
     parseBound(plannerExerciseParser, day.exerciseText),
     settings,
+    "perday",
   );
   if (result.success) {
     const exercises = result.data[0]?.days[0]?.exercises || [];
