@@ -3614,29 +3614,25 @@ export class PlannerExerciseEvaluator {
     }
   }
 
-  private evaluateProgram(
-    expr: SourcedSyntaxNode,
-    settings: ISettings,
-  ): IPlannerExerciseEvaluatorWeek[] {
-    if (expr.type.name === PlannerNodeName.Program) {
-      this.weeks = [];
-      this.exerciseIndex = 0;
-      for (const child of CollectionUtils_compact(getChildren(expr))) {
-        this.evaluateExercise(child, settings);
-      }
-      return this.weeks;
-    } else {
-      errorPlannerSyntax(`Unexpected node type ${expr.node.type.name}`, expr);
-    }
-  }
-
   public evaluate(
     programNode: SourcedSyntaxNode,
     settings: ISettings,
   ): IPlannerEvalFullResult {
     try {
       parse(programNode);
-      const program = this.evaluateProgram(programNode, settings);
+      if (programNode.type.name !== PlannerNodeName.Program) {
+        errorPlannerSyntax(
+          `Unexpected node type ${programNode.node.type.name}`,
+          programNode,
+        );
+      }
+
+      this.weeks = [];
+      this.exerciseIndex = 0;
+      for (const child of CollectionUtils_compact(getChildren(programNode))) {
+        this.evaluateExercise(child, settings);
+      }
+      const program = this.weeks;
       return { data: program, success: true };
     } catch (e) {
       if (e instanceof PlannerSyntaxError) {
