@@ -6619,7 +6619,7 @@ class ScriptRunner {
     this.mode = mode;
   }
 
-  public parse(units: IUnit): [LiftoscriptEvaluator, Tree] {
+  public parse(units: IUnit): void {
     const liftoscriptTree = LiftoscriptParser.parse(this.script);
     const liftoscriptEvaluator = new LiftoscriptEvaluator(
       this.script,
@@ -6632,7 +6632,6 @@ class ScriptRunner {
       this.mode,
     );
     liftoscriptEvaluator.parse(liftoscriptTree.topNode);
-    return [liftoscriptEvaluator, liftoscriptTree];
   }
 
   public getStateVariableKeys(units: IUnit): Set<string> {
@@ -6657,7 +6656,18 @@ class ScriptRunner {
     ILiftoscriptEvaluatorUpdate[],
     number | IWeight | IDynamicWeight | boolean,
   ] {
-    const [liftoscriptEvaluator, liftoscriptTree] = this.parse(units);
+    const liftoscriptTree = LiftoscriptParser.parse(this.script);
+    const liftoscriptEvaluator = new LiftoscriptEvaluator(
+      this.script,
+      this.state,
+      this.otherStates,
+      this.bindings,
+      this.fns,
+      this.context,
+      units,
+      this.mode,
+    );
+    liftoscriptEvaluator.parse(liftoscriptTree.topNode);
     const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
     let result = (Array.isArray(rawResult) ? rawResult[0] : rawResult) ?? 0;
 
