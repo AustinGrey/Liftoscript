@@ -6600,7 +6600,6 @@ class ScriptRunner {
   private readonly fns: IScriptFunctions;
   private readonly context: IScriptFnContext;
   private readonly mode: IProgramMode;
-  private updates: ILiftoscriptEvaluatorUpdate[] = [];
 
   constructor(
     script: string,
@@ -6660,14 +6659,9 @@ class ScriptRunner {
   ] {
     const [liftoscriptEvaluator, liftoscriptTree] = this.parse(units);
     const rawResult = liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
-    let result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
-    if (result == null) {
-      result = 0;
-    }
-    const output = convertResult(type, result, units);
-    this.updates = liftoscriptEvaluator.updates;
+    let result = (Array.isArray(rawResult) ? rawResult[0] : rawResult) ?? 0;
 
-    return [this.updates, output];
+    return [liftoscriptEvaluator.updates, convertResult(type, result, units)];
   }
 }
 
