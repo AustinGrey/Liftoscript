@@ -277,6 +277,136 @@ Squat / 3x8 / update: custom() {~
 `,
     }),
   );
+
+  it(
+    "configures all the new sets",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x5 / 100lb / progress: custom() {~
+  numberOfSets = 5
+  weights[4] = 110lb
+  weights[5] = 110lb
+  reps[4] = 8
+  reps[5] = 8
+~}`,
+      completed: {
+        reps: [[5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x5 100lb, 2x8 110lb / progress: custom() {~
+  numberOfSets = 5
+  weights[4] = 110lb
+  weights[5] = 110lb
+  reps[4] = 8
+  reps[5] = 8
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "updates lp after completing",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 2x5 / 100lb / progress: lp(5lb, 2, 0)`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 2x5 / 100lb / progress: lp(5lb, 2, 1)
+
+
+`,
+    }),
+  );
+
+  it(
+    "updates lp and weight after failing",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 2x5 / 100lb / progress: lp(5lb, 1, 0, 10lb, 2, 1)`,
+      completed: {
+        reps: [[5, 3]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 2x5 / 90lb / progress: lp(5lb, 1, 0, 10lb, 2, 0)
+
+
+`,
+    }),
+  );
+
+  it(
+    "properly compacts multiple empty lines in-between descriptions",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+// Hey
+
+/// Sup
+
+
+// Hey hey
+Squat / 2x5 100lb`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `# Week 1
+## Day 1
+/// Sup
+// Hey
+
+// Hey hey
+Squat / 2x5 / 100lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "compacts repeated exercises",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat[1-2] / 2x5
+
+# Week 2
+## Day 1
+
+# Week 3
+## Day 1
+Squat / 2x5
+`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat[1-2] / 2x5
+
+
+# Week 2
+## Day 1
+
+
+
+# Week 3
+## Day 1
+Squat / 2x5
+
+
+`,
+    }),
+  );
 });
 
 describe("Planner", () => {
@@ -312,126 +442,6 @@ Squat / 1x5 47.5kg / 2x8 152.5kg / progress: custom(increase: 7.5kg) {~
 
 ## Day 2
 Squat / 3x5 / 4x8 / 47.5kg
-
-
-`);
-  });
-
-  it("configures all the new sets", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x5 / 100lb / progress: custom() {~
-  numberOfSets = 5
-  weights[4] = 110lb
-  weights[5] = 110lb
-  reps[4] = 8
-  reps[5] = 8
-~}`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x5 100lb, 2x8 110lb / progress: custom() {~
-  numberOfSets = 5
-  weights[4] = 110lb
-  weights[5] = 110lb
-  reps[4] = 8
-  reps[5] = 8
-~}
-
-
-`);
-  });
-
-  it("updates lp after completing", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 2x5 / 100lb / progress: lp(5lb, 2, 0)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5 / 100lb / progress: lp(5lb, 2, 1)
-
-
-`);
-  });
-
-  it("updates lp and weight after failing", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 2x5 / 100lb / progress: lp(5lb, 1, 0, 10lb, 2, 1)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 3]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5 / 90lb / progress: lp(5lb, 1, 0, 10lb, 2, 0)
-
-
-`);
-  });
-
-  it("properly compacts multiple empty lines in-between descriptions", () => {
-    const programText = `# Week 1
-## Day 1
-// Hey
-
-/// Sup
-
-
-// Hey hey
-Squat / 2x5 100lb`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-/// Sup
-// Hey
-
-// Hey hey
-Squat / 2x5 / 100lb
-
-
-`);
-  });
-
-  it("compacts repeated exercises", () => {
-    const programText = `# Week 1
-## Day 1
-Squat[1-2] / 2x5
-
-# Week 2
-## Day 1
-
-# Week 3
-## Day 1
-Squat / 2x5
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat[1-2] / 2x5
-
-
-# Week 2
-## Day 1
-
-
-
-# Week 3
-## Day 1
-Squat / 2x5
 
 
 `);
