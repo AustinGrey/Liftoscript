@@ -93,6 +93,7 @@ import {
 import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
+import { run } from "@/logic/evaluators";
 
 //#region Program
 
@@ -6648,19 +6649,7 @@ function execute(
   mode: IProgramMode,
   type?: "reps" | "weight" | "timer" | "rpe",
 ): ILiftoscriptEvaluatorUpdate[] {
-  const liftoscriptTree = LiftoscriptParser.parse(script);
-  const liftoscriptEvaluator = new LiftoscriptEvaluator(
-    script,
-    state,
-    otherStates,
-    bindings,
-    fns,
-    context,
-    units,
-    mode,
-  );
-  liftoscriptEvaluator.parse(liftoscriptTree.topNode);
-  liftoscriptEvaluator.evaluate(liftoscriptTree.topNode);
-  return liftoscriptEvaluator.updates;
+  // @todo where to pass in units? Or does it even matter?
+  return run(script, state, bindings, fns, context, otherStates, mode).updates;
 }
 //#endregion
