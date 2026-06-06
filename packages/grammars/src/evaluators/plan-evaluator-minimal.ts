@@ -6653,6 +6653,17 @@ function execute(
   type?: "reps" | "weight" | "timer" | "rpe",
 ): ILiftoscriptEvaluatorUpdate[] {
   // @todo where to pass in units? Or does it even matter?
-  return run(script, state, bindings, fns, context, otherStates, mode).updates;
+  const { updates, finalState } = run(
+    script,
+    state,
+    bindings,
+    fns,
+    context,
+    otherStates,
+    mode,
+  );
+  // @todo not a fan of this, we should return the updated state
+  Object.assign(state, finalState);
+  return updates;
 }
 //#endregion
