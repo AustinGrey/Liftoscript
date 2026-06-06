@@ -407,6 +407,292 @@ Squat / 2x5
 `,
     }),
   );
+
+  it(
+    "does not compact repeated exercises if originally didn't use ranges",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 2x5
+
+# Week 2
+## Day 1
+Squat / 2x5
+
+# Week 3
+## Day 1
+Squat / 2x5
+`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 2x5
+
+
+# Week 2
+## Day 1
+Squat / 2x5
+
+
+# Week 3
+## Day 1
+Squat / 2x5
+
+
+`,
+    }),
+  );
+
+  it(
+    "splits and compacts after mid-program progression",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat[1-5] / 2x5 / progress: custom() {~
+  weights[3:*:*:*] += 10lb
+~}
+Bench Press[1-5] / 2x5
+
+# Week 2
+## Day 1
+
+# Week 3
+## Day 1
+
+# Week 4
+## Day 1
+
+# Week 5
+## Day 1
+`,
+      completed: {
+        reps: [
+          [5, 5],
+          [5, 5],
+        ],
+      },
+      result: `# Week 1
+## Day 1
+Squat[1-2] / 2x5 / progress: custom() {~
+  weights[3:*:*:*] += 10lb
+~}
+Bench Press[1-5] / 2x5
+
+
+# Week 2
+## Day 1
+
+
+
+# Week 3
+## Day 1
+Squat / 2x5 / 10lb
+
+
+# Week 4
+## Day 1
+Squat[4-5] / 2x5
+
+
+# Week 5
+## Day 1
+
+
+
+`,
+    }),
+  );
+
+  it(
+    "override weights",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x5 100lb, 1x3 200lb / 60s / progress: dp(5lb, 3, 8)
+Bench Press[1-5] / ...Squat / 120lb / progress: lp(5lb)
+`,
+      completed: {
+        reps: [
+          [5, 3],
+          [5, 3],
+        ],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x6 100lb, 1x4 200lb / 60s / progress: dp(5lb, 3, 8)
+Bench Press / ...Squat / 1x5, 1x3 / 125lb / progress: lp(5lb)
+
+
+`,
+    }),
+  );
+
+  it(
+    "should work with negative weights",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 2x5 / -40lb / progress: lp(5lb)
+Bench Press / 2x3-5 -20lb / progress: lp(-5lb)
+`,
+      completed: {
+        reps: [
+          [5, 5],
+          [5, 5],
+        ],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 2x5 / -35lb / progress: lp(5lb)
+Bench Press / 2x3-5 / -25lb / progress: lp(-5lb)
+
+
+`,
+    }),
+  );
+
+  it(
+    "updates group states",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 2x5 100lb / progress: custom() {~
+  state[4].foo = 5
+~}
+Bench Press / id: tags(4) / 2x5 100lb / progress: custom(foo: 2) {~
+  reps += state.foo
+~}
+`,
+      completed: {
+        reps: [
+          [5, 5],
+          [5, 5],
+        ],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 2x5 / 100lb / progress: custom() {~
+  state[4].foo = 5
+~}
+Bench Press / 2x10 / 100lb / id: tags(4) / progress: custom(foo: 5) {~
+  reps += state.foo
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "properly handles askweights",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x5 100lb+, 1x3 100lb / 60s / progress: lp(5lb)
+Bench Press / ...Squat / progress: lp(5lb)
+`,
+      completed: {
+        reps: [
+          [5, 3],
+          [5, 3],
+        ],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x5 105lb+, 1x3 105lb / 60s / progress: lp(5lb)
+Bench Press / ...Squat
+
+
+`,
+    }),
+  );
+
+  it(
+    "parses ?+ as askWeight without explicit weight",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8 @8 ?+`,
+      completed: {
+        reps: [[8, 8, 8]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x8 / ?+ @8
+
+
+`,
+    }),
+  );
+
+  it(
+    "handles ?+ with lp() progress",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8 @8 ?+ / progress: lp(5lb)`,
+      completed: {
+        reps: [[8, 8, 8]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x8 / 102.5lb+ @8 / progress: lp(5lb)
+
+
+`,
+    }),
+  );
+
+  it(
+    "handles per-set ?+ mixed with non-askWeight sets",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x8 @8 ?+, 1x5 100lb`,
+      completed: {
+        reps: [[8, 5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x8 ?+ @8, 1x5 100lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "use loops",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8 100lb / progress: custom() {~
+  for (var.i in completedReps) {
+    if (completedReps[var.i] >= reps[var.i]) {
+      weights[var.i] = weights[var.i] + 5lb
+    }
+  }
+~}
+`,
+      completed: {
+        reps: [[8, 6, 8]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x8 105lb, 1x8 100lb, 1x8 105lb / progress: custom() {~
+  for (var.i in completedReps) {
+    if (completedReps[var.i] >= reps[var.i]) {
+      weights[var.i] = weights[var.i] + 5lb
+    }
+  }
+~}
+
+
+`,
+    }),
+  );
 });
 
 describe("Planner", () => {
@@ -442,243 +728,6 @@ Squat / 1x5 47.5kg / 2x8 152.5kg / progress: custom(increase: 7.5kg) {~
 
 ## Day 2
 Squat / 3x5 / 4x8 / 47.5kg
-
-
-`);
-  });
-
-  it("does not compact repeated exercises if originally didn't use ranges", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 2x5
-
-# Week 2
-## Day 1
-Squat / 2x5
-
-# Week 3
-## Day 1
-Squat / 2x5
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5
-
-
-# Week 2
-## Day 1
-Squat / 2x5
-
-
-# Week 3
-## Day 1
-Squat / 2x5
-
-
-`);
-  });
-
-  it("splits and compacts after mid-program progression", () => {
-    const programText = `# Week 1
-## Day 1
-Squat[1-5] / 2x5 / progress: custom() {~
-  weights[3:*:*:*] += 10lb
-~}
-Bench Press[1-5] / 2x5
-
-# Week 2
-## Day 1
-
-# Week 3
-## Day 1
-
-# Week 4
-## Day 1
-
-# Week 5
-## Day 1
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [5, 5],
-        [5, 5],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat[1-2] / 2x5 / progress: custom() {~
-  weights[3:*:*:*] += 10lb
-~}
-Bench Press[1-5] / 2x5
-
-
-# Week 2
-## Day 1
-
-
-
-# Week 3
-## Day 1
-Squat / 2x5 / 10lb
-
-
-# Week 4
-## Day 1
-Squat[4-5] / 2x5
-
-
-# Week 5
-## Day 1
-
-
-
-`);
-  });
-
-  it("override weights", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x5 100lb, 1x3 200lb / 60s / progress: dp(5lb, 3, 8)
-Bench Press[1-5] / ...Squat / 120lb / progress: lp(5lb)
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [5, 3],
-        [5, 3],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x6 100lb, 1x4 200lb / 60s / progress: dp(5lb, 3, 8)
-Bench Press / ...Squat / 1x5, 1x3 / 125lb / progress: lp(5lb)
-
-
-`);
-  });
-
-  it("should work with negative weights", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 2x5 / -40lb / progress: lp(5lb)
-Bench Press / 2x3-5 -20lb / progress: lp(-5lb)
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [5, 5],
-        [5, 5],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5 / -35lb / progress: lp(5lb)
-Bench Press / 2x3-5 / -25lb / progress: lp(-5lb)
-
-
-`);
-  });
-
-  it("updates group states", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 2x5 100lb / progress: custom() {~
-  state[4].foo = 5
-~}
-Bench Press / id: tags(4) / 2x5 100lb / progress: custom(foo: 2) {~
-  reps += state.foo
-~}
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [5, 5],
-        [5, 5],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5 / 100lb / progress: custom() {~
-  state[4].foo = 5
-~}
-Bench Press / 2x10 / 100lb / id: tags(4) / progress: custom(foo: 5) {~
-  reps += state.foo
-~}
-
-
-`);
-  });
-
-  it("properly handles askweights", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x5 100lb+, 1x3 100lb / 60s / progress: lp(5lb)
-Bench Press / ...Squat / progress: lp(5lb)
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [5, 3],
-        [5, 3],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x5 105lb+, 1x3 105lb / 60s / progress: lp(5lb)
-Bench Press / ...Squat
-
-
-`);
-  });
-
-  it("parses ?+ as askWeight without explicit weight", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8 @8 ?+`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[8, 8, 8]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x8 / ?+ @8
-
-
-`);
-  });
-
-  it("handles ?+ with lp() progress", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8 @8 ?+ / progress: lp(5lb)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[8, 8, 8]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x8 / 102.5lb+ @8 / progress: lp(5lb)
-
-
-`);
-  });
-
-  it("handles per-set ?+ mixed with non-askWeight sets", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x8 @8 ?+, 1x5 100lb`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[8, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x8 ?+ @8, 1x5 100lb
 
 
 `);
@@ -774,35 +823,6 @@ Squat / 1x5 50lb, 1x3 80lb / 60s / progress: lp(5lb)
     expect(newText.trim()).to.equal(`# Week 1
 ## Day 1
 Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`);
-  });
-
-  it("use loops", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8 100lb / progress: custom() {~
-  for (var.i in completedReps) {
-    if (completedReps[var.i] >= reps[var.i]) {
-      weights[var.i] = weights[var.i] + 5lb
-    }
-  }
-~}
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[8, 6, 8]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x8 105lb, 1x8 100lb, 1x8 105lb / progress: custom() {~
-  for (var.i in completedReps) {
-    if (completedReps[var.i] >= reps[var.i]) {
-      weights[var.i] = weights[var.i] + 5lb
-    }
-  }
-~}
-
-
-`);
   });
 
   it("keeps overridden dp progress", () => {
