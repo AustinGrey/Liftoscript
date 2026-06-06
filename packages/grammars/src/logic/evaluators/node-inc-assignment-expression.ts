@@ -139,50 +139,46 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
   } else {
     const indexNode = stateVar.getChild(NodeName.StateVariableIndex);
     const stateKeyNode = stateVar.getChild(NodeName.Keyword);
-    if (stateKeyNode != null) {
-      const stateKey = t.getText(stateKeyNode);
-      let state: IProgramState | undefined;
-      if (indexNode == null) {
-        if (stateKey in this.state) {
-          state = this.state;
-        } else {
-          t.error(`There's no state variable '${stateKey}'`, stateVar);
-        }
-      } else {
-        const indexEval = t.recurse(indexNode);
-        const index = this.toNumber(indexEval);
-        state = this.otherStates[index];
-      }
-
-      let value = t.recurse(expression);
-      if (state != null) {
-        if (
-          !(is(TWeight, value) || is(TDynamicWeight, value) || isNumber(value))
-        ) {
-          value = value ? 1 : 0;
-        }
-        const op = t.getText(incAssignmentExpr);
-        const currentValue = state[stateKey] ?? 0;
-        if (op === "+=") {
-          state[stateKey] = add(currentValue, value);
-        } else if (op === "-=") {
-          state[stateKey] = subtract(currentValue, value);
-        } else if (op === "*=") {
-          state[stateKey] = multiply(currentValue, value);
-        } else if (op === "/=") {
-          state[stateKey] = divide(currentValue, value);
-        } else {
-          t.error(
-            `Unknown operator ${op} after state.${stateKey}`,
-            incAssignmentExpr,
-          );
-        }
-        return state[stateKey];
-      } else {
-        return value;
-      }
-    } else {
+    if (stateKeyNode == null) {
       return 0;
     }
+    const stateKey = t.getText(stateKeyNode);
+    let state: IProgramState | undefined;
+    if (indexNode == null) {
+      if (stateKey in this.state) {
+        state = this.state;
+      } else {
+        t.error(`There's no state variable '${stateKey}'`, stateVar);
+      }
+    } else {
+      const indexEval = t.recurse(indexNode);
+      const index = this.toNumber(indexEval);
+      state = this.otherStates[index];
+    }
+
+    let value = t.recurse(expression);
+    if (state == null) {
+      return value;
+    }
+    if (!(is(TWeight, value) || is(TDynamicWeight, value) || isNumber(value))) {
+      value = value ? 1 : 0;
+    }
+    const op = t.getText(incAssignmentExpr);
+    const currentValue = state[stateKey] ?? 0;
+    if (op === "+=") {
+      state[stateKey] = add(currentValue, value);
+    } else if (op === "-=") {
+      state[stateKey] = subtract(currentValue, value);
+    } else if (op === "*=") {
+      state[stateKey] = multiply(currentValue, value);
+    } else if (op === "/=") {
+      state[stateKey] = divide(currentValue, value);
+    } else {
+      t.error(
+        `Unknown operator ${op} after state.${stateKey}`,
+        incAssignmentExpr,
+      );
+    }
+    return state[stateKey];
   }
 };
