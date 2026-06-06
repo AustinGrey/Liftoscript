@@ -6,19 +6,21 @@ import {
   TDynamicWeight,
   TWeight,
   convertToWeight,
-  add,
-  subtract,
-  divide,
-  multiply,
 } from "@/quantities/weight.ts";
 import type { IProgramState } from "@/common-types.ts";
-import { toNumberUnsafe, coerceToQuantity } from "@/logic/result-handling.ts";
+import {
+  toNumberUnsafe,
+  coerceToQuantity,
+  operate,
+} from "@/logic/result-handling.ts";
 import {
   changeBinding,
   changeNumberOfSets,
   recordVariableUpdate,
 } from "@/logic/evaluators/common.ts";
+import type { Quantity } from "@/logic/types.ts";
 
+// @todo this is a lot of complicated logic - can't this be simplified by just desugaring this to left = left <op> right? We can dispatch this to the existing handlers for binary ops and assignment
 export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
   const [stateVar, incAssignmentExpr, expression] = queryChildren(n, {
     atLeast: 3,
@@ -39,6 +41,13 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       n,
     );
   }
+
+  // This function set is more readable unchopped
+  /* prettier-ignore */ const add     = <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a + b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "+", (message)=>t.error(message, n));
+  /* prettier-ignore */ const subtract= <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a - b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "-", (message)=>t.error(message, n));
+  /* prettier-ignore */ const multiply= <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a * b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "*", (message)=>t.error(message, n));
+  /* prettier-ignore */ const divide  = <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a / b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "/", (message)=>t.error(message, n));
+
   if (stateVar.type.name === NodeName.VariableExpression) {
     const nameNode = queryChild(stateVar, { ofType: NodeName.Keyword });
     if (nameNode == null) {
