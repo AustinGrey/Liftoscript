@@ -27,6 +27,7 @@ import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import {
   LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
+  NodeName,
 } from "@/evaluators/logic-evaluator.ts";
 import {
   applyOp,
@@ -94,6 +95,8 @@ import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
+import { getDescendant, queryDescendants } from "@/utils/grammars.ts";
+import type { TypedLogicNode } from "@/logic/parsing/guards.ts";
 
 //#region Program
 
@@ -6624,18 +6627,32 @@ function getStateVariableKeys(
   context: IScriptFnContext,
   mode: IProgramMode,
 ): Set<string> {
-  const liftoscriptTree = LiftoscriptParser.parse(script);
-  const liftoscriptEvaluator = new LiftoscriptEvaluator(
-    script,
-    state,
-    otherStates,
-    bindings,
-    fns,
-    context,
-    units,
-    mode,
-  );
-  return liftoscriptEvaluator.getStateVariableKeys(liftoscriptTree.topNode);
+  return getStateVariableKeysInner(parseBound(LiftoscriptParser, script));
+}
+
+function getStateVariableKeysInner(expr: SourcedSyntaxNode): Set<string> {
+  const cursor = expr.cursor();
+  const stateKeys: Set<string> = new Set();
+  do {
+    if (cursor.node.type.name === NodeName.StateVariable) {
+      const stateKey = getStateKey(cursor.node);
+      if (stateKey != null) {
+        stateKeys.add(stateKey);
+      }
+    }
+  } while (cursor.next());
+  return stateKeys;
+}
+
+/**
+ * @todo de-duplicate with the 'getStateKey' in the node-state-variable.ts file
+ * Gets the text of the variable attempting to be accessed on the state
+ * e.g. state.foo, this would return 'foo'
+ * @param expr The node to get the state key from
+ */
+function getStateKey(expr: SourcedSyntaxNode): string | undefined {
+  return [...queryDescendants(expr, { ofType: NodeName.Keyword }).take(1)].at(0)
+    ?.source;
 }
 
 function execute(

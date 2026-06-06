@@ -1,4 +1,5 @@
 import type { SyntaxNode } from "@lezer/common";
+import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 /**
  * Options when querying for children of a syntax node
@@ -79,9 +80,9 @@ export function getChild<TTypes extends string>(
  * @param options.includeSkipped - If true, includes skipped nodes in the result. Otherwise they are skipped.
  */
 export function* queryDescendants<TTypes extends string>(
-  node: SyntaxNode,
+  node: SourcedSyntaxNode,
   { atLeast, ofType, includeSkipped }: QueryOptions<TTypes> = {},
-): Generator<SyntaxNode> {
+): Generator<SourcedSyntaxNode> {
   const cur = node.cursor();
   let count = 0;
 
@@ -128,9 +129,9 @@ export function* queryDescendants<TTypes extends string>(
  * @param options The query options to use when searching for the descendant
  */
 export function getDescendant<TTypes extends string>(
-  node: SyntaxNode,
+  node: SourcedSyntaxNode,
   options: QueryOptions<TTypes> = {},
-): SyntaxNode {
+): SourcedSyntaxNode {
   const [result, ...rest] = queryDescendants(node, options);
   if (!result) {
     throw new SyntaxError(

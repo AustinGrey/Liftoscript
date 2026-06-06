@@ -82,7 +82,7 @@ export interface SourcedSyntaxNode {
   matchContext(context: readonly string[]): boolean;
 }
 
-export class SourcedTreeCursor {
+class SourcedTreeCursor {
   constructor(
     private cursor: TreeCursor,
     private getSource: () => string,
@@ -169,7 +169,7 @@ export class SourcedTreeCursor {
   }
 }
 
-export function bindNode(
+function bindNode(
   node: SyntaxNode,
   getSource: () => string,
 ): SourcedSyntaxNode {
