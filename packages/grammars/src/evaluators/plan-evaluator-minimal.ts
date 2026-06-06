@@ -6592,18 +6592,21 @@ function parseScript(
   context: IScriptFnContext,
   mode: IProgramMode,
 ): void {
-  const liftoscriptTree = LiftoscriptParser.parse(script);
-  const liftoscriptEvaluator = new LiftoscriptEvaluator(
-    script,
-    state,
-    otherStates,
-    bindings,
-    fns,
-    context,
-    units,
-    mode,
-  );
-  liftoscriptEvaluator.parse(liftoscriptTree.topNode);
+  parseBound(LiftoscriptParser, script);
+  // @todo I think the original "parse" method was supposed to throw if there were any parsing issues, sort of like a checker/validator
+  // Which we are definitely not doing here. But should we even care?
+  // const liftoscriptTree = LiftoscriptParser.parse(script);
+  // const liftoscriptEvaluator = new LiftoscriptEvaluator(
+  //   script,
+  //   state,
+  //   otherStates,
+  //   bindings,
+  //   fns,
+  //   context,
+  //   units,
+  //   mode,
+  // );
+  // liftoscriptEvaluator.parse(liftoscriptTree.topNode);
 }
 
 function getStateVariableKeys(script: string): Set<string> {
