@@ -2,11 +2,21 @@ import type { LogicHandler } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { is, isNumber } from "@/utils/types.ts";
-import { TDynamicWeight, TWeight } from "@/quantities/weight.ts";
+import {
+  TDynamicWeight,
+  TWeight,
+  convertToWeight,
+  add,
+  subtract,
+  divide,
+  multiply,
+} from "@/quantities/weight.ts";
 import type { IProgramState } from "@/common-types.ts";
 
 export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
-  const [stateVar, incAssignmentExpr, expression] = queryChildren(n);
+  const [stateVar, incAssignmentExpr, expression] = queryChildren(n, {
+    atLeast: 3,
+  });
   if (
     stateVar == null ||
     (stateVar.type.name !== NodeName.StateVariable &&
@@ -15,7 +25,10 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     expression == null ||
     incAssignmentExpr == null
   ) {
-    assert(NodeName.IncAssignmentExpression);
+    t.error(
+      `missing required nodes for ${NodeName.IncAssignmentExpression}`,
+      n,
+    );
   }
   if (stateVar.type.name === NodeName.VariableExpression) {
     const nameNode = stateVar.getChild(NodeName.Keyword);
@@ -23,47 +36,40 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       t.error(`Missing variable name`, stateVar);
     }
     const indexExprs = stateVar.getChildren(NodeName.VariableIndex);
-    const variable = this.getValue(nameNode);
+    const variable = t.getText(nameNode);
     if (variable === "rm1") {
       if (indexExprs.length > 0) {
         t.error(`rm1 is not an array`, n);
       }
-      const evaluatedValue = this.evaluate(expression);
+      const evaluatedValue = t.recurse(expression);
       let value = Array.isArray(evaluatedValue)
         ? evaluatedValue[0]
         : evaluatedValue;
       value = value ?? 0;
       value = value === true ? 1 : value === false ? 0 : value;
 
-      const op = this.getValue(incAssignmentExpr);
-      if (op === "+=") {
-        this.bindings.rm1 = Weight_convertToWeight(
-          this.bindings.rm1,
-          this.add(this.bindings.rm1, value),
-          this.unit,
-        );
-      } else if (op === "-=") {
-        this.bindings.rm1 = Weight_convertToWeight(
-          this.bindings.rm1,
-          this.subtract(this.bindings.rm1, value),
-          this.unit,
-        );
-      } else if (op === "*=") {
-        this.bindings.rm1 = Weight_convertToWeight(
-          this.bindings.rm1,
-          this.multiply(this.bindings.rm1, value),
-          this.unit,
-        );
-      } else if (op === "/=") {
-        this.bindings.rm1 = Weight_convertToWeight(
-          this.bindings.rm1,
-          this.divide(this.bindings.rm1, value),
-          this.unit,
-        );
-      } else {
-        t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
-      }
-      return this.bindings.rm1;
+      const op = t.getText(incAssignmentExpr);
+      t.updateGlobal("rm1", (rm1) =>
+        convertToWeight(
+          rm1,
+          op === "+="
+            ? add(rm1, value)
+            : op === "-="
+              ? subtract(rm1, value)
+              : op === "*="
+                ? multiply(rm1, value)
+                : op === "/="
+                  ? divide(rm1, value)
+                  : t.error(
+                      `Unknown operator ${op} after ${variable}`,
+                      incAssignmentExpr,
+                    ),
+          // @todo why use this.unit? When you can do all the math in kg and just adjust at display time?
+          // this.unit
+          "kg",
+        ),
+      );
+      return t.getGlobal("rm1");
     } else if (
       this.mode === "planner" &&
       (variable === "reps" ||
@@ -75,7 +81,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         variable === "descriptionIndex" ||
         variable === "numberOfSets")
     ) {
-      const op = this.getValue(incAssignmentExpr);
+      const op = t.getText(incAssignmentExpr);
       if (
         op !== "=" &&
         op !== "+=" &&
@@ -106,7 +112,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         variable === "minReps" ||
         variable === "timers")
     ) {
-      const op = this.getValue(incAssignmentExpr);
+      const op = t.getText(incAssignmentExpr);
       if (
         op !== "=" &&
         op !== "+=" &&
@@ -153,7 +159,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     const indexNode = stateVar.getChild(NodeName.StateVariableIndex);
     const stateKeyNode = stateVar.getChild(NodeName.Keyword);
     if (stateKeyNode != null) {
-      const stateKey = this.getValue(stateKeyNode);
+      const stateKey = t.getText(stateKeyNode);
       let state: IProgramState | undefined;
       if (indexNode == null) {
         if (stateKey in this.state) {
@@ -162,28 +168,28 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
           t.error(`There's no state variable '${stateKey}'`, stateVar);
         }
       } else {
-        const indexEval = this.evaluate(indexNode);
+        const indexEval = t.recurse(indexNode);
         const index = this.toNumber(indexEval);
         state = this.otherStates[index];
       }
 
-      let value = this.evaluate(expression);
+      let value = t.recurse(expression);
       if (state != null) {
         if (
           !(is(TWeight, value) || is(TDynamicWeight, value) || isNumber(value))
         ) {
           value = value ? 1 : 0;
         }
-        const op = this.getValue(incAssignmentExpr);
+        const op = t.getText(incAssignmentExpr);
         const currentValue = state[stateKey] ?? 0;
         if (op === "+=") {
-          state[stateKey] = this.add(currentValue, value);
+          state[stateKey] = add(currentValue, value);
         } else if (op === "-=") {
-          state[stateKey] = this.subtract(currentValue, value);
+          state[stateKey] = subtract(currentValue, value);
         } else if (op === "*=") {
-          state[stateKey] = this.multiply(currentValue, value);
+          state[stateKey] = multiply(currentValue, value);
         } else if (op === "/=") {
-          state[stateKey] = this.divide(currentValue, value);
+          state[stateKey] = divide(currentValue, value);
         } else {
           t.error(
             `Unknown operator ${op} after state.${stateKey}`,
