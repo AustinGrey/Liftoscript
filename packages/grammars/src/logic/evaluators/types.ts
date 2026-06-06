@@ -65,16 +65,20 @@ export type EvaluateTools = SourceTools & {
   /**
    * Updates the value of a state variable. If the state variable is not found, it throws an error.
    * @param key The key of the state variable
-   * @param value The new value of the state variable
+   * @param value The new value of the state variable, or a setter function that takes in the current value and returns the new value
    * @param relatedNode The node that caused this action
    * @param index There are "other states". If an index is passed, this will effect the state dictionary at that index. If not passed, it will impact the current state. When updating from other states, an error is not thrown if the state dictionary doesn't exist (the update is just ignored in that case) but an error IS thrown if the dictionary exists, but the state variable to update does not
+   * @returns Always returns the value that was passed in/result of the setter function
    */
   updateState: (
     key: string,
-    value: Quantity,
+    value:
+      | Quantity
+      | undefined
+      | ((current: Quantity | undefined) => Quantity | undefined),
     relatedNode: SyntaxNode,
     index?: number,
-  ) => void;
+  ) => Quantity | undefined;
   /**
    * Updates the value of a state variable. If the state variable is not found, it creates a new one.
    * @param key The key of the state variable

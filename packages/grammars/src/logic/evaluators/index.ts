@@ -11,7 +11,10 @@ import type {
 } from "@/logic/evaluators/types.ts";
 import type { SyntaxNode } from "@lezer/common";
 import { parser } from "@/logic/parsing/logic.ts";
-import { LiftoscriptSyntaxError } from "@/evaluators/logic-evaluator.ts";
+import {
+  type IProgramMode,
+  LiftoscriptSyntaxError,
+} from "@/evaluators/logic-evaluator.ts";
 import {
   type ILiftoscriptEvaluatorUpdate,
   type LogicResult,
@@ -45,7 +48,8 @@ const handlers: {
   ForInExpression: NOT_IMPLEMENTED,
   IfExpression: (await import("./node-if-expression")).handler,
   IncAssignment: NOT_IMPLEMENTED,
-  IncAssignmentExpression: NOT_IMPLEMENTED,
+  IncAssignmentExpression: (await import("./node-inc-assignment-expression"))
+    .handler,
   Keyword: NOT_IMPLEMENTED,
   LineComment: (await import("./node-line-comment")).handler,
   Not: NOT_IMPLEMENTED,
@@ -92,11 +96,17 @@ export function run(
   globalData: IScriptBindings,
   publicFunctions: IScriptFunctions,
   fnContext: IScriptFnContext,
-): { result: LogicResult; finalState: IProgramState } {
+  // @TODO in original liftoscript, there seems to be multiple use cases for this -> either states by tag, or by exercise, or something else.... not sure how to hook this up, or how to test for it.
+  // @TODO remove the default
+  otherStates: Record<string | number, IProgramState> = {},
+  mode: IProgramMode = "update",
+): {
+  result: LogicResult;
+  finalState: IProgramState;
+  updates: ILiftoscriptEvaluatorUpdate[];
+} {
   const state: IProgramState = { ...initialState };
   const updates: ILiftoscriptEvaluatorUpdate[] = [];
-  // @TODO in original liftoscript, there seems to be multiple use cases for this -> either states by tag, or by exercise, or something else.... not sure how to hook this up, or how to test for it.
-  const otherStates: Record<string | number, IProgramState> = {};
   // @TODO surely this is something which needs to be reset between blocks? Not sure at all why this is different that state if that's not the case
   const vars: IProgramState = {};
 
@@ -128,8 +138,7 @@ export function run(
         node.to,
       );
     },
-    // @TODO should probably figure out when and where this will change
-    mode: "update",
+    mode,
     recurse: (node) => handleLogic(node, tools),
     getState: (key, relatedNode, index) => {
       if (index === undefined) {
@@ -149,25 +158,24 @@ export function run(
     },
     updateState: (key, value, relatedNode, index) => {
       if (index === undefined) {
-        if (key in state) {
-          state[key] = value;
-        } else {
+        if (!(key in state)) {
           return tools.error(`There's no state variable '${key}'`, relatedNode);
         }
-      } else {
-        if (index in otherStates && key in otherStates[key]) {
-          if (key in otherStates[index]) {
-            otherStates[index][key] = value;
-          } else {
-            return tools.error(
-              `There's no state variable '${key}' in the state dictionary at index '${index}'`,
-              relatedNode,
-            );
-          }
-        } else {
-          // Silently ignore update, as per the spec
-        }
+        return (state[key] =
+          typeof value === "function" ? value(state[key]) : value);
       }
+      if (!(index in otherStates && key in otherStates[key])) {
+        // Silently ignore update, as per the spec
+        return typeof value === "function" ? value(undefined) : value;
+      }
+      if (!(key in otherStates[index])) {
+        return tools.error(
+          `There's no state variable '${key}' in the state dictionary at index '${index}'`,
+          relatedNode,
+        );
+      }
+      return (otherStates[index][key] =
+        typeof value === "function" ? value(otherStates[index][key]) : value);
     },
     upsertState: (key, value) => {
       state[key] = value;
@@ -195,5 +203,6 @@ export function run(
   return {
     result: handleLogic(parser.parse(logic).topNode, tools),
     finalState: state,
+    updates,
   };
 }

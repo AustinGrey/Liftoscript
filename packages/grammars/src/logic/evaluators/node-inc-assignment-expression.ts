@@ -7,7 +7,6 @@ import {
   TWeight,
   convertToWeight,
 } from "@/quantities/weight.ts";
-import type { IProgramState } from "@/common-types.ts";
 import {
   toNumberUnsafe,
   coerceToQuantity,
@@ -18,7 +17,7 @@ import {
   changeNumberOfSets,
   recordVariableUpdate,
 } from "@/logic/evaluators/common.ts";
-import type { Quantity } from "@/logic/types.ts";
+import { isQuantity, type Quantity } from "@/logic/types.ts";
 
 // @todo this is a lot of complicated logic - can't this be simplified by just desugaring this to left = left <op> right? We can dispatch this to the existing handlers for binary ops and assignment
 export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
@@ -170,49 +169,39 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         ofType: NodeName.StateVariableIndex,
       });
       const stateKeyNode = queryChild(stateVar, { ofType: NodeName.Keyword });
-      if (stateKeyNode == null) {
+      if (stateKeyNode === undefined) {
+        // @todo why return 0? why not just undefined?
         return 0;
       }
       const stateKey = t.getText(stateKeyNode);
-      let state: IProgramState | undefined;
-      if (indexNode == null) {
-        if (stateKey in this.state) {
-          state = this.state;
-        } else {
-          t.error(`There's no state variable '${stateKey}'`, stateVar);
-        }
-      } else {
-        const indexEval = t.recurse(indexNode);
-        const index = toNumberUnsafe(indexEval);
-        state = this.otherStates[index];
-      }
+      // The presence of an index node indicates that we're accessing an "other state"
+      // @todo I still don't understand this "otherstate" system? Why not just have one state? Or is this the state of another exercise than the one being evaluated?
 
+      // @todo this coercion is different than  in other places. In this one, arrays are always coerced to 1, but in others, you extract the first value and coerce that as an individual
       let value = t.recurse(expression);
-      if (state == null) {
-        return value;
-      }
-      if (
-        !(is(TWeight, value) || is(TDynamicWeight, value) || isNumber(value))
-      ) {
+      if (!isQuantity(value)) {
         value = value ? 1 : 0;
       }
       const op = t.getText(incAssignmentExpr);
-      const currentValue = state[stateKey] ?? 0;
-      if (op === "+=") {
-        state[stateKey] = add(currentValue, value);
-      } else if (op === "-=") {
-        state[stateKey] = subtract(currentValue, value);
-      } else if (op === "*=") {
-        state[stateKey] = multiply(currentValue, value);
-      } else if (op === "/=") {
-        state[stateKey] = divide(currentValue, value);
-      } else {
-        t.error(
-          `Unknown operator ${op} after state.${stateKey}`,
-          incAssignmentExpr,
-        );
-      }
-      return state[stateKey];
+      // @todo in original liftoscript, if updating an "other state" via index, but there is no state at the index, then you just return the evaluated value, and it's all fine. The update is ignored. Is that still happening?
+      return t.updateState(
+        stateKey,
+        (currentValue = 0) =>
+          op === "+="
+            ? add(currentValue, value)
+            : op === "-="
+              ? subtract(currentValue, value)
+              : op === "*="
+                ? multiply(currentValue, value)
+                : op === "/="
+                  ? divide(currentValue, value)
+                  : t.error(
+                      `Unknown operator ${op} after state.${stateKey}`,
+                      incAssignmentExpr,
+                    ),
+        n,
+        indexNode ? toNumberUnsafe(t.recurse(indexNode)) : undefined,
+      );
     }
     default:
       stateVar.type.name satisfies never;
