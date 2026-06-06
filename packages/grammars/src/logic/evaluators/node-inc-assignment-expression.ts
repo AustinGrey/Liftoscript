@@ -19,11 +19,14 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
   });
   if (
     stateVar == null ||
-    (stateVar.type.name !== NodeName.StateVariable &&
-      stateVar.type.name !== NodeName.VariableExpression &&
-      stateVar.type.name !== NodeName.Variable) ||
     expression == null ||
-    incAssignmentExpr == null
+    incAssignmentExpr == null ||
+    !isOneOf(
+      stateVar.type.name,
+      NodeName.StateVariable,
+      NodeName.VariableExpression,
+      NodeName.Variable,
+    )
   ) {
     t.error(
       `missing required nodes for ${NodeName.IncAssignmentExpression}`,
@@ -74,26 +77,23 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       return t.getGlobal("rm1");
     } else if (
       this.mode === "planner" &&
-      (variable === "reps" ||
-        variable === "weights" ||
-        variable === "RPE" ||
-        variable === "minReps" ||
-        variable === "timers" ||
-        variable === "setVariationIndex" ||
-        variable === "descriptionIndex" ||
-        variable === "numberOfSets")
+      isOneOf(
+        variable,
+        "reps",
+        "weights",
+        "RPE",
+        "minReps",
+        "timers",
+        "setVariationIndex",
+        "descriptionIndex",
+        "numberOfSets",
+      )
     ) {
       const op = t.getText(incAssignmentExpr);
-      if (
-        op !== "=" &&
-        op !== "+=" &&
-        op !== "-=" &&
-        op !== "*=" &&
-        op !== "/="
-      ) {
-        t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
+      if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
+        return this.recordVariableUpdate(variable, expression, indexExprs, op);
       }
-      return this.recordVariableUpdate(variable, expression, indexExprs, op);
+      t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
     } else if (this.mode === "update" && variable === "numberOfSets") {
       const op = t.getText(incAssignmentExpr);
       if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
@@ -122,13 +122,13 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
       switch (op) {
         case "+=":
-          return (this.vars[varKey] = add(this.vars[varKey], value));
+          return t.updateVar(varKey, add(t.getVar(varKey), value));
         case "-=":
-          return (this.vars[varKey] = subtract(this.vars[varKey], value));
+          return t.updateVar(varKey, subtract(t.getVar(varKey), value));
         case "*=":
-          return (this.vars[varKey] = multiply(this.vars[varKey], value));
+          return t.updateVar(varKey, multiply(t.getVar(varKey), value));
         case "/=":
-          return (this.vars[varKey] = divide(this.vars[varKey], value));
+          return t.updateVar(varKey, divide(t.getVar(varKey), value));
         default:
           op satisfies never;
           t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
@@ -137,8 +137,10 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
     }
   } else {
-    const indexNode = stateVar.getChild(NodeName.StateVariableIndex);
-    const stateKeyNode = stateVar.getChild(NodeName.Keyword);
+    const indexNode = queryChild(stateVar, {
+      ofType: NodeName.StateVariableIndex,
+    });
+    const stateKeyNode = queryChild(stateVar, { ofType: NodeName.Keyword });
     if (stateKeyNode == null) {
       return 0;
     }
