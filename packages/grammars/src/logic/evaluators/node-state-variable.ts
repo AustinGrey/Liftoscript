@@ -1,16 +1,15 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
-import { getDescendant } from "@/utils/grammars.ts";
-import type { TypedLogicNode } from "@/logic/parsing/guards.ts";
+import { queryChild } from "@/utils/grammars.ts";
+import type { SyntaxNode } from "@lezer/common";
 
 export const handler: LogicHandler<"StateVariable"> = (n, t) => {
-  const stateKey = getStateKey(n, t);
-  if (stateKey == null) {
-    return t.error(
+  const stateKey =
+    getStateKey(n, t) ??
+    t.error(
       `You cannot read from other exercise's states, you can only write to them`,
       n,
     );
-  }
   return t.getState(stateKey, n);
 };
 
@@ -20,13 +19,17 @@ export const handler: LogicHandler<"StateVariable"> = (n, t) => {
  * @param expr The node to get the state key from
  * @param tools
  */
+
 function getStateKey(
-  expr: TypedLogicNode<"StateVariable">,
+  expr: SyntaxNode,
   tools: EvaluateTools,
 ): string | undefined {
-  try {
-    return tools.getText(getDescendant(expr, { ofType: NodeName.Keyword }));
-  } catch (e) {
-    return undefined;
+  const index = queryChild(expr, { ofType: NodeName.StateVariableIndex });
+  if (index === undefined) {
+    const stateKeyNode = queryChild(expr, { ofType: NodeName.Keyword });
+    if (stateKeyNode != null) {
+      return tools.getText(stateKeyNode);
+    }
   }
+  return undefined;
 }

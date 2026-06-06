@@ -95,8 +95,8 @@ import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
-import { getDescendant, queryDescendants } from "@/utils/grammars.ts";
-import type { TypedLogicNode } from "@/logic/parsing/guards.ts";
+import { queryChild } from "@/utils/grammars.ts";
+import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 
 //#region Program
 
@@ -6645,14 +6645,20 @@ function getStateVariableKeysInner(expr: SourcedSyntaxNode): Set<string> {
 }
 
 /**
- * @todo de-duplicate with the 'getStateKey' in the node-state-variable.ts file
  * Gets the text of the variable attempting to be accessed on the state
  * e.g. state.foo, this would return 'foo'
  * @param expr The node to get the state key from
  */
+
 function getStateKey(expr: SourcedSyntaxNode): string | undefined {
-  return [...queryDescendants(expr, { ofType: NodeName.Keyword }).take(1)].at(0)
-    ?.source;
+  const index = queryChild(expr, { ofType: NodeName.StateVariableIndex });
+  if (index === undefined) {
+    const stateKeyNode = queryChild(expr, { ofType: NodeName.Keyword });
+    if (stateKeyNode != null) {
+      return stateKeyNode.source;
+    }
+  }
+  return undefined;
 }
 
 function execute(

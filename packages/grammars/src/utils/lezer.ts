@@ -144,11 +144,11 @@ class SourcedTreeCursor {
     return this.cursor.prevSibling();
   }
 
-  next(enter = true) {
+  next(enter?: boolean) {
     return this.cursor.next(enter);
   }
 
-  prev(enter = true) {
+  prev(enter?: boolean) {
     return this.cursor.prev(enter);
   }
 

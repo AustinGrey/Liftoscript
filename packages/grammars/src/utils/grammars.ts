@@ -28,9 +28,9 @@ type QueryOptions<TTypes extends string> = Partial<{
  * @param options.ofType - If provided, only yields children of this type, and atLeast ensures that there are at least that number of children of this type
  */
 export function* queryChildren<TTypes extends string>(
-  node: SyntaxNode,
+  node: SourcedSyntaxNode,
   { atLeast, ofType, includeSkipped }: QueryOptions<TTypes> = {},
-): Generator<SyntaxNode> {
+): Generator<SourcedSyntaxNode> {
   const cur = node.cursor();
   let count = 0;
   if (!cur.firstChild()) {
@@ -64,14 +64,15 @@ export function* queryChildren<TTypes extends string>(
  * @param options Additional options to pass along to queryChildren
  */
 export function getChild<TTypes extends string>(
-  node: SyntaxNode,
+  node: SourcedSyntaxNode,
   options: QueryOptions<TTypes> = {},
-): SyntaxNode {
+): SourcedSyntaxNode {
   const [result] = queryChildren(node, { ...options, atLeast: 1 });
   return result;
 }
 
 /**
+ * @todo THIS MIGHT BE BROKEN AND NOT DO WHAT YOU EXPECT. CURSORS ARE WEIRD!!!!!!!
  * @yields all descendants of a syntax node in depth-first (pre-order) order.
  * @param node The node to get descendants of
  * @param options
@@ -85,18 +86,8 @@ export function* queryDescendants<TTypes extends string>(
 ): Generator<SourcedSyntaxNode> {
   const cur = node.cursor();
   let count = 0;
-
-  // Depth-first traversal over descendants (excluding `node` itself).
-  if (!cur.firstChild()) {
-    if (atLeast !== undefined && atLeast !== 0) {
-      throw new SyntaxError(
-        `Expected at least ${atLeast} descendant${atLeast === 1 ? "" : "s"}${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
-      );
-    }
-    return;
-  }
-
-  while (true) {
+  // First .next ensures we skip the node itself
+  while (cur.next()) {
     const current = cur.node;
     const matchesType = !ofType || current.type.name === ofType;
     const matchesSkipped = includeSkipped || !current.type.isSkipped;
@@ -104,25 +95,16 @@ export function* queryDescendants<TTypes extends string>(
       yield current;
       count++;
     }
-
-    if (cur.firstChild()) {
-      continue;
-    }
-
-    while (!cur.nextSibling()) {
-      if (!cur.parent() || cur.node === node) {
-        if (atLeast !== undefined && count < atLeast) {
-          throw new SyntaxError(
-            `Expected at least ${atLeast} descendant${atLeast === 1 ? "" : "s"}${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
-          );
-        }
-        return;
-      }
-    }
+  }
+  if (atLeast !== undefined && atLeast !== count) {
+    throw new SyntaxError(
+      `Expected at least ${atLeast} descendant${atLeast === 1 ? "" : "s"}${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
+    );
   }
 }
 
 /**
+ * @todo THIS MIGHT BE BROKEN AND NOT DO WHAT YOU EXPECT. CURSORS ARE WEIRD!!!!!!!
  * Gets the descendant of a node that matches the given type.
  * Throws if there is more than one matching descendant.
  * @param node The node to get the first matching descendant of
@@ -152,9 +134,9 @@ export function getDescendant<TTypes extends string>(
  * @param options Additional options to pass along to queryChildren
  */
 export function queryChild<TTypes extends string>(
-  node: SyntaxNode,
+  node: SourcedSyntaxNode,
   options: QueryOptions<TTypes> = {},
-): SyntaxNode | undefined {
+): SourcedSyntaxNode | undefined {
   const [result] = queryChildren(node, options);
   return result;
 }
