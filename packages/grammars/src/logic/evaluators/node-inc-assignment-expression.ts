@@ -12,6 +12,7 @@ import {
   multiply,
 } from "@/quantities/weight.ts";
 import type { IProgramState } from "@/common-types.ts";
+import { toNumberUnsafe } from "@/logic/result-handling.ts";
 
 export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
   const [stateVar, incAssignmentExpr, expression] = queryChildren(n, {
@@ -28,7 +29,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       NodeName.Variable,
     )
   ) {
-    t.error(
+    return t.error(
       `missing required nodes for ${NodeName.IncAssignmentExpression}`,
       n,
     );
@@ -90,27 +91,33 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       )
     ) {
       const op = t.getText(incAssignmentExpr);
-      if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
-        return this.recordVariableUpdate(variable, expression, indexExprs, op);
-      }
-      t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
+      return isOneOf(op, "=", "+=", "-=", "*=", "/=")
+        ? this.recordVariableUpdate(variable, expression, indexExprs, op)
+        : t.error(
+            `Unknown operator ${op} after ${variable}`,
+            incAssignmentExpr,
+          );
     } else if (this.mode === "update" && variable === "numberOfSets") {
       const op = t.getText(incAssignmentExpr);
-      if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
-        return this.changeNumberOfSets(expression, op);
-      }
-      t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
+      return isOneOf(op, "=", "+=", "-=", "*=", "/=")
+        ? this.changeNumberOfSets(expression, op)
+        : t.error(
+            `Unknown operator ${op} after ${variable}`,
+            incAssignmentExpr,
+          );
     } else if (
       this.mode === "update" &&
       isOneOf(variable, "reps", "weights", "RPE", "minReps", "timers")
     ) {
       const op = t.getText(incAssignmentExpr);
-      if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
-        return this.changeBinding(variable, expression, indexExprs, op);
-      }
-      t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
+      return isOneOf(op, "=", "+=", "-=", "*=", "/=")
+        ? this.changeBinding(variable, expression, indexExprs, op)
+        : t.error(
+            `Unknown operator ${op} after ${variable}`,
+            incAssignmentExpr,
+          );
     } else {
-      t.error(`Unknown variable '${variable}'`, stateVar);
+      return t.error(`Unknown variable '${variable}'`, stateVar);
     }
   } else if (stateVar.type.name === NodeName.Variable) {
     const varKey = t.getText(stateVar).replace("var.", "");
@@ -154,7 +161,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       }
     } else {
       const indexEval = t.recurse(indexNode);
-      const index = this.toNumber(indexEval);
+      const index = toNumberUnsafe(indexEval);
       state = this.otherStates[index];
     }
 
