@@ -68,7 +68,7 @@ const handlers: {
   Times: NOT_IMPLEMENTED,
   UnaryExpression: (await import("./node-unary-expression")).handler,
   Unit: NOT_IMPLEMENTED,
-  Variable: NOT_IMPLEMENTED,
+  Variable: (await import("./node-variable")).handler,
   VariableExpression: (await import("./node-variable-expression")).handler,
   VariableIndex: NOT_IMPLEMENTED,
   WeightExpression: (await import("./node-weight-expression")).handler,
