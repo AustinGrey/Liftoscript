@@ -77,7 +77,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       );
       return t.getGlobal("rm1");
     } else if (
-      this.mode === "planner" &&
+      t.mode === "planner" &&
       isOneOf(
         variable,
         "reps",
@@ -97,7 +97,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
             `Unknown operator ${op} after ${variable}`,
             incAssignmentExpr,
           );
-    } else if (this.mode === "update" && variable === "numberOfSets") {
+    } else if (t.mode === "update" && variable === "numberOfSets") {
       const op = t.getText(incAssignmentExpr);
       return isOneOf(op, "=", "+=", "-=", "*=", "/=")
         ? this.changeNumberOfSets(expression, op)
@@ -106,7 +106,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
             incAssignmentExpr,
           );
     } else if (
-      this.mode === "update" &&
+      t.mode === "update" &&
       isOneOf(variable, "reps", "weights", "RPE", "minReps", "timers")
     ) {
       const op = t.getText(incAssignmentExpr);
