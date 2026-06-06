@@ -1,4 +1,8 @@
-import type { LogicResult } from "@/logic/types.ts";
+import type {
+  LogicResult,
+  LogicResultSingular,
+  Quantity,
+} from "@/logic/types.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
 import { TDynamicWeight, TWeight } from "@/quantities/weight.ts";
 
@@ -21,4 +25,16 @@ export function toNumberUnsafe(value: LogicResult): number {
   } else {
     return 0;
   }
+}
+
+function toSingular(value: LogicResult): LogicResultSingular | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
+export function coerceToQuantity(value: LogicResult): Quantity {
+  const result = toSingular(value) ?? 0;
+  return result === true ? 1 : result === false ? 0 : result;
 }

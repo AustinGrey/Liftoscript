@@ -12,7 +12,12 @@ import {
   multiply,
 } from "@/quantities/weight.ts";
 import type { IProgramState } from "@/common-types.ts";
-import { toNumberUnsafe } from "@/logic/result-handling.ts";
+import { toNumberUnsafe, coerceToQuantity } from "@/logic/result-handling.ts";
+import {
+  changeBinding,
+  changeNumberOfSets,
+  recordVariableUpdate,
+} from "@/logic/evaluators/common.ts";
 
 export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
   const [stateVar, incAssignmentExpr, expression] = queryChildren(n, {
@@ -47,12 +52,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       if (indexExprs.length > 0) {
         t.error(`rm1 is not an array`, n);
       }
-      const evaluatedValue = t.recurse(expression);
-      let value = Array.isArray(evaluatedValue)
-        ? evaluatedValue[0]
-        : evaluatedValue;
-      value = value ?? 0;
-      value = value === true ? 1 : value === false ? 0 : value;
+      const value = coerceToQuantity(t.recurse(expression));
 
       const op = t.getText(incAssignmentExpr);
       t.updateGlobal("rm1", (rm1) =>
@@ -92,7 +92,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     ) {
       const op = t.getText(incAssignmentExpr);
       return isOneOf(op, "=", "+=", "-=", "*=", "/=")
-        ? this.recordVariableUpdate(variable, expression, indexExprs, op)
+        ? recordVariableUpdate(variable, expression, indexExprs, op, t)
         : t.error(
             `Unknown operator ${op} after ${variable}`,
             incAssignmentExpr,
@@ -100,7 +100,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     } else if (t.mode === "update" && variable === "numberOfSets") {
       const op = t.getText(incAssignmentExpr);
       return isOneOf(op, "=", "+=", "-=", "*=", "/=")
-        ? this.changeNumberOfSets(expression, op)
+        ? changeNumberOfSets(expression, op, t)
         : t.error(
             `Unknown operator ${op} after ${variable}`,
             incAssignmentExpr,
@@ -111,7 +111,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     ) {
       const op = t.getText(incAssignmentExpr);
       return isOneOf(op, "=", "+=", "-=", "*=", "/=")
-        ? this.changeBinding(variable, expression, indexExprs, op)
+        ? changeBinding(variable, expression, indexExprs, op, t)
         : t.error(
             `Unknown operator ${op} after ${variable}`,
             incAssignmentExpr,
