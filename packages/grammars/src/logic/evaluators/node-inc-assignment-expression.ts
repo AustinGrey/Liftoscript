@@ -96,67 +96,45 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       return this.recordVariableUpdate(variable, expression, indexExprs, op);
     } else if (this.mode === "update" && variable === "numberOfSets") {
       const op = t.getText(incAssignmentExpr);
-      if (
-        op !== "=" &&
-        op !== "+=" &&
-        op !== "-=" &&
-        op !== "*=" &&
-        op !== "/="
-      ) {
-        t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
+      if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
+        return this.changeNumberOfSets(expression, op);
       }
-      return this.changeNumberOfSets(expression, op);
+      t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
     } else if (
       this.mode === "update" &&
-      (variable === "reps" ||
-        variable === "weights" ||
-        variable === "RPE" ||
-        variable === "minReps" ||
-        variable === "timers")
+      isOneOf(variable, "reps", "weights", "RPE", "minReps", "timers")
     ) {
       const op = t.getText(incAssignmentExpr);
-      if (
-        op !== "=" &&
-        op !== "+=" &&
-        op !== "-=" &&
-        op !== "*=" &&
-        op !== "/="
-      ) {
-        t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
+      if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
+        return this.changeBinding(variable, expression, indexExprs, op);
       }
-      return this.changeBinding(variable, expression, indexExprs, op);
+      t.error(`Unknown operator ${op} after ${variable}`, incAssignmentExpr);
     } else {
       t.error(`Unknown variable '${variable}'`, stateVar);
     }
   } else if (stateVar.type.name === NodeName.Variable) {
     const varKey = t.getText(stateVar).replace("var.", "");
-    let value = this.evaluate(expression);
+    let value = t.recurse(expression);
     if (!(is(TWeight, value) || is(TDynamicWeight, value) || isNumber(value))) {
       value = value ? 1 : 0;
     }
     const op = t.getText(incAssignmentExpr);
-    if (!isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
-      t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
-    } else {
-      const currentValue = this.vars[varKey];
+    if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
       switch (op) {
         case "+=":
-          this.vars[varKey] = add(currentValue, value);
-          break;
+          return (this.vars[varKey] = add(this.vars[varKey], value));
         case "-=":
-          this.vars[varKey] = subtract(currentValue, value);
-          break;
+          return (this.vars[varKey] = subtract(this.vars[varKey], value));
         case "*=":
-          this.vars[varKey] = multiply(currentValue, value);
-          break;
+          return (this.vars[varKey] = multiply(this.vars[varKey], value));
         case "/=":
-          this.vars[varKey] = divide(currentValue, value);
-          break;
+          return (this.vars[varKey] = divide(this.vars[varKey], value));
         default:
           op satisfies never;
           t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
       }
-      return this.vars[varKey];
+    } else {
+      t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
     }
   } else {
     const indexNode = stateVar.getChild(NodeName.StateVariableIndex);
