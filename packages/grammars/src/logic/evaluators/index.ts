@@ -46,7 +46,7 @@ const handlers: {
   ).handler,
   Cmp: NOT_IMPLEMENTED,
   ForExpression: (await import("./node-for-expression")).handler,
-  ForInExpression: NOT_IMPLEMENTED,
+  ForInExpression: (await import("./node-for-in-expression")).handler,
   IfExpression: (await import("./node-if-expression")).handler,
   IncAssignment: NOT_IMPLEMENTED,
   IncAssignmentExpression: (await import("./node-inc-assignment-expression"))
