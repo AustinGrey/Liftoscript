@@ -44,11 +44,11 @@ export function toQuantity(
   },
 ): Quantity {
   if (isQuantity(value)) return value;
-  if (value === true && coercion.true) {
+  if (value === true && coercion.true !== undefined) {
     return structuredClone(coercion.true);
-  } else if (value === false && coercion.false) {
+  } else if (value === false && coercion.false !== undefined) {
     return structuredClone(coercion.false);
-  } else if (value === undefined && coercion.undefined) {
+  } else if (value === undefined && coercion.undefined !== undefined) {
     return structuredClone(coercion.undefined);
   } else
     // @TODO really? Throwing an error here doesn't seem like a good idea unless we can give the user a better error message to track down where the value came from

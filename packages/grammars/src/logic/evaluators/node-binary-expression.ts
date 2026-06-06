@@ -55,7 +55,7 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
           {
             true: undefined,
             false: undefined,
-            undefined: undefined,
+            undefined: 0, // @todo this is what original liftoscript was doing.... but that's wrong because it means undefined < 1 is true but undefined < 0 is false!
           },
           t,
         );
