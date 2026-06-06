@@ -84,7 +84,9 @@ function handleLogic(node: SyntaxNode, tools: EvaluateTools): LogicResult {
   if (!handler) {
     return tools.error(`No handler for node type: ${node.type}`, node);
   }
-  return handler(node as TypedLogicNode<NodeNames_Logic>, tools);
+  const result = handler(node as TypedLogicNode<NodeNames_Logic>, tools);
+  // console.log("EVAL: ", result, " <- ", node.source);
+  return result;
 }
 
 /**
@@ -131,13 +133,15 @@ export function run(
     },
     error(message, node) {
       const [line, offset] = this.locate(node);
-      throw new LiftoscriptSyntaxError(
+      const err = new LiftoscriptSyntaxError(
         `${message} (${line}:${offset})`,
         line,
         offset,
         node.from,
         node.to,
       );
+      console.error(err);
+      throw err;
     },
     mode,
     recurse: (node) => handleLogic(node, tools),

@@ -1582,6 +1582,19 @@ export class LiftoscriptEvaluator {
     | IWeight
     | IDynamicWeight
     | (IWeight | IDynamicWeight | number | undefined)[] {
+    const result = this.evaluateInner(expr);
+    // console.log("EVAL: ", result, " <- ", this.getValue(expr));
+    return result;
+  }
+
+  public evaluateInner(
+    expr: SyntaxNode,
+  ):
+    | number
+    | boolean
+    | IWeight
+    | IDynamicWeight
+    | (IWeight | IDynamicWeight | number | undefined)[] {
     if (
       expr.type.name === NodeName.Program ||
       expr.type.name === NodeName.BlockExpression
