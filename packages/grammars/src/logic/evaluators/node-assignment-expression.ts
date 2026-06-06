@@ -25,7 +25,7 @@ import {
   TWeight,
 } from "@/quantities/weight.ts";
 import { CollectionUtils_compact } from "@/utils/collection.ts";
-import { is, isNumber } from "@/utils/types.ts";
+import { is, isNumber, isOneOf } from "@/utils/types.ts";
 import {
   MathUtils_applyOp,
   MathUtils_clamp,
@@ -39,7 +39,9 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     if (nameNode == null) {
       return t.error(`Missing variable name`, variableNode);
     }
-    const indexExprs = variableNode.getChildren(NodeName.VariableIndex);
+    const [...indexExprs] = queryChildren(variableNode, {
+      ofType: NodeName.VariableIndex,
+    });
     const variable = t.getText(nameNode);
     if (variable === "rm1") {
       if (indexExprs.length > 0) {
@@ -64,31 +66,37 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
       return value;
     } else if (
       t.mode === "planner" &&
-      (variable === "reps" ||
-        variable === "weights" ||
-        variable === "RPE" ||
-        variable === "minReps" ||
-        variable === "timers" ||
-        variable === "logrpes" ||
-        variable === "amraps" ||
-        variable === "askweights" ||
-        variable === "setVariationIndex" ||
-        variable === "descriptionIndex" ||
-        variable === "numberOfSets")
+      isOneOf(
+        variable,
+        "reps",
+        "weights",
+        "RPE",
+        "minReps",
+        "timers",
+        "logrpes",
+        "amraps",
+        "askweights",
+        "setVariationIndex",
+        "descriptionIndex",
+        "numberOfSets",
+      )
     ) {
       return recordVariableUpdate(variable, expression, indexExprs, "=", t);
     } else if (t.mode === "update" && variable === "numberOfSets") {
       return changeNumberOfSets(expression, "=", t);
     } else if (
       t.mode === "update" &&
-      (variable === "reps" ||
-        variable === "weights" ||
-        variable === "RPE" ||
-        variable === "amraps" ||
-        variable === "logrpes" ||
-        variable === "askweights" ||
-        variable === "minReps" ||
-        variable === "timers")
+      isOneOf(
+        variable,
+        "reps",
+        "weights",
+        "RPE",
+        "amraps",
+        "logrpes",
+        "askweights",
+        "minReps",
+        "timers",
+      )
     ) {
       return changeBinding(variable, expression, indexExprs, "=", t);
     } else {
