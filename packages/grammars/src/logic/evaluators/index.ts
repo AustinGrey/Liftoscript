@@ -29,7 +29,7 @@ import { parseBound } from "@/utils/lezer.ts";
  * @deprecated There shouldn't be any unhandled nodes
  */
 const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n, t) =>
-  t.error("Not implemented", n);
+  t.error(`Not implemented - type ${n.type.name}`, n);
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -63,7 +63,7 @@ const handlers: {
   Program: (await import("./node-program")).handler,
   StateKeyword: NOT_IMPLEMENTED,
   StateVariable: (await import("./node-state-variable")).handler,
-  StateVariableIndex: NOT_IMPLEMENTED,
+  StateVariableIndex: (await import("./node-state-variable-index")).handler,
   Ternary: (await import("./node-ternary")).handler,
   Times: NOT_IMPLEMENTED,
   UnaryExpression: (await import("./node-unary-expression")).handler,
@@ -169,7 +169,7 @@ export function run(
         return (state[key] =
           typeof value === "function" ? value(state[key]) : value);
       }
-      if (!(index in otherStates && key in otherStates[key])) {
+      if (!(index in otherStates && key in otherStates[index])) {
         // Silently ignore update, as per the spec
         return typeof value === "function" ? value(undefined) : value;
       }
