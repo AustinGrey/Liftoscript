@@ -47,3 +47,17 @@ export function is<TSchema extends z.ZodTypeAny>(
 ): value is z.infer<TSchema> {
   return schema.safeParse(value).success;
 }
+
+export function isOneOf<TTarget, const TGuard extends TTarget>(
+  text: TTarget,
+  ...options: TGuard[]
+): text is TGuard {
+  return options.includes(text as TGuard);
+}
+
+const f: string = "";
+
+if (!isOneOf(f, "a", "b", "c")) {
+} else {
+  const b = f;
+}

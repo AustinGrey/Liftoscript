@@ -1,7 +1,7 @@
 import type { LogicHandler } from "@/logic/evaluators/types.ts";
-import { queryChildren } from "@/utils/grammars.ts";
+import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
-import { is, isNumber } from "@/utils/types.ts";
+import { is, isNumber, isOneOf } from "@/utils/types.ts";
 import {
   TDynamicWeight,
   TWeight,
@@ -31,11 +31,13 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     );
   }
   if (stateVar.type.name === NodeName.VariableExpression) {
-    const nameNode = stateVar.getChild(NodeName.Keyword);
+    const nameNode = queryChild(stateVar, { ofType: NodeName.Keyword });
     if (nameNode == null) {
       t.error(`Missing variable name`, stateVar);
     }
-    const indexExprs = stateVar.getChildren(NodeName.VariableIndex);
+    const [...indexExprs] = queryChildren(stateVar, {
+      ofType: NodeName.VariableIndex,
+    });
     const variable = t.getText(nameNode);
     if (variable === "rm1") {
       if (indexExprs.length > 0) {
@@ -93,7 +95,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       }
       return this.recordVariableUpdate(variable, expression, indexExprs, op);
     } else if (this.mode === "update" && variable === "numberOfSets") {
-      const op = this.getValue(incAssignmentExpr);
+      const op = t.getText(incAssignmentExpr);
       if (
         op !== "=" &&
         op !== "+=" &&
@@ -127,34 +129,35 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       t.error(`Unknown variable '${variable}'`, stateVar);
     }
   } else if (stateVar.type.name === NodeName.Variable) {
-    const varKey = this.getValue(stateVar).replace("var.", "");
+    const varKey = t.getText(stateVar).replace("var.", "");
     let value = this.evaluate(expression);
     if (!(is(TWeight, value) || is(TDynamicWeight, value) || isNumber(value))) {
       value = value ? 1 : 0;
     }
-    const op = this.getValue(incAssignmentExpr);
-    if (
-      op !== "=" &&
-      op !== "+=" &&
-      op !== "-=" &&
-      op !== "*=" &&
-      op !== "/="
-    ) {
+    const op = t.getText(incAssignmentExpr);
+    if (!isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
       t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
-    }
-    const currentValue = this.vars[varKey];
-    if (op === "+=") {
-      this.vars[varKey] = this.add(currentValue, value);
-    } else if (op === "-=") {
-      this.vars[varKey] = this.subtract(currentValue, value);
-    } else if (op === "*=") {
-      this.vars[varKey] = this.multiply(currentValue, value);
-    } else if (op === "/=") {
-      this.vars[varKey] = this.divide(currentValue, value);
     } else {
-      t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
+      const currentValue = this.vars[varKey];
+      switch (op) {
+        case "+=":
+          this.vars[varKey] = add(currentValue, value);
+          break;
+        case "-=":
+          this.vars[varKey] = subtract(currentValue, value);
+          break;
+        case "*=":
+          this.vars[varKey] = multiply(currentValue, value);
+          break;
+        case "/=":
+          this.vars[varKey] = divide(currentValue, value);
+          break;
+        default:
+          op satisfies never;
+          t.error(`Unknown operator ${op} after ${varKey}`, incAssignmentExpr);
+      }
+      return this.vars[varKey];
     }
-    return this.vars[varKey];
   } else {
     const indexNode = stateVar.getChild(NodeName.StateVariableIndex);
     const stateKeyNode = stateVar.getChild(NodeName.Keyword);
