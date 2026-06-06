@@ -48,7 +48,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
   /* prettier-ignore */ const divide  = <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a / b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "/", (message)=>t.error(message, n));
 
   switch (stateVar.type.name) {
-    case NodeName.StateVariable: {
+    case NodeName.VariableExpression: {
       const nameNode = queryChild(stateVar, { ofType: NodeName.Keyword });
       if (nameNode == null) {
         t.error(`Missing variable name`, stateVar);
@@ -129,7 +129,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         return t.error(`Unknown variable '${variable}'`, stateVar);
       }
     }
-    case NodeName.VariableExpression: {
+    case NodeName.Variable: {
       const varKey = t.getText(stateVar).replace("var.", "");
       let value = t.recurse(expression);
       if (
@@ -164,7 +164,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         );
       }
     }
-    case NodeName.Variable: {
+    case NodeName.StateVariable: {
       const indexNode = queryChild(stateVar, {
         ofType: NodeName.StateVariableIndex,
       });

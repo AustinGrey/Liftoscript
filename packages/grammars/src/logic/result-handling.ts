@@ -91,7 +91,7 @@ export function operate<
     if (right === undefined) {
       return undefined as OperateReturnType<TLeft, TRight>;
     }
-    return onError(`Cannot apply operation "${describe}" when left side is undefined and right side is defined`, left, right);
+    return onError(`Cannot apply operation "${describe}" when left side is undefined and right side is defined ${right}`, left, right);
   }
   if (isNumber(left)) {
     if (right === undefined) {
