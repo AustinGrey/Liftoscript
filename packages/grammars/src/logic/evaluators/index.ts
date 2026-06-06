@@ -20,6 +20,7 @@ import {
   type LogicResult,
 } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
+import { parseBound } from "@/utils/lezer.ts";
 
 /**
  * The handler for when we haven't decided how to handle a node
@@ -44,7 +45,7 @@ const handlers: {
     await import("./node-builtin-function-expression")
   ).handler,
   Cmp: NOT_IMPLEMENTED,
-  ForExpression: NOT_IMPLEMENTED,
+  ForExpression: (await import("./node-for-expression")).handler,
   ForInExpression: NOT_IMPLEMENTED,
   IfExpression: (await import("./node-if-expression")).handler,
   IncAssignment: NOT_IMPLEMENTED,
@@ -201,7 +202,7 @@ export function run(
   };
 
   return {
-    result: handleLogic(parser.parse(logic).topNode, tools),
+    result: handleLogic(parseBound(parser, logic), tools),
     finalState: state,
     updates,
   };
