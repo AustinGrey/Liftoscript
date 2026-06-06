@@ -96,7 +96,6 @@ import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
 import { queryChild } from "@/utils/grammars.ts";
-import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 
 //#region Program
 
@@ -2955,17 +2954,7 @@ function evaluateUpdate(
         ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
         : undefined;
       if (script) {
-        const stateKeys = getStateVariableKeys(
-          settings.units,
-          script,
-          {},
-          {},
-          Progress_createEmptyScriptBindings(dayData, settings),
-          Progress_createScriptFunctions(settings),
-          { exerciseType, unit: settings.units, prints: [] },
-          "update",
-        );
-        meta = { stateKeys };
+        meta = { stateKeys: getStateVariableKeys(script) };
       }
       if (!script && !body) {
         errorPlannerSyntax(
@@ -6617,20 +6606,8 @@ function parseScript(
   liftoscriptEvaluator.parse(liftoscriptTree.topNode);
 }
 
-function getStateVariableKeys(
-  units: IUnit,
-  script: string,
-  state: IProgramState,
-  otherStates: Record<number, IProgramState>,
-  bindings: IScriptBindings,
-  fns: IScriptFunctions,
-  context: IScriptFnContext,
-  mode: IProgramMode,
-): Set<string> {
-  return getStateVariableKeysInner(parseBound(LiftoscriptParser, script));
-}
-
-function getStateVariableKeysInner(expr: SourcedSyntaxNode): Set<string> {
+function getStateVariableKeys(script: string): Set<string> {
+  const expr = parseBound(LiftoscriptParser, script);
   const cursor = expr.cursor();
   const stateKeys: Set<string> = new Set();
   do {
