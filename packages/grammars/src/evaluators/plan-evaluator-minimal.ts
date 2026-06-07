@@ -18,7 +18,6 @@ import {
   ObjectUtils_filter,
   ObjectUtils_isEqual,
   ObjectUtils_keys,
-  ObjectUtils_values,
 } from "@/utils/object";
 import { StringUtils_unindent } from "@/utils/string";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
@@ -278,20 +277,20 @@ function Program_runFinishDayScript(
   );
   const fns = Progress_createScriptFunctions(settings);
 
-  const newState: IProgramState = {
-    ...state,
-    ...userPromptedStateVars,
-  };
   const otherStates = structuredClone(program.states);
 
   const script =
     PlannerProgramExercise_getProgressScript(programExercise) || "";
-  let updates: ILiftoscriptEvaluatorUpdate[] = [];
+  let updates: ILiftoscriptEvaluatorUpdate[];
+  let newState: IProgramState;
   try {
-    updates = execute(
+    const result = execute(
       settings.units,
       script,
-      newState,
+      {
+        ...state,
+        ...userPromptedStateVars,
+      },
       otherStates,
       bindings,
       fns,
@@ -302,6 +301,8 @@ function Program_runFinishDayScript(
       },
       "planner",
     );
+    updates = result.updates;
+    newState = result.finalState;
   } catch (e) {
     if (e instanceof SyntaxError) {
       return { success: false, error: e.message };
@@ -1569,7 +1570,7 @@ export function ProgramExercise_weightChanges(
       }
     }
   });
-  return CollectionUtils_sortBy(ObjectUtils_values(results), "current", true);
+  return CollectionUtils_sortBy(Object.values(results), "current", true);
 }
 
 function ProgramExercise_applyVariables(
@@ -4527,7 +4528,7 @@ function PlannerEvaluator_findReusedDescriptions(
   }
   reusingName = reusingName.replace(/\[([^]+)\]/, "").trim();
   const key = PlannerKey_fromFullName(reusingName, settings.exercises);
-  const weekExercises = ObjectUtils_values(
+  const weekExercises = Object.values(
     byExerciseWeekDay[key]?.[weekIndex ?? currentWeekIndex] || [],
   );
   const weekDescriptions = weekExercises.map((d) => d.descriptions);
@@ -5398,7 +5399,7 @@ function Progress_runUpdateScriptForEntry(
       unit: settings.units,
       prints: [],
     };
-    execute(
+    const result = execute(
       settings.units,
       script,
       state,
@@ -5409,7 +5410,7 @@ function Progress_runUpdateScriptForEntry(
       "update",
     );
     const newEntry = Progress_applyBindings(entry, bindings, settings);
-    newEntry.state = { ...newEntry.state, ...state };
+    newEntry.state = { ...newEntry.state, ...result.finalState };
     if (fnContext.prints.length > 0) {
       newEntry.updatePrints = fnContext.prints;
     }
@@ -6832,20 +6833,8 @@ function execute(
   fns: IScriptFunctions,
   context: IScriptFnContext,
   mode: IProgramMode,
-  type?: "reps" | "weight" | "timer" | "rpe",
-): ILiftoscriptEvaluatorUpdate[] {
+): { finalState: IProgramState; updates: ILiftoscriptEvaluatorUpdate[] } {
   // @todo where to pass in units? Or does it even matter?
-  const { updates, finalState } = run(
-    script,
-    state,
-    bindings,
-    fns,
-    context,
-    otherStates,
-    mode,
-  );
-  // @todo not a fan of this, we should return the updated state
-  Object.assign(state, finalState);
-  return updates;
+  return run(script, state, bindings, fns, context, otherStates, mode);
 }
 //#endregion
