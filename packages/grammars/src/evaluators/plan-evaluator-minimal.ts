@@ -29,7 +29,6 @@ import {
   build,
   eq,
   type IDynamicWeight,
-  type IUnit,
   type IWeight,
   parse as parseWeight,
   parsePct,
@@ -46,7 +45,6 @@ import {
 } from "@/quantities/weight.ts";
 import {
   type IExerciseDataValue,
-  type IPlannerSettings,
   type IProgramState,
   type IScriptFnContext,
   type IScriptFunctions,
@@ -66,7 +64,7 @@ import {
   TExerciseType,
   toKey,
 } from "@/exercises";
-import { equipmentName, type IAllEquipment } from "@/equipment";
+import { equipmentName } from "@/equipment";
 import {
   getCurrentEquipment,
   getPreferredUnit,
@@ -685,298 +683,6 @@ export function Program_create(name: string, id?: string): IProgram {
 }
 
 export const Program_evaluate = memoize(Program_forceEvaluate, { maxSize: 10 });
-
-//#endregion
-
-//#region Settings
-function Settings_programContentBuild(): Pick<
-  ISettings,
-  "timers" | "units" | "planner"
-> {
-  return {
-    timers: {
-      warmup: 90,
-      workout: 180,
-      reminder: 900,
-    },
-    units: "lb",
-    planner: Settings_buildPlannerSettings(),
-  };
-}
-
-export function Settings_defaultEquipment(): IAllEquipment {
-  return {
-    barbell: {
-      multiplier: 2,
-      bar: {
-        lb: w`45lb`,
-        kg: w`20kg`,
-      },
-      plates: [
-        { weight: w`45lb`, num: 8 },
-        { weight: w`25lb`, num: 4 },
-        { weight: w`10lb`, num: 4 },
-        { weight: w`5lb`, num: 4 },
-        { weight: w`2.5lb`, num: 4 },
-        { weight: w`1.25lb`, num: 2 },
-        { weight: w`20kg`, num: 8 },
-        { weight: w`10kg`, num: 4 },
-        { weight: w`5kg`, num: 4 },
-        { weight: w`2.5kg`, num: 4 },
-        { weight: w`1.25kg`, num: 4 },
-        { weight: w`0.5kg`, num: 2 },
-      ],
-      fixed: [],
-      isFixed: false,
-    },
-    trapbar: {
-      multiplier: 2,
-      bar: {
-        lb: w`45lb`,
-        kg: w`20kg`,
-      },
-      plates: [
-        { weight: w`45lb`, num: 8 },
-        { weight: w`25lb`, num: 4 },
-        { weight: w`10lb`, num: 4 },
-        { weight: w`5lb`, num: 4 },
-        { weight: w`2.5lb`, num: 4 },
-        { weight: w`1.25lb`, num: 2 },
-        { weight: w`20kg`, num: 8 },
-        { weight: w`10kg`, num: 4 },
-        { weight: w`5kg`, num: 4 },
-        { weight: w`2.5kg`, num: 4 },
-        { weight: w`1.25kg`, num: 4 },
-        { weight: w`0.5kg`, num: 2 },
-      ],
-      fixed: [],
-      isFixed: false,
-    },
-    leverageMachine: {
-      multiplier: 1,
-      bar: {
-        lb: w`0lb`,
-        kg: w`0kg`,
-      },
-      plates: [
-        { weight: w`45lb`, num: 8 },
-        { weight: w`25lb`, num: 4 },
-        { weight: w`10lb`, num: 4 },
-        { weight: w`5lb`, num: 4 },
-        { weight: w`2.5lb`, num: 4 },
-        { weight: w`1.25lb`, num: 2 },
-        { weight: w`20kg`, num: 8 },
-        { weight: w`10kg`, num: 4 },
-        { weight: w`5kg`, num: 4 },
-        { weight: w`2.5kg`, num: 4 },
-        { weight: w`1.25kg`, num: 4 },
-        { weight: w`0.5kg`, num: 2 },
-      ],
-      fixed: [],
-      isFixed: false,
-    },
-    smith: {
-      multiplier: 2,
-      bar: {
-        lb: w`45lb`,
-        kg: w`20kg`,
-      },
-      plates: [
-        { weight: w`45lb`, num: 8 },
-        { weight: w`25lb`, num: 4 },
-        { weight: w`10lb`, num: 4 },
-        { weight: w`5lb`, num: 4 },
-        { weight: w`2.5lb`, num: 4 },
-        { weight: w`1.25lb`, num: 2 },
-        { weight: w`20kg`, num: 8 },
-        { weight: w`10kg`, num: 4 },
-        { weight: w`5kg`, num: 4 },
-        { weight: w`2.5kg`, num: 4 },
-        { weight: w`1.25kg`, num: 4 },
-        { weight: w`0.5kg`, num: 2 },
-      ],
-      fixed: [],
-      isFixed: false,
-    },
-    dumbbell: {
-      multiplier: 2,
-      bar: {
-        lb: w`10lb`,
-        kg: w`5kg`,
-      },
-      plates: [
-        { weight: w`10lb`, num: 8 },
-        { weight: w`5lb`, num: 4 },
-        { weight: w`2.5lb`, num: 4 },
-        { weight: w`1.25lb`, num: 2 },
-        { weight: w`5kg`, num: 8 },
-        { weight: w`2.5kg`, num: 4 },
-        { weight: w`1.25kg`, num: 4 },
-        { weight: w`0.5kg`, num: 2 },
-      ],
-      fixed: [
-        w`10lb`,
-        w`15lb`,
-        w`20lb`,
-        w`25lb`,
-        w`30lb`,
-        w`35lb`,
-        w`40lb`,
-        w`4kg`,
-        w`6kg`,
-        w`8kg`,
-        w`10kg`,
-        w`12kg`,
-        w`14kg`,
-        w`20kg`,
-      ],
-      isFixed: false,
-    },
-    ezbar: {
-      multiplier: 2,
-      bar: {
-        lb: w`20lb`,
-        kg: w`10kg`,
-      },
-      plates: [
-        { weight: w`45lb`, num: 8 },
-        { weight: w`25lb`, num: 4 },
-        { weight: w`10lb`, num: 4 },
-        { weight: w`5lb`, num: 4 },
-        { weight: w`2.5lb`, num: 4 },
-        { weight: w`1.25lb`, num: 2 },
-        { weight: w`20kg`, num: 8 },
-        { weight: w`10kg`, num: 4 },
-        { weight: w`5kg`, num: 4 },
-        { weight: w`2.5kg`, num: 4 },
-        { weight: w`1.25kg`, num: 4 },
-        { weight: w`0.5kg`, num: 2 },
-      ],
-      fixed: [],
-      isFixed: false,
-    },
-    cable: {
-      multiplier: 1,
-      bar: {
-        lb: w`0lb`,
-        kg: w`0kg`,
-      },
-      plates: [
-        {
-          weight: w`10lb`,
-          num: 20,
-        },
-        {
-          weight: w`5lb`,
-          num: 10,
-        },
-        {
-          weight: w`5kg`,
-          num: 20,
-        },
-        {
-          weight: w`2.5kg`,
-          num: 10,
-        },
-      ],
-      fixed: [],
-      isFixed: false,
-    },
-    kettlebell: {
-      multiplier: 1,
-      bar: {
-        lb: w`0lb`,
-        kg: w`0kg`,
-      },
-      plates: [],
-      fixed: [
-        w`10lb`,
-        w`15lb`,
-        w`20lb`,
-        w`25lb`,
-        w`30lb`,
-        w`35lb`,
-        w`40lb`,
-        w`4kg`,
-        w`8kg`,
-        w`12kg`,
-        w`16kg`,
-        w`24kg`,
-      ],
-      isFixed: true,
-    },
-  };
-}
-
-export function Settings_build(): ISettings {
-  return {
-    ...Settings_programContentBuild(),
-    graphsSettings: {
-      isSameXAxis: false,
-      isWithBodyweight: false,
-      isWithOneRm: true,
-    },
-    exerciseData: {},
-    graphOptions: {},
-    exerciseStatsSettings: {
-      ascendingSort: false,
-    },
-    gyms: [
-      {
-        id: "default",
-        name: "Main",
-        equipment: Settings_defaultEquipment(),
-      },
-    ],
-    deletedGyms: [],
-    volume: 1.0,
-    vibration: false,
-    startWeekFromMonday: false,
-    lengthUnits: "in",
-    workoutSettings: {
-      targetType: "target",
-    },
-    exercises: {},
-    planner: Settings_buildPlannerSettings(),
-    muscleGroups: {
-      data: {},
-    },
-  };
-}
-
-function Settings_buildPlannerSettings(): IPlannerSettings {
-  return {
-    strengthSetsPct: 30,
-    hypertrophySetsPct: 70,
-    weeklyRangeSets: {
-      shoulders: [10, 12],
-      triceps: [10, 12],
-      back: [10, 12],
-      abs: [10, 12],
-      glutes: [10, 12],
-      hamstrings: [10, 12],
-      quadriceps: [10, 12],
-      chest: [10, 12],
-      biceps: [10, 12],
-      calves: [10, 12],
-      forearms: [10, 12],
-    },
-    weeklyFrequency: {
-      shoulders: 2,
-      triceps: 2,
-      back: 2,
-      abs: 2,
-      glutes: 2,
-      hamstrings: 2,
-      quadriceps: 2,
-      chest: 2,
-      biceps: 2,
-      calves: 2,
-      forearms: 2,
-    },
-    synergistMultiplier: 0.5,
-  };
-}
 
 //#endregion
 
@@ -6460,16 +6166,14 @@ function variationToString(
   index: number,
   exercise: IPlannerProgramExercise,
 ): string {
-  const groupedVariationSets = groupVariationSets(
+  const result: string[] = [];
+  for (const [set, count] of groupVariationSets(
     variation.sets,
     exercise,
     index,
-  );
-  const result: string[] = [];
-  for (const group of groupedVariationSets) {
-    const set = group[0];
+  )) {
     let setStr = "";
-    setStr += `${group[1]}${set.isQuickAddSet ? "+" : ""}x`;
+    setStr += `${count}${set.isQuickAddSet ? "+" : ""}x`;
     setStr += set.minrep != null ? `${n(Math.max(0, set.minrep))}-` : "";
     setStr += `${n(Math.max(0, set.maxrep ?? 0))}`;
     setStr += set.isAmrap ? "+" : "";
@@ -6481,9 +6185,11 @@ function variationToString(
         setStr += " ?+";
       }
     }
-    if (globals.rpe == null) {
-      setStr += set.rpe != null ? ` @${n(Math.max(0, set.rpe))}` : "";
-      setStr += set.rpe != null && set.logRpe ? "+" : "";
+    if (globals.rpe == null && set.rpe != null) {
+      setStr += ` @${n(Math.max(0, set.rpe))}`;
+      if (set.logRpe) {
+        setStr += "+";
+      }
     }
     if (globals.timer == null) {
       setStr += set.timer ? ` ${n(Math.max(0, set.timer))}s` : "";
@@ -6505,14 +6211,17 @@ function getGlobals(
 ): IPlannerToProgram2Globals {
   const variations = exercise.evaluatedSetVariations;
   if (variations.length === 0 || variations[0].sets.length === 0) {
-    const globals = exercise.globals;
-    const reusedGlobals = exercise.reuse?.exercise?.globals || {};
     return {
-      weight: globals?.weight ?? reusedGlobals.weight,
-      rpe: globals?.rpe ?? reusedGlobals.rpe,
-      timer: globals?.timer ?? reusedGlobals.timer,
-      logRpe: globals?.logRpe ?? reusedGlobals.logRpe,
-      askWeight: globals?.askWeight ?? reusedGlobals.askWeight,
+      weight:
+        exercise.globals?.weight ?? exercise.reuse?.exercise?.globals?.weight,
+      rpe: exercise.globals?.rpe ?? exercise.reuse?.exercise?.globals?.rpe,
+      timer:
+        exercise.globals?.timer ?? exercise.reuse?.exercise?.globals?.timer,
+      logRpe:
+        exercise.globals?.logRpe ?? exercise.reuse?.exercise?.globals?.logRpe,
+      askWeight:
+        exercise.globals?.askWeight ??
+        exercise.reuse?.exercise?.globals?.askWeight,
     };
   }
   const first = variations.at(0)?.sets.at(0);

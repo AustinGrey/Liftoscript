@@ -3,7 +3,6 @@ import {
   Program_evaluate,
   Program_applyEvaluatedProgram,
   Program_runAllFinishDayScripts,
-  Settings_build,
   PlannerProgram_evaluateText,
   PlannerProgram_replaceWeight,
   PlannerProgram_generateFullText,
@@ -18,6 +17,7 @@ import {
 } from "@/evaluators/plan-evaluator-minimal.ts";
 import type { IStats } from "@/fitness-stats";
 import type { IPlannerProgram, IProgram } from "@/program";
+import { Settings_build } from "@/user-settings";
 
 export interface ICompletedEntries {
   completedReps: number[][];

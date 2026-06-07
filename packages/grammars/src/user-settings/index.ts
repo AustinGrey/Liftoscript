@@ -1,4 +1,4 @@
-import { type IUnit, TUnit, TWeight } from "@/quantities/weight.ts";
+import { type IUnit, TUnit, TWeight, w } from "@/quantities/weight.ts";
 import {
   type IExerciseType,
   TCustomExercise,
@@ -146,4 +146,279 @@ export function getPreferredUnit(
     (exerciseType ? getEquipmentData(settings, exerciseType) : undefined)
       ?.unit ?? settings.units
   );
+}
+
+/**
+ * Creates a "typical" settings object that can be used for tests
+ * @todo what if you need a "blank" settings object?
+ */
+export function Settings_build(): ISettings {
+  return {
+    timers: {
+      warmup: 90,
+      workout: 180,
+      reminder: 900,
+    },
+    units: "lb",
+    graphsSettings: {
+      isSameXAxis: false,
+      isWithBodyweight: false,
+      isWithOneRm: true,
+    },
+    exerciseData: {},
+    graphOptions: {},
+    exerciseStatsSettings: {
+      ascendingSort: false,
+    },
+    gyms: [
+      {
+        id: "default",
+        name: "Main",
+        equipment: {
+          barbell: {
+            multiplier: 2,
+            bar: {
+              lb: w`45lb`,
+              kg: w`20kg`,
+            },
+            plates: [
+              { weight: w`45lb`, num: 8 },
+              { weight: w`25lb`, num: 4 },
+              { weight: w`10lb`, num: 4 },
+              { weight: w`5lb`, num: 4 },
+              { weight: w`2.5lb`, num: 4 },
+              { weight: w`1.25lb`, num: 2 },
+              { weight: w`20kg`, num: 8 },
+              { weight: w`10kg`, num: 4 },
+              { weight: w`5kg`, num: 4 },
+              { weight: w`2.5kg`, num: 4 },
+              { weight: w`1.25kg`, num: 4 },
+              { weight: w`0.5kg`, num: 2 },
+            ],
+            fixed: [],
+            isFixed: false,
+          },
+          trapbar: {
+            multiplier: 2,
+            bar: {
+              lb: w`45lb`,
+              kg: w`20kg`,
+            },
+            plates: [
+              { weight: w`45lb`, num: 8 },
+              { weight: w`25lb`, num: 4 },
+              { weight: w`10lb`, num: 4 },
+              { weight: w`5lb`, num: 4 },
+              { weight: w`2.5lb`, num: 4 },
+              { weight: w`1.25lb`, num: 2 },
+              { weight: w`20kg`, num: 8 },
+              { weight: w`10kg`, num: 4 },
+              { weight: w`5kg`, num: 4 },
+              { weight: w`2.5kg`, num: 4 },
+              { weight: w`1.25kg`, num: 4 },
+              { weight: w`0.5kg`, num: 2 },
+            ],
+            fixed: [],
+            isFixed: false,
+          },
+          leverageMachine: {
+            multiplier: 1,
+            bar: {
+              lb: w`0lb`,
+              kg: w`0kg`,
+            },
+            plates: [
+              { weight: w`45lb`, num: 8 },
+              { weight: w`25lb`, num: 4 },
+              { weight: w`10lb`, num: 4 },
+              { weight: w`5lb`, num: 4 },
+              { weight: w`2.5lb`, num: 4 },
+              { weight: w`1.25lb`, num: 2 },
+              { weight: w`20kg`, num: 8 },
+              { weight: w`10kg`, num: 4 },
+              { weight: w`5kg`, num: 4 },
+              { weight: w`2.5kg`, num: 4 },
+              { weight: w`1.25kg`, num: 4 },
+              { weight: w`0.5kg`, num: 2 },
+            ],
+            fixed: [],
+            isFixed: false,
+          },
+          smith: {
+            multiplier: 2,
+            bar: {
+              lb: w`45lb`,
+              kg: w`20kg`,
+            },
+            plates: [
+              { weight: w`45lb`, num: 8 },
+              { weight: w`25lb`, num: 4 },
+              { weight: w`10lb`, num: 4 },
+              { weight: w`5lb`, num: 4 },
+              { weight: w`2.5lb`, num: 4 },
+              { weight: w`1.25lb`, num: 2 },
+              { weight: w`20kg`, num: 8 },
+              { weight: w`10kg`, num: 4 },
+              { weight: w`5kg`, num: 4 },
+              { weight: w`2.5kg`, num: 4 },
+              { weight: w`1.25kg`, num: 4 },
+              { weight: w`0.5kg`, num: 2 },
+            ],
+            fixed: [],
+            isFixed: false,
+          },
+          dumbbell: {
+            multiplier: 2,
+            bar: {
+              lb: w`10lb`,
+              kg: w`5kg`,
+            },
+            plates: [
+              { weight: w`10lb`, num: 8 },
+              { weight: w`5lb`, num: 4 },
+              { weight: w`2.5lb`, num: 4 },
+              { weight: w`1.25lb`, num: 2 },
+              { weight: w`5kg`, num: 8 },
+              { weight: w`2.5kg`, num: 4 },
+              { weight: w`1.25kg`, num: 4 },
+              { weight: w`0.5kg`, num: 2 },
+            ],
+            fixed: [
+              w`10lb`,
+              w`15lb`,
+              w`20lb`,
+              w`25lb`,
+              w`30lb`,
+              w`35lb`,
+              w`40lb`,
+              w`4kg`,
+              w`6kg`,
+              w`8kg`,
+              w`10kg`,
+              w`12kg`,
+              w`14kg`,
+              w`20kg`,
+            ],
+            isFixed: false,
+          },
+          ezbar: {
+            multiplier: 2,
+            bar: {
+              lb: w`20lb`,
+              kg: w`10kg`,
+            },
+            plates: [
+              { weight: w`45lb`, num: 8 },
+              { weight: w`25lb`, num: 4 },
+              { weight: w`10lb`, num: 4 },
+              { weight: w`5lb`, num: 4 },
+              { weight: w`2.5lb`, num: 4 },
+              { weight: w`1.25lb`, num: 2 },
+              { weight: w`20kg`, num: 8 },
+              { weight: w`10kg`, num: 4 },
+              { weight: w`5kg`, num: 4 },
+              { weight: w`2.5kg`, num: 4 },
+              { weight: w`1.25kg`, num: 4 },
+              { weight: w`0.5kg`, num: 2 },
+            ],
+            fixed: [],
+            isFixed: false,
+          },
+          cable: {
+            multiplier: 1,
+            bar: {
+              lb: w`0lb`,
+              kg: w`0kg`,
+            },
+            plates: [
+              {
+                weight: w`10lb`,
+                num: 20,
+              },
+              {
+                weight: w`5lb`,
+                num: 10,
+              },
+              {
+                weight: w`5kg`,
+                num: 20,
+              },
+              {
+                weight: w`2.5kg`,
+                num: 10,
+              },
+            ],
+            fixed: [],
+            isFixed: false,
+          },
+          kettlebell: {
+            multiplier: 1,
+            bar: {
+              lb: w`0lb`,
+              kg: w`0kg`,
+            },
+            plates: [],
+            fixed: [
+              w`10lb`,
+              w`15lb`,
+              w`20lb`,
+              w`25lb`,
+              w`30lb`,
+              w`35lb`,
+              w`40lb`,
+              w`4kg`,
+              w`8kg`,
+              w`12kg`,
+              w`16kg`,
+              w`24kg`,
+            ],
+            isFixed: true,
+          },
+        },
+      },
+    ],
+    deletedGyms: [],
+    volume: 1.0,
+    vibration: false,
+    startWeekFromMonday: false,
+    lengthUnits: "in",
+    workoutSettings: {
+      targetType: "target",
+    },
+    exercises: {},
+    planner: {
+      strengthSetsPct: 30,
+      hypertrophySetsPct: 70,
+      weeklyRangeSets: {
+        shoulders: [10, 12],
+        triceps: [10, 12],
+        back: [10, 12],
+        abs: [10, 12],
+        glutes: [10, 12],
+        hamstrings: [10, 12],
+        quadriceps: [10, 12],
+        chest: [10, 12],
+        biceps: [10, 12],
+        calves: [10, 12],
+        forearms: [10, 12],
+      },
+      weeklyFrequency: {
+        shoulders: 2,
+        triceps: 2,
+        back: 2,
+        abs: 2,
+        glutes: 2,
+        hamstrings: 2,
+        quadriceps: 2,
+        chest: 2,
+        biceps: 2,
+        calves: 2,
+        forearms: 2,
+      },
+      synergistMultiplier: 0.5,
+    },
+    muscleGroups: {
+      data: {},
+    },
+  };
 }
