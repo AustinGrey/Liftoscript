@@ -1552,17 +1552,12 @@ function PlannerKey_fromPlannerExercise(
   plannerExercise: IPlannerProgramExercise,
   settings: ISettings,
 ): PlannerKey {
-  if (plannerExercise.exerciseType) {
-    return PlannerKey_fromExerciseType(
-      plannerExercise.exerciseType,
-      plannerExercise.label,
-    );
-  } else {
-    return PlannerKey_fromFullName(
-      plannerExercise.fullName,
-      settings.exercises,
-    );
-  }
+  return plannerExercise.exerciseType
+    ? PlannerKey_fromExerciseType(
+        plannerExercise.exerciseType,
+        plannerExercise.label,
+      )
+    : PlannerKey_fromFullName(plannerExercise.fullName, settings.exercises);
 }
 
 function PlannerKey_fromExerciseType(
