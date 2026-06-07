@@ -88,7 +88,7 @@ import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
-import { queryChild } from "@/utils/grammars.ts";
+import { queryChild, queryTree } from "@/utils/grammars.ts";
 
 //#region Program
 
@@ -6716,18 +6716,13 @@ function validate(
 }
 
 function getStateVariableKeys(script: string): Set<string> {
-  const expr = parseBound(LiftoscriptParser, script);
-  const cursor = expr.cursor();
-  const stateKeys: Set<string> = new Set();
-  do {
-    if (cursor.node.type.name === NodeName.StateVariable) {
-      const stateKey = getStateKey(cursor.node);
-      if (stateKey != null) {
-        stateKeys.add(stateKey);
-      }
-    }
-  } while (cursor.next());
-  return stateKeys;
+  const allKeys = queryTree(
+    parseBound(LiftoscriptParser, script),
+    (node) => node.type.name === NodeName.StateVariable,
+  )
+    .map(getStateKey)
+    .filter((key) => key !== undefined);
+  return new Set(allKeys);
 }
 
 /**
@@ -6737,13 +6732,9 @@ function getStateVariableKeys(script: string): Set<string> {
  */
 
 function getStateKey(expr: SourcedSyntaxNode): string | undefined {
-  const index = queryChild(expr, { ofType: NodeName.StateVariableIndex });
-  if (index === undefined) {
-    const stateKeyNode = queryChild(expr, { ofType: NodeName.Keyword });
-    if (stateKeyNode != null) {
-      return stateKeyNode.source;
-    }
-  }
-  return undefined;
+  return queryChild(expr, { ofType: NodeName.StateVariableIndex }) !== undefined
+    ? // If there's an index, then there isn't going to be a named state key
+      undefined
+    : queryChild(expr, { ofType: NodeName.Keyword })?.source;
 }
 //#endregion

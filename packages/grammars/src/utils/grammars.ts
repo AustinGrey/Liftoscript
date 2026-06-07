@@ -82,3 +82,20 @@ export function queryChild<TTypes extends string>(
   const [result] = queryChildren(node, options);
   return result;
 }
+
+/**
+ * Gets all nodes in the tree of the node that is passed
+ * @param node The node that is the root of the tree
+ * @param where The filter function to use
+ */
+export function* queryTree(
+  node: SourcedSyntaxNode,
+  where: (node: SourcedSyntaxNode) => boolean,
+): Generator<SourcedSyntaxNode> {
+  const cursor = node.cursor();
+  do {
+    if (where(cursor.node)) {
+      yield cursor.node;
+    }
+  } while (cursor.next());
+}
