@@ -85,7 +85,7 @@ import {
 import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
-import { run } from "@/logic/evaluators";
+import { run, validate } from "@/logic/evaluators";
 import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
 
 //#region Program
@@ -6295,9 +6295,24 @@ function parseScript(
       );
     },
   );
+  validateOld(
+    parseBound(LiftoscriptParser, script),
+    Object.keys(fns),
+    Object.keys(bindings),
+    Object.keys(state),
+    mode,
+    (message, node) => {
+      throw new LiftoscriptSyntaxError(
+        message,
+        ...node.getLineAndOffset(),
+        node.from,
+        node.to,
+      );
+    },
+  );
 }
 
-function validate(
+function validateOld(
   expr: SourcedSyntaxNode,
   knownFunctions: string[],
   knownBindings: string[],

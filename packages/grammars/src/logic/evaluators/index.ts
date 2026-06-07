@@ -8,6 +8,8 @@ import type {
   IProgramState,
   IScriptBindings,
   LogicHandler,
+  ValidationTools,
+  Validator,
 } from "@/logic/evaluators/types.ts";
 import { parser } from "@/logic/parsing/logic.ts";
 import {
@@ -20,6 +22,7 @@ import {
 } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { queryTree } from "@/utils/grammars.ts";
 
 /**
  * The handler for when we haven't decided how to handle a node
@@ -33,45 +36,44 @@ const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n, t) =>
 /**
  * Dictionary of evaluation methods for different logic nodes.
  */
-const handlers: {
-  [Key in NodeNames_Logic]: LogicHandler<Key>;
+const parsers: {
+  [Key in NodeNames_Logic]: {
+    handler: LogicHandler<Key>;
+    validator?: Validator<Key>;
+  };
 } = {
-  AndOr: NOT_IMPLEMENTED,
-  AssignmentExpression: (await import("./node-assignment-expression")).handler,
-  BinaryExpression: (await import("./node-binary-expression")).handler,
-  BlockExpression: (await import("./node-block-expression")).handler,
-  BuiltinFunctionExpression: (
-    await import("./node-builtin-function-expression")
-  ).handler,
-  Cmp: NOT_IMPLEMENTED,
-  ForExpression: (await import("./node-for-expression")).handler,
-  ForInExpression: (await import("./node-for-in-expression")).handler,
-  IfExpression: (await import("./node-if-expression")).handler,
-  IncAssignment: NOT_IMPLEMENTED,
-  IncAssignmentExpression: (await import("./node-inc-assignment-expression"))
-    .handler,
-  Keyword: NOT_IMPLEMENTED,
-  LineComment: (await import("./node-line-comment")).handler,
-  Not: NOT_IMPLEMENTED,
-  Number: NOT_IMPLEMENTED,
-  NumberExpression: (await import("./node-number-expression")).handler,
-  ParenthesisExpression: (await import("./node-parenthesis-expression"))
-    .handler,
-  Percentage: (await import("./node-percentage")).handler,
-  Plus: NOT_IMPLEMENTED,
-  Program: (await import("./node-program")).handler,
-  StateKeyword: NOT_IMPLEMENTED,
-  StateVariable: (await import("./node-state-variable")).handler,
-  StateVariableIndex: (await import("./node-state-variable-index")).handler,
-  Ternary: (await import("./node-ternary")).handler,
-  Times: NOT_IMPLEMENTED,
-  UnaryExpression: (await import("./node-unary-expression")).handler,
-  Unit: NOT_IMPLEMENTED,
-  Variable: (await import("./node-variable")).handler,
-  VariableExpression: (await import("./node-variable-expression")).handler,
-  VariableIndex: NOT_IMPLEMENTED,
-  WeightExpression: (await import("./node-weight-expression")).handler,
-  Wildcard: NOT_IMPLEMENTED,
+  AndOr: { handler: NOT_IMPLEMENTED },
+  AssignmentExpression: await import("./node-assignment-expression"),
+  BinaryExpression: await import("./node-binary-expression"),
+  BlockExpression: await import("./node-block-expression"),
+  BuiltinFunctionExpression: await import("./node-builtin-function-expression"),
+  Cmp: { handler: NOT_IMPLEMENTED },
+  ForExpression: await import("./node-for-expression"),
+  ForInExpression: await import("./node-for-in-expression"),
+  IfExpression: await import("./node-if-expression"),
+  IncAssignment: { handler: NOT_IMPLEMENTED },
+  IncAssignmentExpression: await import("./node-inc-assignment-expression"),
+  Keyword: { handler: NOT_IMPLEMENTED },
+  LineComment: await import("./node-line-comment"),
+  Not: { handler: NOT_IMPLEMENTED },
+  Number: { handler: NOT_IMPLEMENTED },
+  NumberExpression: await import("./node-number-expression"),
+  ParenthesisExpression: await import("./node-parenthesis-expression"),
+  Percentage: await import("./node-percentage"),
+  Plus: { handler: NOT_IMPLEMENTED },
+  Program: await import("./node-program"),
+  StateKeyword: { handler: NOT_IMPLEMENTED },
+  StateVariable: await import("./node-state-variable"),
+  StateVariableIndex: await import("./node-state-variable-index"),
+  Ternary: await import("./node-ternary"),
+  Times: { handler: NOT_IMPLEMENTED },
+  UnaryExpression: await import("./node-unary-expression"),
+  Unit: { handler: NOT_IMPLEMENTED },
+  Variable: await import("./node-variable"),
+  VariableExpression: await import("./node-variable-expression"),
+  VariableIndex: { handler: NOT_IMPLEMENTED },
+  WeightExpression: await import("./node-weight-expression"),
+  Wildcard: { handler: NOT_IMPLEMENTED },
 };
 
 function handleLogic(
@@ -81,7 +83,7 @@ function handleLogic(
   const handler: LogicHandler<NodeNames_Logic> | undefined = isLogicNodeName(
     node.name,
   )
-    ? (handlers[node.name] as LogicHandler<NodeNames_Logic>)
+    ? (parsers[node.name].handler as LogicHandler<NodeNames_Logic>)
     : undefined;
   if (!handler) {
     return tools.error(`No handler for node type: ${node.type}`, node);
@@ -89,6 +91,17 @@ function handleLogic(
   const result = handler(node as TypedLogicNode<NodeNames_Logic>, tools);
   // console.log("EVAL: ", result, " <- ", node.source);
   return result;
+}
+
+export function validate(node: SourcedSyntaxNode, tools: ValidationTools) {
+  queryTree(node, () => true).forEach((node) => {
+    const validator: Validator<NodeNames_Logic> | undefined = isLogicNodeName(
+      node.name,
+    )
+      ? (parsers[node.name].validator as Validator<NodeNames_Logic>)
+      : undefined;
+    validator?.(node as TypedLogicNode<NodeNames_Logic>, tools);
+  });
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { LogicHandler } from "@/logic/evaluators/types.ts";
+import type { LogicHandler, Validator } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 
@@ -24,3 +24,7 @@ export const handler: LogicHandler<"BuiltinFunctionExpression"> = (n, t) => {
     return t.error(`Unknown function '${name}'`, keyword);
   }
 };
+
+export const validator: Validator<"BuiltinFunctionExpression"> = (n, t)=>{
+
+}

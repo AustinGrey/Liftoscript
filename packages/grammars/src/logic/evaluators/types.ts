@@ -111,6 +111,19 @@ export type EvaluateTools = {
   fnContext: IScriptFnContext;
 };
 
+export type Validator<T extends NodeNames_Logic> = (
+  node: TypedLogicNode<T>,
+  tools: ValidationTools,
+) => void;
+
+export type ValidationTools = {
+  knownFunctions: string[];
+  knownBindings: string[];
+  knownStateVariables: string[];
+  mode: IProgramMode;
+  onError: (message: string, node: SourcedSyntaxNode) => never;
+};
+
 /**
  * A program is stateful, as lines execute they may alter the state of the program.
  * A state is a dictionary of quantities, no other kinds of data are tracked.

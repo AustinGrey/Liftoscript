@@ -54,10 +54,3 @@ export function isOneOf<TTarget, const TGuard extends TTarget>(
 ): text is TGuard {
   return options.includes(text as TGuard);
 }
-
-const f: string = "";
-
-if (!isOneOf(f, "a", "b", "c")) {
-} else {
-  const b = f;
-}
