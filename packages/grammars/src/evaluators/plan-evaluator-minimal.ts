@@ -367,7 +367,11 @@ export function Program_runAllFinishDayScripts(
 ): { program: IProgram; exerciseData: IExerciseData } {
   const exerciseData: IExerciseData = {};
   const newEvaluatedProgram = Program_forceEvaluate(program, settings);
-  const dayData = Progress_getDayData(progress);
+  const dayData = {
+    day: progress.day,
+    week: progress.week,
+    dayInWeek: progress.dayInWeek,
+  };
   const programDay = Program_getProgramDay(newEvaluatedProgram, progress.day);
   if (!programDay) {
     return { program, exerciseData };
@@ -4712,17 +4716,12 @@ function PlannerProgramExercise_setVariations(
     : setVariations;
 }
 
-function PlannerProgramExercise_warmups(
-  exercise: IPlannerProgramExercise,
-): IPlannerProgramExerciseWarmupSet[] | undefined {
-  return exercise.warmupSets || exercise.reuse?.exercise?.warmupSets;
-}
-
 function PlannerProgramExercise_programWarmups(
   exercise: IPlannerProgramExercise,
   settings: ISettings,
 ): IProgramExerciseWarmupSet[] | undefined {
-  const exerciseWarmups = PlannerProgramExercise_warmups(exercise);
+  const exerciseWarmups =
+    exercise.warmupSets || exercise.reuse?.exercise?.warmupSets;
   if (exerciseWarmups == null) {
     return undefined;
   }
@@ -5448,14 +5447,6 @@ function Progress_applyBindings(
   return entry;
 }
 
-function Progress_getDayData(progress: IHistoryRecord): IDayData {
-  return {
-    day: progress.day,
-    week: progress.week,
-    dayInWeek: progress.dayInWeek,
-  };
-}
-
 function Progress_getEntryId(
   exerciseType: IExerciseType,
   label?: string,
@@ -5872,7 +5863,9 @@ function groupVariationSets(
   let lastKey: string | undefined;
   const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = [];
   for (const set of sets) {
-    const key = setToKey(set);
+    const key = `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
+      set.timer
+    }-${set.label}-${set.askWeight}`;
     if (lastKey == null || lastKey !== key) {
       groups.push([set, 0]);
     }
@@ -5887,7 +5880,7 @@ function groupWarmupsSets(
   let lastKey: string | undefined;
   const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
   for (const set of sets) {
-    const key = warmupSetToKey(set);
+    const key = `${set.reps}-${print(set.weight || set.percentage || 0)}`;
     if (lastKey == null || lastKey !== key) {
       groups.push([set, 0]);
     }
@@ -6555,15 +6548,6 @@ function getGlobals(
 
 const weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
   weightExpr ? print(weightExpr) : "";
-function warmupSetToKey(set: IPlannerProgramExerciseWarmupSet): string {
-  return `${set.reps}-${print(set.weight || set.percentage || 0)}`;
-}
-
-function setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
-  return `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
-    set.timer
-  }-${set.label}-${set.askWeight}`;
-}
 //#endregion
 
 //#region ScriptRunner
