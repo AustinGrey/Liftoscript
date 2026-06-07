@@ -25,7 +25,6 @@ import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import {
-  LiftoscriptEvaluator,
   LiftoscriptSyntaxError,
   NodeName,
 } from "@/evaluators/logic-evaluator.ts";
@@ -2273,22 +2272,55 @@ const extractNameParts = memoize(
 
 // @todo used in testing? Don't delete until the test making use of this is converted
 export function changeWeightsToCompletedWeights(oldScript: string): string {
-  const node = plannerExerciseParser.parse(oldScript);
+  const node = parseBound(plannerExerciseParser, oldScript);
   const cursor = node.cursor();
   let script = oldScript;
   let shift = 0;
   do {
     if (cursor.node.type.name === PlannerNodeName.Liftoscript) {
-      const value = LiftoscriptEvaluator.getValueRaw(oldScript, cursor.node);
-      const from = cursor.node.from;
-      const to = cursor.node.to;
-      const newValue =
-        LiftoscriptEvaluator.changeWeightsToCompleteWeights(value);
+      const value = cursor.node.source;
+      const newValue = changeWeightsToCompleteWeights(value);
       script =
-        script.substring(0, from + shift) +
+        script.substring(0, cursor.node.from + shift) +
         newValue +
-        script.substring(to + shift);
+        script.substring(cursor.node.to + shift);
       shift = shift + newValue.length - value.length;
+    }
+  } while (cursor.next());
+  return script;
+}
+
+function changeWeightsToCompleteWeights(oldScript: string): string {
+  const node = parseBound(LiftoscriptParser, oldScript);
+  const cursor = node.cursor();
+  let script = oldScript;
+  let shift = 0;
+  do {
+    if (cursor.node.type.name === NodeName.VariableExpression) {
+      const keywordNode = cursor.node.getChild(NodeName.Keyword);
+      if (keywordNode) {
+        const keyword = keywordNode.source;
+        if (keyword === "weights") {
+          const parent = cursor.node.parent;
+          if (
+            parent != null &&
+            !(
+              (parent.type.name === NodeName.AssignmentExpression ||
+                parent.type.name === NodeName.IncAssignmentExpression) &&
+              parent.firstChild?.from === cursor.node.from &&
+              parent.firstChild?.to === cursor.node.to
+            )
+          ) {
+            const oldWeightStr = keyword;
+            const newWeightStr = "completedWeights";
+            script =
+              script.substring(0, keywordNode.from + shift) +
+              newWeightStr +
+              script.substring(keywordNode.to + shift);
+            shift = shift + newWeightStr.length - oldWeightStr.length;
+          }
+        }
+      }
     }
   } while (cursor.next());
   return script;
