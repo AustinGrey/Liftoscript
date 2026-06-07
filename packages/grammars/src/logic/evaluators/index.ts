@@ -102,9 +102,8 @@ export function run(
   publicFunctions: IScriptFunctions,
   fnContext: IScriptFnContext,
   // @TODO in original liftoscript, there seems to be multiple use cases for this -> either states by tag, or by exercise, or something else.... not sure how to hook this up, or how to test for it.
-  // @TODO remove the default
-  otherStates: Record<string | number, IProgramState> = {},
-  mode: IProgramMode = "update",
+  otherStates: Record<string | number, IProgramState>,
+  mode: IProgramMode,
 ): {
   result: LogicResult;
   finalState: IProgramState;

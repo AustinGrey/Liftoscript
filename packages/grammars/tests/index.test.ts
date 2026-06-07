@@ -674,6 +674,8 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
             },
             publicFunctions,
             testFnContext,
+            {},
+            "update",
           );
 
           // The old system would round on every operation, propagating errors.
