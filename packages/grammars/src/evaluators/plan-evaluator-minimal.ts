@@ -86,7 +86,7 @@ import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
-import { queryChild, queryTree } from "@/utils/grammars.ts";
+import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
 
 //#region Program
 
@@ -1820,18 +1820,6 @@ type IPlannerEvalFullResult = IEither<
   PlannerSyntaxError
 >;
 
-function getChildren(node: SourcedSyntaxNode): SourcedSyntaxNode[] {
-  const cur = node.cursor();
-  const result: SourcedSyntaxNode[] = [];
-  if (!cur.firstChild()) {
-    return result;
-  }
-  do {
-    result.push(cur.node);
-  } while (cur.nextSibling());
-  return result;
-}
-
 function assert(name: string): never {
   throw new PlannerSyntaxError(
     `Missing required nodes for ${name}, this should never happen`,
@@ -2206,8 +2194,8 @@ function getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
     const result = weekDayNode
       .getChildren(PlannerNodeName.WeekOrDay)
       .map((n) => {
-        const child = getChildren(n)[0];
-        if (child.type.name === PlannerNodeName.Int) {
+        const [child] = queryChildren(n);
+        if (child?.type.name === PlannerNodeName.Int) {
           return parseInt(getNodeSourceEscapedWhiteSpace(child), 10);
         } else {
           return undefined;
@@ -2253,8 +2241,7 @@ function getOrder(expr: SourcedSyntaxNode): number {
     if (repeatNode == null) {
       return 0;
     }
-    const children = getChildren(repeatNode);
-    for (const childNode of children) {
+    for (const childNode of queryChildren(repeatNode)) {
       if (childNode.type.name === PlannerNodeName.Rep) {
         return parseInt(getNodeSourceEscapedWhiteSpace(childNode), 10);
       }
@@ -2272,10 +2259,9 @@ function getRepeat(expr: SourcedSyntaxNode): number[] {
       return [];
     }
     const result: Set<number> = new Set();
-    const children = getChildren(repeatNode);
-    for (const childNode of children) {
+    for (const childNode of queryChildren(repeatNode)) {
       if (childNode.type.name === PlannerNodeName.RepRange) {
-        const [from, to] = getChildren(childNode).map((n) =>
+        const [from, to] = queryChildren(childNode, { atLeast: 2 }).map((n) =>
           parseInt(getNodeSourceEscapedWhiteSpace(n), 10),
         );
         for (let i = from; i <= to; i += 1) {
@@ -2374,8 +2360,9 @@ function evaluateSet(expr: SourcedSyntaxNode): IPlannerProgramExerciseSet {
           );
     const weight = getWeight(weightNode);
     const label = labelNode
-      ? getChildren(labelNode)
+      ? queryChildren(labelNode)
           .map((n) => getNodeSourceEscapedWhiteSpace(n))
+          .toArray()
           .join(" ")
       : undefined;
     if (labelNode && label && label.length > 8) {
@@ -2561,12 +2548,11 @@ function topLineMap(
       programNode,
     );
   }
-  const children = getChildren(programNode);
   const result: IPlannerTopLineItem[] = [];
   let lastDescriptions: string[][] = [];
   let ongoingDescriptions = false;
   let exerciseIndex = 0;
-  for (const child of children) {
+  for (const child of queryChildren(programNode)) {
     if (child.type.name === PlannerNodeName.ExerciseExpression) {
       ongoingDescriptions = false;
       const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
@@ -2984,7 +2970,9 @@ function evaluate(
     let weeks: IPlannerExerciseEvaluatorWeek[] = [];
     let exerciseIndex = 0;
     let latestDescriptions: string[][] = [];
-    for (const child of CollectionUtils_compact(getChildren(programNode))) {
+    for (const child of CollectionUtils_compact(
+      queryChildren(programNode).toArray(),
+    )) {
       if (
         child.type.name === PlannerNodeName.EmptyExpression ||
         child.type.name === PlannerNodeName.TripleLineComment
@@ -3307,7 +3295,9 @@ function evaluatePreservingSource(
 
   let weeksFullText: IPlannerExerciseEvaluatorTextWeek[] = [];
   let ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
-  for (const child of CollectionUtils_compact(getChildren(programNode))) {
+  for (const child of CollectionUtils_compact(
+    queryChildren(programNode).toArray(),
+  )) {
     if (child.type.name === PlannerNodeName.Week) {
       const weekName = child.source.replace(/^#+/, "").trim();
       const description = getWeekDayDescriptionAndFillLastDayFullText(
@@ -6321,7 +6311,7 @@ function validate(
     if (cursor.node.type.isError) {
       return onError("Syntax error", cursor.node);
     } else if (cursor.node.type.name === NodeName.BuiltinFunctionExpression) {
-      const [keyword, ...fnArgs] = getChildren(cursor.node);
+      const [keyword, ...fnArgs] = queryChildren(cursor.node);
       if (keyword == null || keyword.type.name !== NodeName.Keyword) {
         assert(NodeName.BuiltinFunctionExpression);
       }
@@ -6338,10 +6328,10 @@ function validate(
         vars[variableNode.source] = 1;
       }
     } else if (cursor.node.type.name === NodeName.AssignmentExpression) {
-      const [variableNode] = getChildren(cursor.node);
-      if (variableNode.type.name === NodeName.Variable) {
+      const [variableNode] = queryChildren(cursor.node);
+      if (variableNode?.type.name === NodeName.Variable) {
         vars[variableNode.source] = 1;
-      } else if (variableNode.type.name === NodeName.VariableExpression) {
+      } else if (variableNode?.type.name === NodeName.VariableExpression) {
         const nameNode = variableNode.getChild(NodeName.Keyword);
         if (nameNode != null) {
           const name = nameNode.source;
@@ -6384,7 +6374,7 @@ function validate(
         return onError(`There's no variable '${variableKey}'`, cursor.node);
       }
     } else if (cursor.node.type.name === NodeName.VariableExpression) {
-      const [nameNode, indexExpr] = getChildren(cursor.node);
+      const [nameNode, indexExpr] = queryChildren(cursor.node);
       if (nameNode == null) {
         assert(NodeName.VariableExpression);
       }
