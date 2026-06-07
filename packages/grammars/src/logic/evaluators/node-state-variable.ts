@@ -1,4 +1,4 @@
-import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
+import type { LogicHandler } from "@/logic/evaluators/types.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { queryChild } from "@/utils/grammars.ts";
 import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
