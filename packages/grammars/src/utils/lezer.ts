@@ -7,7 +7,6 @@ import {
   type SyntaxNode,
   Tree,
   TreeCursor,
-  type SyntaxNodeRef,
   NodeType,
 } from "@lezer/common";
 import { LRParser } from "@lezer/lr";
@@ -101,16 +100,8 @@ class SourcedTreeCursor {
     return this.cursor.name;
   }
 
-  get from() {
-    return this.cursor.from;
-  }
-
   get to() {
     return this.cursor.to;
-  }
-
-  get tree() {
-    return this.cursor.tree;
   }
 
   get node(): SourcedSyntaxNode {
@@ -121,56 +112,12 @@ class SourcedTreeCursor {
     return this.cursor.firstChild();
   }
 
-  lastChild() {
-    return this.cursor.lastChild();
-  }
-
-  childAfter(pos: number) {
-    return this.cursor.childAfter(pos);
-  }
-
-  childBefore(pos: number) {
-    return this.cursor.childBefore(pos);
-  }
-
-  enter(pos: number, side: -1 | 0 | 1, mode?: IterMode) {
-    return this.cursor.enter(pos, side, mode);
-  }
-
-  parent() {
-    return this.cursor.parent();
-  }
-
   nextSibling() {
     return this.cursor.nextSibling();
   }
 
-  prevSibling() {
-    return this.cursor.prevSibling();
-  }
-
   next(enter?: boolean) {
     return this.cursor.next(enter);
-  }
-
-  prev(enter?: boolean) {
-    return this.cursor.prev(enter);
-  }
-
-  moveTo(pos: number, side: -1 | 0 | 1 = 0): this {
-    this.cursor.moveTo(pos, side);
-    return this;
-  }
-
-  iterate(
-    enter: (node: SyntaxNodeRef) => boolean | void,
-    leave?: (node: SyntaxNodeRef) => void,
-  ) {
-    return this.cursor.iterate(enter, leave);
-  }
-
-  matchContext(context: readonly string[]) {
-    return this.cursor.matchContext(context);
   }
 }
 
