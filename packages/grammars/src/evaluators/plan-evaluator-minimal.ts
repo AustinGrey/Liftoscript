@@ -3049,13 +3049,10 @@ function evaluateProgressImpl(
       if (script) {
         try {
           parseScript(
-            settings.units,
             script,
             state,
-            {},
             Progress_createEmptyScriptBindings(dayData, settings),
             Progress_createScriptFunctions(settings),
-            { exerciseType, unit: settings.units, prints: [] },
             "planner",
           );
         } catch (e) {
@@ -4279,20 +4276,13 @@ function PlannerEvaluator_checkUpdateScript(
   if (update?.type === "custom") {
     const { script, liftoscriptNode } = update;
     if (script && liftoscriptNode) {
-      const exerciseType = PlannerProgramExercise_getExercise(
-        exercise,
-        settings,
-      );
       const state = PlannerProgramExercise_getState(exercise);
       try {
         parseScript(
-          settings.units,
           script,
           state,
-          {},
           Progress_createEmptyScriptBindings(dayData, settings),
           Progress_createScriptFunctions(settings),
-          { exerciseType, unit: settings.units, prints: [] },
           "update",
         );
       } catch (e) {
@@ -4723,24 +4713,6 @@ const PlannerEvaluator_evaluate = memoize(PlannerEvaluator_forceEvaluate, {
 //#endregion
 
 //#region Planner Program Exercise
-
-function PlannerProgramExercise_getExercise(
-  plannerExercise: IPlannerProgramExercise,
-  settings: ISettings,
-): IExercise | undefined {
-  const exercise = Exercise_findByName(
-    plannerExercise.name.trim(),
-    settings.exercises,
-  );
-  if (exercise == null) {
-    return undefined;
-  }
-  exercise.equipment =
-    plannerExercise.equipment ||
-    exercise?.equipment ||
-    exercise?.defaultEquipment;
-  return exercise;
-}
 
 function PlannerProgramExercise_setVariations(
   exercise: IPlannerProgramExercise,
@@ -6634,13 +6606,10 @@ export class LiftoscriptSyntaxError extends SyntaxError {
 }
 
 function parseScript(
-  units: IUnit,
   script: string,
   state: IProgramState,
-  otherStates: Record<number, IProgramState>,
   bindings: IScriptBindings,
   fns: IScriptFunctions,
-  context: IScriptFnContext,
   mode: IProgramMode,
 ): void {
   validate(
@@ -6658,19 +6627,6 @@ function parseScript(
       );
     },
   );
-  // Which we are definitely not doing here. But should we even care?
-  // const liftoscriptTree = LiftoscriptParser.parse(script);
-  // const liftoscriptEvaluator = new LiftoscriptEvaluator(
-  //   script,
-  //   state,
-  //   otherStates,
-  //   bindings,
-  //   fns,
-  //   context,
-  //   units,
-  //   mode,
-  // );
-  // liftoscriptEvaluator.parse(liftoscriptTree.topNode);
 }
 
 function validate(
