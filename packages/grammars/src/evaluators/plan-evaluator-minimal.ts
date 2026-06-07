@@ -282,14 +282,12 @@ function Program_runFinishDayScript(
   let updates: ILiftoscriptEvaluatorUpdate[];
   let newState: IProgramState;
   try {
-    const result = execute(
-      settings.units,
+    const result = run(
       script,
       {
         ...state,
         ...userPromptedStateVars,
       },
-      otherStates,
       bindings,
       fns,
       {
@@ -297,6 +295,7 @@ function Program_runFinishDayScript(
         unit: settings.units,
         prints: [],
       },
+      otherStates,
       "planner",
     );
     updates = result.updates;
@@ -5354,14 +5353,13 @@ function Progress_runUpdateScriptForEntry(
       unit: settings.units,
       prints: [],
     };
-    const result = execute(
-      settings.units,
+    const result = run(
       script,
       state,
-      structuredClone(otherStates),
       bindings,
       Progress_createScriptFunctions(settings),
       fnContext,
+      structuredClone(otherStates),
       "update",
     );
     const newEntry = Progress_applyBindings(entry, bindings, settings);
@@ -6747,19 +6745,5 @@ function getStateKey(expr: SourcedSyntaxNode): string | undefined {
     }
   }
   return undefined;
-}
-
-function execute(
-  units: IUnit,
-  script: string,
-  state: IProgramState,
-  otherStates: Record<number, IProgramState>,
-  bindings: IScriptBindings,
-  fns: IScriptFunctions,
-  context: IScriptFnContext,
-  mode: IProgramMode,
-): { finalState: IProgramState; updates: ILiftoscriptEvaluatorUpdate[] } {
-  // @todo where to pass in units? Or does it even matter?
-  return run(script, state, bindings, fns, context, otherStates, mode);
 }
 //#endregion

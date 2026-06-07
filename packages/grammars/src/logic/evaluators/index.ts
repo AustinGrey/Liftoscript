@@ -93,6 +93,9 @@ function handleLogic(
 
 /**
  * Runs a script to return it's value
+ * @todo all calls to this function in old liftoscript took in a units parameter, which was settings.units on all call
+ *   sites. But it doesn't seem necessary to do that since all math can be done in any unit, and then converted after
+ *   to display in whichever unit is needed. So I'm leaving that off and will delete this comment once I'm sure it's not needed.
  * @param logic The script to run
  */
 export function run(
