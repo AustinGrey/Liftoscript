@@ -2980,7 +2980,14 @@ function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
         ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
         : undefined;
       if (script) {
-        meta = { stateKeys: getStateVariableKeys(script) };
+        const allKeys = queryTree(
+          parseBound(LiftoscriptParser, script),
+          (node) => node.type.name === NodeName.StateVariable,
+        )
+          .map(getStateKey)
+          .filter((key) => key !== undefined);
+
+        meta = { stateKeys: new Set(allKeys) };
       }
       if (!script && !body) {
         errorPlannerSyntax(
@@ -6713,16 +6720,6 @@ function validate(
       }
     }
   } while (cursor.next());
-}
-
-function getStateVariableKeys(script: string): Set<string> {
-  const allKeys = queryTree(
-    parseBound(LiftoscriptParser, script),
-    (node) => node.type.name === NodeName.StateVariable,
-  )
-    .map(getStateKey)
-    .filter((key) => key !== undefined);
-  return new Set(allKeys);
 }
 
 /**
