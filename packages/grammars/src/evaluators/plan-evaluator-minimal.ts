@@ -2214,10 +2214,11 @@ function fnArgsToStateVars(
   const stateMetadata: IProgramStateMetadata = {};
   for (const value of fnArgs) {
     let [fnArgKey, fnArgValStr] = value.split(":").map((v) => v.trim());
-    if (!fnArgKey || !fnArgValStr) {
-      onError?.(`Invalid argument ${value}`);
+    if (onError && (!fnArgKey || !fnArgValStr)) {
+      onError(`Invalid argument ${value}`);
     }
     if (fnArgKey.endsWith("+")) {
+      fnArgKey = fnArgKey.replace("+", "");
       stateMetadata[fnArgKey] = { userPrompted: true };
     } else {
       stateMetadata[fnArgKey] = { userPrompted: false };
@@ -3044,9 +3045,21 @@ function evaluateProgressImpl(
     if (type === "custom") {
       const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
       const script = liftoscriptNode ? liftoscriptNode.source : undefined;
+      const { state } = fnArgsToStateVars(fnArgs, (message) =>
+        errorPlannerSyntax(message, fnNameNode),
+      );
       if (script) {
         try {
-          parseScript(script);
+          parseScript(
+            settings.units,
+            script,
+            state,
+            {},
+            Progress_createEmptyScriptBindings(dayData, settings),
+            Progress_createScriptFunctions(settings),
+            { exerciseType, unit: settings.units, prints: [] },
+            "planner",
+          );
         } catch (e) {
           if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
             const [line] = liftoscriptNode.getLineAndOffset();
@@ -4268,8 +4281,22 @@ function PlannerEvaluator_checkUpdateScript(
   if (update?.type === "custom") {
     const { script, liftoscriptNode } = update;
     if (script && liftoscriptNode) {
+      const exerciseType = PlannerProgramExercise_getExercise(
+        exercise,
+        settings,
+      );
+      const state = PlannerProgramExercise_getState(exercise);
       try {
-        parseScript(script);
+        parseScript(
+          settings.units,
+          script,
+          state,
+          {},
+          Progress_createEmptyScriptBindings(dayData, settings),
+          Progress_createScriptFunctions(settings),
+          { exerciseType, unit: settings.units, prints: [] },
+          "update",
+        );
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
           const [line] = liftoscriptNode.getLineAndOffset();
@@ -6587,7 +6614,16 @@ function setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
 
 //#region ScriptRunner
 
-function parseScript(script: string): void {
+function parseScript(
+  units: IUnit,
+  script: string,
+  state: IProgramState,
+  otherStates: Record<number, IProgramState>,
+  bindings: IScriptBindings,
+  fns: IScriptFunctions,
+  context: IScriptFnContext,
+  mode: IProgramMode,
+): void {
   parseBound(LiftoscriptParser, script);
   // @todo I think the original "parse" method was supposed to throw if there were any parsing issues, sort of like a checker/validator
   // Which we are definitely not doing here. But should we even care?
