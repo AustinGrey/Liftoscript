@@ -6434,18 +6434,19 @@ function getWarmupSets(
   programExercise: IPlannerProgramExercise,
 ): string | undefined {
   const warmupSets = programExercise.warmupSets;
-  if (warmupSets) {
-    const groups = groupWarmupsSets(warmupSets);
-    const strs: string[] = [];
-    for (const [first, length] of groups) {
+  if (!warmupSets) {
+    return undefined;
+  }
+
+  const result = groupWarmupsSets(warmupSets)
+    .map(([first, length]) => {
       const weight =
         first.weight ??
         (first.percentage != null ? percentORM(first.percentage) : w`0lb`);
-      strs.push(`${length}x${first.reps} ${print(weight)}`);
-    }
-    return strs.length === 0 ? "none" : strs.join(", ");
-  }
-  return undefined;
+      return `${length}x${first.reps} ${print(weight)}`;
+    })
+    .join(", ");
+  return result.length === 0 ? "none" : result;
 }
 
 function variationToString(
