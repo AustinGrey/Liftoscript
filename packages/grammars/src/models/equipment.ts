@@ -51,7 +51,7 @@ export function Equipment_getEquipmentDataForExerciseType(
     settings,
     exerciseType,
   );
-  const currentGym = Equipment_getCurrentGym(settings);
+  const currentGym = Equipment_getGymByIdOrCurrent(settings);
   return equipment ? currentGym.equipment[equipment] : undefined;
 }
 
@@ -61,13 +61,6 @@ export function Equipment_getGymByIdOrCurrent(
 ): IGym {
   return (
     settings.gyms.find((g) => g.id === (gymId ?? settings.currentGymId)) ??
-    settings.gyms[0]
-  );
-}
-
-export function Equipment_getCurrentGym(settings: ISettings): IGym {
-  return (
-    settings.gyms.find((g) => g.id === settings.currentGymId) ??
     settings.gyms[0]
   );
 }

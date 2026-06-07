@@ -1,5 +1,5 @@
 import { Equipment_getUnitOrDefaultForExerciseType } from "@/models/equipment.ts";
-import type { IExerciseType } from "@/exercises";
+import type { IExerciseType, IExerciseTypeKey } from "@/exercises";
 import type { ISettings } from "@/user-settings";
 
 export function Exercise_defaultRounding(
@@ -14,6 +14,6 @@ export function Exercise_defaultRounding(
   );
 }
 
-export function Exercise_toKey(type: IExerciseType): string {
-  return `${type.id}${type.equipment ? `_${type.equipment}` : ""}`;
+export function Exercise_toKey(type: IExerciseType): IExerciseTypeKey {
+  return `${type.id}${type.equipment ? `_${type.equipment}` : ""}` as IExerciseTypeKey;
 }
