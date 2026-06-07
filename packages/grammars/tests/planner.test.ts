@@ -4,7 +4,11 @@ import {
   PlannerTestUtils_changeWeight,
   PlannerTestUtils_finish,
 } from "./oldPlannerSystemTestUtils.ts";
-import { PlannerTestUtils_finish as newSystemFinish } from "./newPlannerSystemTestUtils.ts";
+import {
+  PlannerTestUtils_finish as newSystemFinish,
+  PlannerTestUtils_changeExercise as newSystemChangeExercise,
+  PlannerTestUtils_changeWeight as newSystemChangeWeight,
+} from "./newPlannerSystemTestUtils.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import {
   Weight_build,
@@ -14,11 +18,15 @@ import {
   type IPlannerProgram,
   PlannerProgram_evaluateText,
   PlannerProgram_evaluate,
-  PlannerSyntaxError,
   PlannerExerciseEvaluator,
   Settings_defaultEquipment,
   type IStats as OLD_IStats,
 } from "@/evaluators/plan-evaluator.ts";
+import {
+  PlannerProgram_evaluate as newPlannerProgram_evaluate,
+  PlannerProgram_evaluateText as newPlannerProgram_evaluateText,
+  changeWeightsToCompletedWeights as newChangeWeightsToCompletedWeights,
+} from "@/evaluators/plan-evaluator-minimal.ts";
 import type { IWeight } from "@/quantities/weight.ts";
 
 import type { IStats } from "@/fitness-stats";
@@ -1948,14 +1956,7 @@ Squat / 1x5 100lb / 2x8 150kg / progress: custom(increase: 5lb) {~
 Squat / 3x5 / 4x8 / 100lb
 `;
     const settings = { ...Settings_build(), units: "kg" as const };
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      { completedReps: [[5]] },
-      settings,
-    );
-    const kgProgram = PlannerProgram_switchToUnit(program.planner!, settings);
-    const newText = asProgramScript(kgProgram);
-    expect(newText).to.equal(`# Week 1
+    const expected = `# Week 1
 ## Day 1
 Squat / 1x5 47.5kg / 2x8 152.5kg / progress: custom(increase: 7.5kg) {~
   if (completedReps >= reps) {
@@ -1968,7 +1969,42 @@ Squat / 1x5 47.5kg / 2x8 152.5kg / progress: custom(increase: 7.5kg) {~
 Squat / 3x5 / 4x8 / 47.5kg
 
 
-`);
+`;
+
+    const { program } = PlannerTestUtils_finish(
+      programText,
+      { completedReps: [[5]] },
+      settings,
+    );
+    if (!program.planner) {
+      expect.fail("Old system failed to produce a program planner.");
+    }
+    const oldKgProgram = PlannerProgram_switchToUnit(program.planner, settings);
+    expect
+      .soft(
+        asProgramScript(oldKgProgram),
+        "Old system failed to produce the expected result",
+      )
+      .to.equal(expected);
+
+    const { program: newSystemProgram } = newSystemFinish(
+      programText,
+      { completedReps: [[5]] },
+      settings,
+    );
+    if (!newSystemProgram.planner) {
+      expect.fail("New system failed to produce a program planner.");
+    }
+    const newKgProgram = PlannerProgram_switchToUnit(
+      { vtype: "planner", ...newSystemProgram.planner },
+      settings,
+    );
+    expect
+      .soft(
+        asProgramScript(newKgProgram),
+        "New system failed to produce the expected result",
+      )
+      .to.equal(expected);
   });
 
   it("replace exercise", () => {
@@ -1979,16 +2015,28 @@ Squat / 1x5 100lb, 1x3 200lb / 60s / progress: lp(5lb)
 ## Day 2
 Bench Press / 3x8 150lb / progress: dp(5lb, 8, 12)
 `;
-    const newText = PlannerTestUtils_changeExercise(programText, "Squat", {
-      id: "overheadPress",
-      equipment: "barbell",
-    }).trim();
-    expect(newText).to.equal(`# Week 1
+    const expected = `# Week 1
 ## Day 1
 Overhead Press / 1x5 100lb, 1x3 200lb / 60s / progress: lp(5lb)
 
 ## Day 2
-Bench Press / 3x8 / 150lb / progress: dp(5lb, 8, 12)`);
+Bench Press / 3x8 / 150lb / progress: dp(5lb, 8, 12)`;
+
+    const oldText = PlannerTestUtils_changeExercise(programText, "Squat", {
+      id: "overheadPress",
+      equipment: "barbell",
+    }).trim();
+    expect
+      .soft(oldText, "Old system failed to produce the expected result")
+      .to.equal(expected);
+
+    const newText = newSystemChangeExercise(programText, "Squat", {
+      id: "overheadPress",
+      equipment: "barbell",
+    }).trim();
+    expect
+      .soft(newText, "New system failed to produce the expected result")
+      .to.equal(expected);
   });
 
   it("replace exercise to the one that already exists in the program", () => {
@@ -1999,16 +2047,32 @@ Squat / 1x5 100lb, 1x3 200lb / 60s / progress: lp(5lb)
 ## Day 2
 Bench Press / 3x8 / progress: dp(5lb, 8, 12)
 `;
-    const newText = PlannerTestUtils_changeExercise(programText, "Squat", {
+    const expectedContain = `Bench Press / 1x5 100lb, 1x3 200lb / 60s / progress: lp(5lb)
+
+## Day 2
+Bench Press / 3x8 / progress: dp(5lb, 8, 12)`;
+
+    const oldText = PlannerTestUtils_changeExercise(programText, "Squat", {
       id: "benchPress",
       equipment: "barbell",
     }).trim();
-    expect(newText).to
-      .contain(`Bench Press / 1x5 100lb, 1x3 200lb / 60s / progress: lp(5lb)
+    expect
+      .soft(oldText, "Old system failed to contain the expected result")
+      .to.contain(expectedContain);
+    expect
+      .soft(oldText.split("\n")[2], "Old system template line")
+      .to.match(/^[a-z]{3}: Bench Press/);
 
-## Day 2
-Bench Press / 3x8 / progress: dp(5lb, 8, 12)`);
-    expect(newText.split("\n")[2]).to.match(/^[a-z]{3}: Bench Press/);
+    const newText = newSystemChangeExercise(programText, "Squat", {
+      id: "benchPress",
+      equipment: "barbell",
+    }).trim();
+    expect
+      .soft(newText, "New system failed to contain the expected result")
+      .to.contain(expectedContain);
+    expect
+      .soft(newText.split("\n")[2], "New system template line")
+      .to.match(/^[a-z]{3}: Bench Press/);
   });
 
   it("properly update weights", () => {
@@ -2016,16 +2080,28 @@ Bench Press / 3x8 / progress: dp(5lb, 8, 12)`);
 ## Day 1
 Squat / 1x5 100lb, 1x3 200lb / 60s / progress: lp(5lb)
 `;
-    const newText = PlannerTestUtils_changeWeight(
+    const expected = `# Week 1
+## Day 1
+Squat / 1x5 100lb, 1x3 250lb / 60s / progress: lp(5lb)`;
+
+    const oldText = PlannerTestUtils_changeWeight(
       programText,
       (weightChanges) => {
         weightChanges[1].weight = Weight_build(250, "lb");
         return weightChanges;
       },
     );
-    expect(newText.trim()).to.equal(`# Week 1
-## Day 1
-Squat / 1x5 100lb, 1x3 250lb / 60s / progress: lp(5lb)`);
+    expect
+      .soft(oldText.trim(), "Old system failed to produce the expected result")
+      .to.equal(expected);
+
+    const newText = newSystemChangeWeight(programText, (weightChanges) => {
+      weightChanges[1].weight = Weight_build(250, "lb");
+      return weightChanges;
+    });
+    expect
+      .soft(newText.trim(), "New system failed to produce the expected result")
+      .to.equal(expected);
   });
 
   it("properly update global weights", () => {
@@ -2033,16 +2109,28 @@ Squat / 1x5 100lb, 1x3 250lb / 60s / progress: lp(5lb)`);
 ## Day 1
 Squat / 1x5 100lb, 1x3 200lb / 80lb / 60s / progress: lp(80lb)
 `;
-    const newText = PlannerTestUtils_changeWeight(
+    const expected = `# Week 1
+## Day 1
+Squat / 1x5, 1x3 / 100lb 60s / progress: lp(80lb)`;
+
+    const oldText = PlannerTestUtils_changeWeight(
       programText,
       (weightChanges) => {
         weightChanges[0].weight = Weight_build(100, "lb");
         return weightChanges;
       },
     );
-    expect(newText.trim()).to.equal(`# Week 1
-## Day 1
-Squat / 1x5, 1x3 / 100lb 60s / progress: lp(80lb)`);
+    expect
+      .soft(oldText.trim(), "Old system failed to produce the expected result")
+      .to.equal(expected);
+
+    const newText = newSystemChangeWeight(programText, (weightChanges) => {
+      weightChanges[0].weight = Weight_build(100, "lb");
+      return weightChanges;
+    });
+    expect
+      .soft(newText.trim(), "New system failed to produce the expected result")
+      .to.equal(expected);
   });
 
   it("properly update default weights", () => {
@@ -2050,7 +2138,11 @@ Squat / 1x5, 1x3 / 100lb 60s / progress: lp(80lb)`);
 ## Day 1
 Squat / 1x5 50lb, 1x3 80lb / 60s / progress: lp(5lb)
 `;
-    const newText = PlannerTestUtils_changeWeight(
+    const expected = `# Week 1
+## Day 1
+Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`;
+
+    const oldText = PlannerTestUtils_changeWeight(
       programText,
       (weightChanges) => {
         weightChanges[0].weight = Weight_build(100, "lb");
@@ -2058,9 +2150,18 @@ Squat / 1x5 50lb, 1x3 80lb / 60s / progress: lp(5lb)
         return weightChanges;
       },
     );
-    expect(newText.trim()).to.equal(`# Week 1
-## Day 1
-Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`);
+    expect
+      .soft(oldText.trim(), "Old system failed to produce the expected result")
+      .to.equal(expected);
+
+    const newText = newSystemChangeWeight(programText, (weightChanges) => {
+      weightChanges[0].weight = Weight_build(100, "lb");
+      weightChanges[1].weight = Weight_build(150, "lb");
+      return weightChanges;
+    });
+    expect
+      .soft(newText.trim(), "New system failed to produce the expected result")
+      .to.equal(expected);
   });
 
   it("doesn't show an error if original exercise progress reuses another exercise but overrides progress", () => {
@@ -2069,16 +2170,31 @@ Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`);
 Squat / 1x1 100lb / progress: custom(increment: 10lb) { ...Bench Press }
 Bench Press / ...Squat / progress: custom() {~ ~}
 `;
-    const planner: IPlannerProgram = {
+
+    const oldPlanner: IPlannerProgram = {
       vtype: "planner",
       name: "MyProgram",
       weeks: PlannerProgram_evaluateText(programText),
     };
-    const evaluatedWeeks = PlannerProgram_evaluate(
-      planner,
+    const oldEvaluatedWeeks = PlannerProgram_evaluate(
+      oldPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect(evaluatedWeeks[0][0].success).to.be.true;
+    expect
+      .soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed")
+      .to.be.true;
+
+    const newPlanner = {
+      name: "MyProgram",
+      weeks: newPlannerProgram_evaluateText(programText),
+    };
+    const newEvaluatedWeeks = newPlannerProgram_evaluate(
+      newPlanner,
+      Settings_build(),
+    ).evaluatedWeeks;
+    expect
+      .soft(newEvaluatedWeeks[0][0].success, "New system should succeed")
+      .to.be.true;
   });
 
   it("doesn't show an error if original exercise update reuses another exercise but overrides update", () => {
@@ -2087,16 +2203,31 @@ Bench Press / ...Squat / progress: custom() {~ ~}
 Squat / 1x1 100lb / update: custom() { ...Bench Press }
 Bench Press / ...Squat / update: custom() {~ ~}
 `;
-    const planner: IPlannerProgram = {
+
+    const oldPlanner: IPlannerProgram = {
       vtype: "planner",
       name: "MyProgram",
       weeks: PlannerProgram_evaluateText(programText),
     };
-    const evaluatedWeeks = PlannerProgram_evaluate(
-      planner,
+    const oldEvaluatedWeeks = PlannerProgram_evaluate(
+      oldPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect(evaluatedWeeks[0][0].success).to.be.true;
+    expect
+      .soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed")
+      .to.be.true;
+
+    const newPlanner = {
+      name: "MyProgram",
+      weeks: newPlannerProgram_evaluateText(programText),
+    };
+    const newEvaluatedWeeks = newPlannerProgram_evaluate(
+      newPlanner,
+      Settings_build(),
+    ).evaluatedWeeks;
+    expect
+      .soft(newEvaluatedWeeks[0][0].success, "New system should succeed")
+      .to.be.true;
   });
 
   it("show an error for reuse/repeat mismatch", () => {
@@ -2120,25 +2251,39 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
 # Week 5
 ## Day 1
 `;
-    const planner: IPlannerProgram = {
+    const errorMessage =
+      "Squat: No such exercise tmp: Squat at week: 3 (4:13)";
+
+    const oldPlanner: IPlannerProgram = {
       vtype: "planner",
       name: "MyProgram",
       weeks: PlannerProgram_evaluateText(programText),
     };
-    const evaluatedWeeks = PlannerProgram_evaluate(
-      planner,
+    const oldResult = PlannerProgram_evaluate(
+      oldPlanner,
       Settings_build(),
-    ).evaluatedWeeks;
-    expect(evaluatedWeeks[2][0]).to.deep.equal({
-      success: false,
-      error: new PlannerSyntaxError(
-        "Squat: No such exercise tmp: Squat at week: 3 (4:13)",
-        0,
-        0,
-        0,
-        0,
-      ),
-    });
+    ).evaluatedWeeks[2][0];
+    expect.soft(oldResult.success, "Old system should fail").to.be.false;
+    if (!oldResult.success) {
+      expect
+        .soft(oldResult.error.message, "Old system error message")
+        .to.equal(errorMessage);
+    }
+
+    const newPlanner = {
+      name: "MyProgram",
+      weeks: newPlannerProgram_evaluateText(programText),
+    };
+    const newResult = newPlannerProgram_evaluate(
+      newPlanner,
+      Settings_build(),
+    ).evaluatedWeeks[2][0];
+    expect.soft(newResult.success, "New system should fail").to.be.false;
+    if (!newResult.success) {
+      expect
+        .soft(newResult.error.message, "New system error message")
+        .to.equal(errorMessage);
+    }
   });
 
   it("migrates weights to completedWeights", () => {
@@ -2158,9 +2303,7 @@ Squat / 2x5 / 100lb / progress: custom() {~
     weights = weights[1] * 0.5 + (weights[3] == 30lb ? weights[4] : weights[3])
   }
 ~}`;
-    const newScript =
-      PlannerExerciseEvaluator.changeWeightsToCompletedWeights(script);
-    expect(newScript).to.equal(`# Week 1
+    const expected = `# Week 1
 ## Day 1
 /// asdfasd
 // A: Day 1
@@ -2175,6 +2318,23 @@ Squat / 2x5 / 100lb / progress: custom() {~
     var.a = completedWeights[1] + completedWeights[3]
     weights = completedWeights[1] * 0.5 + (completedWeights[3] == 30lb ? completedWeights[4] : completedWeights[3])
   }
-~}`);
+~}`;
+
+    const oldScript =
+      PlannerExerciseEvaluator.changeWeightsToCompletedWeights(script);
+    expect
+      .soft(
+        oldScript,
+        "Old system failed to produce the expected result",
+      )
+      .to.equal(expected);
+
+    const newScript = newChangeWeightsToCompletedWeights(script);
+    expect
+      .soft(
+        newScript,
+        "New system failed to produce the expected result",
+      )
+      .to.equal(expected);
   });
 });
