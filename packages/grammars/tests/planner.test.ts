@@ -693,6 +693,190 @@ Squat / 1x8 105lb, 1x8 100lb, 1x8 105lb / progress: custom() {~
 `,
     }),
   );
+
+  it(
+    "keeps overridden dp progress",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / used: none / 1x1 / 100% 100s / warmup: none
+Bench Press / ...Squat / 3x10 / 30lb / progress: dp(3lb, 8, 12)`,
+      completed: {
+        reps: [[10, 10, 10]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / used: none / 1x1 / 100% 100s / warmup: none
+Bench Press / ...Squat / 3x11 / 30lb / progress: dp(3lb, 8, 12)
+
+
+`,
+    }),
+  );
+
+  it(
+    "dp with range - narrows minReps on failure",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8-12 / 100lb / progress: dp(5lb, 8, 12)`,
+      completed: {
+        reps: [[9, 10, 8]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x10-12, 1x11-12, 1x9-12 / 100lb / progress: dp(5lb, 8, 12)
+
+
+`,
+    }),
+  );
+
+  it(
+    "dp with range - increases weight on success",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8-12 / 100lb / progress: dp(5lb, 8, 12)`,
+      completed: {
+        reps: [[12, 12, 12]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x8-12 / 105lb / progress: dp(5lb, 8, 12)
+
+
+`,
+    }),
+  );
+
+  it(
+    "dp without range - increases reps then weight",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8 / 100lb / progress: dp(5lb, 8, 12)`,
+      completed: {
+        reps: [[8, 8, 8]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x9 / 100lb / progress: dp(5lb, 8, 12)
+
+
+`,
+    }),
+  );
+
+  it(
+    "dp without range - resets reps and increases weight at maxReps",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x12 / 100lb / progress: dp(5lb, 8, 12)`,
+      completed: {
+        reps: [[12, 12, 12]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x8 / 105lb / progress: dp(5lb, 8, 12)
+
+
+`,
+    }),
+  );
+
+  it(
+    "dp without range - skips reps when over-performing",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8 / 100lb / progress: dp(5lb, 8, 12)`,
+      completed: {
+        reps: [[11, 10, 9]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x12, 1x11, 1x10 / 100lb / progress: dp(5lb, 8, 12)
+
+
+`,
+    }),
+  );
+
+  it(
+    "dp without range - increases weight when over-performing past maxReps",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x8 / 100lb / progress: dp(5lb, 8, 12)`,
+      completed: {
+        reps: [[15, 13, 12]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x8 / 105lb / progress: dp(5lb, 8, 12)
+
+
+`,
+    }),
+  );
+
+  it(
+    "keeps customized warmups",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x4-6 / 80% @8+ 180s / warmup: 2x10 50%, 1x4 70%`,
+      completed: {
+        reps: [[6, 6, 6]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 3x4-6 / 80% @8+ 180s / warmup: 2x10 50%, 1x4 70%
+
+
+`,
+    }),
+  );
+
+  it(
+    "keeps overridden update",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / used: none / 1x1 / 100% 100s / warmup: none
+Bench Press / ...Squat / 3x10 / 30lb / update: custom() {~ weights += 5lb ~}`,
+      completed: {
+        reps: [[10, 10, 10]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / used: none / 1x1 / 100% 100s / warmup: none
+Bench Press / ...Squat / 3x10 / 30lb / update: custom() {~ weights += 5lb ~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "keeps @0 RPE",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x5, 1x5+ @0+ / 100lb`,
+      completed: {
+        reps: [[2]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x5, 1x5+ @0+ / 100lb
+
+
+`,
+    }),
+  );
 });
 
 describe("Planner", () => {
@@ -823,170 +1007,6 @@ Squat / 1x5 50lb, 1x3 80lb / 60s / progress: lp(5lb)
     expect(newText.trim()).to.equal(`# Week 1
 ## Day 1
 Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`);
-  });
-
-  it("keeps overridden dp progress", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / used: none / 1x1 / 100% 100s / warmup: none
-Bench Press / ...Squat / 3x10 / 30lb / progress: dp(3lb, 8, 12)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[10, 10, 10]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / used: none / 1x1 / 100% 100s / warmup: none
-Bench Press / ...Squat / 3x11 / 30lb / progress: dp(3lb, 8, 12)
-
-
-`);
-  });
-
-  it("dp with range - narrows minReps on failure", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8-12 / 100lb / progress: dp(5lb, 8, 12)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[9, 10, 8]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x10-12, 1x11-12, 1x9-12 / 100lb / progress: dp(5lb, 8, 12)
-
-
-`);
-  });
-
-  it("dp with range - increases weight on success", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8-12 / 100lb / progress: dp(5lb, 8, 12)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[12, 12, 12]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x8-12 / 105lb / progress: dp(5lb, 8, 12)
-
-
-`);
-  });
-
-  it("dp without range - increases reps then weight", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8 / 100lb / progress: dp(5lb, 8, 12)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[8, 8, 8]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x9 / 100lb / progress: dp(5lb, 8, 12)
-
-
-`);
-  });
-
-  it("dp without range - resets reps and increases weight at maxReps", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x12 / 100lb / progress: dp(5lb, 8, 12)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[12, 12, 12]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x8 / 105lb / progress: dp(5lb, 8, 12)
-
-
-`);
-  });
-
-  it("dp without range - skips reps when over-performing", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8 / 100lb / progress: dp(5lb, 8, 12)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[11, 10, 9]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x12, 1x11, 1x10 / 100lb / progress: dp(5lb, 8, 12)
-
-
-`);
-  });
-
-  it("dp without range - increases weight when over-performing past maxReps", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x8 / 100lb / progress: dp(5lb, 8, 12)`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[15, 13, 12]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x8 / 105lb / progress: dp(5lb, 8, 12)
-
-
-`);
-  });
-
-  it("keeps customized warmups", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x4-6 / 80% @8+ 180s / warmup: 2x10 50%, 1x4 70%`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[6, 6, 6]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 3x4-6 / 80% @8+ 180s / warmup: 2x10 50%, 1x4 70%
-
-
-`);
-  });
-
-  it("keeps overridden update", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / used: none / 1x1 / 100% 100s / warmup: none
-Bench Press / ...Squat / 3x10 / 30lb / update: custom() {~ weights += 5lb ~}`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[10, 10, 10]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / used: none / 1x1 / 100% 100s / warmup: none
-Bench Press / ...Squat / 3x10 / 30lb / update: custom() {~ weights += 5lb ~}
-
-
-`);
-  });
-
-  it("keeps @0 RPE", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x5, 1x5+ @0+ / 100lb`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[2]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x5, 1x5+ @0+ / 100lb
-
-
-`);
   });
 
   it("keeps reused progress from another exercise with set reuse", () => {
