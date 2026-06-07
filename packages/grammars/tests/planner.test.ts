@@ -50,6 +50,10 @@ type PlannerTestCase = {
    * The plan that results from evaluating the plan
    */
   result: string;
+  /**
+   * Which program day to finish (1-based)
+   */
+  dayIndex?: number;
 };
 function makeTest(c: PlannerTestCase): TestFunction {
   return () => {
@@ -61,6 +65,7 @@ function makeTest(c: PlannerTestCase): TestFunction {
       },
       c.settings,
       c.oldSystemStats,
+      c.dayIndex,
     );
     if (!program.planner) {
       expect.fail("Old system failed to produce a program planner.");
@@ -78,6 +83,7 @@ function makeTest(c: PlannerTestCase): TestFunction {
       },
       c.settings,
       c.stats,
+      c.dayIndex,
     );
     if (!newSystemProgram.planner) {
       expect.fail("New system failed to produce a program planner.");
@@ -877,6 +883,1054 @@ Squat / 1x5, 1x5+ @0+ / 100lb
 `,
     }),
   );
+
+  it(
+    "keeps reused progress from another exercise with set reuse",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x1 100lb / used: none / progress: custom() {~
+  weights += 5lb
+~}
+Bench Press / used: none / 1x2 100lb
+Chest Fly / ...Bench Press / 120lb / progress: custom(foo: 1) { ...Squat }`,
+      completed: {
+        reps: [[2]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / used: none / 1x1 / 100lb / progress: custom() {~
+  weights += 5lb
+~}
+Bench Press / used: none / 1x2 / 100lb
+Chest Fly / ...Bench Press / 125lb / progress: custom(foo: 1) { ...Squat }
+
+
+`,
+    }),
+  );
+
+  it(
+    "keeps reused update from another exercise with set reuse",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x1 100lb / used: none / update: custom() {~
+  weights += 5lb
+~}
+Bench Press / used: none / 1x2 100lb
+Chest Fly / ...Bench Press / 120lb / update: custom() { ...Squat }`,
+      completed: {
+        reps: [[2]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / used: none / 1x1 / 100lb / update: custom() {~
+  weights += 5lb
+~}
+Bench Press / used: none / 1x2 / 100lb
+Chest Fly / ...Bench Press / 120lb / update: custom() { ...Squat }
+
+
+`,
+    }),
+  );
+
+  it(
+    "use templates",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+tmp: Squat[1-5] / 2x5 / used: none / progress: custom() {~
+  weights[3:*:*:*] += 10lb
+~}
+Squat[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
+Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
+
+# Week 2
+## Day 1
+
+# Week 3
+## Day 1
+
+# Week 4
+## Day 1
+
+# Week 5
+## Day 1
+`,
+      completed: {
+        reps: [
+        [5, 5],
+        [5, 5],
+      ],
+      },
+      result: `# Week 1
+## Day 1
+tmp: Squat[1-5] / used: none / 2x5 / progress: custom() {~
+  weights[3:*:*:*] += 10lb
+~}
+Squat[1-2] / ...tmp: Squat
+Bench Press[1-2] / ...tmp: Squat
+
+
+# Week 2
+## Day 1
+
+
+
+# Week 3
+## Day 1
+Squat / ...tmp: Squat / 10lb
+Bench Press / ...tmp: Squat / 10lb
+
+
+# Week 4
+## Day 1
+Squat[4-5] / ...tmp: Squat
+Bench Press[4-5] / ...tmp: Squat
+
+
+# Week 5
+## Day 1
+
+
+
+`,
+    }),
+  );
+
+  it(
+    "preserves order of exercises",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+tmp: Squat[1-5] / 2x5 / used: none
+Squat[1-5, 3] / ...tmp: Squat 
+Bench Press[1-5,2] / ...tmp: Squat
+
+# Week 2
+## Day 1
+Bicep Curl[2-5] / 5x5
+
+# Week 3
+## Day 1
+
+# Week 4
+## Day 1
+
+# Week 5
+## Day 1
+`,
+      completed: {
+        reps: [
+        [5, 5],
+        [5, 5],
+      ],
+      },
+      result: `# Week 1
+## Day 1
+tmp: Squat[1-5] / used: none / 2x5
+Squat[3,1-5] / ...tmp: Squat
+Bench Press[2] / ...tmp: Squat
+
+
+# Week 2
+## Day 1
+Bicep Curl[2-5] / 5x5
+Bench Press[2,2-5] / ...tmp: Squat
+
+
+# Week 3
+## Day 1
+
+
+
+# Week 4
+## Day 1
+
+
+
+# Week 5
+## Day 1
+
+
+
+`,
+    }),
+  );
+
+  it(
+    "dereuses the custom progress when diverges",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x2 100lb / progress: custom(increase: 5lb) {~
+  if (completedReps >= reps) {
+    weights += 5lb
+  } else {
+    state.increase = 2.5lb
+  }
+~}
+Bench Press / ...Squat
+`,
+      completed: {
+        reps: [[2], [1]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x2 / 105lb / progress: custom(increase: 5lb) {~
+  if (completedReps >= reps) {
+    weights += 5lb
+  } else {
+    state.increase = 2.5lb
+  }
+~}
+Bench Press / ...Squat / 100lb / progress: custom(increase: 2.5lb) { ...Squat }
+
+
+`,
+    }),
+  );
+
+  it(
+    "uses the inherited state for update blocks",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Leg Press / 2x2 100lb / progress: custom(foo: 1) {~
+  state.foo += 1
+~}
+Squat / 2x2 200lb / update: custom() {~
+  state.foo += 1
+~} / progress: custom() { ...Leg Press }
+`,
+      completed: {
+        reps: [
+        [2, 2],
+        [2, 2],
+      ],
+      },
+      result: `# Week 1
+## Day 1
+Leg Press / 2x2 / 100lb / progress: custom(foo: 2) {~
+  state.foo += 1
+~}
+Squat / 2x2 / 200lb / update: custom() {~
+  state.foo += 1
+~} / progress: custom(foo: 3) { ...Leg Press }
+
+
+`,
+    }),
+  );
+
+  it(
+    "doesn't combine different user prompted vars",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x1 / 100% / progress: custom(foo: 0) {~
+
+~}
+Bench Press / ...Squat / progress: custom(foo+: 0) { ...Squat }
+`,
+      completed: {
+        reps: [[1], [1]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x1 / 100% / progress: custom(foo: 0) {~
+
+~}
+Bench Press / ...Squat / progress: custom(foo+: 0) { ...Squat }
+
+
+`,
+    }),
+  );
+
+  it(
+    "doesn't dereuse if the custom progress still matches",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x2 100lb / progress: custom(increase: 5lb) {~
+  if (completedReps >= reps) {
+    weights += 5lb
+  } else {
+    state.increase = 2.5lb
+  }
+~}
+Bench Press / ...Squat
+`,
+      completed: {
+        reps: [[2], [2]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x2 / 105lb / progress: custom(increase: 5lb) {~
+  if (completedReps >= reps) {
+    weights += 5lb
+  } else {
+    state.increase = 2.5lb
+  }
+~}
+Bench Press / ...Squat
+
+
+`,
+    }),
+  );
+
+  it(
+    "combine reuse if the custom progress starts to match",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x2 100lb / progress: custom(increase: 5lb) {~
+  if (completedReps >= reps) {
+    weights += 5lb
+  } else {
+    state.increase = 2.5lb
+  }
+~}
+Bench Press / ...Squat / progress: custom(increase: 2.5lb) { ...Squat }
+`,
+      completed: {
+        reps: [[1], [2]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x2 / 100lb / progress: custom(increase: 2.5lb) {~
+  if (completedReps >= reps) {
+    weights += 5lb
+  } else {
+    state.increase = 2.5lb
+  }
+~}
+Bench Press / ...Squat / 105lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "dereuse lp in case of mismatch",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x2 100lb / progress: lp(5lb, 2, 0, 10lb, 2, 0)
+Bench Press / ...Squat
+`,
+      completed: {
+        reps: [[1], [2]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x2 / 100lb / progress: lp(5lb, 2, 0, 10lb, 2, 1)
+Bench Press / ...Squat / progress: lp(5lb, 2, 1, 10lb, 2, 0)
+
+
+`,
+    }),
+  );
+
+  it(
+    "combine lp in case it matches again",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x2 100lb / progress: lp(5lb)
+Bench Press[1-3] / ...Squat
+
+# Week 2
+## Day 1
+Squat / 1x3 100lb
+
+# Week 3
+## Day 1
+Squat / 1x4 100lb
+
+
+`,
+      completed: {
+        reps: [[3], [2]],
+      },
+      dayIndex: 2,
+      result: `# Week 1
+## Day 1
+Squat / 1x2 / 105lb / progress: lp(5lb)
+Bench Press[1-3] / ...Squat / 100lb
+
+
+# Week 2
+## Day 1
+Squat / 1x3 / 105lb
+
+
+# Week 3
+## Day 1
+Squat / 1x4 / 105lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "updates the state from update scripts",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x1 100lb / update: custom() {~
+  state.foo = 3
+  state.zzz = 5
+~} / progress: custom(foo: 0, bar: 0, zzz: 0) {~
+  state.bar = 4
+  state.zzz = 6
+~}
+`,
+      completed: {
+        reps: [[1], [1]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x1 / 100lb / update: custom() {~
+  state.foo = 3
+  state.zzz = 5
+~} / progress: custom(foo: 3, bar: 4, zzz: 6) {~
+  state.bar = 4
+  state.zzz = 6
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "allows reusing progress of exercise that reuses original exercise sets, but has custom progress",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+
+Squat / 1x8 100lb / progress: custom(foo: 10lb) { ...Bench Press }
+Bench Press / ...Squat / warmup: none / progress: custom(foo: 5lb, blah: 10lb) {~
+  weights += state.foo + state.blah
+~}
+`,
+      completed: {
+        reps: [[8]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x8 / 120lb / progress: custom(foo: 10lb) { ...Bench Press }
+Bench Press / ...Squat / 100lb / warmup: none / progress: custom(foo: 5lb, blah: 10lb) {~
+  weights += state.foo + state.blah
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "uses the right exercise for reuse",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Pec Deck / 1x1 100lb / progress: custom() { ...Squat }
+Squat, Smith Machine / 1x1 100lb / progress: custom() { ...Squat }
+
+## Day 2
+Squat / 1x1 100lb / progress: custom() {~ weights += 5lb ~}
+`,
+      completed: {
+        reps: [[1], [1]],
+      },
+      result: `# Week 1
+## Day 1
+Pec Deck / 1x1 / 105lb / progress: custom() { ...Squat }
+Squat, Smith Machine / 1x1 / 105lb / progress: custom() { ...Squat }
+
+## Day 2
+Squat / 1x1 / 100lb / progress: custom() {~ weights += 5lb ~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "preserves the day descriptions after finishing the workout",
+    makeTest({
+      plan: `# Week 1
+// A: Day 1
+## Day 1
+Squat / 2x5 / 100lb
+
+## Day 2
+Bench Press / 2x5 / 100lb
+
+// Week 2
+# Week 2
+
+## Day 1
+Squat / 2x5 / 100lb
+
+// B: Day 2
+## Day 2
+Bench Press / 2x5 / 100lb
+
+# Week 3
+//
+## Day 1
+Squat / 2x5 / 100lb
+
+## Day 2
+Bench Press / 2x5 / 100lb
+
+# Week 4
+## Day 1
+Squat / 2x5 / 100lb
+
+//
+## Day 2
+Bench Press / 2x5 / 100lb
+
+`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `# Week 1
+// A: Day 1
+## Day 1
+Squat / 2x5 / 100lb
+
+## Day 2
+Bench Press / 2x5 / 100lb
+
+
+// Week 2
+# Week 2
+## Day 1
+Squat / 2x5 / 100lb
+
+// B: Day 2
+## Day 2
+Bench Press / 2x5 / 100lb
+
+
+# Week 3
+// 
+## Day 1
+Squat / 2x5 / 100lb
+
+## Day 2
+Bench Press / 2x5 / 100lb
+
+
+# Week 4
+## Day 1
+Squat / 2x5 / 100lb
+
+// 
+## Day 2
+Bench Press / 2x5 / 100lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "preserves triple comments at the end of the day",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 2x5 / 100lb
+/// Some stuff
+
+// More stuff
+## Day 2
+Bench Press / 2x5 / 100lb
+
+`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 2x5 / 100lb
+/// Some stuff
+
+// More stuff
+## Day 2
+Bench Press / 2x5 / 100lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "properly sets up day data on repeated exercises",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+## Day 2
+Squat[1-3] / 1x5 / 200lb / warmup: none / progress: custom(week: 1, dayInWeek: 1, day: 1) {~
+  state.day = day
+  state.dayInWeek = dayInWeek
+  state.week = week
+~}
+# Week 2
+## Day 1
+## Day 2
+# Week 3
+## Day 1
+## Day 2
+
+`,
+      completed: {
+        reps: [[5]],
+      },
+      dayIndex: 4,
+      result: `# Week 1
+## Day 1
+
+
+## Day 2
+Squat[1-3] / 1x5 / 200lb / warmup: none / progress: custom(week: 2, dayInWeek: 2, day: 4) {~
+  state.day = day
+  state.dayInWeek = dayInWeek
+  state.week = week
+~}
+
+
+# Week 2
+## Day 1
+
+
+## Day 2
+
+
+
+# Week 3
+## Day 1
+
+
+## Day 2
+
+
+
+`,
+    }),
+  );
+
+  it(
+    "preserves end of exercise properly",
+    makeTest({
+      plan: `/// Some stuff
+
+// Week description
+
+# Week 1
+## Day 1
+Squat / 2x5 / 100lb
+/// Some stuff
+
+/// More
+
+// More stuff
+
+/// Triple comment
+
+## Day 2
+/// Triple Comment
+
+// Description
+
+
+/// More stuff
+Bench Press / 2x5 / 100lb
+
+`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `// Week description
+# Week 1
+## Day 1
+Squat / 2x5 / 100lb
+/// Some stuff
+
+/// More
+
+// More stuff
+## Day 2
+/// Triple Comment
+
+/// More stuff
+// Description
+Bench Press / 2x5 / 100lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "increment() weight",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x10 / 100lb / progress: custom() {~
+  weights[1] = increment(weights[1])
+~}`,
+      completed: {
+        reps: [[10]],
+      },
+      settings: (() => {
+        const equipment = structuredClone(Settings_defaultEquipment());
+        equipment.barbell!.plates = [
+          { weight: Weight_build(10, "lb"), num: 2 },
+          { weight: Weight_build(25, "lb"), num: 2 },
+          { weight: Weight_build(45, "lb"), num: 2 },
+        ];
+        return {
+          ...Settings_build(),
+          gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
+          exerciseData: {
+            squat_barbell: { equipment: { default: "barbell" } },
+          },
+        };
+      })(),
+      result: `# Week 1
+## Day 1
+Squat / 1x10 / 115lb / progress: custom() {~
+  weights[1] = increment(weights[1])
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "increment() number",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x10 / 100lb / progress: custom() {~
+  weights[1] = increment(105)
+~}`,
+      completed: {
+        reps: [[10]],
+      },
+      settings: (() => {
+        const equipment = structuredClone(Settings_defaultEquipment());
+        equipment.barbell!.isFixed = true;
+        equipment.barbell!.fixed = [
+          Weight_build(45, "lb"),
+          Weight_build(100, "lb"),
+          Weight_build(120, "lb"),
+        ];
+        return {
+          ...Settings_build(),
+          gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
+          exerciseData: {
+            squat_barbell: { equipment: { default: "barbell" } },
+          },
+        };
+      })(),
+      result: `# Week 1
+## Day 1
+Squat / 1x10 / 120lb / progress: custom() {~
+  weights[1] = increment(105)
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "decrement() percentage",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x10 / 100lb / progress: custom() {~
+  weights[1] = decrement(50%)
+~}`,
+      completed: {
+        reps: [[10]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x10 / 49% / progress: custom() {~
+  weights[1] = decrement(50%)
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "properly uses bodyweight",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 1x10 / 100lb / progress: custom() {~
+  weights = bodyweight
+~}`,
+      completed: {
+        reps: [[10]],
+      },
+      settings: {
+        ...Settings_build(),
+        graphOptions: {
+          weight: {
+            movingAverageWindowSize: 3,
+          },
+        },
+      },
+      oldSystemStats: {
+        weight: {
+          weight: [
+            { vtype: "stat", value: Weight_build(200, "lb"), timestamp: 10 },
+            { vtype: "stat", value: Weight_build(220, "lb"), timestamp: 30 },
+            { vtype: "stat", value: Weight_build(210, "lb"), timestamp: 20 },
+            { vtype: "stat", value: Weight_build(240, "lb"), timestamp: 50 },
+            { vtype: "stat", value: Weight_build(230, "lb"), timestamp: 40 },
+          ],
+        },
+        length: {},
+        percentage: {},
+      },
+      stats: {
+        weight: [
+          { value: Weight_build(200, "lb"), timestamp: 10 },
+          { value: Weight_build(220, "lb"), timestamp: 30 },
+          { value: Weight_build(210, "lb"), timestamp: 20 },
+          { value: Weight_build(240, "lb"), timestamp: 50 },
+          { value: Weight_build(230, "lb"), timestamp: 40 },
+        ],
+        neck: [],
+        shoulders: [],
+        bicepLeft: [],
+        bicepRight: [],
+        forearmLeft: [],
+        forearmRight: [],
+        chest: [],
+        waist: [],
+        hips: [],
+        thighLeft: [],
+        thighRight: [],
+        calfLeft: [],
+        calfRight: [],
+        bodyfat: [],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x10 / 230lb / progress: custom() {~
+  weights = bodyweight
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "template reuses progress of another template",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+t1 / used: none / 3x5 100lb / progress: custom() {~
+  weights += 5lb
+~}
+t2 / used: none / 2x5 120lb / progress: custom() { ...t1 }
+Squat / ...t2
+
+`,
+      completed: {
+        reps: [[5, 5]],
+      },
+      result: `# Week 1
+## Day 1
+t1 / used: none / 3x5 / 100lb / progress: custom() {~
+  weights += 5lb
+~}
+t2 / used: none / 2x5 / 120lb / progress: custom() { ...t1 }
+Squat / ...t2 / 125lb
+
+
+`,
+    }),
+  );
+
+  it(
+    "updates isAMRAP, logRPE and askWeight",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+Squat / 3x5 / @8 100lb / progress: custom() {~
+  amraps[1] = 1
+  amraps[2] = 0
+  logrpes[2] = 1
+  askweights[3] = 1
+~}`,
+      completed: {
+        reps: [[5, 5, 5]],
+      },
+      result: `# Week 1
+## Day 1
+Squat / 1x5+ 100lb @8, 1x5 100lb @8+, 1x5 100lb+ @8 / progress: custom() {~
+  amraps[1] = 1
+  amraps[2] = 0
+  logrpes[2] = 1
+  askweights[3] = 1
+~}
+
+
+`,
+    }),
+  );
+
+  it(
+    "keeps description [1:1] reuse syntax if different day or week",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+// Description
+Squat / 1x1
+
+# Week 2
+## Day 1
+// ...Squat[1:1]
+Bench Press / 1x1`,
+      completed: {
+        reps: [[1]],
+      },
+      result: `# Week 1
+## Day 1
+// Description
+Squat / 1x1
+
+
+# Week 2
+## Day 1
+// ...Squat[1:1]
+Bench Press / 1x1
+
+
+`,
+    }),
+  );
+
+  it(
+    "omits [1:1] description reuse syntax if on the same week",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+// Description
+Squat / 1x1
+
+## Day 2
+// ...Squat
+Bench Press / 1x1`,
+      completed: {
+        reps: [[1]],
+      },
+      result: `# Week 1
+## Day 1
+// Description
+Squat / 1x1
+
+## Day 2
+// ...Squat
+Bench Press / 1x1
+
+
+`,
+    }),
+  );
+
+  it(
+    "adds [1:1] description reuse syntax if there's 2 same exercises",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+// Description
+Squat / 1x1
+
+## Day 2
+// Description 2
+Squat / 1x1
+
+## Day 3
+// ...Squat[1:2]
+Bench Press / 1x1`,
+      completed: {
+        reps: [[1]],
+      },
+      result: `# Week 1
+## Day 1
+// Description
+Squat / 1x1
+
+## Day 2
+// Description 2
+Squat / 1x1
+
+## Day 3
+// ...Squat[1:2]
+Bench Press / 1x1
+
+
+`,
+    }),
+  );
+
+  it(
+    "omits [1:1] description reuse syntax if exercise description is repeated on the same week",
+    makeTest({
+      plan: `# Week 1
+## Day 1
+
+// Description
+Squat / 1x1
+
+# Week 2
+## Day 1
+
+Squat / 1x1
+// ...Squat
+Bench Press / 1x1`,
+      completed: {
+        reps: [[1]],
+      },
+      result: `# Week 1
+## Day 1
+// Description
+Squat / 1x1
+
+
+# Week 2
+## Day 1
+// Description
+Squat / 1x1
+// ...Squat
+Bench Press / 1x1
+
+
+`,
+    }),
+  );
 });
 
 describe("Planner", () => {
@@ -1009,116 +2063,6 @@ Squat / 1x5 50lb, 1x3 80lb / 60s / progress: lp(5lb)
 Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`);
   });
 
-  it("keeps reused progress from another exercise with set reuse", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x1 100lb / used: none / progress: custom() {~
-  weights += 5lb
-~}
-Bench Press / used: none / 1x2 100lb
-Chest Fly / ...Bench Press / 120lb / progress: custom(foo: 1) { ...Squat }`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[2]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / used: none / 1x1 / 100lb / progress: custom() {~
-  weights += 5lb
-~}
-Bench Press / used: none / 1x2 / 100lb
-Chest Fly / ...Bench Press / 125lb / progress: custom(foo: 1) { ...Squat }
-
-
-`);
-  });
-
-  it("keeps reused update from another exercise with set reuse", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x1 100lb / used: none / update: custom() {~
-  weights += 5lb
-~}
-Bench Press / used: none / 1x2 100lb
-Chest Fly / ...Bench Press / 120lb / update: custom() { ...Squat }`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[2]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / used: none / 1x1 / 100lb / update: custom() {~
-  weights += 5lb
-~}
-Bench Press / used: none / 1x2 / 100lb
-Chest Fly / ...Bench Press / 120lb / update: custom() { ...Squat }
-
-
-`);
-  });
-
-  it("use templates", () => {
-    const programText = `# Week 1
-## Day 1
-tmp: Squat[1-5] / 2x5 / used: none / progress: custom() {~
-  weights[3:*:*:*] += 10lb
-~}
-Squat[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
-Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
-
-# Week 2
-## Day 1
-
-# Week 3
-## Day 1
-
-# Week 4
-## Day 1
-
-# Week 5
-## Day 1
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [5, 5],
-        [5, 5],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-tmp: Squat[1-5] / used: none / 2x5 / progress: custom() {~
-  weights[3:*:*:*] += 10lb
-~}
-Squat[1-2] / ...tmp: Squat
-Bench Press[1-2] / ...tmp: Squat
-
-
-# Week 2
-## Day 1
-
-
-
-# Week 3
-## Day 1
-Squat / ...tmp: Squat / 10lb
-Bench Press / ...tmp: Squat / 10lb
-
-
-# Week 4
-## Day 1
-Squat[4-5] / ...tmp: Squat
-Bench Press[4-5] / ...tmp: Squat
-
-
-# Week 5
-## Day 1
-
-
-
-`);
-  });
-
   it("doesn't show an error if original exercise progress reuses another exercise but overrides progress", () => {
     const programText = `# Week 1
 ## Day 1
@@ -1197,566 +2141,6 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
     });
   });
 
-  it("preserves order of exercises", () => {
-    const programText = `# Week 1
-## Day 1
-tmp: Squat[1-5] / 2x5 / used: none
-Squat[1-5, 3] / ...tmp: Squat 
-Bench Press[1-5,2] / ...tmp: Squat
-
-# Week 2
-## Day 1
-Bicep Curl[2-5] / 5x5
-
-# Week 3
-## Day 1
-
-# Week 4
-## Day 1
-
-# Week 5
-## Day 1
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [5, 5],
-        [5, 5],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-tmp: Squat[1-5] / used: none / 2x5
-Squat[3,1-5] / ...tmp: Squat
-Bench Press[2] / ...tmp: Squat
-
-
-# Week 2
-## Day 1
-Bicep Curl[2-5] / 5x5
-Bench Press[2,2-5] / ...tmp: Squat
-
-
-# Week 3
-## Day 1
-
-
-
-# Week 4
-## Day 1
-
-
-
-# Week 5
-## Day 1
-
-
-
-`);
-  });
-
-  it("dereuses the custom progress when diverges", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x2 100lb / progress: custom(increase: 5lb) {~
-  if (completedReps >= reps) {
-    weights += 5lb
-  } else {
-    state.increase = 2.5lb
-  }
-~}
-Bench Press / ...Squat
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[2], [1]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x2 / 105lb / progress: custom(increase: 5lb) {~
-  if (completedReps >= reps) {
-    weights += 5lb
-  } else {
-    state.increase = 2.5lb
-  }
-~}
-Bench Press / ...Squat / 100lb / progress: custom(increase: 2.5lb) { ...Squat }
-
-
-`);
-  });
-
-  it("uses the inherited state for update blocks", () => {
-    const programText = `# Week 1
-## Day 1
-Leg Press / 2x2 100lb / progress: custom(foo: 1) {~
-  state.foo += 1
-~}
-Squat / 2x2 200lb / update: custom() {~
-  state.foo += 1
-~} / progress: custom() { ...Leg Press }
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [
-        [2, 2],
-        [2, 2],
-      ],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Leg Press / 2x2 / 100lb / progress: custom(foo: 2) {~
-  state.foo += 1
-~}
-Squat / 2x2 / 200lb / update: custom() {~
-  state.foo += 1
-~} / progress: custom(foo: 3) { ...Leg Press }
-
-
-`);
-  });
-
-  it("doesn't combine different user prompted vars", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x1 / 100% / progress: custom(foo: 0) {~
-
-~}
-Bench Press / ...Squat / progress: custom(foo+: 0) { ...Squat }
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1], [1]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x1 / 100% / progress: custom(foo: 0) {~
-
-~}
-Bench Press / ...Squat / progress: custom(foo+: 0) { ...Squat }
-
-
-`);
-  });
-
-  it("doesn't dereuse if the custom progress still matches", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x2 100lb / progress: custom(increase: 5lb) {~
-  if (completedReps >= reps) {
-    weights += 5lb
-  } else {
-    state.increase = 2.5lb
-  }
-~}
-Bench Press / ...Squat
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[2], [2]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x2 / 105lb / progress: custom(increase: 5lb) {~
-  if (completedReps >= reps) {
-    weights += 5lb
-  } else {
-    state.increase = 2.5lb
-  }
-~}
-Bench Press / ...Squat
-
-
-`);
-  });
-
-  it("combine reuse if the custom progress starts to match", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x2 100lb / progress: custom(increase: 5lb) {~
-  if (completedReps >= reps) {
-    weights += 5lb
-  } else {
-    state.increase = 2.5lb
-  }
-~}
-Bench Press / ...Squat / progress: custom(increase: 2.5lb) { ...Squat }
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1], [2]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x2 / 100lb / progress: custom(increase: 2.5lb) {~
-  if (completedReps >= reps) {
-    weights += 5lb
-  } else {
-    state.increase = 2.5lb
-  }
-~}
-Bench Press / ...Squat / 105lb
-
-
-`);
-  });
-
-  it("dereuse lp in case of mismatch", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x2 100lb / progress: lp(5lb, 2, 0, 10lb, 2, 0)
-Bench Press / ...Squat
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1], [2]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x2 / 100lb / progress: lp(5lb, 2, 0, 10lb, 2, 1)
-Bench Press / ...Squat / progress: lp(5lb, 2, 1, 10lb, 2, 0)
-
-
-`);
-  });
-
-  it("combine lp in case it matches again", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x2 100lb / progress: lp(5lb)
-Bench Press[1-3] / ...Squat
-
-# Week 2
-## Day 1
-Squat / 1x3 100lb
-
-# Week 3
-## Day 1
-Squat / 1x4 100lb
-
-
-`;
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      {
-        completedReps: [[3], [2]],
-      },
-      undefined,
-      undefined,
-      2,
-    );
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x2 / 105lb / progress: lp(5lb)
-Bench Press[1-3] / ...Squat / 100lb
-
-
-# Week 2
-## Day 1
-Squat / 1x3 / 105lb
-
-
-# Week 3
-## Day 1
-Squat / 1x4 / 105lb
-
-
-`);
-  });
-
-  it("updates the state from update scripts", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x1 100lb / update: custom() {~
-  state.foo = 3
-  state.zzz = 5
-~} / progress: custom(foo: 0, bar: 0, zzz: 0) {~
-  state.bar = 4
-  state.zzz = 6
-~}
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1], [1]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x1 / 100lb / update: custom() {~
-  state.foo = 3
-  state.zzz = 5
-~} / progress: custom(foo: 3, bar: 4, zzz: 6) {~
-  state.bar = 4
-  state.zzz = 6
-~}
-
-
-`);
-  });
-
-  it("allows reusing progress of exercise that reuses original exercise sets, but has custom progress", () => {
-    const programText = `# Week 1
-## Day 1
-
-Squat / 1x8 100lb / progress: custom(foo: 10lb) { ...Bench Press }
-Bench Press / ...Squat / warmup: none / progress: custom(foo: 5lb, blah: 10lb) {~
-  weights += state.foo + state.blah
-~}
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[8]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x8 / 120lb / progress: custom(foo: 10lb) { ...Bench Press }
-Bench Press / ...Squat / 100lb / warmup: none / progress: custom(foo: 5lb, blah: 10lb) {~
-  weights += state.foo + state.blah
-~}
-
-
-`);
-  });
-
-  it("uses the right exercise for reuse", () => {
-    const programText = `# Week 1
-## Day 1
-Pec Deck / 1x1 100lb / progress: custom() { ...Squat }
-Squat, Smith Machine / 1x1 100lb / progress: custom() { ...Squat }
-
-## Day 2
-Squat / 1x1 100lb / progress: custom() {~ weights += 5lb ~}
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1], [1]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Pec Deck / 1x1 / 105lb / progress: custom() { ...Squat }
-Squat, Smith Machine / 1x1 / 105lb / progress: custom() { ...Squat }
-
-## Day 2
-Squat / 1x1 / 100lb / progress: custom() {~ weights += 5lb ~}
-
-
-`);
-  });
-
-  it("preserves the day descriptions after finishing the workout", () => {
-    const programText = `# Week 1
-// A: Day 1
-## Day 1
-Squat / 2x5 / 100lb
-
-## Day 2
-Bench Press / 2x5 / 100lb
-
-// Week 2
-# Week 2
-
-## Day 1
-Squat / 2x5 / 100lb
-
-// B: Day 2
-## Day 2
-Bench Press / 2x5 / 100lb
-
-# Week 3
-//
-## Day 1
-Squat / 2x5 / 100lb
-
-## Day 2
-Bench Press / 2x5 / 100lb
-
-# Week 4
-## Day 1
-Squat / 2x5 / 100lb
-
-//
-## Day 2
-Bench Press / 2x5 / 100lb
-
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-// A: Day 1
-## Day 1
-Squat / 2x5 / 100lb
-
-## Day 2
-Bench Press / 2x5 / 100lb
-
-
-// Week 2
-# Week 2
-## Day 1
-Squat / 2x5 / 100lb
-
-// B: Day 2
-## Day 2
-Bench Press / 2x5 / 100lb
-
-
-# Week 3
-// 
-## Day 1
-Squat / 2x5 / 100lb
-
-## Day 2
-Bench Press / 2x5 / 100lb
-
-
-# Week 4
-## Day 1
-Squat / 2x5 / 100lb
-
-// 
-## Day 2
-Bench Press / 2x5 / 100lb
-
-
-`);
-  });
-
-  it("preserves triple comments at the end of the day", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 2x5 / 100lb
-/// Some stuff
-
-// More stuff
-## Day 2
-Bench Press / 2x5 / 100lb
-
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 2x5 / 100lb
-/// Some stuff
-
-// More stuff
-## Day 2
-Bench Press / 2x5 / 100lb
-
-
-`);
-  });
-
-  it("properly sets up day data on repeated exercises", () => {
-    const programText = `# Week 1
-## Day 1
-## Day 2
-Squat[1-3] / 1x5 / 200lb / warmup: none / progress: custom(week: 1, dayInWeek: 1, day: 1) {~
-  state.day = day
-  state.dayInWeek = dayInWeek
-  state.week = week
-~}
-# Week 2
-## Day 1
-## Day 2
-# Week 3
-## Day 1
-## Day 2
-
-`;
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      { completedReps: [[5]] },
-      undefined,
-      undefined,
-      4,
-    );
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-
-
-## Day 2
-Squat[1-3] / 1x5 / 200lb / warmup: none / progress: custom(week: 2, dayInWeek: 2, day: 4) {~
-  state.day = day
-  state.dayInWeek = dayInWeek
-  state.week = week
-~}
-
-
-# Week 2
-## Day 1
-
-
-## Day 2
-
-
-
-# Week 3
-## Day 1
-
-
-## Day 2
-
-
-
-`);
-  });
-
-  it("preserves end of exercise properly", () => {
-    const programText = `/// Some stuff
-
-// Week description
-
-# Week 1
-## Day 1
-Squat / 2x5 / 100lb
-/// Some stuff
-
-/// More
-
-// More stuff
-
-/// Triple comment
-
-## Day 2
-/// Triple Comment
-
-// Description
-
-
-/// More stuff
-Bench Press / 2x5 / 100lb
-
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`// Week description
-# Week 1
-## Day 1
-Squat / 2x5 / 100lb
-/// Some stuff
-
-/// More
-
-// More stuff
-## Day 2
-/// Triple Comment
-
-/// More stuff
-// Description
-Bench Press / 2x5 / 100lb
-
-
-`);
-  });
-
   it("migrates weights to completedWeights", () => {
     const script = `# Week 1
 ## Day 1
@@ -1792,314 +2176,5 @@ Squat / 2x5 / 100lb / progress: custom() {~
     weights = completedWeights[1] * 0.5 + (completedWeights[3] == 30lb ? completedWeights[4] : completedWeights[3])
   }
 ~}`);
-  });
-
-  it("increment() weight", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x10 / 100lb / progress: custom() {~
-  weights[1] = increment(weights[1])
-~}`;
-    const equipment = structuredClone(Settings_defaultEquipment());
-    equipment.barbell!.plates = [
-      { weight: Weight_build(10, "lb"), num: 2 },
-      { weight: Weight_build(25, "lb"), num: 2 },
-      { weight: Weight_build(45, "lb"), num: 2 },
-    ];
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      { completedReps: [[10]] },
-      {
-        ...Settings_build(),
-        gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
-        exerciseData: {
-          squat_barbell: { equipment: { default: "barbell" } },
-        },
-      },
-    );
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x10 / 115lb / progress: custom() {~
-  weights[1] = increment(weights[1])
-~}
-
-
-`);
-  });
-
-  it("increment() number", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x10 / 100lb / progress: custom() {~
-  weights[1] = increment(105)
-~}`;
-    const equipment = structuredClone(Settings_defaultEquipment());
-    equipment.barbell!.isFixed = true;
-    equipment.barbell!.fixed = [
-      Weight_build(45, "lb"),
-      Weight_build(100, "lb"),
-      Weight_build(120, "lb"),
-    ];
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      { completedReps: [[10]] },
-      {
-        ...Settings_build(),
-        gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
-        exerciseData: {
-          squat_barbell: { equipment: { default: "barbell" } },
-        },
-      },
-    );
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x10 / 120lb / progress: custom() {~
-  weights[1] = increment(105)
-~}
-
-
-`);
-  });
-
-  it("decrement() percentage", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x10 / 100lb / progress: custom() {~
-  weights[1] = decrement(50%)
-~}`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[10]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x10 / 49% / progress: custom() {~
-  weights[1] = decrement(50%)
-~}
-
-
-`);
-  });
-
-  it("properly uses bodyweight", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 1x10 / 100lb / progress: custom() {~
-  weights = bodyweight
-~}`;
-    const stats: OLD_IStats = {
-      weight: {
-        weight: [
-          { vtype: "stat", value: Weight_build(200, "lb"), timestamp: 10 },
-          { vtype: "stat", value: Weight_build(220, "lb"), timestamp: 30 },
-          { vtype: "stat", value: Weight_build(210, "lb"), timestamp: 20 },
-          { vtype: "stat", value: Weight_build(240, "lb"), timestamp: 50 },
-          { vtype: "stat", value: Weight_build(230, "lb"), timestamp: 40 },
-        ],
-      },
-      length: {},
-      percentage: {},
-    };
-    const { program } = PlannerTestUtils_finish(
-      programText,
-      { completedReps: [[10]] },
-      {
-        ...Settings_build(),
-        graphOptions: {
-          weight: {
-            movingAverageWindowSize: 3,
-          },
-        },
-      },
-      stats,
-    );
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x10 / 230lb / progress: custom() {~
-  weights = bodyweight
-~}
-
-
-`);
-  });
-
-  it("template reuses progress of another template", () => {
-    const programText = `# Week 1
-## Day 1
-t1 / used: none / 3x5 100lb / progress: custom() {~
-  weights += 5lb
-~}
-t2 / used: none / 2x5 120lb / progress: custom() { ...t1 }
-Squat / ...t2
-
-`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-t1 / used: none / 3x5 / 100lb / progress: custom() {~
-  weights += 5lb
-~}
-t2 / used: none / 2x5 / 120lb / progress: custom() { ...t1 }
-Squat / ...t2 / 125lb
-
-
-`);
-  });
-
-  it("updates isAMRAP, logRPE and askWeight", () => {
-    const programText = `# Week 1
-## Day 1
-Squat / 3x5 / @8 100lb / progress: custom() {~
-  amraps[1] = 1
-  amraps[2] = 0
-  logrpes[2] = 1
-  askweights[3] = 1
-~}`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[5, 5, 5]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-Squat / 1x5+ 100lb @8, 1x5 100lb @8+, 1x5 100lb+ @8 / progress: custom() {~
-  amraps[1] = 1
-  amraps[2] = 0
-  logrpes[2] = 1
-  askweights[3] = 1
-~}
-
-
-`);
-  });
-
-  describe("description reuse", () => {
-    it("keeps description [1:1] reuse syntax if different day or week", () => {
-      const programText = `# Week 1
-## Day 1
-// Description
-Squat / 1x1
-
-# Week 2
-## Day 1
-// ...Squat[1:1]
-Bench Press / 1x1`;
-      const { program } = PlannerTestUtils_finish(programText, {
-        completedReps: [[1]],
-      });
-      const newText = asProgramScript(program.planner);
-      expect(newText).to.equal(`# Week 1
-## Day 1
-// Description
-Squat / 1x1
-
-
-# Week 2
-## Day 1
-// ...Squat[1:1]
-Bench Press / 1x1
-
-
-`);
-    });
-  });
-
-  it("omits [1:1] description reuse syntax if on the same week", () => {
-    const programText = `# Week 1
-## Day 1
-// Description
-Squat / 1x1
-
-## Day 2
-// ...Squat
-Bench Press / 1x1`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-// Description
-Squat / 1x1
-
-## Day 2
-// ...Squat
-Bench Press / 1x1
-
-
-`);
-  });
-
-  it("adds [1:1] description reuse syntax if there's 2 same exercises", () => {
-    const programText = `# Week 1
-## Day 1
-// Description
-Squat / 1x1
-
-## Day 2
-// Description 2
-Squat / 1x1
-
-## Day 3
-// ...Squat[1:2]
-Bench Press / 1x1`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-// Description
-Squat / 1x1
-
-## Day 2
-// Description 2
-Squat / 1x1
-
-## Day 3
-// ...Squat[1:2]
-Bench Press / 1x1
-
-
-`);
-  });
-
-  it("omits [1:1] description reuse syntax if exercise description is repeated on the same week", () => {
-    const programText = `# Week 1
-## Day 1
-
-// Description
-Squat / 1x1
-
-# Week 2
-## Day 1
-
-Squat / 1x1
-// ...Squat
-Bench Press / 1x1`;
-    const { program } = PlannerTestUtils_finish(programText, {
-      completedReps: [[1]],
-    });
-    const newText = asProgramScript(program.planner);
-    expect(newText).to.equal(`# Week 1
-## Day 1
-// Description
-Squat / 1x1
-
-
-# Week 2
-## Day 1
-// Description
-Squat / 1x1
-// ...Squat
-Bench Press / 1x1
-
-
-`);
   });
 });
