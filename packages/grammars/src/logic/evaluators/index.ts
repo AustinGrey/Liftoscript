@@ -9,7 +9,6 @@ import type {
   IScriptBindings,
   LogicHandler,
 } from "@/logic/evaluators/types.ts";
-import type { SyntaxNode } from "@lezer/common";
 import { parser } from "@/logic/parsing/logic.ts";
 import {
   type IProgramMode,
@@ -20,7 +19,7 @@ import {
   type LogicResult,
 } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
-import { parseBound } from "@/utils/lezer.ts";
+import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 /**
  * The handler for when we haven't decided how to handle a node
@@ -75,7 +74,10 @@ const handlers: {
   Wildcard: NOT_IMPLEMENTED,
 };
 
-function handleLogic(node: SyntaxNode, tools: EvaluateTools): LogicResult {
+function handleLogic(
+  node: SourcedSyntaxNode,
+  tools: EvaluateTools,
+): LogicResult {
   const handler: LogicHandler<NodeNames_Logic> | undefined = isLogicNodeName(
     node.name,
   )
@@ -119,7 +121,7 @@ export function run(
         node === undefined ? undefined : logic.slice(node.from, node.to)
       ) as typeof node extends undefined ? undefined : string;
     },
-    locate(node: SyntaxNode) {
+    locate(node: SourcedSyntaxNode) {
       const linesLengths = logic.split("\n").map((l) => l.length + 1);
       let offset = 0;
       for (let i = 0; i < linesLengths.length; i++) {

@@ -1,4 +1,3 @@
-import type { SyntaxNode } from "@lezer/common";
 import type {
   NodeNames_Logic,
   TypedLogicNode,
@@ -17,6 +16,7 @@ import type {
   Quantity,
 } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
+import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
@@ -26,19 +26,19 @@ export type LogicHandler<T extends NodeNames_Logic> = (
  * Tools related to the original source code. This keeps the evaluator from needing to know about the source code
  */
 export type SourceTools = {
-  getText: <TNode extends SyntaxNode | undefined>(
+  getText: <TNode extends SourcedSyntaxNode | undefined>(
     node: TNode,
   ) => TNode extends undefined ? undefined : string;
   /**
    * @returns The [line, offset] of the node in the source code
    */
-  locate: (node: SyntaxNode) => [number, number];
+  locate: (node: SourcedSyntaxNode) => [number, number];
   /**
    * Throws an error related to a node
    * @param message The message to share
    * @param node The node to throw the error for
    */
-  error: (message: string, node: SyntaxNode) => never;
+  error: (message: string, node: SourcedSyntaxNode) => never;
 };
 
 export type EvaluateTools = SourceTools & {
@@ -50,7 +50,7 @@ export type EvaluateTools = SourceTools & {
   /**
    * Continues evaluation into a node, using the same tools as the existing context
    */
-  recurse: (node: SyntaxNode) => LogicResult;
+  recurse: (node: SourcedSyntaxNode) => LogicResult;
   /**
    * Gets the value of a state variable. If the state variable is not found, it throws an error.
    * @param key The key of the state variable
@@ -59,7 +59,7 @@ export type EvaluateTools = SourceTools & {
    */
   getState: (
     key: string,
-    relatedNode: SyntaxNode,
+    relatedNode: SourcedSyntaxNode,
     index?: number,
   ) => Quantity | undefined;
   /**
@@ -76,7 +76,7 @@ export type EvaluateTools = SourceTools & {
       | Quantity
       | undefined
       | ((current: Quantity | undefined) => Quantity | undefined),
-    relatedNode: SyntaxNode,
+    relatedNode: SourcedSyntaxNode,
     index?: number,
   ) => Quantity | undefined;
   /**

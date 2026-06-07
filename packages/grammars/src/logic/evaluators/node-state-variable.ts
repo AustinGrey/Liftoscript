@@ -1,7 +1,7 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { queryChild } from "@/utils/grammars.ts";
-import type { SyntaxNode } from "@lezer/common";
+import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 export const handler: LogicHandler<"StateVariable"> = (n, t) => {
   const stateKey =
@@ -21,7 +21,7 @@ export const handler: LogicHandler<"StateVariable"> = (n, t) => {
  */
 
 function getStateKey(
-  expr: SyntaxNode,
+  expr: SourcedSyntaxNode,
   tools: EvaluateTools,
 ): string | undefined {
   const index = queryChild(expr, { ofType: NodeName.StateVariableIndex });

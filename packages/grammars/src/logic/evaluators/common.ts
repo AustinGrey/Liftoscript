@@ -1,4 +1,3 @@
-import type { SyntaxNode } from "@lezer/common";
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { CollectionUtils_compact } from "@/utils/collection.ts";
 import {
@@ -22,9 +21,10 @@ import {
   MathUtils_clamp,
   MathUtils_round,
 } from "@/utils/math.ts";
+import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 export function calculateIndexValues(
-  indexes: SyntaxNode[],
+  indexes: SourcedSyntaxNode[],
   tools: EvaluateTools,
 ): (number | "*")[] {
   return CollectionUtils_compact(indexes).map((ie) => {
@@ -39,7 +39,7 @@ export function calculateIndexValues(
 }
 
 export function evaluateToNumber(
-  expr: SyntaxNode,
+  expr: SourcedSyntaxNode,
   tools: EvaluateTools,
 ): number {
   const v = tools.recurse(expr);
@@ -48,7 +48,7 @@ export function evaluateToNumber(
 }
 
 export function evaluateToQuantity(
-  expr: SyntaxNode,
+  expr: SourcedSyntaxNode,
   tools: EvaluateTools,
 ): Quantity {
   const v = tools.recurse(expr);
@@ -88,8 +88,8 @@ export function changeBinding(
     | "logrpes"
     | "amraps"
     | "askweights",
-  expression: SyntaxNode,
-  indexExprs: SyntaxNode[],
+  expression: SourcedSyntaxNode,
+  indexExprs: SourcedSyntaxNode[],
   op: IAssignmentOp,
   tools: EvaluateTools,
 ): number | IWeight | IDynamicWeight {
@@ -177,8 +177,8 @@ export function recordVariableUpdate(
     | "logrpes"
     | "amraps"
     | "askweights",
-  expression: SyntaxNode,
-  indexExprs: SyntaxNode[],
+  expression: SourcedSyntaxNode,
+  indexExprs: SourcedSyntaxNode[],
   op: IAssignmentOp,
   tools: EvaluateTools,
 ): Quantity {
@@ -275,7 +275,7 @@ export function recordVariableUpdate(
  * @param tools The evaluation tools in the current context
  */
 export function changeNumberOfSets(
-  expression: SyntaxNode,
+  expression: SourcedSyntaxNode,
   op: IAssignmentOp,
   tools: EvaluateTools,
 ): number | IWeight | IDynamicWeight {

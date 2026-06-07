@@ -1,6 +1,6 @@
 import * as logicTerms from "./logic.terms.ts";
 import type * as planTerms from "../../planner/parsing/workout-plan.terms.ts";
-import type { SyntaxNode } from "@lezer/common";
+import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 /**
  * Swaps keys for values in a record
@@ -19,7 +19,7 @@ type NodeNames_Plan = keyof IdMap_Plan;
 type NodeIds_Logic = IdMap_Logic[NodeNames_Logic];
 type NodeIds_Plan = IdMap_Plan[NodeNames_Plan];
 
-export type TypedLogicNode<T extends NodeNames_Logic> = SyntaxNode & {
+export type TypedLogicNode<T extends NodeNames_Logic> = SourcedSyntaxNode & {
   name: T;
   type: {
     name: T;
@@ -71,7 +71,7 @@ export namespace LogicNodes {
  */
 export function isLogicNodeOfType<T extends NodeNames_Logic>(
   name: T,
-  node: SyntaxNode,
+  node: SourcedSyntaxNode,
 ): node is TypedLogicNode<T> {
   return node.type.name === name;
 }
