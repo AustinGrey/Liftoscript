@@ -5,7 +5,7 @@ import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 export const handler: LogicHandler<"StateVariable"> = (n, t) => {
   const stateKey =
-    getStateKey(n, t) ??
+    getStateKey(n) ??
     t.error(
       `You cannot read from other exercise's states, you can only write to them`,
       n,
@@ -17,18 +17,14 @@ export const handler: LogicHandler<"StateVariable"> = (n, t) => {
  * Gets the text of the variable attempting to be accessed on the state
  * e.g. state.foo, this would return 'foo'
  * @param expr The node to get the state key from
- * @param tools
  */
 
-function getStateKey(
-  expr: SourcedSyntaxNode,
-  tools: EvaluateTools,
-): string | undefined {
+function getStateKey(expr: SourcedSyntaxNode): string | undefined {
   const index = queryChild(expr, { ofType: NodeName.StateVariableIndex });
   if (index === undefined) {
     const stateKeyNode = queryChild(expr, { ofType: NodeName.Keyword });
     if (stateKeyNode != null) {
-      return tools.getText(stateKeyNode);
+      return stateKeyNode.source;
     }
   }
   return undefined;

@@ -12,7 +12,7 @@ export const handler: LogicHandler<"BuiltinFunctionExpression"> = (n, t) => {
       n,
     );
   }
-  const name = t.getText(keyword) as keyof typeof fns;
+  const name = keyword.source as keyof typeof fns;
   if (name != null && fns[name] != null) {
     const argValues = args.map((a) => t.recurse(a));
     const fn = fns[name];

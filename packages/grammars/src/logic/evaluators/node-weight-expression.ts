@@ -20,7 +20,7 @@ function getWeight(
   if (!isNumber(num)) {
     tools.error("WeightExpression must contain a number", numberNode);
   }
-  const unit = tools.getText(unitNode);
+  const unit = unitNode.source;
   if (!is(TUnit, unit)) {
     tools.error(
       "WeightExpression must contain a unit of either kg or lb",

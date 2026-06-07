@@ -12,7 +12,7 @@ import {
 export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
   // Get the variable to be indexed
   const nameNode = getChild(n);
-  const name = t.getText(nameNode) as keyof IScriptBindings;
+  const name = nameNode.source as keyof IScriptBindings;
 
   // Get the logic that will determine which index to pull from the variable
   // Ignore other nodes found here.

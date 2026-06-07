@@ -10,7 +10,7 @@ export const handler: LogicHandler<"ForExpression"> = (n, t) => {
   if (!Array.isArray(forIn)) {
     return t.error(`for in expression should return an array`, forInExpression);
   }
-  const varKey = t.getText(variableNode).replace("var.", "");
+  const varKey = variableNode.source.replace("var.", "");
   for (let i = 1; i <= forIn.length; i += 1) {
     t.updateVar(varKey, i);
     t.recurse(blockNode);

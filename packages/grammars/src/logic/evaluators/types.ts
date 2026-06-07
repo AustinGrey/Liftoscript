@@ -26,9 +26,6 @@ export type LogicHandler<T extends NodeNames_Logic> = (
  * Tools related to the original source code. This keeps the evaluator from needing to know about the source code
  */
 export type SourceTools = {
-  getText: <TNode extends SourcedSyntaxNode | undefined>(
-    node: TNode,
-  ) => TNode extends undefined ? undefined : string;
   /**
    * @returns The [line, offset] of the node in the source code
    */

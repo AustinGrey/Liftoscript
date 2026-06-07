@@ -24,7 +24,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     const [...indexExprs] = queryChildren(variableNode, {
       ofType: NodeName.VariableIndex,
     });
-    const variable = t.getText(nameNode);
+    const variable = nameNode.source;
     if (variable === "rm1") {
       if (indexExprs.length > 0) {
         return t.error(`rm1 is not an array`, n);
@@ -85,7 +85,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
       return t.error(`Unknown variable '${variable}'`, variableNode);
     }
   } else if (isLogicNodeOfType("Variable", variableNode)) {
-    const varKey = t.getText(variableNode).replace("var.", "");
+    const varKey = variableNode.source.replace("var.", "");
     const value = t.recurse(expression);
     return t.updateVar(varKey, isQuantity(value) ? value : value ? 1 : 0);
   } else if (isLogicNodeOfType("StateVariable", variableNode)) {
@@ -94,7 +94,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     if (stateKeyNode == null) {
       return 0;
     }
-    const stateKey = t.getText(stateKeyNode);
+    const stateKey = stateKeyNode.source;
 
     // There are two different state sources - the normal "state" and the "otherStates" collection of various states
     // @TODO Why? What makes these two different from each other? Hypothesis - "state" is the state of the current exercise, while otherStates is the state of all the other exercises, indexed by set

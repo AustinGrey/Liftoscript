@@ -22,7 +22,7 @@ import { toWeight } from "@/utils/dynamic-weight.ts";
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });
   const left = t.recurse(leftNode);
-  const op = t.getText(opNode);
+  const op = opNode.source;
   const right = t.recurse(rightNode);
 
   const maybeArrayResult = binaryOpMaybeArray(left, right, (l, r) => {

@@ -56,14 +56,14 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       const [...indexExprs] = queryChildren(stateVar, {
         ofType: NodeName.VariableIndex,
       });
-      const variable = t.getText(nameNode);
+      const variable = nameNode?.source;
       if (variable === "rm1") {
         if (indexExprs.length > 0) {
           t.error(`rm1 is not an array`, n);
         }
         const value = coerceToQuantity(t.recurse(expression));
 
-        const op = t.getText(incAssignmentExpr);
+        const op = incAssignmentExpr.source;
         t.updateGlobal("rm1", (rm1) =>
           convertToWeight(
             rm1,
@@ -99,7 +99,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
           "numberOfSets",
         )
       ) {
-        const op = t.getText(incAssignmentExpr);
+        const op = incAssignmentExpr.source;
         return isOneOf(op, "=", "+=", "-=", "*=", "/=")
           ? recordVariableUpdate(variable, expression, indexExprs, op, t)
           : t.error(
@@ -107,7 +107,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
               incAssignmentExpr,
             );
       } else if (t.mode === "update" && variable === "numberOfSets") {
-        const op = t.getText(incAssignmentExpr);
+        const op = incAssignmentExpr.source;
         return isOneOf(op, "=", "+=", "-=", "*=", "/=")
           ? changeNumberOfSets(expression, op, t)
           : t.error(
@@ -118,7 +118,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         t.mode === "update" &&
         isOneOf(variable, "reps", "weights", "RPE", "minReps", "timers")
       ) {
-        const op = t.getText(incAssignmentExpr);
+        const op = incAssignmentExpr.source;
         return isOneOf(op, "=", "+=", "-=", "*=", "/=")
           ? changeBinding(variable, expression, indexExprs, op, t)
           : t.error(
@@ -130,14 +130,14 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       }
     }
     case NodeName.Variable: {
-      const varKey = t.getText(stateVar).replace("var.", "");
+      const varKey = stateVar.source.replace("var.", "");
       let value = t.recurse(expression);
       if (
         !(is(TWeight, value) || is(TDynamicWeight, value) || isNumber(value))
       ) {
         value = value ? 1 : 0;
       }
-      const op = t.getText(incAssignmentExpr);
+      const op = incAssignmentExpr.source;
       if (isOneOf(op, "=", "+=", "-=", "*=", "/=")) {
         switch (op) {
           case "+=":
@@ -173,7 +173,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         // @todo why return 0? why not just undefined?
         return 0;
       }
-      const stateKey = t.getText(stateKeyNode);
+      const stateKey = stateKeyNode.source;
       // The presence of an index node indicates that we're accessing an "other state"
       // @todo I still don't understand this "otherstate" system? Why not just have one state? Or is this the state of another exercise than the one being evaluated?
 
@@ -182,7 +182,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       if (!isQuantity(value)) {
         value = value ? 1 : 0;
       }
-      const op = t.getText(incAssignmentExpr);
+      const op = incAssignmentExpr.source;
       // @todo in original liftoscript, if updating an "other state" via index, but there is no state at the index, then you just return the evaluated value, and it's all fine. The update is ignored. Is that still happening?
       return t.updateState(
         stateKey,

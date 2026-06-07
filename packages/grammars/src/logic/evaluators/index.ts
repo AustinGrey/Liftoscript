@@ -116,11 +116,6 @@ export function run(
   const vars: IProgramState = {};
 
   const tools: EvaluateTools = {
-    getText(node) {
-      return (
-        node === undefined ? undefined : logic.slice(node.from, node.to)
-      ) as typeof node extends undefined ? undefined : string;
-    },
     locate(node: SourcedSyntaxNode) {
       const linesLengths = logic.split("\n").map((l) => l.length + 1);
       let offset = 0;
