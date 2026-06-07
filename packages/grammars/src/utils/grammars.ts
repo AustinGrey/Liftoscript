@@ -1,4 +1,3 @@
-import type { SyntaxNode } from "@lezer/common";
 import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 /**
