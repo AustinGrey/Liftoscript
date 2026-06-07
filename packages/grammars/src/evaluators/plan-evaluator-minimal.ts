@@ -6376,7 +6376,7 @@ function validate(
     } else if (cursor.node.type.name === NodeName.VariableExpression) {
       const [nameNode, indexExpr] = queryChildren(cursor.node);
       if (nameNode == null) {
-        assert(NodeName.VariableExpression);
+        return assert(NodeName.VariableExpression);
       }
       const name = nameNode.source;
       if (indexExpr != null) {
