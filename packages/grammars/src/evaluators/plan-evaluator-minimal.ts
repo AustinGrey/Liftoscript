@@ -55,14 +55,12 @@ import {
 } from "@/common-types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import {
-  Exercise_findByName,
   Exercise_findByNameAndEquipment,
   Exercise_findByNameEquipment,
   Exercise_fullName,
   getExerciseOrDefault,
   getOrmOrStartingWeight,
   type IAllCustomExercises,
-  type IExercise,
   type IExerciseType,
   isUnilateral,
   TExerciseType,
@@ -1175,8 +1173,8 @@ function PlannerProgram_compact(
     });
   });
 
-  const mapping = plannerProgram.weeks.map((week, weekIndex) => {
-    return week.days.map((day, dayInWeekIndex) => {
+  const mapping = plannerProgram.weeks.map((week) => {
+    return week.days.map((day) => {
       dayIndex += 1;
 
       return topLineMap(
@@ -1357,8 +1355,8 @@ function PlannerProgram_topLineItems(
 ): IPlannerTopLineItem[][][] {
   let dayIndex = 0;
 
-  const mapping = plannerProgram.weeks.map((week, weekIndex) => {
-    return week.days.map((day, dayInWeekIndex) => {
+  const mapping = plannerProgram.weeks.map((week) => {
+    return week.days.map((day) => {
       dayIndex += 1;
 
       return topLineMap(
@@ -2943,12 +2941,7 @@ function topLineMap(
   return result;
 }
 
-function evaluateUpdate(
-  expr: SourcedSyntaxNode,
-  settings: ISettings,
-  dayData: Required<IDayData>,
-  exerciseType?: IExerciseType,
-): IProgramExerciseUpdate {
+function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
   if (expr.type.name === PlannerNodeName.ExerciseProperty) {
     const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
     if (valueNode == null) {
@@ -3014,7 +3007,6 @@ function evaluateProgressImpl(
   expr: SourcedSyntaxNode,
   settings: ISettings,
   dayData: Required<IDayData>,
-  exerciseType?: IExerciseType,
 ): IEither<IProgramExerciseProgress, string> {
   if (expr.type.name === PlannerNodeName.ExerciseProperty) {
     const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
@@ -3093,9 +3085,8 @@ function evaluateProgress(
   expr: SourcedSyntaxNode,
   settings: ISettings,
   dayData: Required<IDayData>,
-  exerciseType?: IExerciseType,
 ): IProgramExerciseProgress {
-  const result = evaluateProgressImpl(expr, settings, dayData, exerciseType);
+  const result = evaluateProgressImpl(expr, settings, dayData);
   if (result.success) {
     return result.data;
   } else {
@@ -3107,7 +3098,6 @@ function evaluateProperty(
   expr: SourcedSyntaxNode,
   settings: ISettings,
   dayData: Required<IDayData>,
-  exerciseType?: IExerciseType,
 ):
   | { type: "progress"; data: IProgramExerciseProgress }
   | { type: "update"; data: IProgramExerciseUpdate }
@@ -3123,12 +3113,12 @@ function evaluateProperty(
     if (name === "progress") {
       return {
         type: "progress",
-        data: evaluateProgress(expr, settings, dayData, exerciseType),
+        data: evaluateProgress(expr, settings, dayData),
       };
     } else if (name === "update") {
       return {
         type: "update",
-        data: evaluateUpdate(expr, settings, dayData, exerciseType),
+        data: evaluateUpdate(expr),
       };
     } else if (name === "warmup") {
       return { type: "warmup", data: evaluateWarmup(expr) };
@@ -3151,7 +3141,6 @@ function evaluateSection(
   expr: SourcedSyntaxNode,
   settings: ISettings,
   dayData: Required<IDayData>,
-  exerciseType?: IExerciseType,
 ):
   | { type: "sets"; data: IPlannerProgramExerciseSet[]; isCurrent: boolean }
   | { type: "progress"; data: IProgramExerciseProgress }
@@ -3185,7 +3174,7 @@ function evaluateSection(
     }
     const property = expr.getChild(PlannerNodeName.ExerciseProperty);
     if (property != null) {
-      return evaluateProperty(property, settings, dayData, exerciseType);
+      return evaluateProperty(property, settings, dayData);
     } else {
       assert(PlannerNodeName.ExerciseProperty);
     }
@@ -3388,12 +3377,7 @@ function evaluate(
         let update: IProgramExerciseUpdate | undefined;
         let superset: IPlannerProgramExerciseSuperset | undefined;
         for (const sectionNode of sectionNodes) {
-          const section = evaluateSection(
-            sectionNode,
-            settings,
-            dayData,
-            exercise ? { id: exercise.id, equipment } : undefined,
-          );
+          const section = evaluateSection(sectionNode, settings, dayData);
           if (section.type === "sets") {
             allSets.push(...section.data);
             if (section.data.some((set) => set.repRange != null)) {
@@ -4402,7 +4386,7 @@ function PlannerEvaluator_postProcess(
 ): void {
   PlannerEvaluator_iterateOverExercises(
     evaluatedWeeks,
-    (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
+    (weekIndex, dayInWeekIndex, _, __, exercise) => {
       PlannerEvaluator_fillDescriptions(
         exercise,
         evaluatedWeeks,
@@ -4422,7 +4406,7 @@ function PlannerEvaluator_postProcess(
 
   PlannerEvaluator_iterateOverExercises(
     evaluatedWeeks,
-    (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
+    (weekIndex, dayInWeekIndex, _, __, exercise) => {
       PlannerEvaluator_fillSetReuses(
         exercise,
         evaluatedWeeks,
@@ -4471,7 +4455,7 @@ function PlannerEvaluator_postProcess(
 
   PlannerEvaluator_iterateOverExercises(
     evaluatedWeeks,
-    (weekIndex, dayInWeekIndex, dayIndex, exerciseIndex, exercise) => {
+    (_, __, ___, ____, exercise) => {
       PlannerEvaluator_fillEvaluatedSetVariations(exercise);
     },
   );
