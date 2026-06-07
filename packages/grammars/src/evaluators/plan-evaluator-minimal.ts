@@ -24,10 +24,7 @@ import { StringUtils_unindent } from "@/utils/string";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
-import {
-  LiftoscriptSyntaxError,
-  NodeName,
-} from "@/evaluators/logic-evaluator.ts";
+import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import {
   applyOp,
   build,
@@ -6614,6 +6611,27 @@ function setToKey(set: IPlannerProgramExerciseEvaluatedSet): string {
 
 //#region ScriptRunner
 
+export class LiftoscriptSyntaxError extends SyntaxError {
+  public readonly line: number;
+  public readonly offset: number;
+  public readonly from: number;
+  public readonly to: number;
+
+  constructor(
+    message: string,
+    line: number,
+    offset: number,
+    from: number,
+    to: number,
+  ) {
+    super(message);
+    this.line = line;
+    this.offset = offset;
+    this.from = from;
+    this.to = to;
+  }
+}
+
 function parseScript(
   units: IUnit,
   script: string,
@@ -6624,8 +6642,21 @@ function parseScript(
   context: IScriptFnContext,
   mode: IProgramMode,
 ): void {
-  parseBound(LiftoscriptParser, script);
-  // @todo I think the original "parse" method was supposed to throw if there were any parsing issues, sort of like a checker/validator
+  validate(
+    parseBound(LiftoscriptParser, script),
+    Object.keys(fns),
+    Object.keys(bindings),
+    Object.keys(state),
+    mode,
+    (message, node) => {
+      throw new LiftoscriptSyntaxError(
+        message,
+        ...node.getLineAndOffset(),
+        node.from,
+        node.to,
+      );
+    },
+  );
   // Which we are definitely not doing here. But should we even care?
   // const liftoscriptTree = LiftoscriptParser.parse(script);
   // const liftoscriptEvaluator = new LiftoscriptEvaluator(
@@ -6639,6 +6670,125 @@ function parseScript(
   //   mode,
   // );
   // liftoscriptEvaluator.parse(liftoscriptTree.topNode);
+}
+
+function validate(
+  expr: SourcedSyntaxNode,
+  knownFunctions: string[],
+  knownBindings: string[],
+  knownStateVariables: string[],
+  mode: IProgramMode,
+  onError: (message: string, node: SourcedSyntaxNode) => never,
+): void {
+  const cursor = expr.cursor();
+  const vars: IProgramState = {};
+  do {
+    if (cursor.node.type.isError) {
+      return onError("Syntax error", cursor.node);
+    } else if (cursor.node.type.name === NodeName.BuiltinFunctionExpression) {
+      const [keyword, ...fnArgs] = getChildren(cursor.node);
+      if (keyword == null || keyword.type.name !== NodeName.Keyword) {
+        assert(NodeName.BuiltinFunctionExpression);
+      }
+      const name = keyword.source;
+      if (!knownFunctions.includes(name)) {
+        return onError(`Unknown function '${name}'`, keyword);
+      }
+      if (name === "sets" && fnArgs.length !== 9) {
+        return onError(`'sets' function should have 9 arguments`, keyword);
+      }
+    } else if (cursor.node.type.name === NodeName.ForExpression) {
+      const variableNode = cursor.node.getChild(NodeName.Variable);
+      if (variableNode != null) {
+        vars[variableNode.source] = 1;
+      }
+    } else if (cursor.node.type.name === NodeName.AssignmentExpression) {
+      const [variableNode] = getChildren(cursor.node);
+      if (variableNode.type.name === NodeName.Variable) {
+        vars[variableNode.source] = 1;
+      } else if (variableNode.type.name === NodeName.VariableExpression) {
+        const nameNode = variableNode.getChild(NodeName.Keyword);
+        if (nameNode != null) {
+          const name = nameNode.source;
+          if (mode === "update") {
+            if (
+              [
+                "reps",
+                "weights",
+                "RPE",
+                "minReps",
+                "numberOfSets",
+                "timers",
+                "askweights",
+                "amraps",
+                "logrpes",
+              ].indexOf(name) === -1
+            ) {
+              return onError(`Cannot assign to '${name}'`, variableNode);
+            }
+            const indexExprs = variableNode.getChildren(NodeName.VariableIndex);
+            if (name === "numberOfSets" && indexExprs.length > 0) {
+              return onError(`${name} is not an array`, variableNode);
+            } else if (indexExprs.length > 1) {
+              return onError(
+                `Can't assign to set variations, weeks or days here`,
+                variableNode,
+              );
+            }
+          }
+        }
+      }
+    } else if (cursor.node.type.name === NodeName.StateVariable) {
+      const stateKey = getStateKey(cursor.node);
+      if (stateKey != null && !knownStateVariables.includes(stateKey)) {
+        return onError(`There's no state variable '${stateKey}'`, cursor.node);
+      }
+    } else if (cursor.node.type.name === NodeName.Variable) {
+      const variableKey = cursor.node.source;
+      if (!(variableKey in vars)) {
+        return onError(`There's no variable '${variableKey}'`, cursor.node);
+      }
+    } else if (cursor.node.type.name === NodeName.VariableExpression) {
+      const [nameNode, indexExpr] = getChildren(cursor.node);
+      if (nameNode == null) {
+        assert(NodeName.VariableExpression);
+      }
+      const name = nameNode.source;
+      if (indexExpr != null) {
+        const validNames: (keyof IScriptBindings)[] = [
+          "originalWeights",
+          "weights",
+          "reps",
+          "minReps",
+          "completedReps",
+          "completedRepsLeft",
+          "completedWeights",
+          "timers",
+          "w",
+          "r",
+          "cr",
+          "cw",
+          "mr",
+          "completedRPE",
+          "bodyweight",
+          "RPE",
+          "setVariationIndex",
+          "descriptionIndex",
+          "numberOfSets",
+          "programNumberOfSets",
+          "completedNumberOfSets",
+          "amraps",
+          "logrpes",
+          "askweights",
+        ];
+        if (validNames.indexOf(name as keyof IScriptBindings) === -1) {
+          return onError(`${name} is not an array variable`, nameNode);
+        }
+      } else if (!knownBindings.includes(name)) {
+        return onError(`${name} is not a valid variable`, nameNode);
+      }
+    }
+  } while (cursor.next());
 }
 
 function getStateVariableKeys(script: string): Set<string> {

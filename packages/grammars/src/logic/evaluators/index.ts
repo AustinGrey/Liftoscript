@@ -115,20 +115,8 @@ export function run(
   const vars: IProgramState = {};
 
   const tools: EvaluateTools = {
-    locate(node: SourcedSyntaxNode) {
-      const linesLengths = logic.split("\n").map((l) => l.length + 1);
-      let offset = 0;
-      for (let i = 0; i < linesLengths.length; i++) {
-        const lineLength = linesLengths[i];
-        if (node.from > offset && node.from < offset + lineLength) {
-          return [i + 1, node.from - offset];
-        }
-        offset += lineLength;
-      }
-      return [linesLengths.length, linesLengths[linesLengths.length - 1]];
-    },
     error(message, node) {
-      const [line, offset] = this.locate(node);
+      const [line, offset] = node.getLineAndOffset();
       const err = new LiftoscriptSyntaxError(
         `${message} (${line}:${offset})`,
         line,

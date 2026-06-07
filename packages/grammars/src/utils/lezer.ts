@@ -23,6 +23,8 @@ function getLineAndOffset(script: string, node: SyntaxNode): [number, number] {
   let offset = 0;
   for (let i = 0; i < linesLengths.length; i++) {
     const lineLength = linesLengths[i];
+    // @todo original liftoscript had conflicting implementations -> `node.from > offset` or `node.from >= offset`.
+    //    As of yet I don't know which is correct, just using one arbitrarily.
     if (node.from >= offset && node.from < offset + lineLength) {
       return [i + 1, node.from - offset];
     }
@@ -39,11 +41,14 @@ export interface SourcedSyntaxNode {
   /**
    * The full source code this node was parsed from
    */
-  getSource: () => string;
+  getSourceFile: () => string;
   /**
    * The slice of the full source that this node represents
    */
   source: string;
+  /**
+   * Gets the [line, offset] within the full source where this node's source is located
+   */
   getLineAndOffset: () => [number, number];
   parent: SourcedSyntaxNode | null;
   firstChild: SourcedSyntaxNode | null;
@@ -176,9 +181,9 @@ function bindNode(
   const recurse = (node: SyntaxNode | null) => bindMaybeNode(node, getSource);
   const recurseSure = (node: SyntaxNode) => bindNode(node, getSource);
   return {
-    getSource,
+    getSourceFile: getSource,
     get source() {
-      return this.getSource().slice(node.from, node.to);
+      return this.getSourceFile().slice(node.from, node.to);
     },
     childAfter: (...args) => recurse(node.childAfter(...args)),
     childBefore: (...args) => recurse(node.childBefore(...args)),

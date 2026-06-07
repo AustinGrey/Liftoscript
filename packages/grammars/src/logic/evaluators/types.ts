@@ -22,23 +22,14 @@ export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
   tools: EvaluateTools,
 ) => LogicResult;
-/**
- * Tools related to the original source code. This keeps the evaluator from needing to know about the source code
- */
-export type SourceTools = {
-  /**
-   * @returns The [line, offset] of the node in the source code
-   */
-  locate: (node: SourcedSyntaxNode) => [number, number];
+
+export type EvaluateTools = {
   /**
    * Throws an error related to a node
    * @param message The message to share
    * @param node The node to throw the error for
    */
   error: (message: string, node: SourcedSyntaxNode) => never;
-};
-
-export type EvaluateTools = SourceTools & {
   /**
    * @todo I don't know what this does.... like... at all, but it seems to be something that is stable for a complete evaluation pass of a program, so we just track it.
    *    This needs documentation
