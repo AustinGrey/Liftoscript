@@ -93,15 +93,18 @@ function handleLogic(
   return result;
 }
 
-export function validate(node: SourcedSyntaxNode, tools: ValidationTools) {
-  queryTree(node, () => true).forEach((node) => {
+export function* validate(
+  node: SourcedSyntaxNode,
+  tools: ValidationTools,
+): Generator<LiftoscriptSyntaxError> {
+  for (const n of queryTree(node)) {
     const validator: Validator<NodeNames_Logic> | undefined = isLogicNodeName(
-      node.name,
+      n.name,
     )
-      ? (parsers[node.name].validator as Validator<NodeNames_Logic>)
+      ? (parsers[n.name].validator as Validator<NodeNames_Logic>)
       : undefined;
-    validator?.(node as TypedLogicNode<NodeNames_Logic>, tools);
-  });
+    yield* validator?.(node as TypedLogicNode<NodeNames_Logic>, tools) ?? [];
+  }
 }
 
 /**

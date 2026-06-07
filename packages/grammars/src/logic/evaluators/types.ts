@@ -114,7 +114,7 @@ export type EvaluateTools = {
 export type Validator<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
   tools: ValidationTools,
-) => void;
+) => Iterable<LiftoscriptSyntaxError>;
 
 export type ValidationTools = {
   knownFunctions: string[];
@@ -170,4 +170,33 @@ export interface IScriptBindings {
   bodyweight: IWeight;
   descriptionIndex: number;
   setIndex: number;
+}
+export class LiftoscriptSyntaxError extends SyntaxError {
+  public readonly line: number;
+  public readonly offset: number;
+  public readonly from: number;
+  public readonly to: number;
+
+  constructor(
+    message: string,
+    line: number,
+    offset: number,
+    from: number,
+    to: number,
+  ) {
+    super(message);
+    this.line = line;
+    this.offset = offset;
+    this.from = from;
+    this.to = to;
+  }
+
+  public static fromNode(message: string, node: SourcedSyntaxNode) {
+    return new LiftoscriptSyntaxError(
+      message,
+      ...node.getLineAndOffset(),
+      node.from,
+      node.to,
+    );
+  }
 }

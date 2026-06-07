@@ -90,11 +90,11 @@ export function queryChild<TTypes extends string>(
  */
 export function* queryTree(
   node: SourcedSyntaxNode,
-  where: (node: SourcedSyntaxNode) => boolean,
+  where?: (node: SourcedSyntaxNode) => boolean,
 ): Generator<SourcedSyntaxNode> {
   const cursor = node.cursor();
   do {
-    if (where(cursor.node)) {
+    if (!where || where(cursor.node)) {
       yield cursor.node;
     }
   } while (cursor.next());

@@ -87,6 +87,7 @@ import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run, validate } from "@/logic/evaluators";
 import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
+import { LiftoscriptSyntaxError } from "@/logic/evaluators/types.ts";
 
 //#region Program
 
@@ -6252,27 +6253,6 @@ const weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
 
 //#region ScriptRunner
 
-export class LiftoscriptSyntaxError extends SyntaxError {
-  public readonly line: number;
-  public readonly offset: number;
-  public readonly from: number;
-  public readonly to: number;
-
-  constructor(
-    message: string,
-    line: number,
-    offset: number,
-    from: number,
-    to: number,
-  ) {
-    super(message);
-    this.line = line;
-    this.offset = offset;
-    this.from = from;
-    this.to = to;
-  }
-}
-
 function parseScript(
   script: string,
   state: IProgramState,
@@ -6280,13 +6260,13 @@ function parseScript(
   fns: IScriptFunctions,
   mode: IProgramMode,
 ): void {
-  validate(
-    parseBound(LiftoscriptParser, script),
-    Object.keys(fns),
-    Object.keys(bindings),
-    Object.keys(state),
-    mode,
-    (message, node) => {
+  // @todo I need to either throw if this returns, or bubble up what should happen.
+  const errors = validate(parseBound(LiftoscriptParser, script), {
+    knownFunctions: Object.keys(fns),
+    knownBindings: Object.keys(bindings),
+    knownStateVariables: Object.keys(state),
+    mode: mode,
+    onError: (message, node) => {
       throw new LiftoscriptSyntaxError(
         message,
         ...node.getLineAndOffset(),
@@ -6294,7 +6274,7 @@ function parseScript(
         node.to,
       );
     },
-  );
+  });
   validateOld(
     parseBound(LiftoscriptParser, script),
     Object.keys(fns),

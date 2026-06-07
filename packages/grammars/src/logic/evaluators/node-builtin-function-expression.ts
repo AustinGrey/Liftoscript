@@ -1,4 +1,8 @@
-import type { LogicHandler, Validator } from "@/logic/evaluators/types.ts";
+import {
+  LiftoscriptSyntaxError,
+  type LogicHandler,
+  type Validator,
+} from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 
@@ -25,6 +29,29 @@ export const handler: LogicHandler<"BuiltinFunctionExpression"> = (n, t) => {
   }
 };
 
-export const validator: Validator<"BuiltinFunctionExpression"> = (n, t)=>{
-
-}
+export const validator: Validator<"BuiltinFunctionExpression"> = function* (
+  n,
+  t,
+) {
+  const [keyword, ...fnArgs] = queryChildren(n);
+  if (keyword?.type.name !== NodeName.Keyword) {
+    yield LiftoscriptSyntaxError.fromNode(
+      `Expected ${NodeName.Keyword} node as first child of node, but got ${keyword?.type.name}`,
+      n,
+    );
+    return;
+  }
+  const name = keyword.source;
+  if (!t.knownFunctions.includes(name)) {
+    yield LiftoscriptSyntaxError.fromNode(
+      `Unknown function '${name}'`,
+      keyword,
+    );
+  }
+  if (name === "sets" && fnArgs.length !== 9) {
+    yield LiftoscriptSyntaxError.fromNode(
+      `'sets' function should have 9 arguments`,
+      keyword,
+    );
+  }
+};
