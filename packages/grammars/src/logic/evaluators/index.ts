@@ -3,19 +3,17 @@ import {
   type NodeNames_Logic,
   type TypedLogicNode,
 } from "@/logic/parsing/guards.ts";
-import type {
-  EvaluateTools,
-  IProgramState,
-  IScriptBindings,
-  LogicHandler,
-  ValidationTools,
-  Validator,
+import {
+  type EvaluateTools,
+  type IProgramState,
+  type IScriptBindings,
+  LiftoscriptSyntaxError,
+  type LogicHandler,
+  type ValidationTools,
+  type Validator,
 } from "@/logic/evaluators/types.ts";
 import { parser } from "@/logic/parsing/logic.ts";
-import {
-  type IProgramMode,
-  LiftoscriptSyntaxError,
-} from "@/evaluators/logic-evaluator.ts";
+import { type IProgramMode } from "@/evaluators/logic-evaluator.ts";
 import {
   type ILiftoscriptEvaluatorUpdate,
   type LogicResult,
@@ -98,6 +96,11 @@ export function* validate(
   tools: ValidationTools,
 ): Generator<LiftoscriptSyntaxError> {
   for (const n of queryTree(node)) {
+    if (n.type.isError) {
+      yield LiftoscriptSyntaxError.fromNode("Syntax error", n);
+      return;
+    }
+
     const validator: Validator<NodeNames_Logic> | undefined = isLogicNodeName(
       n.name,
     )
