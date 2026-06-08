@@ -2738,7 +2738,7 @@ function evaluateProgressImpl(
       );
       if (script) {
         try {
-          parseScript(
+          validateScript(
             script,
             state,
             Progress_createEmptyScriptBindings(dayData, settings),
@@ -3964,7 +3964,7 @@ function PlannerEvaluator_checkUpdateScript(
     if (script && liftoscriptNode) {
       const state = PlannerProgramExercise_getState(exercise);
       try {
-        parseScript(
+        validateScript(
           script,
           state,
           Progress_createEmptyScriptBindings(dayData, settings),
@@ -6253,7 +6253,7 @@ const weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
 
 //#region ScriptRunner
 
-function parseScript(
+function validateScript(
   script: string,
   state: IProgramState,
   bindings: IScriptBindings,
@@ -6291,7 +6291,6 @@ function parseScript(
  * e.g. state.foo, this would return 'foo'
  * @param expr The node to get the state key from
  */
-
 function getStateKey(expr: SourcedSyntaxNode): string | undefined {
   return queryChild(expr, { ofType: NodeName.StateVariableIndex }) !== undefined
     ? // If there's an index, then there isn't going to be a named state key
