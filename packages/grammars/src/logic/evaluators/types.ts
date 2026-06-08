@@ -122,6 +122,14 @@ export type ValidationTools = {
   knownStateVariables: string[];
   mode: IProgramMode;
   onError: (message: string, node: SourcedSyntaxNode) => never;
+  /**
+   * During validation, nodes should record if a variable has been created by calling this function
+   */
+  trackVariable: (name: string) => void;
+  /**
+   * Can be called to see if a variable was previously created (as tracked in trackVariable calls)
+   */
+  isKnownVariable: (name: string) => boolean;
 };
 
 /**

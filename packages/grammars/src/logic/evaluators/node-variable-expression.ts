@@ -1,6 +1,8 @@
-import type {
-  IScriptBindings,
-  LogicHandler,
+import {
+  type IScriptBindings,
+  LiftoscriptSyntaxError,
+  type LogicHandler,
+  type Validator,
 } from "@/logic/evaluators/types.ts";
 import { getChild, queryChildren } from "@/utils/grammars.ts";
 import {
@@ -68,5 +70,60 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
       `Can't use [1:1] syntax when reading from the ${name} variable`,
       n,
     );
+  }
+};
+
+export const validator: Validator<"VariableExpression"> = function* (n, t) {
+  const [nameNode, indexExpr] = queryChildren(n);
+  if (nameNode == null) {
+    yield LiftoscriptSyntaxError.fromNode(
+      `Expected a ${NodeName.VariableExpression} child in a ${NodeName.StateVariable} node, but found none`,
+      n,
+    );
+    return;
+  }
+  const name = nameNode.source;
+  if (indexExpr != null) {
+    const validNames: (keyof IScriptBindings)[] = [
+      "originalWeights",
+      "weights",
+      "reps",
+      "minReps",
+      "completedReps",
+      "completedRepsLeft",
+      "completedWeights",
+      "timers",
+      "w",
+      "r",
+      "cr",
+      "cw",
+      "mr",
+      "completedRPE",
+      "bodyweight",
+      "RPE",
+      "setVariationIndex",
+      "descriptionIndex",
+      "numberOfSets",
+      "programNumberOfSets",
+      "completedNumberOfSets",
+      "amraps",
+      "logrpes",
+      "askweights",
+    ];
+    if (!validNames.includes(name as keyof IScriptBindings)) {
+      yield LiftoscriptSyntaxError.fromNode(
+        `${name} is not an array variable`,
+        nameNode,
+      );
+      return;
+    }
+  }
+
+  if (!t.knownBindings.includes(name)) {
+    yield LiftoscriptSyntaxError.fromNode(
+      `${name} is not a valid variable`,
+      nameNode,
+    );
+    return;
   }
 };

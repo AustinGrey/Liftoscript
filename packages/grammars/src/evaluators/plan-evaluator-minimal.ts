@@ -6260,155 +6260,30 @@ function parseScript(
   fns: IScriptFunctions,
   mode: IProgramMode,
 ): void {
-  // @todo I need to either throw if this returns, or bubble up what should happen.
-  const errors = validate(parseBound(LiftoscriptParser, script), {
-    knownFunctions: Object.keys(fns),
-    knownBindings: Object.keys(bindings),
-    knownStateVariables: Object.keys(state),
-    mode: mode,
-    onError: (message, node) => {
-      throw new LiftoscriptSyntaxError(
-        message,
-        ...node.getLineAndOffset(),
-        node.from,
-        node.to,
-      );
-    },
-  });
-  validateOld(
+  const trackedVarNames = new Set<string>();
+  const [firstError, ..._rest] = validate(
     parseBound(LiftoscriptParser, script),
-    Object.keys(fns),
-    Object.keys(bindings),
-    Object.keys(state),
-    mode,
-    (message, node) => {
-      throw new LiftoscriptSyntaxError(
-        message,
-        ...node.getLineAndOffset(),
-        node.from,
-        node.to,
-      );
+    {
+      knownFunctions: Object.keys(fns),
+      knownBindings: Object.keys(bindings),
+      knownStateVariables: Object.keys(state),
+      mode: mode,
+      onError: (message, node) => {
+        throw new LiftoscriptSyntaxError(
+          message,
+          ...node.getLineAndOffset(),
+          node.from,
+          node.to,
+        );
+      },
+      trackVariable: (name) => trackedVarNames.add(name),
+      isKnownVariable: (name) => trackedVarNames.has(name),
     },
   );
-}
-
-function validateOld(
-  expr: SourcedSyntaxNode,
-  knownFunctions: string[],
-  knownBindings: string[],
-  knownStateVariables: string[],
-  mode: IProgramMode,
-  onError: (message: string, node: SourcedSyntaxNode) => never,
-): void {
-  const cursor = expr.cursor();
-  const vars: IProgramState = {};
-  do {
-    if (cursor.node.type.isError) {
-      return onError("Syntax error", cursor.node);
-    } else if (cursor.node.type.name === NodeName.BuiltinFunctionExpression) {
-      const [keyword, ...fnArgs] = queryChildren(cursor.node);
-      if (keyword == null || keyword.type.name !== NodeName.Keyword) {
-        assert(NodeName.BuiltinFunctionExpression);
-      }
-      const name = keyword.source;
-      if (!knownFunctions.includes(name)) {
-        return onError(`Unknown function '${name}'`, keyword);
-      }
-      if (name === "sets" && fnArgs.length !== 9) {
-        return onError(`'sets' function should have 9 arguments`, keyword);
-      }
-    } else if (cursor.node.type.name === NodeName.ForExpression) {
-      const variableNode = cursor.node.getChild(NodeName.Variable);
-      if (variableNode != null) {
-        vars[variableNode.source] = 1;
-      }
-    } else if (cursor.node.type.name === NodeName.AssignmentExpression) {
-      const [variableNode] = queryChildren(cursor.node);
-      if (variableNode?.type.name === NodeName.Variable) {
-        vars[variableNode.source] = 1;
-      } else if (variableNode?.type.name === NodeName.VariableExpression) {
-        const nameNode = variableNode.getChild(NodeName.Keyword);
-        if (nameNode != null) {
-          const name = nameNode.source;
-          if (mode === "update") {
-            if (
-              [
-                "reps",
-                "weights",
-                "RPE",
-                "minReps",
-                "numberOfSets",
-                "timers",
-                "askweights",
-                "amraps",
-                "logrpes",
-              ].indexOf(name) === -1
-            ) {
-              return onError(`Cannot assign to '${name}'`, variableNode);
-            }
-            const indexExprs = variableNode.getChildren(NodeName.VariableIndex);
-            if (name === "numberOfSets" && indexExprs.length > 0) {
-              return onError(`${name} is not an array`, variableNode);
-            } else if (indexExprs.length > 1) {
-              return onError(
-                `Can't assign to set variations, weeks or days here`,
-                variableNode,
-              );
-            }
-          }
-        }
-      }
-    } else if (cursor.node.type.name === NodeName.StateVariable) {
-      const stateKey = getStateKey(cursor.node);
-      if (stateKey != null && !knownStateVariables.includes(stateKey)) {
-        return onError(`There's no state variable '${stateKey}'`, cursor.node);
-      }
-    } else if (cursor.node.type.name === NodeName.Variable) {
-      const variableKey = cursor.node.source;
-      if (!(variableKey in vars)) {
-        return onError(`There's no variable '${variableKey}'`, cursor.node);
-      }
-    } else if (cursor.node.type.name === NodeName.VariableExpression) {
-      const [nameNode, indexExpr] = queryChildren(cursor.node);
-      if (nameNode == null) {
-        return assert(NodeName.VariableExpression);
-      }
-      const name = nameNode.source;
-      if (indexExpr != null) {
-        const validNames: (keyof IScriptBindings)[] = [
-          "originalWeights",
-          "weights",
-          "reps",
-          "minReps",
-          "completedReps",
-          "completedRepsLeft",
-          "completedWeights",
-          "timers",
-          "w",
-          "r",
-          "cr",
-          "cw",
-          "mr",
-          "completedRPE",
-          "bodyweight",
-          "RPE",
-          "setVariationIndex",
-          "descriptionIndex",
-          "numberOfSets",
-          "programNumberOfSets",
-          "completedNumberOfSets",
-          "amraps",
-          "logrpes",
-          "askweights",
-        ];
-        if (validNames.indexOf(name as keyof IScriptBindings) === -1) {
-          return onError(`${name} is not an array variable`, nameNode);
-        }
-      } else if (!knownBindings.includes(name)) {
-        return onError(`${name} is not a valid variable`, nameNode);
-      }
-    }
-  } while (cursor.next());
+  // @todo This seems odd. I should push the decision to throw up as far as it can go.
+  if (firstError) {
+    throw firstError;
+  }
 }
 
 /**

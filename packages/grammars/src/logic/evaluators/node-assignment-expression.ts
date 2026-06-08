@@ -1,5 +1,9 @@
-import { type LogicHandler } from "@/logic/evaluators/types.ts";
-import { queryChildren } from "@/utils/grammars.ts";
+import {
+  LiftoscriptSyntaxError,
+  type LogicHandler,
+  type Validator,
+} from "@/logic/evaluators/types.ts";
+import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
   Weight_convertToWeight,
@@ -110,4 +114,56 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     return value;
   }
   return t.error("Cannot assign a value to something other than a variable", n);
+};
+
+export const validator: Validator<"AssignmentExpression"> = function* (n, t) {
+  const [variableNode] = queryChildren(n);
+
+  if (variableNode?.type.name === NodeName.Variable) {
+    t.trackVariable(variableNode.source);
+    return;
+  }
+
+  if (variableNode?.type.name === NodeName.VariableExpression) {
+    const name = queryChild(variableNode, { ofType: NodeName.Keyword })?.source;
+    if (name !== undefined && t.mode === "update") {
+      if (
+        ![
+          "reps",
+          "weights",
+          "RPE",
+          "minReps",
+          "numberOfSets",
+          "timers",
+          "askweights",
+          "amraps",
+          "logrpes",
+        ].includes(name)
+      ) {
+        yield LiftoscriptSyntaxError.fromNode(
+          `Cannot assign to '${name}'`,
+          variableNode,
+        );
+        return;
+      }
+      const indexExprs = queryChildren(variableNode, {
+        ofType: NodeName.VariableIndex,
+      }).toArray();
+      if (name === "numberOfSets" && indexExprs.length > 0) {
+        yield LiftoscriptSyntaxError.fromNode(
+          `${name} is not an array`,
+          variableNode,
+        );
+        return;
+      }
+
+      if (indexExprs.length > 1) {
+        yield LiftoscriptSyntaxError.fromNode(
+          `Can't assign to set variations, weeks or days here`,
+          variableNode,
+        );
+        return;
+      }
+    }
+  }
 };

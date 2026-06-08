@@ -1,4 +1,8 @@
-import type { LogicHandler } from "@/logic/evaluators/types.ts";
+import {
+  LiftoscriptSyntaxError,
+  type LogicHandler,
+  type Validator,
+} from "@/logic/evaluators/types.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { queryChild } from "@/utils/grammars.ts";
 import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
@@ -29,3 +33,13 @@ function getStateKey(expr: SourcedSyntaxNode): string | undefined {
   }
   return undefined;
 }
+
+export const validator: Validator<"StateVariable"> = function* (n, t) {
+  const stateKey = getStateKey(n);
+  if (stateKey != null && !t.knownStateVariables.includes(stateKey)) {
+    yield LiftoscriptSyntaxError.fromNode(
+      `There's no state variable '${stateKey}'`,
+      n,
+    );
+  }
+};

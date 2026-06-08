@@ -1,4 +1,4 @@
-import type { LogicHandler } from "@/logic/evaluators/types.ts";
+import { type LogicHandler, type Validator } from "@/logic/evaluators/types.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { getChild } from "@/utils/grammars.ts";
 
@@ -16,4 +16,11 @@ export const handler: LogicHandler<"ForExpression"> = (n, t) => {
     t.recurse(blockNode);
   }
   return forIn.length;
+};
+
+export const validator: Validator<"ForExpression"> = function* (n, t) {
+  const variableNode = getChild(n, { ofType: NodeName.Variable });
+  if (variableNode != null) {
+    t.trackVariable(variableNode.source);
+  }
 };
