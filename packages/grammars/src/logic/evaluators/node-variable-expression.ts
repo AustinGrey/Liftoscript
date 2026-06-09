@@ -119,11 +119,10 @@ export const validator: Validator<"VariableExpression"> = function* (n, t) {
     }
   }
 
-  if (!t.knownBindings.includes(name)) {
+  if (indexExpr == null && !t.knownBindings.includes(name)) {
     yield LiftoscriptSyntaxError.fromNode(
       `${name} is not a valid variable`,
       nameNode,
     );
-    return;
   }
 };

@@ -19,8 +19,8 @@ export const handler: LogicHandler<"ForExpression"> = (n, t) => {
 };
 
 export const validator: Validator<"ForExpression"> = function* (n, t) {
-  const variableNode = getChild(n, { ofType: NodeName.Variable });
-  if (variableNode != null) {
-    t.trackVariable(variableNode.source);
+  const varName = getChild(n, { ofType: NodeName.Variable })?.source;
+  if (varName != null) {
+    t.trackVariable(varName);
   }
 };

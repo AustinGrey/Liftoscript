@@ -106,7 +106,7 @@ export function* validate(
     )
       ? (parsers[n.name].validator as Validator<NodeNames_Logic>)
       : undefined;
-    yield* validator?.(node as TypedLogicNode<NodeNames_Logic>, tools) ?? [];
+    yield* validator?.(n as TypedLogicNode<NodeNames_Logic>, tools) ?? [];
   }
 }
 
