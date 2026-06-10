@@ -1247,8 +1247,7 @@ function ProgramExercise_applyVariables(
   for (const update of updates) {
     const key = update.type;
     const value = update.value;
-    const target = value.target;
-    const [week, day, variation, set] = target;
+    const [week, day, variation, set] = value.target;
     let dayIndex = 0;
     for (let weekIndex = 0; weekIndex < program.weeks.length; weekIndex += 1) {
       const programWeek = program.weeks[weekIndex];
@@ -1270,21 +1269,26 @@ function ProgramExercise_applyVariables(
             variationIndex < exercise.evaluatedSetVariations.length;
             variationIndex += 1
           ) {
+            if (
+              !(
+                (week === "*" || week === weekIndex + 1) &&
+                (day === "*" || day === dayInWeekIndex + 1) &&
+                (variation === "*" || variation === variationIndex + 1)
+              )
+            ) {
+              continue;
+            }
             const setVariation =
               exercise.evaluatedSetVariations[variationIndex];
             const sets = setVariation.sets;
-            if (
-              (week === "*" || week === weekIndex + 1) &&
-              (day === "*" || day === dayInWeekIndex + 1) &&
-              (variation === "*" || variation === variationIndex + 1)
-            ) {
-              if (key === "numberOfSets" && typeof value.value === "number") {
+            if (key === "numberOfSets") {
+              if (isNumber(value.value)) {
                 const newValue = MathUtils_applyOp(
                   sets.length,
                   value.value,
                   value.op,
                 );
-                const defaultSet: IPlannerProgramExerciseEvaluatedSet = {
+                const lastSet = sets[sets.length - 1] || {
                   maxrep: 1,
                   weight: w`100lb`,
                   logRpe: false,
@@ -1292,20 +1296,15 @@ function ProgramExercise_applyVariables(
                   isQuickAddSet: false,
                   askWeight: false,
                 };
-                const lastSet = sets[sets.length - 1] || defaultSet;
                 sets.splice(newValue);
                 for (let i = sets.length; i < newValue; i += 1) {
                   sets.push(structuredClone(lastSet));
                 }
               }
+              continue;
             }
             for (let setIndex = 0; setIndex < sets.length; setIndex += 1) {
-              if (
-                (week === "*" || week === weekIndex + 1) &&
-                (day === "*" || day === dayInWeekIndex + 1) &&
-                (variation === "*" || variation === variationIndex + 1) &&
-                (set === "*" || set === setIndex + 1)
-              ) {
+              if (set === "*" || set === setIndex + 1) {
                 switch (key) {
                   case "RPE":
                   case "reps":
@@ -1337,7 +1336,6 @@ function ProgramExercise_applyVariables(
                     break;
                   case "setVariationIndex":
                   case "descriptionIndex":
-                  case "numberOfSets":
                     // @todo original code just silently did nothing? Not sure why. Do they not matter?
                     break;
                   default:
