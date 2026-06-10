@@ -539,7 +539,15 @@ function getTotalDaysInProgram(program: IEvaluatedProgram): number {
  * @param program The program to get information about
  * @param day The absolute day to get information about
  */
-function getDayData(program: IEvaluatedProgram, day: number): IDayData & {dayObj: IEvaluatedProgramDay | undefined} {
+function getDayData(
+  program: IEvaluatedProgram,
+  day: number,
+): IDayData & {
+  /**
+   * The actual day object at this absolute day index of the program
+   */
+  dayObj: IEvaluatedProgramDay | undefined;
+} {
   let week = 1;
   let dayInWeek = 1;
   let daysTotal = 0;
@@ -1298,78 +1306,42 @@ function ProgramExercise_applyVariables(
                 (variation === "*" || variation === variationIndex + 1) &&
                 (set === "*" || set === setIndex + 1)
               ) {
-                if (key === "RPE") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "rpe",
-                    value.value,
-                    value.op,
-                  );
-                } else if (key === "reps") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "maxrep",
-                    value.value,
-                    value.op,
-                  );
-                } else if (key === "minReps") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "minrep",
-                    value.value,
-                    value.op,
-                  );
-                } else if (key === "timers") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "timer",
-                    value.value,
-                    value.op,
-                  );
-                } else if (key === "weights") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "weight",
-                    value.value,
-                    value.op,
-                  );
-                } else if (key === "amraps") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "isAmrap",
-                    value.value,
-                    value.op,
-                  );
-                } else if (key === "logrpes") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "logRpe",
-                    value.value,
-                    value.op,
-                  );
-                } else if (key === "askweights") {
-                  operation(
-                    exercise,
-                    sets[setIndex],
-                    settings,
-                    "askWeight",
-                    value.value,
-                    value.op,
-                  );
+                switch (key) {
+                  case "RPE":
+                  case "reps":
+                  case "minReps":
+                  case "timers":
+                  case "weights":
+                  case "amraps":
+                  case "logrpes":
+                  case "askweights":
+                    operation(
+                      exercise,
+                      sets[setIndex],
+                      settings,
+                      (
+                        {
+                          RPE: "rpe",
+                          reps: "maxrep",
+                          minReps: "minrep",
+                          timers: "timer",
+                          weights: "weight",
+                          amraps: "isAmrap",
+                          logrpes: "logRpe",
+                          askweights: "askWeight",
+                        } as const
+                      )[key],
+                      value.value,
+                      value.op,
+                    );
+                    break;
+                  case "setVariationIndex":
+                  case "descriptionIndex":
+                  case "numberOfSets":
+                    // @todo original code just silently did nothing? Not sure why. Do they not matter?
+                    break;
+                  default:
+                    key satisfies never;
                 }
               }
             }
@@ -1455,12 +1427,14 @@ function operation(
   value: IWeight | IDynamicWeight | number,
   op: IAssignmentOp,
 ): void {
-  const oldValue =
-    set[key] ??
-    ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings);
   const valueToAssign = applyOp(
     getOrmOrStartingWeight(programExercise.exerciseType, settings),
-    oldValue,
+    set[key] ??
+      ProgramSet_getEvaluatedWeight(
+        set,
+        programExercise.exerciseType,
+        settings,
+      ),
     value,
     op,
   );
