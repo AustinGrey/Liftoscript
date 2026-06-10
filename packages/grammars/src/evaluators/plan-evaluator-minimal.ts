@@ -384,7 +384,11 @@ export function Program_runAllFinishDayScripts(
         const newStateResult = Program_runFinishDayScript(
           programExercise,
           newEvaluatedProgram,
-          dayData,
+          {
+            day: dayData.day,
+            week: dayData.week ?? 1,
+            dayInWeek: dayData.dayInWeek ?? dayData.day,
+          },
           entry,
           settings,
           stats,
@@ -485,10 +489,7 @@ function Program_forceEvaluate(
       states: {},
     };
   }
-  const { evaluatedWeeks } = PlannerEvaluator_forceEvaluate(
-    program.planner!,
-    settings,
-  );
+  const { evaluatedWeeks } = PlannerEvaluator_forceEvaluate(planner, settings);
   let dayNum = 0;
   const errors: IEvaluatedProgramError[] = [];
   const weeks = planner.weeks.map((week, weekIndex) => {
@@ -1190,9 +1191,9 @@ const THistoryRecord = z.strictObject({
 type IHistoryRecord = z.infer<typeof THistoryRecord>;
 
 type IDayData = {
-  week?: number;
+  week: number;
   day: number;
-  dayInWeek?: number;
+  dayInWeek: number;
 };
 
 //#endregion
@@ -4888,8 +4889,8 @@ function Progress_createEmptyScriptBindings(
   const rm1 = exercise ? getOrmOrStartingWeight(exercise, settings) : w`0lb`;
   return {
     day: dayData.day,
-    week: dayData.week ?? 1,
-    dayInWeek: dayData.dayInWeek ?? dayData.day,
+    week: dayData.week,
+    dayInWeek: dayData.dayInWeek,
     completedWeights: [],
     originalWeights: [],
     weights: [],
