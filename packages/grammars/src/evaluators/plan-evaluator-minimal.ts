@@ -203,9 +203,8 @@ export function Program_nextHistoryRecordFromEvaluated(
 
   const dayData = getDayData(program, day);
   const now = Date.now();
-  const programDay = Program_getProgramDay(program, day);
-  const dayExercises = programDay
-    ? Program_getProgramDayUsedExercises(programDay)
+  const dayExercises = dayData.dayObj
+    ? Program_getProgramDayUsedExercises(dayData.dayObj)
     : [];
   return {
     id: 0,
@@ -325,7 +324,7 @@ function Program_getProgramExerciseForKeyAndDay(
   day: number,
   key: string,
 ): IPlannerProgramExerciseWithType | undefined {
-  const programDay = program ? Program_getProgramDay(program, day) : undefined;
+  const programDay = program ? getDayData(program, day).dayObj : undefined;
   const dayExercises = programDay
     ? Program_getProgramDayUsedExercises(programDay)
     : [];
@@ -356,7 +355,7 @@ export function Program_runAllFinishDayScripts(
   settings: ISettings,
 ): { program: IProgram; exerciseData: IExerciseData } {
   const newEvaluatedProgram = Program_forceEvaluate(program, settings);
-  if (!Program_getProgramDay(newEvaluatedProgram, progress.day)) {
+  if (!getDayData(newEvaluatedProgram, progress.day).dayObj) {
     return { program, exerciseData: {} };
   }
 
@@ -430,14 +429,13 @@ export function Program_runAllFinishDayScripts(
       }
     }
   }
-  const theNextDay = Program_nextDay(newEvaluatedProgram, progress.day);
-  const newPlanner = convertToPlanner(newEvaluatedProgram, settings);
-  const newProgram = structuredClone(program);
-  newProgram.nextDay = theNextDay;
-  newProgram.planner = newPlanner;
 
   return {
-    program: newProgram,
+    program: {
+      ...structuredClone(program),
+      nextDay: Program_nextDay(newEvaluatedProgram, progress.day),
+      planner: convertToPlanner(newEvaluatedProgram, settings),
+    },
     exerciseData,
   };
 }
@@ -541,7 +539,7 @@ function getTotalDaysInProgram(program: IEvaluatedProgram): number {
  * @param program The program to get information about
  * @param day The absolute day to get information about
  */
-function getDayData(program: IEvaluatedProgram, day: number): IDayData {
+function getDayData(program: IEvaluatedProgram, day: number): IDayData & {dayObj: IEvaluatedProgramDay | undefined} {
   let week = 1;
   let dayInWeek = 1;
   let daysTotal = 0;
@@ -559,31 +557,16 @@ function getDayData(program: IEvaluatedProgram, day: number): IDayData {
     day,
     week,
     dayInWeek,
+    dayObj: program.weeks[week - 1]?.days[dayInWeek - 1],
   };
 }
 
 function Program_getDayName(program: IEvaluatedProgram, day: number): string {
   const dayData = getDayData(program, day);
-  const programDay = Program_getProgramDay(program, day);
+  const programDay = getDayData(program, day).dayObj;
   const week = program.weeks[(dayData.week || 1) - 1];
   const isMultiweek = program.weeks.length > 1 && week != null;
   return `${isMultiweek ? `${week.name} - ` : ""}${programDay?.name}`;
-}
-
-function Program_getProgramDay(
-  program: IEvaluatedProgram,
-  day: number,
-): IEvaluatedProgramDay | undefined {
-  let aDay = 0;
-  for (const { days } of program.weeks || []) {
-    for (const d of days) {
-      aDay += 1;
-      if (day === aDay) {
-        return d;
-      }
-    }
-  }
-  return undefined;
 }
 
 function Program_getProgramDayUsedExercises(
@@ -615,8 +598,7 @@ function Program_getProgramExercise(
   if (key == null || program == null) {
     return undefined;
   }
-  const programDay = Program_getProgramDay(program, day);
-  return programDay?.exercises.find((e) => e.key === key);
+  return getDayData(program, day).dayObj?.exercises.find((e) => e.key === key);
 }
 
 function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
