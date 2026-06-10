@@ -196,30 +196,17 @@ export function Program_nextHistoryRecordFromEvaluated(
   const day = Math.max(
     1,
     Math.min(
-      Program_numberOfDays(program),
+      getTotalDaysInProgram(program),
       Math.max(1, (dayIndex || program.nextDay) ?? 0),
     ),
   );
-  const dayData = Program_getDayData(program, day);
-  const { week, dayInWeek } = dayData;
 
-  const fullDayName = Program_getDayName(program, day);
+  const dayData = Program_getDayData(program, day);
   const now = Date.now();
   const programDay = Program_getProgramDay(program, day);
   const dayExercises = programDay
     ? Program_getProgramDayUsedExercises(programDay)
     : [];
-  const sortedDayExercises = CollectionUtils_sortBy(dayExercises, "order");
-  const entries = sortedDayExercises.map((exercise, i) => {
-    return Program_nextHistoryEntry(
-      program,
-      dayData,
-      i,
-      exercise,
-      stats,
-      settings,
-    );
-  });
   return {
     id: 0,
     date: new Date().toISOString(),
@@ -227,12 +214,14 @@ export function Program_nextHistoryRecordFromEvaluated(
     programName: program.name,
     intervals: [],
     day,
-    week,
-    dayInWeek,
-    dayName: fullDayName,
+    week: dayData.week,
+    dayInWeek: dayData.dayInWeek,
+    dayName: Program_getDayName(program, day),
     startTime: now,
     updatedAt: now,
-    entries,
+    entries: CollectionUtils_sortBy(dayExercises, "order").map((exercise, i) =>
+      Program_nextHistoryEntry(program, dayData, i, exercise, stats, settings),
+    ),
   };
 }
 
@@ -343,7 +332,7 @@ function Program_getProgramExerciseForKeyAndDay(
   let programExercise = dayExercises.find((pe) => pe.key === key);
   if (programExercise == null) {
     const allExercises = program
-      ? Program_getAllProgramExercises(program).filter(
+      ? getExercisesInProgram(program).filter(
           (e): e is IPlannerProgramExerciseWithType =>
             e.exerciseType !== undefined,
         )
@@ -456,7 +445,7 @@ export function Program_runAllFinishDayScripts(
   };
 }
 
-function Program_getAllProgramExercises(
+function getExercisesInProgram(
   evaluatedProgram: IEvaluatedProgram,
 ): IPlannerProgramExercise[] {
   return evaluatedProgram.weeks.flatMap((w) =>
@@ -549,45 +538,32 @@ function Program_forceEvaluate(
   };
 }
 
-function Program_numberOfDays(program: IEvaluatedProgram): number {
+function getTotalDaysInProgram(program: IEvaluatedProgram): number {
   return program.weeks.reduce((sum, week) => sum + week.days.length, 0);
-}
-
-function Program_getWeekFromDay(
-  program: IEvaluatedProgram,
-  day: number,
-): number {
-  let daysTotal = 0;
-  for (let i = 0; i < program.weeks.length; i += 1) {
-    const weekDays = program.weeks[i].days.length;
-    daysTotal += weekDays;
-    if (daysTotal >= day) {
-      return i + 1;
-    }
-  }
-  return 1;
 }
 
 function Program_getDayData(
   program: IEvaluatedProgram,
   day: number,
 ): Required<IDayData> {
-  return {
-    day,
-    week: Program_getWeekFromDay(program, day),
-    dayInWeek: Program_getDayInWeek(program, day),
-  };
-}
-
-function Program_getDayInWeek(program: IEvaluatedProgram, day: number): number {
+  let week = 1;
+  let dayInWeek = 1;
   let daysTotal = 0;
-  for (const week of program.weeks) {
-    daysTotal += week.days.length;
+  for (let i = 0; i < program.weeks.length; i++) {
+    const weekLength = program.weeks[i].days.length;
+    daysTotal += weekLength;
     if (daysTotal >= day) {
-      return day - (daysTotal - week.days.length);
+      week = i + 1;
+      dayInWeek = day - (daysTotal - weekLength);
+      break;
     }
   }
-  return 1;
+
+  return {
+    day,
+    week,
+    dayInWeek,
+  };
 }
 
 function Program_getDayName(program: IEvaluatedProgram, day: number): string {
@@ -603,8 +579,8 @@ function Program_getProgramDay(
   day: number,
 ): IEvaluatedProgramDay | undefined {
   let aDay = 0;
-  for (const week of program.weeks || []) {
-    for (const d of week.days) {
+  for (const { days } of program.weeks || []) {
+    for (const d of days) {
       aDay += 1;
       if (day === aDay) {
         return d;
@@ -614,20 +590,13 @@ function Program_getProgramDay(
   return undefined;
 }
 
-function Program_getProgramDayExercises(
-  programDay: IEvaluatedProgramDay,
-): IPlannerProgramExerciseWithType[] {
-  const list = programDay.exercises.filter((e) => e.exerciseType != null);
-  return list as IPlannerProgramExerciseWithType[];
-}
-
 function Program_getProgramDayUsedExercises(
   programDay: IEvaluatedProgramDay,
 ): IPlannerProgramExerciseWithType[] {
-  const list = programDay.exercises.filter(
-    (e) => !e.notused && e.exerciseType != null,
+  return programDay.exercises.filter(
+    (e): e is IPlannerProgramExerciseWithType =>
+      !e.notused && e.exerciseType != null,
   );
-  return list as IPlannerProgramExerciseWithType[];
 }
 
 export function Program_applyEvaluatedProgram(
@@ -655,7 +624,7 @@ function Program_getProgramExercise(
 }
 
 function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
-  const nd = (day != null ? day % Program_numberOfDays(program) : 0) + 1;
+  const nd = (day != null ? day % getTotalDaysInProgram(program) : 0) + 1;
   return isNaN(nd) ? 1 : nd;
 }
 
@@ -723,7 +692,7 @@ function PlannerProgram_replaceExercise(
   const evaluatedProgram = structuredClone(
     Program_evaluate({ ...Program_create("Temp"), planner }, settings),
   );
-  const allExercises = Program_getAllProgramExercises(evaluatedProgram);
+  const allExercises = getExercisesInProgram(evaluatedProgram);
   let labelSuffix: string | undefined = undefined;
   let noConflicts = false;
 
@@ -1294,7 +1263,9 @@ function ProgramExercise_applyVariables(
         dayInWeekIndex += 1
       ) {
         const programDay = programWeek.days[dayInWeekIndex];
-        const dayExercises = Program_getProgramDayExercises(programDay);
+        const dayExercises = programDay.exercises.filter(
+          (e): e is IPlannerProgramExerciseWithType => e.exerciseType != null,
+        );
         for (const exercise of dayExercises) {
           if (exercise.key !== programExerciseKey) {
             continue;
