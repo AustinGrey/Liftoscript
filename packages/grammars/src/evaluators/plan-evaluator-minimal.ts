@@ -343,7 +343,10 @@ function Program_getProgramExerciseForKeyAndDay(
   let programExercise = dayExercises.find((pe) => pe.key === key);
   if (programExercise == null) {
     const allExercises = program
-      ? Program_getAllProgramExercisesWithType(program)
+      ? Program_getAllProgramExercises(program).filter(
+          (e): e is IPlannerProgramExerciseWithType =>
+            e.exerciseType !== undefined,
+        )
       : [];
     programExercise = allExercises.find((pe) => pe.key === key);
     if (programExercise != null) {
@@ -459,15 +462,6 @@ function Program_getAllProgramExercises(
   return evaluatedProgram.weeks.flatMap((w) =>
     w.days.flatMap((d) => d.exercises),
   );
-}
-
-function Program_getAllProgramExercisesWithType(
-  evaluatedProgram: IEvaluatedProgram,
-): IPlannerProgramExerciseWithType[] {
-  const used = Program_getAllProgramExercises(evaluatedProgram).filter(
-    (e) => e.exerciseType != null,
-  );
-  return used as IPlannerProgramExerciseWithType[];
 }
 
 function Program_forceEvaluate(
@@ -704,16 +698,14 @@ export function PlannerProgram_replaceWeight(
   }
   const newEvalutedProgram = structuredClone(program);
   forExerciseInEvaluatedWeeks(newEvalutedProgram.weeks, (ex) => {
-    if (ex.key === programExerciseId) {
-      for (const setVariation of ex.evaluatedSetVariations) {
-        for (const set of setVariation.sets) {
-          const weightChange = weightChanges.find((wc) =>
-            eq(wc.originalWeight, set.weight),
-          );
-          if (weightChange != null) {
-            set.weight = weightChange.weight;
-          }
-        }
+    if (ex.key !== programExerciseId) {
+      return;
+    }
+    for (const { sets } of ex.evaluatedSetVariations) {
+      for (const set of sets) {
+        set.weight =
+          weightChanges.find((wc) => eq(wc.originalWeight, set.weight))
+            ?.weight ?? set.weight;
       }
     }
   });
