@@ -364,69 +364,66 @@ export function Program_runAllFinishDayScripts(
 
   for (const entry of progress.entries) {
     if (
-      entry != null &&
-      !entry.isSuppressed &&
-      entry.sets.some((s) => s.isCompleted)
+      entry == null ||
+      entry.isSuppressed ||
+      entry.sets.every((s) => !s.isCompleted)
     ) {
-      const programExercise =
-        program && entry.programExerciseId
-          ? Program_getProgramExerciseForKeyAndDay(
-              newEvaluatedProgram,
-              dayData.day,
-              entry.programExerciseId,
-            )
-          : undefined;
-      if (programExercise) {
-        const newStateResult = Program_runFinishDayScript(
-          programExercise,
-          newEvaluatedProgram,
-          dayData,
-          entry,
-          settings,
-          stats,
-          progress.userPromptedStateVars?.[programExercise.key],
-        );
-        if (newStateResult.success) {
-          const { state, updates, bindings, otherStates } = newStateResult.data;
-          const exerciseKey = toKey(entry.exercise);
-          if (
-            !eq(bindings.rm1, getOrmOrStartingWeight(entry.exercise, settings))
-          ) {
-            exerciseData[exerciseKey] = {
-              rm1: roundTo005(bindings.rm1),
-            };
-          }
-          forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
-            if (exercise.key === programExercise.key && exercise.progress) {
-              exercise.progress.state = {
-                ...exercise.progress.state,
-                ...entry.state,
-                ...state,
-              };
-            }
-          });
-          ProgramExercise_applyVariables(
-            programExercise.key,
+      continue;
+    }
+    const programExercise =
+      program && entry.programExerciseId
+        ? Program_getProgramExerciseForKeyAndDay(
             newEvaluatedProgram,
-            updates,
-            settings,
-          );
-          for (const key of ObjectUtils_keys(otherStates || {})) {
-            forExerciseInEvaluatedWeeks(
-              newEvaluatedProgram.weeks,
-              (exercise) => {
-                if (exercise.tags?.includes(Number(key)) && exercise.progress) {
-                  exercise.progress.state = {
-                    ...exercise.progress.state,
-                    ...otherStates[key],
-                  };
-                }
-              },
-            );
-          }
-        } else {
-        }
+            dayData.day,
+            entry.programExerciseId,
+          )
+        : undefined;
+    if (!programExercise) {
+      continue;
+    }
+    const newStateResult = Program_runFinishDayScript(
+      programExercise,
+      newEvaluatedProgram,
+      dayData,
+      entry,
+      settings,
+      stats,
+      progress.userPromptedStateVars?.[programExercise.key],
+    );
+    if (!newStateResult.success) {
+      continue;
+    }
+    const { state, updates, bindings, otherStates } = newStateResult.data;
+    const exerciseKey = toKey(entry.exercise);
+    if (!eq(bindings.rm1, getOrmOrStartingWeight(entry.exercise, settings))) {
+      exerciseData[exerciseKey] = {
+        rm1: roundTo005(bindings.rm1),
+      };
+    }
+    forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
+      if (exercise.key === programExercise.key && exercise.progress) {
+        exercise.progress.state = {
+          ...exercise.progress.state,
+          ...entry.state,
+          ...state,
+        };
       }
+    });
+    ProgramExercise_applyVariables(
+      programExercise.key,
+      newEvaluatedProgram,
+      updates,
+      settings,
+    );
+    for (const key of ObjectUtils_keys(otherStates || {})) {
+      forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
+        if (exercise.tags?.includes(Number(key)) && exercise.progress) {
+          exercise.progress.state = {
+            ...exercise.progress.state,
+            ...otherStates[key],
+          };
+        }
+      });
     }
   }
 
