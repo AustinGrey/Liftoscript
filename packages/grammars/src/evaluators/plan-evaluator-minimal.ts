@@ -99,14 +99,14 @@ interface IEvaluatedProgramWeek {
 
 interface IEvaluatedProgramDay {
   name: string;
-  dayData: Required<IDayData>;
+  dayData: IDayData;
   description?: string;
   exercises: IPlannerProgramExercise[];
 }
 
 interface IEvaluatedProgramError {
   error: PlannerSyntaxError;
-  dayData: Required<IDayData>;
+  dayData: IDayData;
 }
 
 interface IEvaluatedProgram {
@@ -201,7 +201,7 @@ export function Program_nextHistoryRecordFromEvaluated(
     ),
   );
 
-  const dayData = Program_getDayData(program, day);
+  const dayData = getDayData(program, day);
   const now = Date.now();
   const programDay = Program_getProgramDay(program, day);
   const dayExercises = programDay
@@ -341,7 +341,7 @@ function Program_getProgramExerciseForKeyAndDay(
     if (programExercise != null) {
       programExercise = {
         ...programExercise,
-        dayData: Program_getDayData(program, day),
+        dayData: getDayData(program, day),
       };
     }
   }
@@ -355,17 +355,14 @@ export function Program_runAllFinishDayScripts(
   stats: IStats,
   settings: ISettings,
 ): { program: IProgram; exerciseData: IExerciseData } {
-  const exerciseData: IExerciseData = {};
   const newEvaluatedProgram = Program_forceEvaluate(program, settings);
-  const dayData = {
-    day: progress.day,
-    week: progress.week,
-    dayInWeek: progress.dayInWeek,
-  };
-  const programDay = Program_getProgramDay(newEvaluatedProgram, progress.day);
-  if (!programDay) {
-    return { program, exerciseData };
+  if (!Program_getProgramDay(newEvaluatedProgram, progress.day)) {
+    return { program, exerciseData: {} };
   }
+
+  const exerciseData: IExerciseData = {};
+  const dayData = getDayData(newEvaluatedProgram, progress.day);
+
   for (const entry of progress.entries) {
     if (
       entry != null &&
@@ -384,11 +381,7 @@ export function Program_runAllFinishDayScripts(
         const newStateResult = Program_runFinishDayScript(
           programExercise,
           newEvaluatedProgram,
-          {
-            day: dayData.day,
-            week: dayData.week ?? 1,
-            dayInWeek: dayData.dayInWeek ?? dayData.day,
-          },
+          dayData,
           entry,
           settings,
           stats,
@@ -543,10 +536,12 @@ function getTotalDaysInProgram(program: IEvaluatedProgram): number {
   return program.weeks.reduce((sum, week) => sum + week.days.length, 0);
 }
 
-function Program_getDayData(
-  program: IEvaluatedProgram,
-  day: number,
-): Required<IDayData> {
+/**
+ * Determines information about an absolute day in a program
+ * @param program The program to get information about
+ * @param day The absolute day to get information about
+ */
+function getDayData(program: IEvaluatedProgram, day: number): IDayData {
   let week = 1;
   let dayInWeek = 1;
   let daysTotal = 0;
@@ -568,7 +563,7 @@ function Program_getDayData(
 }
 
 function Program_getDayName(program: IEvaluatedProgram, day: number): string {
-  const dayData = Program_getDayData(program, day);
+  const dayData = getDayData(program, day);
   const programDay = Program_getProgramDay(program, day);
   const week = program.weeks[(dayData.week || 1) - 1];
   const isMultiweek = program.weeks.length > 1 && week != null;
@@ -688,7 +683,7 @@ function PlannerProgram_replaceExercise(
   newLabel: string | undefined,
   toExerciseType: IExerciseType | string,
   settings: ISettings,
-  dayData?: Required<IDayData>,
+  dayData?: IDayData,
 ): IPlannerProgram {
   const evaluatedProgram = structuredClone(
     Program_evaluate({ ...Program_create("Temp"), planner }, settings),
@@ -733,10 +728,7 @@ function PlannerProgram_replaceExercise(
     }
   }
 
-  const renameMapping: Record<
-    string,
-    { to: string; dayData?: Required<IDayData> }
-  > = {};
+  const renameMapping: Record<string, { to: string; dayData?: IDayData }> = {};
   forExerciseInEvaluatedWeeks(
     evaluatedProgram.weeks,
     (exercise, weekIndex, dayInWeekIndex) => {
@@ -779,7 +771,7 @@ export function PlannerProgram_replaceAndValidateExercise(
   key: string,
   toExerciseType: IExerciseType,
   settings: ISettings,
-  dayData?: Required<IDayData>,
+  dayData?: IDayData,
 ): IEither<IProgram, string> {
   const newPlanner = PlannerProgram_replaceExercise(
     program.planner!,
@@ -1191,8 +1183,20 @@ const THistoryRecord = z.strictObject({
 type IHistoryRecord = z.infer<typeof THistoryRecord>;
 
 type IDayData = {
+  /**
+   * Which week of the program the day falls into
+   * 1-indexed
+   */
   week: number;
+  /**
+   * The absolute day of the program
+   * @todo 1-indexed? 0-indexed?
+   */
   day: number;
+  /**
+   * Which day, 1-indexed, within the week the absolute day falls into
+   * e.g. If there are 2 days in a week, and the day is 3, then this is 1
+   */
   dayInWeek: number;
 };
 
@@ -1578,7 +1582,7 @@ type IPlannerProgramExercise = {
   key: string;
   fullName: string;
   shortName: string;
-  dayData: Required<IDayData>;
+  dayData: IDayData;
   exerciseType?: IExerciseType;
   label?: string;
   exerciseIndex: number;
@@ -2669,7 +2673,7 @@ function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
 function evaluateProgressImpl(
   expr: SourcedSyntaxNode,
   settings: ISettings,
-  dayData: Required<IDayData>,
+  dayData: IDayData,
 ): IEither<IProgramExerciseProgress, string> {
   if (expr.type.name === PlannerNodeName.ExerciseProperty) {
     const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
@@ -2747,7 +2751,7 @@ function evaluateProgressImpl(
 function evaluateProgress(
   expr: SourcedSyntaxNode,
   settings: ISettings,
-  dayData: Required<IDayData>,
+  dayData: IDayData,
 ): IProgramExerciseProgress {
   const result = evaluateProgressImpl(expr, settings, dayData);
   if (result.success) {
@@ -2760,7 +2764,7 @@ function evaluateProgress(
 function evaluateProperty(
   expr: SourcedSyntaxNode,
   settings: ISettings,
-  dayData: Required<IDayData>,
+  dayData: IDayData,
 ):
   | { type: "progress"; data: IProgramExerciseProgress }
   | { type: "update"; data: IProgramExerciseUpdate }
@@ -2803,7 +2807,7 @@ function evaluateProperty(
 function evaluateSection(
   expr: SourcedSyntaxNode,
   settings: ISettings,
-  dayData: Required<IDayData>,
+  dayData: IDayData,
 ):
   | { type: "sets"; data: IPlannerProgramExerciseSet[]; isCurrent: boolean }
   | { type: "progress"; data: IProgramExerciseProgress }
@@ -2921,7 +2925,7 @@ function evaluate(
   programNode: SourcedSyntaxNode,
   settings: ISettings,
   mode: IPlannerExerciseEvaluatorMode,
-  dayData: Required<IDayData> | undefined,
+  dayData: IDayData | undefined,
 ): IPlannerEvalFullResult {
   dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
   try {
@@ -3331,18 +3335,18 @@ interface IPlannerEvalMetadata {
   fullNames: Set<string>;
   notused: Set<string>;
   properties: {
-    id: IByExercise<{ property: number[]; dayData: Required<IDayData> }>;
+    id: IByExercise<{ property: number[]; dayData: IDayData }>;
     progress: IByExercise<{
       property: IProgramExerciseProgress;
-      dayData: Required<IDayData>;
+      dayData: IDayData;
     }>;
     update: IByExercise<{
       property: IProgramExerciseUpdate;
-      dayData: Required<IDayData>;
+      dayData: IDayData;
     }>;
     warmup: IByExercise<{
       warmupSets: IPlannerProgramExerciseWarmupSet[];
-      dayData: Required<IDayData>;
+      dayData: IDayData;
     }>;
   };
 }
@@ -3350,7 +3354,7 @@ interface IPlannerEvalMetadata {
 function PlannerEvaluator_fillInMetadata(
   exercise: IPlannerProgramExercise,
   metadata: IPlannerEvalMetadata,
-  dayData: Required<IDayData>,
+  dayData: IDayData,
 ): void {
   if (exercise.progress?.type === "dp") {
     const hasRange = exercise.setVariations.some((sv) =>
@@ -3478,7 +3482,7 @@ function PlannerEvaluator_fillInMetadata(
 
 function PlannerEvaluator_evaluateDay(
   day: IPlannerProgramDay,
-  dayData: Required<IDayData>,
+  dayData: IDayData,
   settings: ISettings,
 ): IPlannerEvalResult {
   const result = evaluate(
@@ -4190,10 +4194,10 @@ function PlannerEvaluator_findOriginalExercisesAtWeekDay(
   program: IPlannerEvalResult[][],
   atWeek: number,
   atDay?: number,
-): { exercise: IPlannerProgramExercise; dayData: Required<IDayData> }[] {
+): { exercise: IPlannerProgramExercise; dayData: IDayData }[] {
   const originalExercises: {
     exercise: IPlannerProgramExercise;
-    dayData: Required<IDayData>;
+    dayData: IDayData;
   }[] = [];
   const week = program[atWeek - 1];
   const candidateDays = atDay != null ? [week[atDay - 1]] : week;
@@ -5223,13 +5227,13 @@ type IDereuseDecision =
   | "update";
 
 interface IPlannerToProgramConvertOpts {
-  renameMapping?: Record<string, { to: string; dayData?: Required<IDayData> }>;
+  renameMapping?: Record<string, { to: string; dayData?: IDayData }>;
   reorder?: {
-    dayData: Required<IDayData>;
+    dayData: IDayData;
     fromIndex: number;
     toIndex: number;
   }[];
-  add?: { dayData: Required<IDayData>; index: number; fullName: string }[];
+  add?: { dayData: IDayData; index: number; fullName: string }[];
 }
 
 function getUpdate(
