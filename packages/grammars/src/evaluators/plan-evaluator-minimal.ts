@@ -1256,33 +1256,32 @@ function ProgramExercise_applyVariables(
         dayInWeekIndex < programWeek.days.length;
         dayInWeekIndex += 1
       ) {
-        const programDay = programWeek.days[dayInWeekIndex];
-        const dayExercises = programDay.exercises.filter(
+        const dayExercises = programWeek.days[dayInWeekIndex].exercises.filter(
           (e): e is IPlannerProgramExerciseWithType => e.exerciseType != null,
         );
         for (const exercise of dayExercises) {
-          if (exercise.key !== programExerciseKey) {
+          if (
+            exercise.key !== programExerciseKey ||
+            (week !== "*" && week !== weekIndex + 1) ||
+            (day !== "*" && day !== dayInWeekIndex + 1)
+          ) {
             continue;
           }
-          for (
-            let variationIndex = 0;
-            variationIndex < exercise.evaluatedSetVariations.length;
-            variationIndex += 1
-          ) {
-            if (
-              (week !== "*" && week !== weekIndex + 1) ||
-              (day !== "*" && day !== dayInWeekIndex + 1) ||
-              (variation !== "*" && variation !== variationIndex + 1)
-            ) {
-              continue;
-            }
-            const sets = exercise.evaluatedSetVariations[variationIndex].sets;
-            switch (key) {
-              case "numberOfSets": {
-                if (isNumber(value.value)) {
+          switch (key) {
+            case "numberOfSets": {
+              const val = value.value;
+              if (!isNumber(val)) break;
+              exercise.evaluatedSetVariations
+                .entries()
+                .filter(
+                  ([variationIndex]) =>
+                    variation === "*" || variation === variationIndex + 1,
+                )
+                .forEach(([, evaluatedVariation]) => {
+                  const sets = evaluatedVariation.sets;
                   const newValue = MathUtils_applyOp(
                     sets.length,
-                    value.value,
+                    val,
                     value.op,
                   );
                   const lastSet = sets[sets.length - 1] || {
@@ -1297,60 +1296,63 @@ function ProgramExercise_applyVariables(
                   for (let i = sets.length; i < newValue; i += 1) {
                     sets.push(structuredClone(lastSet));
                   }
-                }
-                break;
-              }
-              case "RPE":
-              case "reps":
-              case "minReps":
-              case "timers":
-              case "weights":
-              case "amraps":
-              case "logrpes":
-              case "askweights": {
-                for (let setIndex = 0; setIndex < sets.length; setIndex += 1) {
-                  if (set === "*" || set === setIndex + 1) {
-                    operation(
-                      exercise,
-                      sets[setIndex],
-                      settings,
-                      (
-                        {
-                          RPE: "rpe",
-                          reps: "maxrep",
-                          minReps: "minrep",
-                          timers: "timer",
-                          weights: "weight",
-                          amraps: "isAmrap",
-                          logrpes: "logRpe",
-                          askweights: "askWeight",
-                        } as const
-                      )[key],
-                      value.value,
-                      value.op,
-                    );
-                  }
-                }
-                break;
-              }
-              case "setVariationIndex":
-              case "descriptionIndex":
-                // @todo original code just silently did nothing? Not sure why. Do they not matter?
-                break;
-              default:
-                key satisfies never;
+                });
+              break;
             }
+            case "RPE":
+            case "reps":
+            case "minReps":
+            case "timers":
+            case "weights":
+            case "amraps":
+            case "logrpes":
+            case "askweights": {
+              exercise.evaluatedSetVariations
+                .entries()
+                .filter(
+                  ([variationIndex]) =>
+                    variation === "*" || variation === variationIndex + 1,
+                )
+                .forEach(([, evaluatedVariation]) => {
+                  for (
+                    let setIndex = 0;
+                    setIndex < evaluatedVariation.sets.length;
+                    setIndex += 1
+                  ) {
+                    if (set === "*" || set === setIndex + 1) {
+                      operation(
+                        exercise,
+                        evaluatedVariation.sets[setIndex],
+                        settings,
+                        (
+                          {
+                            RPE: "rpe",
+                            reps: "maxrep",
+                            minReps: "minrep",
+                            timers: "timer",
+                            weights: "weight",
+                            amraps: "isAmrap",
+                            logrpes: "logRpe",
+                            askweights: "askWeight",
+                          } as const
+                        )[key],
+                        value.value,
+                        value.op,
+                      );
+                    }
+                  }
+                });
+              break;
+            }
+            case "setVariationIndex":
+            case "descriptionIndex":
+              // @todo original code just silently did nothing? Not sure why. Do they not matter?
+              break;
+            default:
+              key satisfies never;
           }
-          if (
-            (week !== "*" && week !== weekIndex + 1) ||
-            (day !== "*" && day !== dayInWeekIndex + 1)
-          ) {
-            continue;
-          }
-          if (
-            key === "setVariationIndex" &&
-            typeof update.value.value === "number"
-          ) {
+
+          if (key === "setVariationIndex" && isNumber(update.value.value)) {
             let indexValue: number;
             if (update.value.op === "=") {
               indexValue = update.value.value - 1;
@@ -1376,7 +1378,7 @@ function ProgramExercise_applyVariables(
             }
           } else if (
             key === "descriptionIndex" &&
-            typeof update.value.value === "number"
+            isNumber(update.value.value)
           ) {
             let indexValue: number;
             if (update.value.op === "=") {
