@@ -1344,61 +1344,64 @@ function ProgramExercise_applyVariables(
                 });
               break;
             }
-            case "setVariationIndex":
-            case "descriptionIndex":
-              // @todo original code just silently did nothing? Not sure why. Do they not matter?
+            case "setVariationIndex": {
+              if (!isNumber(update.value.value)) {
+                break;
+              }
+              let indexValue: number;
+              if (update.value.op === "=") {
+                indexValue = update.value.value - 1;
+              } else {
+                const currentSetVariationIndex =
+                  PlannerProgramExercise_currentEvaluatedSetVariationIndex(
+                    exercise,
+                  );
+                indexValue = applyOp(
+                  undefined,
+                  currentSetVariationIndex,
+                  update.value.value,
+                  update.value.op,
+                ) as number;
+              }
+              indexValue = indexValue % exercise.evaluatedSetVariations.length;
+              exercise.evaluatedSetVariations.forEach(
+                (s) => (s.isCurrent = false),
+              );
+              const sv = exercise.evaluatedSetVariations[indexValue];
+              if (sv != null) {
+                sv.isCurrent = true;
+              }
               break;
+            }
+            case "descriptionIndex": {
+              if (!isNumber(update.value.value)) {
+                break;
+              }
+              let indexValue: number;
+              if (update.value.op === "=") {
+                indexValue = update.value.value - 1;
+              } else {
+                const currentDescriptionIndex =
+                  PlannerProgramExercise_currentDescriptionIndex(exercise);
+                indexValue = applyOp(
+                  undefined,
+                  currentDescriptionIndex,
+                  update.value.value,
+                  update.value.op,
+                ) as number;
+              }
+              indexValue = indexValue % exercise.descriptions.values.length;
+              exercise.descriptions.values.forEach(
+                (s) => (s.isCurrent = false),
+              );
+              const d = exercise.descriptions.values[indexValue];
+              if (d != null) {
+                d.isCurrent = true;
+              }
+              break;
+            }
             default:
               key satisfies never;
-          }
-
-          if (key === "setVariationIndex" && isNumber(update.value.value)) {
-            let indexValue: number;
-            if (update.value.op === "=") {
-              indexValue = update.value.value - 1;
-            } else {
-              const currentSetVariationIndex =
-                PlannerProgramExercise_currentEvaluatedSetVariationIndex(
-                  exercise,
-                );
-              indexValue = applyOp(
-                undefined,
-                currentSetVariationIndex,
-                update.value.value,
-                update.value.op,
-              ) as number;
-            }
-            indexValue = indexValue % exercise.evaluatedSetVariations.length;
-            exercise.evaluatedSetVariations.forEach(
-              (s) => (s.isCurrent = false),
-            );
-            const sv = exercise.evaluatedSetVariations[indexValue];
-            if (sv != null) {
-              sv.isCurrent = true;
-            }
-          } else if (
-            key === "descriptionIndex" &&
-            isNumber(update.value.value)
-          ) {
-            let indexValue: number;
-            if (update.value.op === "=") {
-              indexValue = update.value.value - 1;
-            } else {
-              const currentDescriptionIndex =
-                PlannerProgramExercise_currentDescriptionIndex(exercise);
-              indexValue = applyOp(
-                undefined,
-                currentDescriptionIndex,
-                update.value.value,
-                update.value.op,
-              ) as number;
-            }
-            indexValue = indexValue % exercise.descriptions.values.length;
-            exercise.descriptions.values.forEach((s) => (s.isCurrent = false));
-            const d = exercise.descriptions.values[indexValue];
-            if (d != null) {
-              d.isCurrent = true;
-            }
           }
         }
         dayIndex += 1;
