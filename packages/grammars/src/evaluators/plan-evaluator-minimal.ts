@@ -1345,12 +1345,12 @@ function ProgramExercise_applyVariables(
               break;
             }
             case "setVariationIndex": {
-              if (!isNumber(update.value.value)) {
+              if (!isNumber(value.value)) {
                 break;
               }
               let indexValue: number;
-              if (update.value.op === "=") {
-                indexValue = update.value.value - 1;
+              if (value.op === "=") {
+                indexValue = value.value - 1;
               } else {
                 const currentSetVariationIndex =
                   PlannerProgramExercise_currentEvaluatedSetVariationIndex(
@@ -1359,7 +1359,7 @@ function ProgramExercise_applyVariables(
                 indexValue = applyOp(
                   undefined,
                   currentSetVariationIndex,
-                  update.value.value,
+                  value.value,
                   update.value.op,
                 ) as number;
               }
@@ -1374,20 +1374,20 @@ function ProgramExercise_applyVariables(
               break;
             }
             case "descriptionIndex": {
-              if (!isNumber(update.value.value)) {
+              if (!isNumber(value.value)) {
                 break;
               }
               let indexValue: number;
-              if (update.value.op === "=") {
-                indexValue = update.value.value - 1;
+              if (value.op === "=") {
+                indexValue = value.value - 1;
               } else {
                 const currentDescriptionIndex =
                   PlannerProgramExercise_currentDescriptionIndex(exercise);
                 indexValue = applyOp(
                   undefined,
                   currentDescriptionIndex,
-                  update.value.value,
-                  update.value.op,
+                  value.value,
+                  value.op,
                 ) as number;
               }
               indexValue = indexValue % exercise.descriptions.values.length;
