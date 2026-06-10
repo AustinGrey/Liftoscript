@@ -1270,11 +1270,9 @@ function ProgramExercise_applyVariables(
             variationIndex += 1
           ) {
             if (
-              !(
-                (week === "*" || week === weekIndex + 1) &&
-                (day === "*" || day === dayInWeekIndex + 1) &&
-                (variation === "*" || variation === variationIndex + 1)
-              )
+              (week !== "*" && week !== weekIndex + 1) ||
+              (day !== "*" && day !== dayInWeekIndex + 1) ||
+              (variation !== "*" && variation !== variationIndex + 1)
             ) {
               continue;
             }
@@ -1344,61 +1342,60 @@ function ProgramExercise_applyVariables(
             }
           }
           if (
-            (week === "*" || week === weekIndex + 1) &&
-            (day === "*" || day === dayInWeekIndex + 1)
+            (week !== "*" && week !== weekIndex + 1) ||
+            (day !== "*" && day !== dayInWeekIndex + 1)
           ) {
-            if (
-              key === "setVariationIndex" &&
-              typeof update.value.value === "number"
-            ) {
-              let indexValue: number;
-              if (update.value.op === "=") {
-                indexValue = update.value.value - 1;
-              } else {
-                const currentSetVariationIndex =
-                  PlannerProgramExercise_currentEvaluatedSetVariationIndex(
-                    exercise,
-                  );
-                indexValue = applyOp(
-                  undefined,
-                  currentSetVariationIndex,
-                  update.value.value,
-                  update.value.op,
-                ) as number;
-              }
-              indexValue = indexValue % exercise.evaluatedSetVariations.length;
-              exercise.evaluatedSetVariations.forEach(
-                (s) => (s.isCurrent = false),
-              );
-              const sv = exercise.evaluatedSetVariations[indexValue];
-              if (sv != null) {
-                sv.isCurrent = true;
-              }
-            } else if (
-              key === "descriptionIndex" &&
-              typeof update.value.value === "number"
-            ) {
-              let indexValue: number;
-              if (update.value.op === "=") {
-                indexValue = update.value.value - 1;
-              } else {
-                const currentDescriptionIndex =
-                  PlannerProgramExercise_currentDescriptionIndex(exercise);
-                indexValue = applyOp(
-                  undefined,
-                  currentDescriptionIndex,
-                  update.value.value,
-                  update.value.op,
-                ) as number;
-              }
-              indexValue = indexValue % exercise.descriptions.values.length;
-              exercise.descriptions.values.forEach(
-                (s) => (s.isCurrent = false),
-              );
-              const d = exercise.descriptions.values[indexValue];
-              if (d != null) {
-                d.isCurrent = true;
-              }
+            continue;
+          }
+          if (
+            key === "setVariationIndex" &&
+            typeof update.value.value === "number"
+          ) {
+            let indexValue: number;
+            if (update.value.op === "=") {
+              indexValue = update.value.value - 1;
+            } else {
+              const currentSetVariationIndex =
+                PlannerProgramExercise_currentEvaluatedSetVariationIndex(
+                  exercise,
+                );
+              indexValue = applyOp(
+                undefined,
+                currentSetVariationIndex,
+                update.value.value,
+                update.value.op,
+              ) as number;
+            }
+            indexValue = indexValue % exercise.evaluatedSetVariations.length;
+            exercise.evaluatedSetVariations.forEach(
+              (s) => (s.isCurrent = false),
+            );
+            const sv = exercise.evaluatedSetVariations[indexValue];
+            if (sv != null) {
+              sv.isCurrent = true;
+            }
+          } else if (
+            key === "descriptionIndex" &&
+            typeof update.value.value === "number"
+          ) {
+            let indexValue: number;
+            if (update.value.op === "=") {
+              indexValue = update.value.value - 1;
+            } else {
+              const currentDescriptionIndex =
+                PlannerProgramExercise_currentDescriptionIndex(exercise);
+              indexValue = applyOp(
+                undefined,
+                currentDescriptionIndex,
+                update.value.value,
+                update.value.op,
+              ) as number;
+            }
+            indexValue = indexValue % exercise.descriptions.values.length;
+            exercise.descriptions.values.forEach((s) => (s.isCurrent = false));
+            const d = exercise.descriptions.values[indexValue];
+            if (d != null) {
+              d.isCurrent = true;
             }
           }
         }
