@@ -641,10 +641,11 @@ export function Program_applyEvaluatedProgram(
   evaluatedProgram: IEvaluatedProgram,
   settings: ISettings,
 ): IProgram {
-  const newProgram = structuredClone(program);
-  newProgram.planner = convertToPlanner(evaluatedProgram, settings);
-  newProgram.nextDay = evaluatedProgram.nextDay;
-  return newProgram;
+  return {
+    ...structuredClone(program),
+    planner: convertToPlanner(evaluatedProgram, settings),
+    nextDay: evaluatedProgram.nextDay,
+  };
 }
 
 function Program_getProgramExercise(
@@ -889,7 +890,7 @@ function PlannerProgram_compact(
 
       return topLineMap(
         parseBound(plannerExerciseParser, day.exerciseText),
-        settings,
+        settings.exercises,
       );
     });
   });
@@ -1061,7 +1062,7 @@ function PlannerProgram_groupedTopLines(
 
 function PlannerProgram_topLineItems(
   plannerProgram: IPlannerProgram,
-  settings: ISettings,
+  exercises: IAllCustomExercises,
 ): IPlannerTopLineItem[][][] {
   let dayIndex = 0;
 
@@ -1071,7 +1072,7 @@ function PlannerProgram_topLineItems(
 
       return topLineMap(
         parseBound(plannerExerciseParser, day.exerciseText),
-        settings,
+        exercises,
       );
     });
   });
@@ -2541,7 +2542,7 @@ function validateProgress(
 
 function topLineMap(
   programNode: SourcedSyntaxNode,
-  settings: ISettings,
+  exercises: IAllCustomExercises,
 ): IPlannerTopLineItem[] {
   if (programNode.type.name !== PlannerNodeName.Program) {
     errorPlannerSyntax(
@@ -2558,7 +2559,7 @@ function topLineMap(
       ongoingDescriptions = false;
       const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
       const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
-      const key = PlannerKey_fromFullName(fullName, settings.exercises);
+      const key = PlannerKey_fromFullName(fullName, exercises);
       const repeat = getRepeat(child);
       const repeatRanges = getRepeatRanges(repeat);
       const order = getOrder(child);
@@ -5723,7 +5724,10 @@ function convertToPlanner(
 
     throw error.error;
   }
-  const topLineMap = PlannerProgram_topLineItems(program.planner, settings);
+  const topLineMap = PlannerProgram_topLineItems(
+    program.planner,
+    settings.exercises,
+  );
   let groupedTopLineMap = PlannerProgram_groupedTopLines(topLineMap);
   groupedTopLineMap = opts.reorder
     ? reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
