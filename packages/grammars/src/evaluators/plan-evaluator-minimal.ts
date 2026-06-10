@@ -1278,42 +1278,40 @@ function ProgramExercise_applyVariables(
             ) {
               continue;
             }
-            const setVariation =
-              exercise.evaluatedSetVariations[variationIndex];
-            const sets = setVariation.sets;
-            if (key === "numberOfSets") {
-              if (isNumber(value.value)) {
-                const newValue = MathUtils_applyOp(
-                  sets.length,
-                  value.value,
-                  value.op,
-                );
-                const lastSet = sets[sets.length - 1] || {
-                  maxrep: 1,
-                  weight: w`100lb`,
-                  logRpe: false,
-                  isAmrap: false,
-                  isQuickAddSet: false,
-                  askWeight: false,
-                };
-                sets.splice(newValue);
-                for (let i = sets.length; i < newValue; i += 1) {
-                  sets.push(structuredClone(lastSet));
+            const sets = exercise.evaluatedSetVariations[variationIndex].sets;
+            switch (key) {
+              case "numberOfSets": {
+                if (isNumber(value.value)) {
+                  const newValue = MathUtils_applyOp(
+                    sets.length,
+                    value.value,
+                    value.op,
+                  );
+                  const lastSet = sets[sets.length - 1] || {
+                    maxrep: 1,
+                    weight: w`100lb`,
+                    logRpe: false,
+                    isAmrap: false,
+                    isQuickAddSet: false,
+                    askWeight: false,
+                  };
+                  sets.splice(newValue);
+                  for (let i = sets.length; i < newValue; i += 1) {
+                    sets.push(structuredClone(lastSet));
+                  }
                 }
+                break;
               }
-              continue;
-            }
-            for (let setIndex = 0; setIndex < sets.length; setIndex += 1) {
-              if (set === "*" || set === setIndex + 1) {
-                switch (key) {
-                  case "RPE":
-                  case "reps":
-                  case "minReps":
-                  case "timers":
-                  case "weights":
-                  case "amraps":
-                  case "logrpes":
-                  case "askweights":
+              case "RPE":
+              case "reps":
+              case "minReps":
+              case "timers":
+              case "weights":
+              case "amraps":
+              case "logrpes":
+              case "askweights": {
+                for (let setIndex = 0; setIndex < sets.length; setIndex += 1) {
+                  if (set === "*" || set === setIndex + 1) {
                     operation(
                       exercise,
                       sets[setIndex],
@@ -1333,15 +1331,16 @@ function ProgramExercise_applyVariables(
                       value.value,
                       value.op,
                     );
-                    break;
-                  case "setVariationIndex":
-                  case "descriptionIndex":
-                    // @todo original code just silently did nothing? Not sure why. Do they not matter?
-                    break;
-                  default:
-                    key satisfies never;
+                  }
                 }
+                break;
               }
+              case "setVariationIndex":
+              case "descriptionIndex":
+                // @todo original code just silently did nothing? Not sure why. Do they not matter?
+                break;
+              default:
+                key satisfies never;
             }
           }
           if (
