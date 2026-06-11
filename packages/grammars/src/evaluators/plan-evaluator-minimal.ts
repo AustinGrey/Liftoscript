@@ -90,13 +90,6 @@ import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
 import { LiftoscriptSyntaxError } from "@/logic/evaluators/types.ts";
 
 //#region Program
-
-interface IEvaluatedProgramWeek {
-  name: string;
-  description?: string;
-  days: IEvaluatedProgramDay[];
-}
-
 interface IEvaluatedProgramDay {
   name: string;
   dayData: IDayData;
@@ -104,22 +97,22 @@ interface IEvaluatedProgramDay {
   exercises: IPlannerProgramExercise[];
 }
 
-interface IEvaluatedProgramError {
-  error: PlannerSyntaxError;
-  dayData: IDayData;
-}
-
 interface IEvaluatedProgram {
   id: string;
   planner: IPlannerProgram;
   name: string;
   nextDay: number;
-  errors: IEvaluatedProgramError[];
-  weeks: IEvaluatedProgramWeek[];
+  errors: {
+    error: PlannerSyntaxError;
+    dayData: IDayData;
+  }[];
+  weeks: {
+    name: string;
+    description?: string;
+    days: IEvaluatedProgramDay[];
+  }[];
   states: IByTag<IProgramState>;
 }
-
-type IProgramMode = "planner" | "update";
 
 function Program_nextHistoryEntry(
   program: IEvaluatedProgram,
@@ -479,7 +472,7 @@ function Program_forceEvaluate(
   }
   const { evaluatedWeeks } = PlannerEvaluator_forceEvaluate(planner, settings);
   let dayNum = 0;
-  const errors: IEvaluatedProgramError[] = [];
+  const errors: IEvaluatedProgram["errors"] = [];
   const weeks = planner.weeks.map((week, weekIndex) => {
     const evaluatedWeek = evaluatedWeeks[weekIndex];
     const days = week.days.map((day, dayInWeekIndex) => {
@@ -5076,7 +5069,7 @@ function Progress_getEntryId(
 
 //#region PP
 function forExerciseInEvaluatedWeeks(
-  evaluatedWeeks: IEvaluatedProgramWeek[],
+  evaluatedWeeks: IEvaluatedProgram["weeks"],
   cb: (
     exercise: IPlannerProgramExercise,
     weekIndex: number,
@@ -6182,7 +6175,7 @@ function validateScript(
   state: IProgramState,
   bindings: IScriptBindings,
   fns: IScriptFunctions,
-  mode: IProgramMode,
+  mode: "planner" | "update",
 ): void {
   const trackedVarNames = new Set<string>();
   const [firstError, ..._rest] = validate(
