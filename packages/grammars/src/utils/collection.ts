@@ -13,10 +13,6 @@ export function CollectionUtils_concatBy<T>(
 export const CollectionUtils_compact = <T>(arr: (T | undefined)[]): T[] =>
   arr.filter((i) => i !== undefined);
 
-export function CollectionUtils_flat<T>(from: T[][]): T[] {
-  return from.reduce((acc, val) => acc.concat(val), []);
-}
-
 export function CollectionUtils_sortBy<T extends {}, K extends keyof T>(
   arr: T[],
   key: K,

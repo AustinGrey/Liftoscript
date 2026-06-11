@@ -5835,7 +5835,34 @@ function convertToPlanner(
                 ? getDereuseDecisions(evalExercise)
                 : [];
               if (shouldReuseSets) {
-                plannerExercise += reuseToStr(evalExercise, settings);
+                function reuseToStr(): string {
+                  const reuseExercise = evalExercise.reuse?.exercise;
+                  const reuse = evalExercise.reuse;
+                  if (!reuseExercise || !reuse) {
+                    throw new Error("reuse.exercise is required");
+                  }
+                  let str = "...";
+                  str += reuseExercise.exerciseType
+                    ? Exercise_fullName(
+                        getExerciseOrDefault(
+                          reuseExercise.exerciseType,
+                          settings.exercises,
+                        ),
+                        getCurrentEquipment(settings),
+                        reuseExercise.label,
+                      )
+                    : reuseExercise.fullName;
+                  if (reuse.week || reuse.day) {
+                    const weekAndDay = CollectionUtils_compact([
+                      reuse.week,
+                      reuse.day,
+                    ]).join(":");
+                    str += `[${weekAndDay}]`;
+                  }
+                  return str;
+                }
+
+                plannerExercise += reuseToStr();
 
                 if (dereuseDecisions.includes("sets")) {
                   plannerExercise +=
@@ -5905,8 +5932,22 @@ function convertToPlanner(
                 }
               }
 
+              function getWarmupSets(): string | undefined {
+                const result = groupWarmupsSets(evalExercise.warmupSets ?? [])
+                  .map(([first, length]) => {
+                    const weight =
+                      first.weight ??
+                      (first.percentage != null
+                        ? percentORM(first.percentage)
+                        : w`0lb`);
+                    return `${length}x${first.reps} ${print(weight)}`;
+                  })
+                  .join(", ");
+                return result.length === 0 ? "none" : result;
+              }
+
               if (!addedWarmupsMap[key] && evalExercise?.warmupSets) {
-                const warmupSets = getWarmupSets(evalExercise);
+                const warmupSets = getWarmupSets();
                 if (warmupSets != null) {
                   plannerExercise += ` / warmup: ${warmupSets}`;
                   addedWarmupsMap[key] = true;
@@ -6006,61 +6047,6 @@ function convertToPlanner(
     settings,
     repeatingExercises,
   );
-}
-
-function reuseToStr(
-  programExercise: IPlannerProgramExercise,
-  settings: ISettings,
-): string {
-  const reuseExercise = programExercise.reuse?.exercise;
-  if (!reuseExercise) {
-    throw new Error("reuse.exercise is required");
-  }
-  const reuse = programExercise.reuse;
-  if (!reuse) {
-    throw new Error("reuse is required");
-  }
-  let str = "...";
-  if (reuseExercise.exerciseType) {
-    const exercise = getExerciseOrDefault(
-      reuseExercise.exerciseType,
-      settings.exercises,
-    );
-    const reuseStr = Exercise_fullName(
-      exercise,
-      getCurrentEquipment(settings),
-      reuseExercise.label,
-    );
-    str += reuseStr;
-  } else {
-    str += reuseExercise.fullName;
-  }
-  if (reuse.week || reuse.day) {
-    const weekAndDay = CollectionUtils_compact([reuse.week, reuse.day]).join(
-      ":",
-    );
-    str += `[${weekAndDay}]`;
-  }
-  return str;
-}
-
-function getWarmupSets(
-  programExercise: IPlannerProgramExercise,
-): string | undefined {
-  const warmupSets = programExercise.warmupSets;
-  if (!warmupSets) {
-    return undefined;
-  }
-
-  const result = groupWarmupsSets(warmupSets)
-    .map(([first, length]) => {
-      const weight =
-        first.weight ??
-        (first.percentage != null ? percentORM(first.percentage) : w`0lb`);
-      return `${length}x${first.reps} ${print(weight)}`;
-    })
-    .join(", ");
-  return result.length === 0 ? "none" : result;
 }
 
 function variationToString(

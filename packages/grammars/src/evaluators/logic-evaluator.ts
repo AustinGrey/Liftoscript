@@ -3,7 +3,6 @@ import {
   CollectionUtils_compact,
   CollectionUtils_compressArray,
   CollectionUtils_concatBy,
-  CollectionUtils_flat,
 } from "@/utils/collection";
 import {
   MathUtils_applyOp,
@@ -8394,19 +8393,15 @@ export function Exercise_filterCustomExercisesByType(
     }
     const targetMuscleGroups = Array.from(
       new Set(
-        CollectionUtils_flat(
-          exercise.meta.targetMuscles.map((m) =>
-            Muscle_getScreenMusclesFromMuscle(m, settings),
-          ),
+        exercise.meta.targetMuscles.flatMap((m) =>
+          Muscle_getScreenMusclesFromMuscle(m, settings),
         ),
       ),
     ).map((m) => Muscle_getMuscleGroupName(m, settings));
     const synergistMuscleGroups = Array.from(
       new Set(
-        CollectionUtils_flat(
-          exercise.meta.synergistMuscles.map((m) =>
-            Muscle_getScreenMusclesFromMuscle(m, settings),
-          ),
+        exercise.meta.synergistMuscles.flatMap((m) =>
+          Muscle_getScreenMusclesFromMuscle(m, settings),
         ),
       ),
     ).map((m) => Muscle_getMuscleGroupName(m, settings));
