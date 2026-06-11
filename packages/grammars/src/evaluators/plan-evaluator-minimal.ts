@@ -1,10 +1,7 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import {
-  CollectionUtils_compact,
-  CollectionUtils_sortBy,
-} from "../utils/collection";
+import { filterUndefined, CollectionUtils_sortBy } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
@@ -674,7 +671,7 @@ function PlannerProgram_replaceExercise(
 
   function getLabel(label?: string): string | undefined {
     return (newLabel ?? label) || labelSuffix
-      ? CollectionUtils_compact([newLabel ?? label, labelSuffix]).join("-")
+      ? filterUndefined([newLabel ?? label, labelSuffix]).join("-")
       : undefined;
   }
 
@@ -2885,9 +2882,7 @@ function evaluate(
     let weeks: IPlannerExerciseEvaluatorWeek[] = [];
     let exerciseIndex = 0;
     let latestDescriptions: string[][] = [];
-    for (const child of CollectionUtils_compact(
-      queryChildren(programNode).toArray(),
-    )) {
+    for (const child of filterUndefined(queryChildren(programNode).toArray())) {
       if (
         child.type.name === PlannerNodeName.EmptyExpression ||
         child.type.name === PlannerNodeName.TripleLineComment
@@ -3210,9 +3205,7 @@ function evaluatePreservingSource(
 
   let weeksFullText: IPlannerExerciseEvaluatorTextWeek[] = [];
   let ongoingLinesFullText: IPlannerNonExerciseFullTextLine[] = [];
-  for (const child of CollectionUtils_compact(
-    queryChildren(programNode).toArray(),
-  )) {
+  for (const child of filterUndefined(queryChildren(programNode).toArray())) {
     if (child.type.name === PlannerNodeName.Week) {
       const weekName = child.source.replace(/^#+/, "").trim();
       const description = getWeekDayDescriptionAndFillLastDayFullText(
@@ -5062,7 +5055,7 @@ function Progress_getEntryId(
   exerciseType: IExerciseType,
   label?: string,
 ): string {
-  return CollectionUtils_compact([label, toKey(exerciseType)]).join("_");
+  return filterUndefined([label, toKey(exerciseType)]).join("_");
 }
 
 //#endregion
@@ -5853,7 +5846,7 @@ function convertToPlanner(
                       )
                     : reuseExercise.fullName;
                   if (reuse.week || reuse.day) {
-                    const weekAndDay = CollectionUtils_compact([
+                    const weekAndDay = filterUndefined([
                       reuse.week,
                       reuse.day,
                     ]).join(":");

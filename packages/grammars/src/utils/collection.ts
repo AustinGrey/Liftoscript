@@ -1,6 +1,6 @@
 import type { ConditionalPick } from "type-fest";
 
-export const CollectionUtils_compact = <T>(arr: (T | undefined)[]): T[] =>
+export const filterUndefined = <T>(arr: (T | undefined)[]): T[] =>
   arr.filter((i) => i !== undefined);
 
 /**

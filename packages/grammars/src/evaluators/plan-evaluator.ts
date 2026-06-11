@@ -2,10 +2,7 @@ import { memoize } from "micro-memoize";
 import * as t from "io-ts";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import { unsafeCoerce } from "fp-ts/lib/function";
-import {
-  CollectionUtils_compact,
-  CollectionUtils_sortBy,
-} from "../utils/collection";
+import { filterUndefined, CollectionUtils_sortBy } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
@@ -2363,7 +2360,7 @@ function PlannerProgram_replaceExercise(
 
   function getLabel(label?: string): string | undefined {
     return (newLabel ?? label) || labelSuffix
-      ? CollectionUtils_compact([newLabel ?? label, labelSuffix]).join("-")
+      ? filterUndefined([newLabel ?? label, labelSuffix]).join("-")
       : undefined;
   }
 
@@ -7071,7 +7068,7 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.Program) {
       this.weeks = [];
       this.exerciseIndex = 0;
-      for (const child of CollectionUtils_compact(getChildren(expr))) {
+      for (const child of filterUndefined(getChildren(expr))) {
         this.evaluateExercise(child);
       }
       return this.weeks;
@@ -15619,9 +15616,7 @@ function Progress_getEntryId(
   exerciseType: IExerciseType,
   label?: string,
 ): string {
-  return CollectionUtils_compact([label, Exercise_toKey(exerciseType)]).join(
-    "_",
-  );
+  return filterUndefined([label, Exercise_toKey(exerciseType)]).join("_");
 }
 
 // function Progress_applyProgramDay(
@@ -17550,9 +17545,7 @@ class ProgramToPlanner {
       str += reuseExercise.fullName;
     }
     if (reuse.week || reuse.day) {
-      const weekAndDay = CollectionUtils_compact([reuse.week, reuse.day]).join(
-        ":",
-      );
+      const weekAndDay = filterUndefined([reuse.week, reuse.day]).join(":");
       str += `[${weekAndDay}]`;
     }
     return str;
@@ -18293,7 +18286,7 @@ class PlannerExerciseEvaluatorText {
     if (expr.type.name === PlannerNodeName.Program) {
       this.ongoingLines = [];
       this.weeks = [];
-      for (const child of CollectionUtils_compact(PEET_getChildren(expr))) {
+      for (const child of filterUndefined(PEET_getChildren(expr))) {
         this.evaluateLine(child);
       }
       return this.weeks;
