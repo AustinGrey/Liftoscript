@@ -1,8 +1,5 @@
 import { type SyntaxNode } from "@lezer/common";
-import {
-  CollectionUtils_compact,
-  CollectionUtils_concatBy,
-} from "@/utils/collection";
+import { CollectionUtils_compact } from "@/utils/collection";
 import {
   MathUtils_applyOp,
   MathUtils_clamp,
@@ -3324,6 +3321,18 @@ export function Equipment_mergeEquipment(
     },
     {},
   );
+}
+
+export function CollectionUtils_concatBy<T>(
+  from: T[],
+  to: T[],
+  condition: (el: T) => string,
+): T[] {
+  const map = [...from, ...to].reduce<Record<string, T>>((memo, item) => {
+    memo[condition(item)] = item;
+    return memo;
+  }, {});
+  return Object.keys(map).map((key) => map[key]);
 }
 
 export function Equipment_isBuiltIn(key: string): boolean {
