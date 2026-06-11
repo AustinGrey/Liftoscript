@@ -192,10 +192,14 @@ export function Program_nextHistoryRecordFromEvaluated(
   );
 
   const dayData = getDayData(program, day);
-  const now = Date.now();
   const dayExercises = dayData.dayObj
     ? Program_getProgramDayUsedExercises(dayData.dayObj)
     : [];
+  const week = program.weeks[dayData.week - 1];
+  const isMultiweek = program.weeks.length > 1 && week != null;
+  const dayName = `${isMultiweek ? `${week.name} - ` : ""}${dayData.dayObj?.name}`;
+  const now = Date.now();
+
   return {
     id: 0,
     date: new Date().toISOString(),
@@ -205,7 +209,7 @@ export function Program_nextHistoryRecordFromEvaluated(
     day,
     week: dayData.week,
     dayInWeek: dayData.dayInWeek,
-    dayName: Program_getDayName(program, day),
+    dayName,
     startTime: now,
     updatedAt: now,
     entries: CollectionUtils_sortBy(dayExercises, "order").map((exercise, i) =>
@@ -554,14 +558,6 @@ function getDayData(
     dayInWeek,
     dayObj: program.weeks[week - 1]?.days[dayInWeek - 1],
   };
-}
-
-function Program_getDayName(program: IEvaluatedProgram, day: number): string {
-  const dayData = getDayData(program, day);
-  const programDay = getDayData(program, day).dayObj;
-  const week = program.weeks[(dayData.week || 1) - 1];
-  const isMultiweek = program.weeks.length > 1 && week != null;
-  return `${isMultiweek ? `${week.name} - ` : ""}${programDay?.name}`;
 }
 
 function Program_getProgramDayUsedExercises(
