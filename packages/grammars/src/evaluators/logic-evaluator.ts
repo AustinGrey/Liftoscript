@@ -1,7 +1,6 @@
 import { type SyntaxNode } from "@lezer/common";
 import {
   CollectionUtils_compact,
-  CollectionUtils_compressArray,
   CollectionUtils_concatBy,
 } from "@/utils/collection";
 import {
@@ -2578,6 +2577,31 @@ export function Weight_formatOneSide(
   }
 
   return CollectionUtils_compressArray(arr, 3).join("/");
+}
+export function CollectionUtils_compressArray(
+  arr: number[],
+  threshold: number,
+): string[] {
+  const result: string[] = [];
+  let count = 1;
+
+  for (let i = 1; i <= arr.length; i++) {
+    if (arr[i] === arr[i - 1]) {
+      count += 1;
+    } else {
+      if (count >= threshold) {
+        result.push(`${count}x${arr[i - 1]}`);
+      } else {
+        while (count > 0) {
+          result.push(`${arr[i - 1]}`);
+          count -= 1;
+        }
+      }
+      count = 1;
+    }
+  }
+
+  return result;
 }
 
 export function Weight_roundTo005(weight: IWeight): IWeight {
