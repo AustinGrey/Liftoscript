@@ -1866,62 +1866,6 @@ const extractNameParts = memoize(
   { maxSize: 1000 },
 );
 
-// @todo used in testing? Don't delete until the test making use of this is converted
-export function changeWeightsToCompletedWeights(oldScript: string): string {
-  const node = parseBound(plannerExerciseParser, oldScript);
-  const cursor = node.cursor();
-  let script = oldScript;
-  let shift = 0;
-  do {
-    if (cursor.node.type.name === PlannerNodeName.Liftoscript) {
-      const value = cursor.node.source;
-      const newValue = changeWeightsToCompleteWeights(value);
-      script =
-        script.substring(0, cursor.node.from + shift) +
-        newValue +
-        script.substring(cursor.node.to + shift);
-      shift = shift + newValue.length - value.length;
-    }
-  } while (cursor.next());
-  return script;
-}
-
-function changeWeightsToCompleteWeights(oldScript: string): string {
-  const node = parseBound(LiftoscriptParser, oldScript);
-  const cursor = node.cursor();
-  let script = oldScript;
-  let shift = 0;
-  do {
-    if (cursor.node.type.name === NodeName.VariableExpression) {
-      const keywordNode = cursor.node.getChild(NodeName.Keyword);
-      if (keywordNode) {
-        const keyword = keywordNode.source;
-        if (keyword === "weights") {
-          const parent = cursor.node.parent;
-          if (
-            parent != null &&
-            !(
-              (parent.type.name === NodeName.AssignmentExpression ||
-                parent.type.name === NodeName.IncAssignmentExpression) &&
-              parent.firstChild?.from === cursor.node.from &&
-              parent.firstChild?.to === cursor.node.to
-            )
-          ) {
-            const oldWeightStr = keyword;
-            const newWeightStr = "completedWeights";
-            script =
-              script.substring(0, keywordNode.from + shift) +
-              newWeightStr +
-              script.substring(keywordNode.to + shift);
-            shift = shift + newWeightStr.length - oldWeightStr.length;
-          }
-        }
-      }
-    }
-  } while (cursor.next());
-  return script;
-}
-
 function getWarmupReps(setParts: string): {
   numberOfSets: number;
   reps: number;

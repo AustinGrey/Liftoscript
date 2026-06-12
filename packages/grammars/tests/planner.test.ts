@@ -18,14 +18,12 @@ import {
   type IPlannerProgram,
   PlannerProgram_evaluateText,
   PlannerProgram_evaluate,
-  PlannerExerciseEvaluator,
   Settings_defaultEquipment,
   type IStats as OLD_IStats,
 } from "@/evaluators/plan-evaluator.ts";
 import {
   PlannerProgram_evaluate as newPlannerProgram_evaluate,
   PlannerProgram_evaluateText as newPlannerProgram_evaluateText,
-  changeWeightsToCompletedWeights as newChangeWeightsToCompletedWeights,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 import type { IWeight } from "@/quantities/weight.ts";
 
@@ -969,9 +967,9 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
 `,
       completed: {
         reps: [
-        [5, 5],
-        [5, 5],
-      ],
+          [5, 5],
+          [5, 5],
+        ],
       },
       result: `# Week 1
 ## Day 1
@@ -1032,9 +1030,9 @@ Bicep Curl[2-5] / 5x5
 `,
       completed: {
         reps: [
-        [5, 5],
-        [5, 5],
-      ],
+          [5, 5],
+          [5, 5],
+        ],
       },
       result: `# Week 1
 ## Day 1
@@ -1115,9 +1113,9 @@ Squat / 2x2 200lb / update: custom() {~
 `,
       completed: {
         reps: [
-        [2, 2],
-        [2, 2],
-      ],
+          [2, 2],
+          [2, 2],
+        ],
       },
       result: `# Week 1
 ## Day 1
@@ -2180,9 +2178,8 @@ Bench Press / ...Squat / progress: custom() {~ ~}
       oldPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect
-      .soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed")
-      .to.be.true;
+    expect.soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed").to
+      .be.true;
 
     const newPlanner = {
       name: "MyProgram",
@@ -2192,9 +2189,8 @@ Bench Press / ...Squat / progress: custom() {~ ~}
       newPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect
-      .soft(newEvaluatedWeeks[0][0].success, "New system should succeed")
-      .to.be.true;
+    expect.soft(newEvaluatedWeeks[0][0].success, "New system should succeed").to
+      .be.true;
   });
 
   it("doesn't show an error if original exercise update reuses another exercise but overrides update", () => {
@@ -2213,9 +2209,8 @@ Bench Press / ...Squat / update: custom() {~ ~}
       oldPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect
-      .soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed")
-      .to.be.true;
+    expect.soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed").to
+      .be.true;
 
     const newPlanner = {
       name: "MyProgram",
@@ -2225,9 +2220,8 @@ Bench Press / ...Squat / update: custom() {~ ~}
       newPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect
-      .soft(newEvaluatedWeeks[0][0].success, "New system should succeed")
-      .to.be.true;
+    expect.soft(newEvaluatedWeeks[0][0].success, "New system should succeed").to
+      .be.true;
   });
 
   it("show an error for reuse/repeat mismatch", () => {
@@ -2251,18 +2245,15 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
 # Week 5
 ## Day 1
 `;
-    const errorMessage =
-      "Squat: No such exercise tmp: Squat at week: 3 (4:13)";
+    const errorMessage = "Squat: No such exercise tmp: Squat at week: 3 (4:13)";
 
     const oldPlanner: IPlannerProgram = {
       vtype: "planner",
       name: "MyProgram",
       weeks: PlannerProgram_evaluateText(programText),
     };
-    const oldResult = PlannerProgram_evaluate(
-      oldPlanner,
-      Settings_build(),
-    ).evaluatedWeeks[2][0];
+    const oldResult = PlannerProgram_evaluate(oldPlanner, Settings_build())
+      .evaluatedWeeks[2][0];
     expect.soft(oldResult.success, "Old system should fail").to.be.false;
     if (!oldResult.success) {
       expect
@@ -2274,67 +2265,13 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
       name: "MyProgram",
       weeks: newPlannerProgram_evaluateText(programText),
     };
-    const newResult = newPlannerProgram_evaluate(
-      newPlanner,
-      Settings_build(),
-    ).evaluatedWeeks[2][0];
+    const newResult = newPlannerProgram_evaluate(newPlanner, Settings_build())
+      .evaluatedWeeks[2][0];
     expect.soft(newResult.success, "New system should fail").to.be.false;
     if (!newResult.success) {
       expect
         .soft(newResult.error.message, "New system error message")
         .to.equal(errorMessage);
     }
-  });
-
-  it("migrates weights to completedWeights", () => {
-    const script = `# Week 1
-## Day 1
-/// asdfasd
-// A: Day 1
-// *** Some stuff
-Squat / 2x5 / 100lb / progress: custom() {~
-  if (completedReps >= reps) {
-    weights[1] = (1 + weights[3] + weights)
-  }
-~} / update: custom() {~
-  // Some stuff
-  if (setIndex == 1) {
-    var.a = weights[1] + weights[3]
-    weights = weights[1] * 0.5 + (weights[3] == 30lb ? weights[4] : weights[3])
-  }
-~}`;
-    const expected = `# Week 1
-## Day 1
-/// asdfasd
-// A: Day 1
-// *** Some stuff
-Squat / 2x5 / 100lb / progress: custom() {~
-  if (completedReps >= reps) {
-    weights[1] = (1 + completedWeights[3] + completedWeights)
-  }
-~} / update: custom() {~
-  // Some stuff
-  if (setIndex == 1) {
-    var.a = completedWeights[1] + completedWeights[3]
-    weights = completedWeights[1] * 0.5 + (completedWeights[3] == 30lb ? completedWeights[4] : completedWeights[3])
-  }
-~}`;
-
-    const oldScript =
-      PlannerExerciseEvaluator.changeWeightsToCompletedWeights(script);
-    expect
-      .soft(
-        oldScript,
-        "Old system failed to produce the expected result",
-      )
-      .to.equal(expected);
-
-    const newScript = newChangeWeightsToCompletedWeights(script);
-    expect
-      .soft(
-        newScript,
-        "New system failed to produce the expected result",
-      )
-      .to.equal(expected);
   });
 });
