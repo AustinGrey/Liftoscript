@@ -1294,12 +1294,6 @@ export function PlannerProgram_evaluateText(
   return weeks;
 }
 
-export function PlannerProgram_generateFullText(
-  weeks: IPlannerProgramWeek[],
-): string {
-  return asProgramScript({ weeks });
-}
-
 //#endregion
 
 /**
