@@ -168,6 +168,13 @@ export class PlannerSyntaxError extends SyntaxError {
     );
   }
 
+  public static fromNode(
+    message: string,
+    node: SourcedSyntaxNode,
+  ): PlannerSyntaxError {
+    return PlannerSyntaxError.fromPoint(undefined, message, node.getPointer());
+  }
+
   constructor(
     message: string,
     line: number,

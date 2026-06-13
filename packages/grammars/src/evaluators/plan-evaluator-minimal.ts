@@ -109,6 +109,7 @@ import {
 } from "@/planner/evaluators";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { asProgramScript } from "@/planner/display.ts";
+import { validate as validateLp } from "@/planner/progression-formulas/lp.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -1754,67 +1755,22 @@ function evaluateId(expr: SourcedSyntaxNode): number[] {
     assert(PlannerNodeName.ExerciseProperty);
   }
 }
-function validateProgress(
+function* validateProgress(
   fnName: string,
   fnArgs: string[],
   fnNameNode: SourcedSyntaxNode,
   valueNode: SourcedSyntaxNode,
-): void {
+): Generator<PlannerSyntaxError> {
   if (!isEnumValue(IProgramExerciseProgressType, fnName)) {
-    return errorPlannerSyntax(
+    yield PlannerSyntaxError.fromNode(
       `There's no such progression exists - '${fnName}'`,
       fnNameNode,
     );
+    return;
   }
   switch (fnName) {
     case IProgramExerciseProgressType.LP:
-      if (fnArgs.length > 6) {
-        return errorPlannerSyntax(
-          `Linear Progression 'lp' only has 6 arguments max`,
-          valueNode,
-        );
-      }
-      if (
-        fnArgs[0] &&
-        !fnArgs[0].endsWith("lb") &&
-        !fnArgs[0].endsWith("kg") &&
-        !fnArgs[0].endsWith("%")
-      ) {
-        errorPlannerSyntax(
-          `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      } else if (fnArgs[1] != null && isNaN(parseInt(fnArgs[1], 10))) {
-        errorPlannerSyntax(
-          `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
-          valueNode,
-        );
-      } else if (fnArgs[2] != null && isNaN(parseInt(fnArgs[2], 10))) {
-        errorPlannerSyntax(
-          `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
-          valueNode,
-        );
-      } else if (
-        fnArgs[3] != null &&
-        !fnArgs[3].endsWith("lb") &&
-        !fnArgs[3].endsWith("kg") &&
-        !fnArgs[3].endsWith("%")
-      ) {
-        errorPlannerSyntax(
-          `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      } else if (fnArgs[4] != null && isNaN(parseInt(fnArgs[4], 10))) {
-        errorPlannerSyntax(
-          `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
-          valueNode,
-        );
-      } else if (fnArgs[5] != null && isNaN(parseInt(fnArgs[5], 10))) {
-        errorPlannerSyntax(
-          `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
-          valueNode,
-        );
-      }
+      yield* validateLp(fnArgs, valueNode);
       break;
     case IProgramExerciseProgressType.SUM:
       if (fnArgs.length > 2) {
@@ -1983,7 +1939,10 @@ function evaluateProgressImpl(
   const fnArgs = valueNode
     .getChildren(PlannerNodeName.FunctionArgument)
     .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
-  validateProgress(fnName, fnArgs, fnNameNode, valueNode);
+  const [firstError] = validateProgress(fnName, fnArgs, fnNameNode, valueNode);
+  if (firstError) {
+    throw firstError;
+  }
 
   let options:
     | Parameters<typeof PlannerProgramExercise_buildProgress>[2]
