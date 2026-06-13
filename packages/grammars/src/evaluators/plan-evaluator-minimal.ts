@@ -43,6 +43,7 @@ import {
   type IProgramState,
   type IScriptFnContext,
   type IScriptFunctions,
+  type ISet,
   TProgramState,
   TSet,
 } from "@/common-types.ts";
@@ -141,8 +142,8 @@ function Program_nextHistoryEntry(
   const programSets = programExercise.evaluatedSetVariations.at(
     PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise),
   )?.sets;
-  const sets =
-    programSets?.map((programSet, i) => ({
+  const sets = (programSets ?? []).map(
+    (programSet, i): ISet => ({
       id: generateUid(6),
       reps: programSet.maxrep,
       index: i,
@@ -165,13 +166,14 @@ function Program_nextHistoryEntry(
       label: programSet.label,
       isCompleted: false,
       programSetIndex: i,
-    })) ?? [];
+    }),
+  );
 
   const entry: IHistoryEntry = {
-    id: Progress_getEntryId(
-      programExercise.exerciseType,
+    id: filterUndefined([
       programExercise.label,
-    ),
+      toKey(programExercise.exerciseType),
+    ]).join("_"),
     index,
     exercise: programExercise.exerciseType,
     programExerciseId: programExercise.key,
@@ -3109,42 +3111,48 @@ function Progress_applyBindings(
         isCompleted: false,
       };
       if (!entry.sets[i].isCompleted) {
-        if (key === "RPE") {
-          const value = bindings.RPE[i];
-          entry.sets[i].rpe = value !== 0 ? value : undefined;
-        } else if (key === "reps") {
-          entry.sets[i].reps = bindings.reps[i];
-        } else if (key === "minReps") {
-          const value = bindings.minReps[i];
-          entry.sets[i].minReps = value !== 0 ? value : undefined;
-        } else if (key === "weights") {
-          entry.sets[i].weight = bindings.weights[i];
-        } else if (key === "originalWeights") {
-          entry.sets[i].originalWeight = bindings.originalWeights[i];
-        } else if (key === "amraps") {
-          const value = bindings.amraps[i];
-          entry.sets[i].isAmrap = !!value;
-        } else if (key === "logrpes") {
-          const value = bindings.logrpes[i];
-          entry.sets[i].logRpe = !!value;
-        } else if (key === "askweights") {
-          const value = bindings.askweights[i];
-          entry.sets[i].askWeight = !!value;
-        } else if (key === "timers") {
-          const value = bindings.timers[i];
-          entry.sets[i].timer = value != null && value >= 0 ? value : undefined;
+        switch (key) {
+          case "RPE": {
+            const value = bindings.RPE[i];
+            entry.sets[i].rpe = value !== 0 ? value : undefined;
+            break;
+          }
+          case "reps":
+            entry.sets[i].reps = bindings.reps[i];
+            break;
+          case "minReps": {
+            const value = bindings.minReps[i];
+            entry.sets[i].minReps = value !== 0 ? value : undefined;
+            break;
+          }
+          case "weights":
+            entry.sets[i].weight = bindings.weights[i];
+            break;
+          case "originalWeights":
+            entry.sets[i].originalWeight = bindings.originalWeights[i];
+            break;
+          case "amraps":
+            entry.sets[i].isAmrap = !!bindings.amraps[i];
+            break;
+          case "logrpes":
+            entry.sets[i].logRpe = !!bindings.logrpes[i];
+            break;
+          case "askweights":
+            entry.sets[i].askWeight = !!bindings.askweights[i];
+            break;
+          case "timers": {
+            const value = bindings.timers[i];
+            entry.sets[i].timer =
+              value != null && value >= 0 ? value : undefined;
+            break;
+          }
+          default:
+            key satisfies never;
         }
       }
     }
   }
   return entry;
-}
-
-function Progress_getEntryId(
-  exerciseType: IExerciseType,
-  label?: string,
-): string {
-  return filterUndefined([label, toKey(exerciseType)]).join("_");
 }
 
 //#endregion
