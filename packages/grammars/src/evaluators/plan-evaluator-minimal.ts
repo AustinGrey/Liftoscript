@@ -3110,45 +3110,45 @@ function Progress_applyBindings(
         askWeight: false,
         isCompleted: false,
       };
-      if (!entry.sets[i].isCompleted) {
-        switch (key) {
-          case "RPE": {
-            const value = bindings.RPE[i];
-            entry.sets[i].rpe = value !== 0 ? value : undefined;
-            break;
-          }
-          case "reps":
-            entry.sets[i].reps = bindings.reps[i];
-            break;
-          case "minReps": {
-            const value = bindings.minReps[i];
-            entry.sets[i].minReps = value !== 0 ? value : undefined;
-            break;
-          }
-          case "weights":
-            entry.sets[i].weight = bindings.weights[i];
-            break;
-          case "originalWeights":
-            entry.sets[i].originalWeight = bindings.originalWeights[i];
-            break;
-          case "amraps":
-            entry.sets[i].isAmrap = !!bindings.amraps[i];
-            break;
-          case "logrpes":
-            entry.sets[i].logRpe = !!bindings.logrpes[i];
-            break;
-          case "askweights":
-            entry.sets[i].askWeight = !!bindings.askweights[i];
-            break;
-          case "timers": {
-            const value = bindings.timers[i];
-            entry.sets[i].timer =
-              value != null && value >= 0 ? value : undefined;
-            break;
-          }
-          default:
-            key satisfies never;
+      if (entry.sets[i].isCompleted) {
+        continue;
+      }
+      switch (key) {
+        case "RPE": {
+          const value = bindings.RPE[i];
+          entry.sets[i].rpe = value !== 0 ? value : undefined;
+          break;
         }
+        case "reps":
+          entry.sets[i].reps = bindings.reps[i];
+          break;
+        case "minReps": {
+          const value = bindings.minReps[i];
+          entry.sets[i].minReps = value !== 0 ? value : undefined;
+          break;
+        }
+        case "weights":
+          entry.sets[i].weight = bindings.weights[i];
+          break;
+        case "originalWeights":
+          entry.sets[i].originalWeight = bindings.originalWeights[i];
+          break;
+        case "amraps":
+          entry.sets[i].isAmrap = !!bindings.amraps[i];
+          break;
+        case "logrpes":
+          entry.sets[i].logRpe = !!bindings.logrpes[i];
+          break;
+        case "askweights":
+          entry.sets[i].askWeight = !!bindings.askweights[i];
+          break;
+        case "timers": {
+          const value = bindings.timers[i];
+          entry.sets[i].timer = value != null && value >= 0 ? value : undefined;
+          break;
+        }
+        default:
+          key satisfies never;
       }
     }
   }
