@@ -228,13 +228,15 @@ function fillInMetadata(
   metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1][
     exercise.key
   ] = exercise;
-  setByExerciseWeekDay(
-    metadata.byExerciseWeekDay,
-    exercise.key,
-    dayData.week - 1,
-    dayData.dayInWeek - 1,
-    exercise,
-  );
+
+  metadata.byExerciseWeekDay[exercise.key] =
+    metadata.byExerciseWeekDay[exercise.key] || {};
+  metadata.byExerciseWeekDay[exercise.key][dayData.week - 1] =
+    metadata.byExerciseWeekDay[exercise.key][dayData.week - 1] || {};
+  metadata.byExerciseWeekDay[exercise.key][dayData.week - 1][
+    dayData.dayInWeek - 1
+  ] = exercise;
+
   metadata.fullNames.add(exercise.fullName);
 }
 
@@ -376,13 +378,11 @@ function fillRepeats(
         dayData,
         isRepeat: true,
       };
-      setByExerciseWeekDay(
-        byExerciseWeekDay,
-        exercise.key,
-        repeatWeekIndex,
-        dayInWeekIndex,
-        repeatedExercise,
-      );
+      byExerciseWeekDay[exercise.key] = byExerciseWeekDay[exercise.key] || {};
+      byExerciseWeekDay[exercise.key][repeatWeekIndex] =
+        byExerciseWeekDay[exercise.key][repeatWeekIndex] || {};
+      byExerciseWeekDay[exercise.key][repeatWeekIndex][dayInWeekIndex] =
+        repeatedExercise;
       const day = evaluatedWeeks[repeatWeekIndex]?.[dayInWeekIndex];
       if (day?.success) {
         day.data.push(repeatedExercise);
@@ -985,22 +985,6 @@ function findLastWeekExercise(
     }
   }
   return undefined;
-}
-
-function setByExerciseWeekDay<
-  T,
-  U extends Record<string, Record<number, Record<number, T>>>,
->(
-  coll: U,
-  exercise: string,
-  weekIndex: number,
-  dayIndex: number,
-  val: T,
-): void {
-  coll[exercise as keyof U] = coll[exercise as keyof U] || {};
-  coll[exercise as keyof U][weekIndex] =
-    coll[exercise as keyof U][weekIndex] || {};
-  coll[exercise as keyof U][weekIndex][dayIndex] = val;
 }
 
 function iterateOverExercises(
