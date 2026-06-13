@@ -2097,7 +2097,7 @@ export function evaluate(
   mode: IPlannerExerciseEvaluatorMode,
   dayData: IDayData | undefined,
 ): IPlannerEvalFullResult {
-  dayData = dayData || { day: 1, week: 1, dayInWeek: 1 };
+  dayData ??= { day: 1, week: 1, dayInWeek: 1 };
   try {
     parse(programNode);
     if (programNode.type.name !== PlannerNodeName.Program) {
@@ -2224,7 +2224,7 @@ export function evaluate(
               });
             }
           } else if (section.type === "warmup") {
-            allWarmupSets = allWarmupSets || [];
+            allWarmupSets ??= [];
             allWarmupSets.push(...section.data);
           } else if (section.type === "progress") {
             progress = section.data;
@@ -2437,12 +2437,8 @@ function PlannerProgramExercise_programWarmups(
       let value: IWeight | number | undefined = ws.percentage
         ? ws.percentage / 100
         : undefined;
-      if (value == null) {
-        value = ws.weight;
-      }
-      if (value == null) {
-        value = MathUtils_roundTo0005(rpeMultiplier(ws.reps, 4));
-      }
+      value ??= ws.weight;
+      value ??= MathUtils_roundTo0005(rpeMultiplier(ws.reps, 4));
       sets.push({
         reps: ws.reps,
         value,
@@ -3084,18 +3080,16 @@ function Progress_applyBindings(
   );
   for (const key of keys) {
     for (let i = 0; i < bindings[key].length; i += 1) {
-      if (entry.sets[i] == null) {
-        entry.sets[i] = {
-          id: generateUid(6),
-          index: i,
-          isUnilateral: isUnilateral(entry.exercise, settings),
-          reps: 0,
-          weight: w`0lb`,
-          originalWeight: w`0lb`,
-          askWeight: false,
-          isCompleted: false,
-        };
-      }
+      entry.sets[i] ??= {
+        id: generateUid(6),
+        index: i,
+        isUnilateral: isUnilateral(entry.exercise, settings),
+        reps: 0,
+        weight: w`0lb`,
+        originalWeight: w`0lb`,
+        askWeight: false,
+        isCompleted: false,
+      };
       if (!entry.sets[i].isCompleted) {
         if (key === "RPE") {
           const value = bindings.RPE[i];
@@ -3682,7 +3676,7 @@ export function compactPlannerProgram(
   const lastDescriptions: OpenRecord<string, number> = {};
   plannerProgram.weeks.forEach((week) => {
     week.days.forEach((day, dayInWeekIndex) => {
-      if (lastDescriptions[dayInWeekIndex] == null) {
+      if (lastDescriptions[dayInWeekIndex] === undefined) {
         lastDescriptions[dayInWeekIndex] = day.description;
       } else if (lastDescriptions[dayInWeekIndex] === day.description) {
         day.description = undefined;
@@ -4058,9 +4052,7 @@ export function convertToPlanner(
                   break;
                 }
               }
-              if (descriptionIndex == null) {
-                descriptionIndex = 0;
-              }
+              descriptionIndex ??= 0;
               if (finishedToAddDescription) {
                 break;
               }

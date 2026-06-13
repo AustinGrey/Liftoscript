@@ -576,14 +576,12 @@ function fillSingleProperties(
   }
 
   if (metadata.properties.progress[exercise.key] != null) {
-    const existingProgress = exercise.progress;
-    if (!existingProgress) {
-      exercise.progress = metadata.properties.progress[exercise.key].property;
-    }
+    exercise.progress ??=
+      metadata.properties.progress[exercise.key].property;
   }
 
-  if (metadata.properties.update[exercise.key] != null && !exercise.update) {
-    exercise.update = metadata.properties.update[exercise.key].property;
+  if (metadata.properties.update[exercise.key] != null) {
+    exercise.update ??= metadata.properties.update[exercise.key].property;
   }
 
   if (metadata.properties.warmup[exercise.key] != null) {
