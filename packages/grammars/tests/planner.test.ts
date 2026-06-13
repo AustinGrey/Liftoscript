@@ -24,7 +24,7 @@ import {
 import {
   PlannerProgram_evaluate as newPlannerProgram_evaluate,
   PlannerProgram_evaluateText as newPlannerProgram_evaluateText,
-} from "@/evaluators/plan-evaluator-minimal.ts";
+} from "@/planner/evaluators";
 import type { IWeight } from "@/quantities/weight.ts";
 
 import type { IStats } from "@/fitness-stats";

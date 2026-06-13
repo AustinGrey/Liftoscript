@@ -3,10 +3,6 @@ import {
   Program_evaluate,
   Program_applyEvaluatedProgram,
   Program_runAllFinishDayScripts,
-  PlannerProgram_evaluateText,
-  PlannerProgram_replaceWeight,
-  PlannerProgram_generateFullText,
-  PlannerProgram_replaceAndValidateExercise,
   type ISettings,
   type IExerciseType,
   type IWeight,
@@ -18,6 +14,12 @@ import {
 import type { IStats } from "@/fitness-stats";
 import type { IPlannerProgram, IProgram } from "@/program";
 import { Settings_build } from "@/user-settings";
+import {
+  PlannerProgram_evaluateText,
+  PlannerProgram_generateFullText,
+  PlannerProgram_replaceAndValidateExercise,
+  PlannerProgram_replaceWeight,
+} from "@/planner/evaluators";
 
 export interface ICompletedEntries {
   completedReps: number[][];
