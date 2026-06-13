@@ -109,8 +109,12 @@ import {
 } from "@/planner/evaluators";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { asProgramScript } from "@/planner/display.ts";
+import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
 import { validate as validateLp } from "@/planner/progression-formulas/lp.ts";
-import { validate as validateSumProgression } from "@/planner/progression-formulas/sum.ts";
+import { validate as validateDp } from "@/planner/progression-formulas/dp.ts";
+import { validate as validateSum } from "@/planner/progression-formulas/sum.ts";
+import { validate as validateCustom } from "@/planner/progression-formulas/custom.ts";
+import { validate as validateNone } from "@/planner/progression-formulas/none.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -1175,7 +1179,7 @@ export interface IProgramExerciseDescriptions {
 /**
  * @todo what relationship does this have to {@link IProgramExerciseUpdateType}, if any? Can they be combined?
  */
-enum IProgramExerciseProgressType {
+export enum IProgramExerciseProgressType {
   CUSTOM = "custom",
   LP = "lp",
   DP = "dp",
@@ -1756,76 +1760,32 @@ function evaluateId(expr: SourcedSyntaxNode): number[] {
     assert(PlannerNodeName.ExerciseProperty);
   }
 }
-function* validateProgress(
+const validatorMap: Record<
+  IProgramExerciseProgressType,
+  ProgressionFormulaValidator
+> = {
+  [IProgramExerciseProgressType.LP]: validateLp,
+  [IProgramExerciseProgressType.DP]: validateDp,
+  [IProgramExerciseProgressType.SUM]: validateSum,
+  [IProgramExerciseProgressType.CUSTOM]: validateCustom,
+  [IProgramExerciseProgressType.NONE]: validateNone,
+};
+
+export function* validateProgress(
   fnName: string,
   fnArgs: string[],
   fnNameNode: SourcedSyntaxNode,
   valueNode: SourcedSyntaxNode,
 ): Generator<PlannerSyntaxError> {
-  if (!isEnumValue(IProgramExerciseProgressType, fnName)) {
-    yield PlannerSyntaxError.fromNode(
-      `There's no such progression exists - '${fnName}'`,
-      fnNameNode,
-    );
-    return;
-  }
-  switch (fnName) {
-    case IProgramExerciseProgressType.LP:
-      yield* validateLp(fnArgs, valueNode);
-      break;
-    case IProgramExerciseProgressType.SUM:
-      yield* validateSumProgression(fnArgs, valueNode);
-      break;
-    case IProgramExerciseProgressType.DP:
-      if (fnArgs.length !== 3) {
-        errorPlannerSyntax(
-          `Double Progression 'dp' should have 3 arguments`,
-          valueNode,
+  const validator = isEnumValue(IProgramExerciseProgressType, fnName)
+    ? validatorMap[fnName]
+    : function* () {
+        yield PlannerSyntaxError.fromNode(
+          `There's no such progression exists - '${fnName}'`,
+          fnNameNode,
         );
-      } else if (
-        fnArgs[0] == null ||
-        (!fnArgs[0].endsWith("lb") &&
-          !fnArgs[0].endsWith("kg") &&
-          !fnArgs[0].endsWith("%"))
-      ) {
-        errorPlannerSyntax(
-          `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      } else if (fnArgs[1] == null || isNaN(parseInt(fnArgs[1], 10))) {
-        errorPlannerSyntax(
-          `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
-          valueNode,
-        );
-      } else if (fnArgs[2] == null || isNaN(parseInt(fnArgs[2], 10))) {
-        errorPlannerSyntax(
-          `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
-          valueNode,
-        );
-      }
-      break;
-    case IProgramExerciseProgressType.CUSTOM:
-      const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-      const script = liftoscriptNode ? liftoscriptNode.source : undefined;
-      const reuseLiftoscriptNode = valueNode
-        .getChild(PlannerNodeName.ReuseLiftoscript)
-        ?.getChild(PlannerNodeName.ReuseSection)
-        ?.getChild(PlannerNodeName.ExerciseName);
-      const body = reuseLiftoscriptNode
-        ? reuseLiftoscriptNode.source
-        : undefined;
-      if (!script && !body) {
-        errorPlannerSyntax(
-          `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
-          valueNode,
-        );
-      }
-      break;
-    case IProgramExerciseProgressType.NONE:
-      break;
-    default:
-      fnName satisfies never;
-  }
+      };
+  yield* validator(fnArgs, valueNode);
 }
 
 function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
