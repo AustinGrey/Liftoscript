@@ -220,13 +220,14 @@ function fillInMetadata(
       dayData,
     };
   }
-  setByWeekDayExercise(
-    metadata.byWeekDayExercise,
-    exercise.key,
-    dayData.week - 1,
-    dayData.dayInWeek - 1,
-    exercise,
-  );
+
+  metadata.byWeekDayExercise[dayData.week - 1] =
+    metadata.byWeekDayExercise[dayData.week - 1] || {};
+  metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1] =
+    metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1] || {};
+  metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1][
+    exercise.key
+  ] = exercise;
   setByExerciseWeekDay(
     metadata.byExerciseWeekDay,
     exercise.key,
@@ -1000,21 +1001,6 @@ function setByExerciseWeekDay<
   coll[exercise as keyof U][weekIndex] =
     coll[exercise as keyof U][weekIndex] || {};
   coll[exercise as keyof U][weekIndex][dayIndex] = val;
-}
-
-function setByWeekDayExercise<
-  T,
-  U extends Record<number, Record<number, Record<string, T>>>,
->(
-  coll: U,
-  exercise: string,
-  weekIndex: number,
-  dayIndex: number,
-  val: T,
-): void {
-  coll[weekIndex] = coll[weekIndex] || {};
-  coll[weekIndex][dayIndex] = coll[weekIndex][dayIndex] || {};
-  coll[weekIndex][dayIndex][exercise] = val;
 }
 
 function iterateOverExercises(
