@@ -98,7 +98,7 @@ import {
   PlannerProgram_groupedTopLines,
 } from "@/planner/evaluators";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
-import { asProgramScript2 } from "@/planner/display.ts";
+import { asProgramScript } from "@/planner/display.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -3991,7 +3991,7 @@ export function convertToPlanner(
   const plannerWeeks: IPlannerProgramWeek[] = [];
   if (program.errors.length > 0) {
     const error = program.errors[0];
-    console.log(asProgramScript2(program.planner));
+    console.log(asProgramScript(program.planner));
 
     throw error.error;
   }

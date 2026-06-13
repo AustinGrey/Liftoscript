@@ -76,7 +76,7 @@ function makeTest(c: PlannerTestCase): TestFunction {
     if (!program.planner) {
       expect.fail("Old system failed to produce a program planner.");
     }
-    const newText = asProgramScript(program.planner);
+    const newText = asProgramScript(program.planner, { addExtraSpace: true });
     expect
       .soft(newText, "Old system failed to produce the expected result")
       .to.equal(c.result);
@@ -94,7 +94,9 @@ function makeTest(c: PlannerTestCase): TestFunction {
     if (!newSystemProgram.planner) {
       expect.fail("New system failed to produce a program planner.");
     }
-    const newSystemNewText = asProgramScript(newSystemProgram.planner);
+    const newSystemNewText = asProgramScript(newSystemProgram.planner, {
+      addExtraSpace: true,
+    });
     expect
       .soft(
         newSystemNewText,
@@ -1980,7 +1982,7 @@ Squat / 3x5 / 4x8 / 47.5kg
     const oldKgProgram = PlannerProgram_switchToUnit(program.planner, settings);
     expect
       .soft(
-        asProgramScript(oldKgProgram),
+        asProgramScript(oldKgProgram, { addExtraSpace: true }),
         "Old system failed to produce the expected result",
       )
       .to.equal(expected);
@@ -1999,7 +2001,7 @@ Squat / 3x5 / 4x8 / 47.5kg
     );
     expect
       .soft(
-        asProgramScript(newKgProgram),
+        asProgramScript(newKgProgram, { addExtraSpace: true }),
         "New system failed to produce the expected result",
       )
       .to.equal(expected);
