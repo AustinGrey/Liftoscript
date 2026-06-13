@@ -1,3 +1,27 @@
+import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { ObjectUtils_isEqual, ObjectUtils_keys } from "@/utils/object.ts";
+import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
+import { LiftoscriptSyntaxError } from "@/logic/evaluators/types.ts";
+import { Progress_createScriptFunctions } from "@/public-functions.ts";
+import type {
+  IPlannerProgram,
+  IPlannerProgramDay,
+  IPlannerProgramWeek,
+  IProgram,
+} from "@/program";
+import { memoize } from "micro-memoize";
+import { eq, typeOf } from "@/quantities/weight.ts";
+import type { IExerciseType } from "@/exercises";
+import type { IEither } from "@/utils/types.ts";
+import { filterUndefined } from "@/utils/collection.ts";
+import { generateUid } from "@/utils/uid.ts";
+import {
+  PlannerNodeName,
+  PlannerSyntaxError,
+} from "@/planner/parsing/guards.ts";
+import { queryChildren } from "@/utils/grammars.ts";
+//@todo These imports are coming from higher or dead layers, which should not be imported from
+import type { ISettings } from "@/user-settings";
 import {
   convertToPlanner,
   evaluate,
@@ -30,30 +54,6 @@ import {
   Progress_createEmptyScriptBindings,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
-import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
-import { ObjectUtils_isEqual, ObjectUtils_keys } from "@/utils/object.ts";
-import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
-//@todo ISettings should not be imported, this layer comes before the user settings layer
-import type { ISettings } from "@/user-settings";
-import { LiftoscriptSyntaxError } from "@/logic/evaluators/types.ts";
-import { Progress_createScriptFunctions } from "@/public-functions.ts";
-import type {
-  IPlannerProgram,
-  IPlannerProgramDay,
-  IPlannerProgramWeek,
-  IProgram,
-} from "@/program";
-import { memoize } from "micro-memoize";
-import { eq, typeOf } from "@/quantities/weight.ts";
-import type { IExerciseType } from "@/exercises";
-import type { IEither } from "@/utils/types.ts";
-import { filterUndefined } from "@/utils/collection.ts";
-import { generateUid } from "@/utils/uid.ts";
-import {
-  PlannerNodeName,
-  PlannerSyntaxError,
-} from "@/planner/parsing/guards.ts";
-import { queryChildren } from "@/utils/grammars.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -1339,30 +1339,33 @@ export function PlannerProgram_evaluateText(
 export function PlannerProgram_generateFullText(
   weeks: IPlannerProgramWeek[],
 ): string {
-  let fullText = "";
+  let allParts: string[] = [];
   for (const week of weeks) {
+    let weekParts: string[] = [];
     if (week.description != null) {
-      fullText +=
+      weekParts.push(
         week.description
           .split("\n")
           .map((l) => (l ? `// ${l}` : "//"))
-          .join("\n") + "\n";
+          .join("\n"),
+      );
     }
-    fullText += `# ${week.name}\n`;
+    weekParts.push(`# ${week.name}`);
     for (const day of week.days) {
       if (day.description != null) {
-        fullText +=
+        weekParts.push(
           day.description
             .split("\n")
             .map((l) => `// ${l}`)
-            .join("\n") + "\n";
+            .join("\n"),
+        );
       }
-      fullText += `## ${day.name}\n`;
-      fullText += `${day.exerciseText}\n\n`;
+      weekParts.push(`## ${day.name}`);
+      weekParts.push(`${day.exerciseText}\n`);
     }
-    fullText += "\n";
+    allParts.push(weekParts.join("\n"));
   }
-  return fullText;
+  return allParts.join("\n");
 }
 
 //#endregion
