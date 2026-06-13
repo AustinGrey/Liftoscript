@@ -2437,8 +2437,7 @@ function PlannerProgramExercise_programWarmups(
       let value: IWeight | number | undefined = ws.percentage
         ? ws.percentage / 100
         : undefined;
-      value ??= ws.weight;
-      value ??= MathUtils_roundTo0005(rpeMultiplier(ws.reps, 4));
+      value ??= ws.weight ?? MathUtils_roundTo0005(rpeMultiplier(ws.reps, 4));
       sets.push({
         reps: ws.reps,
         value,
