@@ -1153,8 +1153,23 @@ export interface IPlannerProgramReuse {
   exercise?: IPlannerProgramExercise;
 }
 
-type IProgramExerciseUpdateType = "custom" | "lp" | "dp" | "sum";
-type IProgramExerciseProgressType = IProgramExerciseUpdateType | "none";
+enum IProgramExerciseUpdateType {
+  CUSTOM = "custom",
+  LP = "lp",
+  DP = "dp",
+  SUM = "sum",
+}
+
+/**
+ * @todo what relationship does this have to {@link IProgramExerciseUpdateType}, if any? Can they be combined?
+ */
+enum IProgramExerciseProgressType {
+  CUSTOM = "custom",
+  LP = "lp",
+  DP = "dp",
+  SUM = "sum",
+  NONE = "none",
+}
 
 export interface IProgramExerciseDescriptions {
   values: {
@@ -1903,7 +1918,7 @@ function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
         );
       }
       return {
-        type: "custom",
+        type: IProgramExerciseUpdateType.CUSTOM,
         script,
         liftoscriptNode,
         meta,
@@ -1948,7 +1963,8 @@ function evaluateProgressImpl(
   let options:
     | Parameters<typeof PlannerProgramExercise_buildProgress>[2]
     | undefined = undefined;
-  if (fnName === "custom") {
+
+  if (fnName === IProgramExerciseProgressType.CUSTOM) {
     const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
     const script = liftoscriptNode ? liftoscriptNode.source : undefined;
     if (script) {
@@ -2680,7 +2696,7 @@ function PlannerProgramExercise_buildProgress(
   } = {},
 ): IEither<IProgramExerciseProgress, string> {
   switch (type) {
-    case "lp": {
+    case IProgramExerciseProgressType.LP: {
       const increment = args[0] ? parsePct(args[0]) : w`0lb`;
       const decrement = args[3] ? parsePct(args[3]) : w`0lb`;
       const state: IProgramState = {
@@ -2728,14 +2744,14 @@ if (state.decrement > 0 && state.failures > 0) {
       return {
         success: true,
         data: {
-          type: "lp",
+          type,
           state,
           stateMetadata: {},
           script,
         },
       };
     }
-    case "dp": {
+    case IProgramExerciseProgressType.DP: {
       const increment = args[0] ? parsePct(args[0]) : w`0lb`;
       const state: IProgramState = {
         increment: increment ?? w`0lb`,
@@ -2746,14 +2762,14 @@ if (state.decrement > 0 && state.failures > 0) {
       return {
         success: true,
         data: {
-          type: "dp",
+          type,
           state,
           stateMetadata: {},
           script,
         },
       };
     }
-    case "sum": {
+    case IProgramExerciseProgressType.SUM: {
       const increment = args[1] ? parsePct(args[1]) : w`0lb`;
       const state: IProgramState = {
         reps: args[0] ? parseInt(args[0], 10) : 0,
@@ -2772,14 +2788,14 @@ for (var.i in completedReps) {
       return {
         success: true,
         data: {
-          type: "sum",
+          type,
           state,
           stateMetadata: {},
           script,
         },
       };
     }
-    case "custom": {
+    case IProgramExerciseProgressType.CUSTOM: {
       const script = opts.script;
       let errorMessage: string | undefined;
       const { state, stateMetadata } = fnArgsToStateVars(args, (message) => {
@@ -2794,7 +2810,7 @@ for (var.i in completedReps) {
       return {
         success: true,
         data: {
-          type: "custom",
+          type,
           state,
           stateMetadata,
           script,
@@ -2804,12 +2820,12 @@ for (var.i in completedReps) {
         },
       };
     }
-    case "none":
+    case IProgramExerciseProgressType.NONE:
     default: {
       return {
         success: true,
         data: {
-          type: "none",
+          type: IProgramExerciseProgressType.NONE,
           state: {},
           stateMetadata: {},
         },
