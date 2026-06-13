@@ -1,5 +1,5 @@
 import * as planTerms from "./workout-plan.terms.ts";
-import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+import type { ISyntaxPointer, SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 type IdMap_Plan = typeof planTerms;
 
@@ -148,13 +148,6 @@ export function asPlanNodeOfTypeOrThrow<T extends NodeNames_Plan>(
   return node as TypedPlanNode<T>;
 }
 
-export type IPlannerSyntaxPointer = {
-  line: number;
-  offset: number;
-  from: number;
-  to: number;
-};
-
 export class PlannerSyntaxError extends SyntaxError {
   public readonly line: number;
   public readonly offset: number;
@@ -164,7 +157,7 @@ export class PlannerSyntaxError extends SyntaxError {
   public static fromPoint(
     fullName: string | undefined,
     message: string,
-    point: IPlannerSyntaxPointer,
+    point: ISyntaxPointer,
   ): PlannerSyntaxError {
     return new PlannerSyntaxError(
       `${fullName ? `${fullName}: ` : ""}${message} (${point.line}:${point.offset})`,
@@ -174,21 +167,6 @@ export class PlannerSyntaxError extends SyntaxError {
       point.to,
     );
   }
-
-  // public static fromNode(
-  //   fullName: string | undefined,
-  //   message: string,
-  //   node: SourcedSyntaxNode,
-  // ): PlannerSyntaxError {
-  //   const [line, offset] = node.getLineAndOffset();
-  //   return new PlannerSyntaxError(
-  //     `${fullName ? `${fullName}: ` : ""}${message} (${line}:${offset})`,
-  //     line,
-  //     offset,
-  //     node.from,
-  //     node.to,
-  //   );
-  // }
 
   constructor(
     message: string,

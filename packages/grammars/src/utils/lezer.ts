@@ -33,6 +33,28 @@ function getLineAndOffset(script: string, node: SyntaxNode): [number, number] {
 }
 
 /**
+ * Points to a particular location in the source code
+ */
+export type ISyntaxPointer = {
+  /**
+   * Which line (1-indexed) the location starts at
+   */
+  line: number;
+  /**
+   * Which offset (0-indexed) within the line the location starts at
+   */
+  offset: number;
+  /**
+   * Which character index (0-indexed) within the full source code the location starts at
+   */
+  from: number;
+  /**
+   * Which character index (0-indexed) within the full source code the location ends at
+   */
+  to: number;
+};
+
+/**
  * Provide an interface that is like {@link SyntaxNode}, but don't extend since the type returned by cursor is a tree class that doesn't
  * extend SyntaxTree, making them technically incompatible
  */
@@ -47,8 +69,13 @@ export interface SourcedSyntaxNode {
   source: string;
   /**
    * Gets the [line, offset] within the full source where this node's source is located
+   * @deprecated Use {@link getPointer} instead
    */
   getLineAndOffset: () => [number, number];
+  /**
+   * Gets a pointer to the code in the original source where this node was parsed from
+   */
+  getPointer: () => ISyntaxPointer;
   parent: SourcedSyntaxNode | null;
   firstChild: SourcedSyntaxNode | null;
   lastChild: SourcedSyntaxNode | null;
@@ -179,6 +206,15 @@ function bindNode(
     prop: (...args) => node.prop(...args),
     toTree: (...args) => node.toTree(...args),
     getLineAndOffset: () => getLineAndOffset(getSource(), node),
+    getPointer: () => {
+      const [line, offset] = getLineAndOffset(getSource(), node);
+      return {
+        line,
+        offset,
+        from: node.from,
+        to: node.to,
+      };
+    },
   };
 }
 

@@ -66,7 +66,6 @@ import {
   type ISettings,
 } from "@/user-settings";
 import {
-  type IPlannerSyntaxPointer,
   PlannerNodeName,
   PlannerSyntaxError,
 } from "@/planner/parsing/guards.ts";
@@ -81,7 +80,11 @@ import {
   type IProgramExerciseWarmupSet,
   type IProgramStateMetadata,
 } from "@/program";
-import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import {
+  type ISyntaxPointer,
+  parseBound,
+  type SourcedSyntaxNode,
+} from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run, validate } from "@/logic/evaluators";
@@ -1082,13 +1085,13 @@ export type IPlannerProgramExercise = {
   progress?: IProgramExerciseProgress;
   update?: IProgramExerciseUpdate;
   points: {
-    fullName: IPlannerSyntaxPointer;
-    supersetPoint?: IPlannerSyntaxPointer;
-    reuseSetPoint?: IPlannerSyntaxPointer;
-    progressPoint?: IPlannerSyntaxPointer;
-    updatePoint?: IPlannerSyntaxPointer;
-    idPoint?: IPlannerSyntaxPointer;
-    warmupPoint?: IPlannerSyntaxPointer;
+    fullName: ISyntaxPointer;
+    supersetPoint?: ISyntaxPointer;
+    reuseSetPoint?: ISyntaxPointer;
+    progressPoint?: ISyntaxPointer;
+    updatePoint?: ISyntaxPointer;
+    idPoint?: ISyntaxPointer;
+    warmupPoint?: ISyntaxPointer;
   };
 };
 
@@ -1448,10 +1451,6 @@ function evaluateWarmupSet(
     assert(PlannerNodeName.ExerciseSection);
   }
 }
-function getPoint(node: SourcedSyntaxNode): IPlannerSyntaxPointer {
-  const [line, offset] = node.getLineAndOffset();
-  return { line, offset, from: node.from, to: node.to };
-}
 
 function evaluateWarmup(
   expr: SourcedSyntaxNode,
@@ -1611,7 +1610,7 @@ export function errorPlannerSyntax(
   message: string,
   node: SourcedSyntaxNode,
 ): never {
-  throw PlannerSyntaxError.fromPoint(undefined, message, getPoint(node));
+  throw PlannerSyntaxError.fromPoint(undefined, message, node.getPointer());
 }
 
 export function parse(expr: SourcedSyntaxNode): void {
@@ -2181,7 +2180,7 @@ export function evaluate(
         }
         const nameNode = child.getChild(PlannerNodeName.ExerciseName);
         if (nameNode == null) {
-          assert("ExerciseName");
+          return assert("ExerciseName");
         }
 
         const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
@@ -2278,15 +2277,11 @@ export function evaluate(
           value: StringUtils_unindent(d.value),
         }));
         latestDescriptions = [];
-        const fullNamePoint = getPoint(nameNode);
 
         const reuseSetsNode = child
           .getChildren(PlannerNodeName.ExerciseSection)
           .map((n) => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
           .filter((n) => n)[0];
-        const reuseSetPoint = reuseSetsNode
-          ? getPoint(reuseSetsNode)
-          : undefined;
 
         const progressNode = child
           .getChildren(PlannerNodeName.ExerciseSection)
@@ -2300,7 +2295,6 @@ export function evaluate(
           })
           .flat(2)
           .filter((n) => n)[0];
-        const progressPoint = progressNode ? getPoint(progressNode) : undefined;
 
         const updateNode = child
           .getChildren(PlannerNodeName.ExerciseSection)
@@ -2312,7 +2306,6 @@ export function evaluate(
           })
           .flat(2)
           .filter((n) => n)[0];
-        const updatePoint = updateNode ? getPoint(updateNode) : undefined;
 
         const idNode = child
           .getChildren(PlannerNodeName.ExerciseSection)
@@ -2324,7 +2317,6 @@ export function evaluate(
           })
           .flat(2)
           .filter((n) => n)[0];
-        const idPoint = idNode ? getPoint(idNode) : undefined;
 
         const warmupNode = child
           .getChildren(PlannerNodeName.ExerciseSection)
@@ -2335,13 +2327,11 @@ export function evaluate(
           )
           .flat(2)
           .filter((n) => n)[0];
-        const warmupPoint = warmupNode ? getPoint(warmupNode) : undefined;
 
         const supersetNode = child
           .getChildren(PlannerNodeName.ExerciseSection)
           .map((n) => n.getChild(PlannerNodeName.Superset))
           .filter((n) => n)[0];
-        const supersetPoint = supersetNode ? getPoint(supersetNode) : undefined;
 
         const plannerExercise: IPlannerProgramExercise = {
           id: generateUid(8),
@@ -2380,13 +2370,13 @@ export function evaluate(
             weight,
           },
           points: {
-            fullName: fullNamePoint,
-            supersetPoint,
-            reuseSetPoint,
-            progressPoint,
-            idPoint,
-            updatePoint,
-            warmupPoint,
+            fullName: nameNode.getPointer(),
+            supersetPoint: supersetNode?.getPointer(),
+            reuseSetPoint: reuseSetsNode?.getPointer(),
+            progressPoint: progressNode?.getPointer(),
+            idPoint: idNode?.getPointer(),
+            updatePoint: updateNode?.getPointer(),
+            warmupPoint: warmupNode?.getPointer(),
           },
         };
         weeks[weeks.length - 1].days[
