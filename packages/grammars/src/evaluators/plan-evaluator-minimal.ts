@@ -9,7 +9,13 @@ import {
   MathUtils_roundTo0005,
   n,
 } from "@/utils/math";
-import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
+import {
+  type IEither,
+  is,
+  isEnumValue,
+  isNumber,
+  type OpenRecord,
+} from "@/utils/types";
 import {
   ObjectUtils_entries,
   ObjectUtils_filter,
@@ -1754,122 +1760,134 @@ function validateProgress(
   fnNameNode: SourcedSyntaxNode,
   valueNode: SourcedSyntaxNode,
 ): void {
-  if (["lp", "sum", "dp", "custom", "none"].indexOf(fnName) === -1) {
-    errorPlannerSyntax(
+  if (!isEnumValue(IProgramExerciseProgressType, fnName)) {
+    return errorPlannerSyntax(
       `There's no such progression exists - '${fnName}'`,
       fnNameNode,
     );
   }
-  if (fnName === "lp") {
-    if (fnArgs.length > 6) {
-      errorPlannerSyntax(
-        `Linear Progression 'lp' only has 6 arguments max`,
-        valueNode,
-      );
-    } else if (
-      fnArgs[0] &&
-      !fnArgs[0].endsWith("lb") &&
-      !fnArgs[0].endsWith("kg") &&
-      !fnArgs[0].endsWith("%")
-    ) {
-      errorPlannerSyntax(
-        `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-        valueNode,
-      );
-    } else if (fnArgs[1] != null && isNaN(parseInt(fnArgs[1], 10))) {
-      errorPlannerSyntax(
-        `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
-        valueNode,
-      );
-    } else if (fnArgs[2] != null && isNaN(parseInt(fnArgs[2], 10))) {
-      errorPlannerSyntax(
-        `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
-        valueNode,
-      );
-    } else if (
-      fnArgs[3] != null &&
-      !fnArgs[3].endsWith("lb") &&
-      !fnArgs[3].endsWith("kg") &&
-      !fnArgs[3].endsWith("%")
-    ) {
-      errorPlannerSyntax(
-        `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-        valueNode,
-      );
-    } else if (fnArgs[4] != null && isNaN(parseInt(fnArgs[4], 10))) {
-      errorPlannerSyntax(
-        `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
-        valueNode,
-      );
-    } else if (fnArgs[5] != null && isNaN(parseInt(fnArgs[5], 10))) {
-      errorPlannerSyntax(
-        `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
-        valueNode,
-      );
-    }
-  } else if (fnName === "sum") {
-    if (fnArgs.length > 2) {
-      errorPlannerSyntax(
-        `Reps Sum Progression 'sum' only has 2 arguments max`,
-        valueNode,
-      );
-    } else if (fnArgs[0] == null || isNaN(parseInt(fnArgs[0], 10))) {
-      errorPlannerSyntax(
-        `1st argument of 'sum' should be a number of reps - i.e. a number`,
-        valueNode,
-      );
-    } else if (
-      fnArgs[1] == null ||
-      (!fnArgs[1].endsWith("lb") &&
-        !fnArgs[1].endsWith("kg") &&
-        !fnArgs[1].endsWith("%"))
-    ) {
-      errorPlannerSyntax(
-        `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-        valueNode,
-      );
-    }
-  } else if (fnName === "dp") {
-    if (fnArgs.length !== 3) {
-      errorPlannerSyntax(
-        `Double Progression 'dp' should have 3 arguments`,
-        valueNode,
-      );
-    } else if (
-      fnArgs[0] == null ||
-      (!fnArgs[0].endsWith("lb") &&
+  switch (fnName) {
+    case IProgramExerciseProgressType.LP:
+      if (fnArgs.length > 6) {
+        return errorPlannerSyntax(
+          `Linear Progression 'lp' only has 6 arguments max`,
+          valueNode,
+        );
+      }
+      if (
+        fnArgs[0] &&
+        !fnArgs[0].endsWith("lb") &&
         !fnArgs[0].endsWith("kg") &&
-        !fnArgs[0].endsWith("%"))
-    ) {
-      errorPlannerSyntax(
-        `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-        valueNode,
-      );
-    } else if (fnArgs[1] == null || isNaN(parseInt(fnArgs[1], 10))) {
-      errorPlannerSyntax(
-        `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
-        valueNode,
-      );
-    } else if (fnArgs[2] == null || isNaN(parseInt(fnArgs[2], 10))) {
-      errorPlannerSyntax(
-        `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
-        valueNode,
-      );
-    }
-  } else if (fnName === "custom") {
-    const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-    const script = liftoscriptNode ? liftoscriptNode.source : undefined;
-    const reuseLiftoscriptNode = valueNode
-      .getChild(PlannerNodeName.ReuseLiftoscript)
-      ?.getChild(PlannerNodeName.ReuseSection)
-      ?.getChild(PlannerNodeName.ExerciseName);
-    const body = reuseLiftoscriptNode ? reuseLiftoscriptNode.source : undefined;
-    if (!script && !body) {
-      errorPlannerSyntax(
-        `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
-        valueNode,
-      );
-    }
+        !fnArgs[0].endsWith("%")
+      ) {
+        errorPlannerSyntax(
+          `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+          valueNode,
+        );
+      } else if (fnArgs[1] != null && isNaN(parseInt(fnArgs[1], 10))) {
+        errorPlannerSyntax(
+          `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
+          valueNode,
+        );
+      } else if (fnArgs[2] != null && isNaN(parseInt(fnArgs[2], 10))) {
+        errorPlannerSyntax(
+          `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
+          valueNode,
+        );
+      } else if (
+        fnArgs[3] != null &&
+        !fnArgs[3].endsWith("lb") &&
+        !fnArgs[3].endsWith("kg") &&
+        !fnArgs[3].endsWith("%")
+      ) {
+        errorPlannerSyntax(
+          `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+          valueNode,
+        );
+      } else if (fnArgs[4] != null && isNaN(parseInt(fnArgs[4], 10))) {
+        errorPlannerSyntax(
+          `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
+          valueNode,
+        );
+      } else if (fnArgs[5] != null && isNaN(parseInt(fnArgs[5], 10))) {
+        errorPlannerSyntax(
+          `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
+          valueNode,
+        );
+      }
+      break;
+    case IProgramExerciseProgressType.SUM:
+      if (fnArgs.length > 2) {
+        errorPlannerSyntax(
+          `Reps Sum Progression 'sum' only has 2 arguments max`,
+          valueNode,
+        );
+      } else if (fnArgs[0] == null || isNaN(parseInt(fnArgs[0], 10))) {
+        errorPlannerSyntax(
+          `1st argument of 'sum' should be a number of reps - i.e. a number`,
+          valueNode,
+        );
+      } else if (
+        fnArgs[1] == null ||
+        (!fnArgs[1].endsWith("lb") &&
+          !fnArgs[1].endsWith("kg") &&
+          !fnArgs[1].endsWith("%"))
+      ) {
+        errorPlannerSyntax(
+          `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+          valueNode,
+        );
+      }
+      break;
+    case IProgramExerciseProgressType.DP:
+      if (fnArgs.length !== 3) {
+        errorPlannerSyntax(
+          `Double Progression 'dp' should have 3 arguments`,
+          valueNode,
+        );
+      } else if (
+        fnArgs[0] == null ||
+        (!fnArgs[0].endsWith("lb") &&
+          !fnArgs[0].endsWith("kg") &&
+          !fnArgs[0].endsWith("%"))
+      ) {
+        errorPlannerSyntax(
+          `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+          valueNode,
+        );
+      } else if (fnArgs[1] == null || isNaN(parseInt(fnArgs[1], 10))) {
+        errorPlannerSyntax(
+          `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
+          valueNode,
+        );
+      } else if (fnArgs[2] == null || isNaN(parseInt(fnArgs[2], 10))) {
+        errorPlannerSyntax(
+          `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
+          valueNode,
+        );
+      }
+      break;
+    case IProgramExerciseProgressType.CUSTOM:
+      const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
+      const script = liftoscriptNode ? liftoscriptNode.source : undefined;
+      const reuseLiftoscriptNode = valueNode
+        .getChild(PlannerNodeName.ReuseLiftoscript)
+        ?.getChild(PlannerNodeName.ReuseSection)
+        ?.getChild(PlannerNodeName.ExerciseName);
+      const body = reuseLiftoscriptNode
+        ? reuseLiftoscriptNode.source
+        : undefined;
+      if (!script && !body) {
+        errorPlannerSyntax(
+          `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
+          valueNode,
+        );
+      }
+      break;
+    case IProgramExerciseProgressType.NONE:
+      break;
+    default:
+      fnName satisfies never;
   }
 }
 
@@ -1973,7 +1991,7 @@ function evaluateProgressImpl(
 
   if (fnName === IProgramExerciseProgressType.CUSTOM) {
     const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-    const script = liftoscriptNode ? liftoscriptNode.source : undefined;
+    const script = liftoscriptNode?.source;
     if (script) {
       const [firstError] = validateScript(
         script,

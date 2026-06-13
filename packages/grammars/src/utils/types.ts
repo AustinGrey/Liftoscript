@@ -61,3 +61,10 @@ export function isOneOf<TTarget, const TGuard extends TTarget>(
 export type Swap<T extends Record<string, string | number | symbol>> = {
   [K in keyof T as T[K]]: K;
 };
+
+export function isEnumValue<T extends string | number | symbol>(
+  enumObject: Record<string, T>,
+  value: unknown,
+): value is T {
+  return Object.values(enumObject).includes(value as T);
+}

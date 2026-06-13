@@ -1,3 +1,5 @@
+import { isInteger } from "es-toolkit/compat";
+
 export function MathUtils_round(value: number, to: number): number {
   return MathUtils_roundFloat(Math.round(value / to) * to, 4);
 }
@@ -64,4 +66,14 @@ export function MathUtils_clamp(
 
 export function n(value: number, precision: number = 2): string {
   return `${MathUtils_roundFloat(value, precision)}`;
+}
+
+/**
+ * @returns the string as a base 10 integer, or undefined if it parsed to a non real number like NaN or infinity
+ * @param text The string to convert
+ */
+export function asBase10Int(text?: string): number | undefined {
+  if (!text) return undefined;
+  const parsed = parseInt(text, 10);
+  return isInteger(parsed) ? undefined : parsed;
 }
