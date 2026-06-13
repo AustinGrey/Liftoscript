@@ -1,7 +1,10 @@
 import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { ObjectUtils_isEqual, ObjectUtils_keys } from "@/utils/object.ts";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
-import { LiftoscriptSyntaxError } from "@/logic/evaluators/types.ts";
+import {
+  IProgramMode,
+  LiftoscriptSyntaxError,
+} from "@/logic/evaluators/types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import type {
   IPlannerProgram,
@@ -32,6 +35,7 @@ import {
   type IProgramExerciseDescriptions,
   type IProgramExerciseProgress,
   type IProgramExerciseUpdate,
+  IProgramExerciseUpdateType,
   isEqualProgress,
   isEqualUpdate,
   type IWeightChange,
@@ -666,31 +670,32 @@ function checkUpdateScript(
   dayData: IDayData,
 ): void {
   const update = exercise.update;
-  if (update?.type === "custom") {
-    const { script, liftoscriptNode } = update;
-    if (script && liftoscriptNode) {
-      const state = PlannerProgramExercise_getState(exercise);
-      try {
-        validateScript(
-          script,
-          state,
-          Progress_createEmptyScriptBindings(dayData, settings),
-          Progress_createScriptFunctions(settings),
-          "update",
+  if (update?.type !== IProgramExerciseUpdateType.CUSTOM) {
+    return;
+  }
+  const { script, liftoscriptNode } = update;
+  if (script && liftoscriptNode) {
+    const state = PlannerProgramExercise_getState(exercise);
+    try {
+      validateScript(
+        script,
+        state,
+        Progress_createEmptyScriptBindings(dayData, settings),
+        Progress_createScriptFunctions(settings),
+        IProgramMode.UPDATE,
+      );
+    } catch (e) {
+      if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
+        const { line, from } = liftoscriptNode.getPointer();
+        throw new PlannerSyntaxError(
+          e.message,
+          line + e.line,
+          e.offset,
+          from + e.from,
+          from + e.to,
         );
-      } catch (e) {
-        if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-          const { line, from } = liftoscriptNode.getPointer();
-          throw new PlannerSyntaxError(
-            e.message,
-            line + e.line,
-            e.offset,
-            from + e.from,
-            from + e.to,
-          );
-        } else {
-          throw e;
-        }
+      } else {
+        throw e;
       }
     }
   }

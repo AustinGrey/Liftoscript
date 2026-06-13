@@ -1183,7 +1183,7 @@ export interface IProgramExerciseProgress {
   liftoscriptNode?: SyntaxNode;
 }
 
-enum IProgramExerciseUpdateType {
+export enum IProgramExerciseUpdateType {
   CUSTOM = "custom",
   LP = "lp",
   DP = "dp",
@@ -1983,7 +1983,7 @@ function evaluateProgressImpl(
           ).state,
           Progress_createEmptyScriptBindings(dayData, settings),
           Progress_createScriptFunctions(settings),
-          "planner",
+          IProgramMode.PLANNER,
         );
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
@@ -3158,25 +3158,52 @@ function Progress_applyBindings(
 //#endregion
 
 //#region PP
+/**
+ * Callback invoked for each exercise while walking a program's week/day grid.
+ *
+ * @returns `true` to stop iteration immediately, otherwise iteration continues.
+ *
+ * @param exercise The evaluated planner exercise at the current position.
+ * @param weekIndex 0-based index of the week within the program.
+ * @param dayInWeekIndex 0-based index of the day within its week.
+ * @param dayIndex 0-based absolute day index across the whole program. This
+ *   increments once per day slot in program order, including days where exercises are skipped.
+ * @param exerciseIndex 0-based index of the exercise within its day.
+ */
 type IExerciseIterationCallback = (
   exercise: IPlannerProgramExercise,
   weekIndex: number,
-  dayInWeekIndex: number,
-  dayIndex: number,
+  dayIndexInWeek: number,
+  dayIndexInProgram: number,
   exerciseIndex: number,
-) => boolean | void;
+) => true | void;
 
+/**
+ * Generic walker for different kinds of week/day/exercise structures.
+ *
+ * @param weeks The top-level weeks collection to iterate.
+ * @param getDays Defines how to access days from an element of the weeks collection. You should always return ALL days,
+ *   even if you don't want to visit the exercises in them.
+ * @param getExercises Defines how to access exercises from an element of the days collection.
+ *   You may return undefined, indicating you do not want to run the callback for the exercises of that day,
+ *   but the day is still counted as visited.
+ * @param cb Called for each exercise in week → day → exercise order.
+ */
 function forExerciseInGrid<TWeek, TDay>(
   weeks: readonly TWeek[],
   getDays: (week: TWeek) => readonly TDay[],
   getExercises: (day: TDay) => readonly IPlannerProgramExercise[] | undefined,
   cb: IExerciseIterationCallback,
 ): void {
-  let dayIndex = 0;
+  let dayIndexInProgram = 0;
   for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
     const days = getDays(weeks[weekIndex]);
-    for (let dayInWeekIndex = 0; dayInWeekIndex < days.length; dayInWeekIndex++) {
-      const exercises = getExercises(days[dayInWeekIndex]);
+    for (
+      let dayIndexInWeek = 0;
+      dayIndexInWeek < days.length;
+      dayIndexInWeek++
+    ) {
+      const exercises = getExercises(days[dayIndexInWeek]);
       if (exercises) {
         for (
           let exerciseIndex = 0;
@@ -3187,8 +3214,8 @@ function forExerciseInGrid<TWeek, TDay>(
             cb(
               exercises[exerciseIndex],
               weekIndex,
-              dayInWeekIndex,
-              dayIndex,
+              dayIndexInWeek,
+              dayIndexInProgram,
               exerciseIndex,
             )
           ) {
@@ -3196,11 +3223,19 @@ function forExerciseInGrid<TWeek, TDay>(
           }
         }
       }
-      dayIndex += 1;
+      dayIndexInProgram += 1;
     }
   }
 }
 
+/**
+ * Visits every exercise in an {@link IEvaluatedProgram}
+ *
+ * @param evaluatedWeeks The evaluated program weeks to walk.
+ * @param cb Called for each exercise in week → day → exercise order.
+ * @see forExerciseInEvaluatedResults
+ * @see forExerciseInGrid
+ */
 export function forExerciseInEvaluatedWeeks(
   evaluatedWeeks: IEvaluatedProgram["weeks"],
   cb: IExerciseIterationCallback,
@@ -3213,6 +3248,14 @@ export function forExerciseInEvaluatedWeeks(
   );
 }
 
+/**
+ * Visits every exercise in successful days only of the {@link IPlannerEvalResult}
+ *
+ * @param evaluatedWeeks Raw per-week evaluation results to walk.
+ * @param cb Called for each exercise in successful days only.
+ * @see forExerciseInEvaluatedWeeks
+ * @see forExerciseInGrid
+ */
 export function forExerciseInEvaluatedResults(
   evaluatedWeeks: IPlannerEvalResult[][],
   cb: IExerciseIterationCallback,
@@ -4556,7 +4599,7 @@ export function validateScript(
   state: IProgramState,
   bindings: IScriptBindings,
   fns: IScriptFunctions,
-  mode: "planner" | "update",
+  mode: IProgramMode,
 ): void {
   const trackedVarNames = new Set<string>();
   const [firstError, ..._rest] = validate(
@@ -4565,7 +4608,7 @@ export function validateScript(
       knownFunctions: Object.keys(fns),
       knownBindings: Object.keys(bindings),
       knownStateVariables: Object.keys(state),
-      mode: mode,
+      mode,
       onError: (message, node) => {
         const { line, offset, from, to } = node.getPointer();
         throw new LiftoscriptSyntaxError(message, line, offset, from, to);
