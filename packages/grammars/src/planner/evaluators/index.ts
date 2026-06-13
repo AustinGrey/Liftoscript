@@ -54,6 +54,7 @@ import {
   Progress_createEmptyScriptBindings,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+import { asProgramScript, asProgramScript2 } from "@/planner/display.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -1328,46 +1329,10 @@ export function PlannerProgram_evaluateText(
   return weeks;
 }
 
-/**
- * Formats the given text so as one or more comment lines.
- * Blank lines won't have trailing space
- * e.g.
- * ```
- * this is my
- * text on multiple
- *
- * lines
- * ```
- * returns
- * ```
- * - "// this is my"
- * - "// text on multiple"
- * - "//"
- * - "// lines"
- * ```
- * @param text The text to format
- */
-function formatAsCommentLines(text?: string): string[] {
-  return text?.split("\n").map((l) => (l ? `// ${l}` : "//")) ?? [];
-}
-
 export function PlannerProgram_generateFullText(
   weeks: IPlannerProgramWeek[],
 ): string {
-  return weeks
-    .map((week) => {
-      let parts: string[] = [];
-      parts.push(...formatAsCommentLines(week.description));
-      parts.push(`# ${week.name}`);
-
-      for (const day of week.days) {
-        parts.push(...formatAsCommentLines(day.description));
-        parts.push(`## ${day.name}`);
-        parts.push(`${day.exerciseText}\n`);
-      }
-      return parts.join("\n");
-    })
-    .join("\n");
+  return asProgramScript2({ weeks });
 }
 
 //#endregion

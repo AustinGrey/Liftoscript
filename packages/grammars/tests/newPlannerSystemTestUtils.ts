@@ -16,10 +16,10 @@ import type { IPlannerProgram, IProgram } from "@/program";
 import { Settings_build } from "@/user-settings";
 import {
   PlannerProgram_evaluateText,
-  PlannerProgram_generateFullText,
   PlannerProgram_replaceAndValidateExercise,
   PlannerProgram_replaceWeight,
 } from "@/planner/evaluators";
+import { asProgramScript2 } from "@/planner/display.ts";
 
 export interface ICompletedEntries {
   completedReps: number[][];
@@ -61,7 +61,7 @@ export function PlannerTestUtils_changeWeight(
     newEvaluatedProgram,
     settings,
   );
-  return PlannerProgram_generateFullText(newProgram.planner?.weeks || []);
+  return newProgram.planner ? asProgramScript2(newProgram.planner) : "";
 }
 
 export function PlannerTestUtils_changeExercise(
@@ -79,7 +79,7 @@ export function PlannerTestUtils_changeExercise(
     settings,
   );
   if (result.success) {
-    return PlannerProgram_generateFullText(result.data.planner?.weeks || []);
+    return result.data.planner ? asProgramScript2(result.data.planner) : "";
   } else {
     throw result.error;
   }

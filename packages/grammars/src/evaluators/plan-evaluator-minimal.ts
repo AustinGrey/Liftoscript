@@ -95,10 +95,10 @@ import { LiftoscriptSyntaxError } from "@/logic/evaluators/types.ts";
 import {
   PlannerEvaluator_forceEvaluate,
   PlannerProgram_evaluate,
-  PlannerProgram_generateFullText,
   PlannerProgram_groupedTopLines,
 } from "@/planner/evaluators";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
+import { asProgramScript2 } from "@/planner/display.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -3991,7 +3991,7 @@ export function convertToPlanner(
   const plannerWeeks: IPlannerProgramWeek[] = [];
   if (program.errors.length > 0) {
     const error = program.errors[0];
-    console.log(PlannerProgram_generateFullText(program.planner.weeks));
+    console.log(asProgramScript2(program.planner));
 
     throw error.error;
   }
