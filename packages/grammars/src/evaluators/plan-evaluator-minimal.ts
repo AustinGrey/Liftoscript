@@ -1585,7 +1585,7 @@ interface IPlannerProgramExerciseEvaluatedSet {
 }
 
 interface IPlannerProgramExerciseSet {
-  repRange?: IPlannerProgramExerciseRepRange;
+  repRange?: IRepRange;
   timer?: number;
   rpe?: number;
   logRpe?: boolean;
@@ -1647,10 +1647,26 @@ interface IProgramExerciseUpdate {
   };
 }
 
-interface IPlannerProgramExerciseRepRange {
+/**
+ * Information about a potentially flexible number of repetitions
+ * @todo rename to "IMovement"? This is more than a range of reps, it's number of sets!
+ */
+interface IRepRange {
+  /**
+   * The many times this rep range should be done
+   */
   numberOfSets: number;
+  /**
+   * The highest number of repetitions that should be done
+   */
   maxrep?: number;
+  /**
+   * The lowest number of repetitions that should be done
+   */
   minrep?: number;
+  /**
+   * If true, there is no maximum, instead the movement should be done until failure
+   */
   isAmrap: boolean;
   isQuickAddSet: boolean;
 }
@@ -1884,9 +1900,7 @@ function getWarmupReps(setParts: string): {
   };
 }
 
-function getRepRange(
-  setParts: string,
-): IPlannerProgramExerciseRepRange | undefined {
+function getRepRange(setParts: string): IRepRange | undefined {
   if (!setParts) {
     return undefined;
   }
@@ -1906,7 +1920,7 @@ function getRepRange(
   }
   return {
     numberOfSets: parseInt(numberOfSetsStr, 10),
-    minrep: minrepStr != null ? parseInt(minrepStr, 10) : undefined,
+    minrep: minrepStr !== undefined ? parseInt(minrepStr, 10) : undefined,
     maxrep: parseInt(maxrepStr, 10),
     isAmrap: isAmrap,
     isQuickAddSet: numberOfSetsStr.endsWith("+"),
@@ -1937,9 +1951,8 @@ function getRepeatRanges(numbers: number[]): string[] {
   return ranges;
 }
 
-function getNodeSourceEscapedWhiteSpace(node: SourcedSyntaxNode): string {
-  return node.source.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-}
+const getNodeSourceEscapedWhiteSpace = (node: SourcedSyntaxNode): string =>
+  node.source.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
 
 function getWeight(expr?: SourcedSyntaxNode | null): IWeight | undefined {
   if (
@@ -2557,77 +2570,69 @@ function evaluateProgressImpl(
   settings: ISettings,
   dayData: IDayData,
 ): IEither<IProgramExerciseProgress, string> {
-  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-    const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
-    if (valueNode == null) {
-      const none = expr.getChild(PlannerNodeName.None);
-      if (none != null) {
-        return PlannerProgramExercise_buildProgress("none", []);
-      } else {
-        throw errorPlannerSyntax(
-          `Missing value for the property 'progress'`,
-          expr,
-        );
-      }
-    }
-    const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
-    if (fnNameNode == null) {
-      assert(PlannerNodeName.FunctionName);
-    }
-    const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
-    const fnArgs = valueNode
-      .getChildren(PlannerNodeName.FunctionArgument)
-      .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
-    validateProgress(fnName, fnArgs, fnNameNode, valueNode);
-
-    const type = fnName as IProgramExerciseProgressType;
-    if (type === "custom") {
-      const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-      const script = liftoscriptNode ? liftoscriptNode.source : undefined;
-      const { state } = fnArgsToStateVars(fnArgs, (message) =>
-        errorPlannerSyntax(message, fnNameNode),
-      );
-      if (script) {
-        try {
-          validateScript(
-            script,
-            state,
-            Progress_createEmptyScriptBindings(dayData, settings),
-            Progress_createScriptFunctions(settings),
-            "planner",
-          );
-        } catch (e) {
-          if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-            const [line] = liftoscriptNode.getLineAndOffset();
-            throw new PlannerSyntaxError(
-              e.message,
-              line + e.line,
-              e.offset,
-              liftoscriptNode.from + e.from,
-              liftoscriptNode.from + e.to,
-            );
-          } else {
-            throw e;
-          }
-        }
-      }
-      const reuseLiftoscriptNode = valueNode
-        .getChild(PlannerNodeName.ReuseLiftoscript)
-        ?.getChild(PlannerNodeName.ReuseSection)
-        ?.getChild(PlannerNodeName.ExerciseName);
-      const body = reuseLiftoscriptNode
-        ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
-        : undefined;
-      return PlannerProgramExercise_buildProgress(type, fnArgs, {
-        script,
-        reuseFullname: body,
-      });
-    } else {
-      return PlannerProgramExercise_buildProgress(type, fnArgs);
-    }
-  } else {
-    assert(PlannerNodeName.ExerciseProperty);
+  if (expr.type.name !== PlannerNodeName.ExerciseProperty) {
+    return assert(PlannerNodeName.ExerciseProperty);
   }
+  const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
+  if (valueNode == null) {
+    if (expr.getChild(PlannerNodeName.None)) {
+      return PlannerProgramExercise_buildProgress("none", []);
+    }
+    throw errorPlannerSyntax(`Missing value for the property 'progress'`, expr);
+  }
+  const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
+  if (fnNameNode == null) {
+    return assert(PlannerNodeName.FunctionName);
+  }
+  const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
+  const fnArgs = valueNode
+    .getChildren(PlannerNodeName.FunctionArgument)
+    .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
+  validateProgress(fnName, fnArgs, fnNameNode, valueNode);
+
+  const type = fnName as IProgramExerciseProgressType;
+  let options:
+    | Parameters<typeof PlannerProgramExercise_buildProgress>[2]
+    | undefined = undefined;
+  if (type === "custom") {
+    const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
+    const script = liftoscriptNode ? liftoscriptNode.source : undefined;
+    if (script) {
+      try {
+        validateScript(
+          script,
+          fnArgsToStateVars(fnArgs, (message) =>
+            errorPlannerSyntax(message, fnNameNode),
+          ).state,
+          Progress_createEmptyScriptBindings(dayData, settings),
+          Progress_createScriptFunctions(settings),
+          "planner",
+        );
+      } catch (e) {
+        if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
+          throw new PlannerSyntaxError(
+            e.message,
+            liftoscriptNode.getLineAndOffset()[0] + e.line,
+            e.offset,
+            liftoscriptNode.from + e.from,
+            liftoscriptNode.from + e.to,
+          );
+        }
+        throw e;
+      }
+    }
+    const reuseLiftoscriptNode = valueNode
+      .getChild(PlannerNodeName.ReuseLiftoscript)
+      ?.getChild(PlannerNodeName.ReuseSection)
+      ?.getChild(PlannerNodeName.ExerciseName);
+    options = {
+      script,
+      reuseFullname: reuseLiftoscriptNode
+        ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
+        : undefined,
+    };
+  }
+  return PlannerProgramExercise_buildProgress(type, fnArgs, options);
 }
 
 function evaluateProgress(
