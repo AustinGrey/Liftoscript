@@ -24,7 +24,7 @@ import {
   type IDayData,
   type IEvaluatedProgram,
   type IPlannerEvalResult,
-  type IPlannerExerciseEvaluatorMode,
+  IPlannerExerciseEvaluatorMode,
   type IPlannerProgramExercise,
   type IPlannerProgramExerciseWarmupSet,
   type IPlannerProgramReuse,
@@ -234,7 +234,7 @@ function evaluateDay(
   const result = evaluate(
     parseBound(plannerExerciseParser, day.exerciseText),
     settings,
-    "perday",
+    IPlannerExerciseEvaluatorMode.PERDAY,
     dayData,
   );
   if (result.success) {
@@ -1139,7 +1139,7 @@ export function PlannerProgram_evaluateText(
 ): IPlannerProgramWeek[] {
   const data = evaluatePreservingSource(
     parseBound(plannerExerciseParser, fullProgramText),
-    "fulltext",
+    IPlannerExerciseEvaluatorMode.FULLTEXT,
   );
   const weeks: IPlannerProgramWeek[] = data.map((week) => {
     return {
@@ -1170,9 +1170,9 @@ function evaluatePreservingSource(
   programNode: SourcedSyntaxNode,
   mode: IPlannerExerciseEvaluatorMode,
 ): ITextWeek[] {
-  if (mode !== "fulltext") {
+  if (mode !== IPlannerExerciseEvaluatorMode.FULLTEXT) {
     throw new Error(
-      'PlannerExerciseEvaluator.evaluatePreservingSource requires mode "fulltext"',
+      `PlannerExerciseEvaluator.evaluatePreservingSource requires mode "${IPlannerExerciseEvaluatorMode.FULLTEXT}"`,
     );
   }
   if (programNode.type.name !== PlannerNodeName.Program) {

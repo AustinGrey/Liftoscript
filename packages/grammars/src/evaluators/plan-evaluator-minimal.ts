@@ -1143,21 +1143,20 @@ interface IPlannerProgramExerciseSuperset {
   name: string;
 }
 
-type IPlannerProgramReuseSource = "specific" | "overall";
-
 export interface IPlannerProgramReuse {
   fullName: string;
-  source: IPlannerProgramReuseSource;
+  source: "specific" | "overall";
   week?: number;
   day?: number;
   exercise?: IPlannerProgramExercise;
 }
 
-enum IProgramExerciseUpdateType {
-  CUSTOM = "custom",
-  LP = "lp",
-  DP = "dp",
-  SUM = "sum",
+export interface IProgramExerciseDescriptions {
+  values: {
+    value: string;
+    isCurrent: boolean;
+  }[];
+  reuse?: IPlannerProgramReuse;
 }
 
 /**
@@ -1170,15 +1169,6 @@ enum IProgramExerciseProgressType {
   SUM = "sum",
   NONE = "none",
 }
-
-export interface IProgramExerciseDescriptions {
-  values: {
-    value: string;
-    isCurrent: boolean;
-  }[];
-  reuse?: IPlannerProgramReuse;
-}
-
 export interface IProgramExerciseProgress {
   type: IProgramExerciseProgressType;
   state: IProgramState;
@@ -1188,6 +1178,12 @@ export interface IProgramExerciseProgress {
   liftoscriptNode?: SyntaxNode;
 }
 
+enum IProgramExerciseUpdateType {
+  CUSTOM = "custom",
+  LP = "lp",
+  DP = "dp",
+  SUM = "sum",
+}
 export interface IProgramExerciseUpdate {
   type: IProgramExerciseUpdateType;
   script?: string;
@@ -1270,7 +1266,11 @@ interface IPlannerExerciseEvaluatorWeek {
  * full -> full program with structured exercises
  * fulltext -> preserve raw source lines for round-trip text
  */
-export type IPlannerExerciseEvaluatorMode = "perday" | "full" | "fulltext";
+export enum IPlannerExerciseEvaluatorMode {
+  PERDAY = "perday",
+  FULL = "full",
+  FULLTEXT = "fulltext",
+}
 
 export function isEqualProgress(
   a: IProgramExerciseProgress,
@@ -2181,7 +2181,7 @@ export function evaluate(
         );
       } else if (child.type.name === PlannerNodeName.ExerciseExpression) {
         if (
-          mode === "full" &&
+          mode === IPlannerExerciseEvaluatorMode.FULL &&
           (weeks.length === 0 || weeks[weeks.length - 1].days.length === 0)
         ) {
           errorPlannerSyntax(
