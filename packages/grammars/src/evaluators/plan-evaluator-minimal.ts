@@ -1617,8 +1617,8 @@ interface IPlannerProgramReuse {
   exercise?: IPlannerProgramExercise;
 }
 
-type IProgramExerciseProgressType = "custom" | "lp" | "dp" | "sum" | "none";
 type IProgramExerciseUpdateType = "custom" | "lp" | "dp" | "sum";
+type IProgramExerciseProgressType = IProgramExerciseUpdateType | "none";
 
 interface IProgramExerciseDescriptions {
   values: {
@@ -2590,11 +2590,10 @@ function evaluateProgressImpl(
     .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
   validateProgress(fnName, fnArgs, fnNameNode, valueNode);
 
-  const type = fnName as IProgramExerciseProgressType;
   let options:
     | Parameters<typeof PlannerProgramExercise_buildProgress>[2]
     | undefined = undefined;
-  if (type === "custom") {
+  if (fnName === "custom") {
     const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
     const script = liftoscriptNode ? liftoscriptNode.source : undefined;
     if (script) {
@@ -2632,7 +2631,7 @@ function evaluateProgressImpl(
         : undefined,
     };
   }
-  return PlannerProgramExercise_buildProgress(type, fnArgs, options);
+  return PlannerProgramExercise_buildProgress(fnName, fnArgs, options);
 }
 
 function evaluateProgress(
@@ -4548,7 +4547,7 @@ if (completedReps >= reps && completedRPE <= RPE) {
 }
 
 function PlannerProgramExercise_buildProgress(
-  type: IProgramExerciseProgressType,
+  type: IProgramExerciseProgressType | string,
   args: string[],
   opts: {
     reuseFullname?: string;
@@ -4556,16 +4555,6 @@ function PlannerProgramExercise_buildProgress(
   } = {},
 ): IEither<IProgramExerciseProgress, string> {
   switch (type) {
-    case "none": {
-      return {
-        success: true,
-        data: {
-          type: "none",
-          state: {},
-          stateMetadata: {},
-        },
-      };
-    }
     case "lp": {
       const increment = args[0] ? parsePct(args[0]) : w`0lb`;
       const decrement = args[3] ? parsePct(args[3]) : w`0lb`;
@@ -4687,6 +4676,17 @@ for (var.i in completedReps) {
           reuse: opts.reuseFullname
             ? { fullName: opts.reuseFullname, source: "specific" }
             : undefined,
+        },
+      };
+    }
+    case "none":
+    default: {
+      return {
+        success: true,
+        data: {
+          type: "none",
+          state: {},
+          stateMetadata: {},
         },
       };
     }
