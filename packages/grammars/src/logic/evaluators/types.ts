@@ -9,7 +9,6 @@ import {
   TWeight,
 } from "@/quantities/weight.ts";
 import { z } from "zod";
-import { type IProgramMode } from "@/evaluators/logic-evaluator.ts";
 import type {
   ILiftoscriptEvaluatorUpdate,
   LogicResult,
@@ -17,6 +16,11 @@ import type {
 } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+
+export enum IProgramMode {
+  PLANNER = "planner",
+  UPDATE = "update",
+}
 
 export type LogicHandler<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,

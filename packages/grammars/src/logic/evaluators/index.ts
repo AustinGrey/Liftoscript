@@ -5,6 +5,7 @@ import {
 } from "@/logic/parsing/guards.ts";
 import {
   type EvaluateTools,
+  IProgramMode,
   type IProgramState,
   type IScriptBindings,
   LiftoscriptSyntaxError,
@@ -13,7 +14,6 @@ import {
   type Validator,
 } from "@/logic/evaluators/types.ts";
 import { parser } from "@/logic/parsing/logic.ts";
-import { type IProgramMode } from "@/evaluators/logic-evaluator.ts";
 import {
   type ILiftoscriptEvaluatorUpdate,
   type LogicResult,
