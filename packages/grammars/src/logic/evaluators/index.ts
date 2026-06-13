@@ -138,13 +138,13 @@ export function run(
 
   const tools: EvaluateTools = {
     error(message, node) {
-      const [line, offset] = node.getLineAndOffset();
+      const { line, offset, from, to } = node.getPointer();
       const err = new LiftoscriptSyntaxError(
         `${message} (${line}:${offset})`,
         line,
         offset,
-        node.from,
-        node.to,
+        from,
+        to,
       );
       console.error(err);
       throw err;

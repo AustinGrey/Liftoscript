@@ -200,11 +200,7 @@ export class LiftoscriptSyntaxError extends SyntaxError {
   }
 
   public static fromNode(message: string, node: SourcedSyntaxNode) {
-    return new LiftoscriptSyntaxError(
-      message,
-      ...node.getLineAndOffset(),
-      node.from,
-      node.to,
-    );
+    const { line, offset, from, to } = node.getPointer();
+    return new LiftoscriptSyntaxError(message, line, offset, from, to);
   }
 }

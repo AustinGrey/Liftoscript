@@ -68,11 +68,6 @@ export interface SourcedSyntaxNode {
    */
   source: string;
   /**
-   * Gets the [line, offset] within the full source where this node's source is located
-   * @deprecated Use {@link getPointer} instead
-   */
-  getLineAndOffset: () => [number, number];
-  /**
    * Gets a pointer to the code in the original source where this node was parsed from
    */
   getPointer: () => ISyntaxPointer;
@@ -205,7 +200,6 @@ function bindNode(
     matchContext: (...args) => node.matchContext(...args),
     prop: (...args) => node.prop(...args),
     toTree: (...args) => node.toTree(...args),
-    getLineAndOffset: () => getLineAndOffset(getSource(), node),
     getPointer: () => {
       const [line, offset] = getLineAndOffset(getSource(), node);
       return {

@@ -680,13 +680,13 @@ function checkUpdateScript(
         );
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-          const [line] = liftoscriptNode.getLineAndOffset();
+          const { line, from } = liftoscriptNode.getPointer();
           throw new PlannerSyntaxError(
             e.message,
             line + e.line,
             e.offset,
-            liftoscriptNode.from + e.from,
-            liftoscriptNode.from + e.to,
+            from + e.from,
+            from + e.to,
           );
         } else {
           throw e;

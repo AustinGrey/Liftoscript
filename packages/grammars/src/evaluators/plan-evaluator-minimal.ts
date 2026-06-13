@@ -1964,12 +1964,13 @@ function evaluateProgressImpl(
         );
       } catch (e) {
         if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
+          const { line, from } = liftoscriptNode.getPointer();
           throw new PlannerSyntaxError(
             e.message,
-            liftoscriptNode.getLineAndOffset()[0] + e.line,
+            line + e.line,
             e.offset,
-            liftoscriptNode.from + e.from,
-            liftoscriptNode.from + e.to,
+            from + e.from,
+            from + e.to,
           );
         }
         throw e;
@@ -2126,8 +2127,7 @@ export function evaluate(
           );
         }
         const weekName = child.source.replace(/^#+/, "").trim();
-        const [line] = child.getLineAndOffset();
-        weeks.push({ name: weekName, line, days: [] });
+        weeks.push({ name: weekName, line: child.getPointer().line, days: [] });
         dayData = {
           day: dayData.day,
           week: weeks.length + 1,
@@ -2144,10 +2144,9 @@ export function evaluate(
           errorPlannerSyntax(`You need to specify a week before a day`, child);
         }
         const dayName = child.source.replace(/^#+/, "").trim();
-        const [line] = child.getLineAndOffset();
         weeks[weeks.length - 1].days.push({
           name: dayName,
-          line,
+          line: child.getPointer().line,
           exercises: [],
         });
         dayData = {
@@ -2260,7 +2259,6 @@ export function evaluate(
         const askWeight = allSets.find(
           (set) => set.repRange == null && set.askWeight != null,
         )?.askWeight;
-        const [line] = child.getLineAndOffset();
         const rawDescriptions: string[] = latestDescriptions.map((d) =>
           d.join("\n"),
         );
@@ -2351,7 +2349,7 @@ export function evaluate(
           name,
           equipment,
           exerciseIndex,
-          line,
+          line: child.getPointer().line,
           tags,
           notused: notused,
           evaluatedSetVariations: [],
@@ -4557,12 +4555,8 @@ export function validateScript(
       knownStateVariables: Object.keys(state),
       mode: mode,
       onError: (message, node) => {
-        throw new LiftoscriptSyntaxError(
-          message,
-          ...node.getLineAndOffset(),
-          node.from,
-          node.to,
-        );
+        const { line, offset, from, to } = node.getPointer();
+        throw new LiftoscriptSyntaxError(message, line, offset, from, to);
       },
       trackVariable: (name) => trackedVarNames.add(name),
       isKnownVariable: (name) => trackedVarNames.has(name),
