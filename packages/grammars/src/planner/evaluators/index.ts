@@ -54,7 +54,7 @@ import {
   Progress_createEmptyScriptBindings,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
-import { asProgramScript, asProgramScript2 } from "@/planner/display.ts";
+import { asProgramScript2 } from "@/planner/display.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -1089,7 +1089,7 @@ export const PlannerEvaluator_evaluate = memoize(
       b: IPlannerProgram | ISettings,
     ) =>
       a && "weeks" in a && b && "weeks" in b
-        ? asProgramScript(a) === asProgramScript(b)
+        ? asProgramScript2(a) === asProgramScript2(b)
         : a === b,
   },
 );
