@@ -56,6 +56,7 @@ import type { IEither, OpenRecord } from "@/utils/types.ts";
 import { filterUndefined } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
 import {
+  asPlanNodeOfTypeOrThrow,
   PlannerNodeName,
   PlannerSyntaxError,
   type TypedPlanNode,
@@ -1306,7 +1307,10 @@ export function PlannerProgram_compact(
       dayIndex += 1;
 
       return topLineMap(
-        parseBound(plannerExerciseParser, day.exerciseText),
+        asPlanNodeOfTypeOrThrow(
+          "Program",
+          parseBound(plannerExerciseParser, day.exerciseText),
+        ),
         settings.exercises,
       );
     });
@@ -1488,7 +1492,10 @@ export function PlannerProgram_topLineItems(
       dayIndex += 1;
 
       return topLineMap(
-        parseBound(plannerExerciseParser, day.exerciseText),
+        asPlanNodeOfTypeOrThrow(
+          "Program",
+          parseBound(plannerExerciseParser, day.exerciseText),
+        ),
         exercises,
       );
     });
@@ -1618,12 +1625,6 @@ function topLineMap(
   programNode: TypedPlanNode<"Program">,
   exercises: IAllCustomExercises,
 ): IPlannerTopLineItem[] {
-  if (programNode.type.name !== PlannerNodeName.Program) {
-    return errorPlannerSyntax(
-      `Unexpected node type ${programNode.type.name} - should be Program`,
-      programNode,
-    );
-  }
   const result: IPlannerTopLineItem[] = [];
   let lastDescriptions: string[][] = [];
   let ongoingDescriptions = false;
