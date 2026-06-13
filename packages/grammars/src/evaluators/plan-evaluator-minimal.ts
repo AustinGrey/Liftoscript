@@ -3158,81 +3158,40 @@ function Progress_applyBindings(
 //#endregion
 
 //#region PP
-export function forExerciseInEvaluatedWeeks(
-  evaluatedWeeks: IEvaluatedProgram["weeks"],
-  cb: (
-    exercise: IPlannerProgramExercise,
-    weekIndex: number,
-    dayInWeekIndex: number,
-    dayIndex: number,
-    exerciseIndex: number,
-  ) => boolean | void,
-): void {
-  let dayIndex = 0;
-  for (let weekIndex = 0; weekIndex < evaluatedWeeks.length; weekIndex++) {
-    const week = evaluatedWeeks[weekIndex];
-    for (
-      let dayInWeekIndex = 0;
-      dayInWeekIndex < week.days.length;
-      dayInWeekIndex++
-    ) {
-      const day = week.days[dayInWeekIndex];
-      for (
-        let exerciseIndex = 0;
-        exerciseIndex < day.exercises.length;
-        exerciseIndex++
-      ) {
-        const exercise = day.exercises[exerciseIndex];
-        const shouldReturn = cb(
-          exercise,
-          weekIndex,
-          dayInWeekIndex,
-          dayIndex,
-          exerciseIndex,
-        );
-        if (!!shouldReturn) {
-          return;
-        }
-      }
-      dayIndex += 1;
-    }
-  }
-}
+type IExerciseIterationCallback = (
+  exercise: IPlannerProgramExercise,
+  weekIndex: number,
+  dayInWeekIndex: number,
+  dayIndex: number,
+  exerciseIndex: number,
+) => boolean | void;
 
-export function forExerciseInEvaluatedResults(
-  evaluatedWeeks: IPlannerEvalResult[][],
-  cb: (
-    exercise: IPlannerProgramExercise,
-    weekIndex: number,
-    dayInWeekIndex: number,
-    dayIndex: number,
-    exerciseIndex: number,
-  ) => boolean | void,
+function forExerciseInGrid<TWeek, TDay>(
+  weeks: readonly TWeek[],
+  getDays: (week: TWeek) => readonly TDay[],
+  getExercises: (day: TDay) => readonly IPlannerProgramExercise[] | undefined,
+  cb: IExerciseIterationCallback,
 ): void {
   let dayIndex = 0;
-  for (let weekIndex = 0; weekIndex < evaluatedWeeks.length; weekIndex++) {
-    const week = evaluatedWeeks[weekIndex];
-    for (
-      let dayInWeekIndex = 0;
-      dayInWeekIndex < week.length;
-      dayInWeekIndex++
-    ) {
-      const day = week[dayInWeekIndex];
-      if (day.success) {
+  for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
+    const days = getDays(weeks[weekIndex]);
+    for (let dayInWeekIndex = 0; dayInWeekIndex < days.length; dayInWeekIndex++) {
+      const exercises = getExercises(days[dayInWeekIndex]);
+      if (exercises) {
         for (
           let exerciseIndex = 0;
-          exerciseIndex < day.data.length;
+          exerciseIndex < exercises.length;
           exerciseIndex++
         ) {
-          const exercise = day.data[exerciseIndex];
-          const shouldReturn = cb(
-            exercise,
-            weekIndex,
-            dayInWeekIndex,
-            dayIndex,
-            exerciseIndex,
-          );
-          if (!!shouldReturn) {
+          if (
+            cb(
+              exercises[exerciseIndex],
+              weekIndex,
+              dayInWeekIndex,
+              dayIndex,
+              exerciseIndex,
+            )
+          ) {
             return;
           }
         }
@@ -3240,6 +3199,30 @@ export function forExerciseInEvaluatedResults(
       dayIndex += 1;
     }
   }
+}
+
+export function forExerciseInEvaluatedWeeks(
+  evaluatedWeeks: IEvaluatedProgram["weeks"],
+  cb: IExerciseIterationCallback,
+): void {
+  forExerciseInGrid(
+    evaluatedWeeks,
+    (week) => week.days,
+    (day) => day.exercises,
+    cb,
+  );
+}
+
+export function forExerciseInEvaluatedResults(
+  evaluatedWeeks: IPlannerEvalResult[][],
+  cb: IExerciseIterationCallback,
+): void {
+  forExerciseInGrid(
+    evaluatedWeeks,
+    (week) => week,
+    (day) => (day.success ? day.data : undefined),
+    cb,
+  );
 }
 
 //#endregion
