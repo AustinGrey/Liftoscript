@@ -8,12 +8,13 @@ import {
   PlannerTestUtils_finish as newSystemFinish,
   PlannerTestUtils_changeExercise as newSystemChangeExercise,
   PlannerTestUtils_changeWeight as newSystemChangeWeight,
+  PlannerProgram_switchToUnit,
 } from "./newPlannerSystemTestUtils.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import {
   Weight_build,
-  Settings_build,
-  PlannerProgram_switchToUnit,
+  Settings_build as OLD_Settings_build,
+  PlannerProgram_switchToUnit as OLD_PlannerProgram_switchToUnit,
   type ISettings,
   type IPlannerProgram,
   PlannerProgram_evaluateText,
@@ -26,8 +27,8 @@ import {
   PlannerProgram_evaluateText as newPlannerProgram_evaluateText,
 } from "@/planner/evaluators";
 import type { IWeight } from "@/quantities/weight.ts";
-
 import type { IStats } from "@/fitness-stats";
+import { Settings_build } from "@/user-settings";
 
 type PlannerTestCase = {
   plan: string;
@@ -1609,7 +1610,7 @@ Squat / 1x10 / 100lb / progress: custom() {~
           { weight: Weight_build(45, "lb"), num: 2 },
         ];
         return {
-          ...Settings_build(),
+          ...OLD_Settings_build(),
           gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
           exerciseData: {
             squat_barbell: { equipment: { default: "barbell" } },
@@ -1647,7 +1648,7 @@ Squat / 1x10 / 100lb / progress: custom() {~
           Weight_build(120, "lb"),
         ];
         return {
-          ...Settings_build(),
+          ...OLD_Settings_build(),
           gyms: [{ vtype: "gym", id: "default", name: "Main", equipment }],
           exerciseData: {
             squat_barbell: { equipment: { default: "barbell" } },
@@ -1699,7 +1700,7 @@ Squat / 1x10 / 100lb / progress: custom() {~
         reps: [[10]],
       },
       settings: {
-        ...Settings_build(),
+        ...OLD_Settings_build(),
         graphOptions: {
           weight: {
             movingAverageWindowSize: 3,
@@ -1955,6 +1956,7 @@ Squat / 1x5 100lb / 2x8 150kg / progress: custom(increase: 5lb) {~
 ## Day 2
 Squat / 3x5 / 4x8 / 100lb
 `;
+    const Oldsettings = { ...OLD_Settings_build(), units: "kg" as const };
     const settings = { ...Settings_build(), units: "kg" as const };
     const expected = `# Week 1
 ## Day 1
@@ -1974,12 +1976,15 @@ Squat / 3x5 / 4x8 / 47.5kg
     const { program } = PlannerTestUtils_finish(
       programText,
       { completedReps: [[5]] },
-      settings,
+      Oldsettings,
     );
     if (!program.planner) {
       expect.fail("Old system failed to produce a program planner.");
     }
-    const oldKgProgram = PlannerProgram_switchToUnit(program.planner, settings);
+    const oldKgProgram = OLD_PlannerProgram_switchToUnit(
+      program.planner,
+      Oldsettings,
+    );
     expect
       .soft(
         asProgramScript(oldKgProgram, { addExtraSpace: true }),
@@ -1996,7 +2001,7 @@ Squat / 3x5 / 4x8 / 47.5kg
       expect.fail("New system failed to produce a program planner.");
     }
     const newKgProgram = PlannerProgram_switchToUnit(
-      { vtype: "planner", ...newSystemProgram.planner },
+      newSystemProgram.planner,
       settings,
     );
     expect
@@ -2178,7 +2183,7 @@ Bench Press / ...Squat / progress: custom() {~ ~}
     };
     const oldEvaluatedWeeks = PlannerProgram_evaluate(
       oldPlanner,
-      Settings_build(),
+      OLD_Settings_build(),
     ).evaluatedWeeks;
     expect.soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed").to
       .be.true;
@@ -2209,7 +2214,7 @@ Bench Press / ...Squat / update: custom() {~ ~}
     };
     const oldEvaluatedWeeks = PlannerProgram_evaluate(
       oldPlanner,
-      Settings_build(),
+      OLD_Settings_build(),
     ).evaluatedWeeks;
     expect.soft(oldEvaluatedWeeks[0][0].success, "Old system should succeed").to
       .be.true;
@@ -2254,7 +2259,7 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
       name: "MyProgram",
       weeks: PlannerProgram_evaluateText(programText),
     };
-    const oldResult = PlannerProgram_evaluate(oldPlanner, Settings_build())
+    const oldResult = PlannerProgram_evaluate(oldPlanner, OLD_Settings_build())
       .evaluatedWeeks[2][0];
     expect.soft(oldResult.success, "Old system should fail").to.be.false;
     if (!oldResult.success) {

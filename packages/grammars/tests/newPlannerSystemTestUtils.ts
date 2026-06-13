@@ -2,6 +2,7 @@ import {
   convertToPlanner,
   forExerciseInEvaluatedWeeks,
   getExercisesInProgram,
+  getWeight,
   type IDayData,
   type IWeightChange,
   PlannerKey_fromExerciseType,
@@ -25,10 +26,18 @@ import {
 import { asProgramScript } from "@/planner/display.ts";
 import type { IExerciseType } from "@/exercises";
 import type { IEither } from "@/utils/types.ts";
-import { PlannerSyntaxError } from "@/planner/parsing/guards.ts";
+import {
+  PlannerNodeName,
+  PlannerSyntaxError,
+} from "@/planner/parsing/guards.ts";
 import { filterUndefined } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
-import type { IWeight } from "@/quantities/weight.ts";
+import { type IUnit, type IWeight, print } from "@/quantities/weight.ts";
+import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { parser } from "@/logic/parsing/logic.ts";
+import { parser as planParser } from "@/planner/parsing/workout-plan";
+import { Weight_smartConvert } from "@/evaluators/logic-evaluator.ts";
+import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 
 export interface ICompletedEntries {
   completedReps: number[][];
@@ -213,6 +222,91 @@ export function PlannerTestUtils_changeExercise(
   } else {
     throw result.error;
   }
+}
+
+export function PlannerProgram_switchToUnit(
+  plannerProgram: IPlannerProgram,
+  settings: ISettings,
+): IPlannerProgram {
+  const newPlannerProgram = structuredClone(plannerProgram);
+  for (const week of newPlannerProgram.weeks) {
+    for (const day of week.days) {
+      day.exerciseText = switchWeightsInPlanToUnit(
+        parseBound(planParser, day.exerciseText),
+        settings,
+      );
+    }
+  }
+  return newPlannerProgram;
+}
+
+function switchWeightsInPlanToUnit(
+  programNode: SourcedSyntaxNode,
+  settings: ISettings,
+): string {
+  const cursor = programNode.cursor();
+  let script = programNode.source;
+  let shift = 0;
+  do {
+    if (cursor.node.type.name === PlannerNodeName.Weight) {
+      const weight = getWeight(cursor.node);
+      if (weight != null) {
+        if (weight.unit !== settings.units) {
+          const from = cursor.node.from;
+          const to = cursor.node.to;
+          const oldWeightStr = print(weight);
+          const newWeightStr = print(
+            Weight_smartConvert(weight, settings.units),
+          );
+          script =
+            script.substring(0, from + shift) +
+            newWeightStr +
+            script.substring(to + shift);
+          shift = shift + newWeightStr.length - oldWeightStr.length;
+        }
+      }
+    } else if (cursor.node.type.name === PlannerNodeName.Liftoscript) {
+      const oldLiftoscript = cursor.node.source;
+      const newLiftoscript = switchWeightsToUnit(
+        parseBound(parser, oldLiftoscript),
+        settings.units,
+      );
+      script =
+        script.substring(0, cursor.node.from + shift) +
+        newLiftoscript +
+        script.substring(cursor.node.to + shift);
+      shift = shift + newLiftoscript.length - oldLiftoscript.length;
+    }
+  } while (cursor.next());
+  return script;
+}
+
+function switchWeightsToUnit(
+  programNode: SourcedSyntaxNode,
+  toUnit: IUnit,
+): string {
+  const cursor = programNode.cursor();
+  let script = programNode.source;
+  let shift = 0;
+  do {
+    if (isLogicNodeOfType("WeightExpression", cursor.node)) {
+      const weight = getWeight(cursor.node);
+      if (weight != null) {
+        if (weight.unit !== toUnit) {
+          const from = cursor.node.from;
+          const to = cursor.node.to;
+          const oldWeightStr = print(weight);
+          const newWeightStr = print(Weight_smartConvert(weight, toUnit));
+          script =
+            script.substring(0, from + shift) +
+            newWeightStr +
+            script.substring(to + shift);
+          shift = shift + newWeightStr.length - oldWeightStr.length;
+        }
+      }
+    }
+  } while (cursor.next());
+  return script;
 }
 
 export function PlannerTestUtils_finish(

@@ -1418,7 +1418,9 @@ export const getNodeSourceEscapedWhiteSpace = (
   node: SourcedSyntaxNode,
 ): string => node.source.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
 
-function getWeight(expr?: SourcedSyntaxNode | null): IWeight | undefined {
+export function getWeight(
+  expr?: SourcedSyntaxNode | null,
+): IWeight | undefined {
   if (
     expr?.type.name === PlannerNodeName.WeightWithPlus ||
     expr?.type.name === PlannerNodeName.Weight
