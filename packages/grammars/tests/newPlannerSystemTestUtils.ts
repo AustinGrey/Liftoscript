@@ -32,7 +32,7 @@ import {
 } from "@/planner/parsing/guards.ts";
 import { filterUndefined } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
-import { type IUnit, type IWeight, print } from "@/quantities/weight.ts";
+import { build, type IUnit, type IWeight, print } from "@/quantities/weight.ts";
 import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { parser } from "@/logic/parsing/logic.ts";
 import { parser as planParser } from "@/planner/parsing/workout-plan";
@@ -281,6 +281,26 @@ function switchWeightsInPlanToUnit(
   return script;
 }
 
+function getLogicWeight(expr: SourcedSyntaxNode): IWeight | undefined {
+  if (!isLogicNodeOfType("WeightExpression", expr)) {
+    return undefined;
+  }
+  const numberNode = expr.getChild("NumberExpression");
+  const unitNode = expr.getChild("Unit");
+  if (numberNode == null || unitNode == null) {
+    return undefined;
+  }
+  const num = parseFloat(numberNode.source);
+  if (Number.isNaN(num)) {
+    return undefined;
+  }
+  const unit = unitNode.source;
+  if (unit !== "kg" && unit !== "lb") {
+    return undefined;
+  }
+  return build(num, unit);
+}
+
 function switchWeightsToUnit(
   programNode: SourcedSyntaxNode,
   toUnit: IUnit,
@@ -290,7 +310,7 @@ function switchWeightsToUnit(
   let shift = 0;
   do {
     if (isLogicNodeOfType("WeightExpression", cursor.node)) {
-      const weight = getWeight(cursor.node);
+      const weight = getLogicWeight(cursor.node);
       if (weight != null) {
         if (weight.unit !== toUnit) {
           const from = cursor.node.from;
