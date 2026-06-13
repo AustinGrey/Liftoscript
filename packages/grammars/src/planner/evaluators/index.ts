@@ -1268,8 +1268,7 @@ export function PlannerProgram_compact(
   settings: ISettings,
   additionalRepeatingExercises?: Set<string>,
 ): IPlannerProgram {
-  let dayIndex = 0;
-  const repeatingExercises = new Set<string>();
+  const repeatingExercises = new Set<string>(additionalRepeatingExercises);
   const { evaluatedWeeks } = PlannerProgram_evaluate(
     structuredClone(oldPlannerProgram),
     settings,
@@ -1284,9 +1283,6 @@ export function PlannerProgram_compact(
         repeatingExercises.add(exercise.key);
       }
     });
-  }
-  for (const ex of additionalRepeatingExercises || []) {
-    repeatingExercises.add(ex);
   }
 
   const lastDescriptions: OpenRecord<string, number> = {};
@@ -1304,8 +1300,6 @@ export function PlannerProgram_compact(
 
   const mapping = plannerProgram.weeks.map((week) => {
     return week.days.map((day) => {
-      dayIndex += 1;
-
       return topLineMap(
         asPlanNodeOfTypeOrThrow(
           "Program",
@@ -1318,7 +1312,7 @@ export function PlannerProgram_compact(
 
   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
     const week = mapping[weekIndex];
-    for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
+    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
       const day = week[dayIndex];
       for (const line of day) {
         if (
@@ -1384,7 +1378,7 @@ export function PlannerProgram_compact(
   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
     const programWeek = plannerProgram.weeks[weekIndex];
     const week = mapping[weekIndex];
-    for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
+    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
       const day = week[dayIndex];
       const programDay = programWeek.days[dayIndex];
       let str = "";
