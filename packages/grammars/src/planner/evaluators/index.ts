@@ -1086,18 +1086,10 @@ export const PlannerEvaluator_evaluate = memoize(
     isEqual: (
       a: IPlannerProgram | ISettings,
       b: IPlannerProgram | ISettings,
-    ) => {
-      if (a == null || b == null) {
-        return a === b;
-      }
-      if ("weeks" in a && "weeks" in b) {
-        const aText = PlannerProgram_generateFullText(a.weeks);
-        const bText = PlannerProgram_generateFullText(b.weeks);
-        return aText === bText;
-      } else {
-        return a === b;
-      }
-    },
+    ) =>
+      a && "weeks" in a && b && "weeks" in b
+        ? asProgramScript(a) === asProgramScript(b)
+        : a === b,
   },
 );
 
