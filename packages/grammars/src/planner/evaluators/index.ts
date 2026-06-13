@@ -1336,36 +1336,46 @@ export function PlannerProgram_evaluateText(
   return weeks;
 }
 
+/**
+ * Formats the given text so as one or more comment lines.
+ * Blank lines won't have trailing space
+ * e.g.
+ * ```
+ * this is my
+ * text on multiple
+ *
+ * lines
+ * ```
+ * returns
+ * ```
+ * - "// this is my"
+ * - "// text on multiple"
+ * - "//"
+ * - "// lines"
+ * ```
+ * @param text The text to format
+ */
+function formatAsCommentLines(text?: string): string[] {
+  return text?.split("\n").map((l) => (l ? `// ${l}` : "//")) ?? [];
+}
+
 export function PlannerProgram_generateFullText(
   weeks: IPlannerProgramWeek[],
 ): string {
-  let allParts: string[] = [];
-  for (const week of weeks) {
-    let weekParts: string[] = [];
-    if (week.description != null) {
-      weekParts.push(
-        week.description
-          .split("\n")
-          .map((l) => (l ? `// ${l}` : "//"))
-          .join("\n"),
-      );
-    }
-    weekParts.push(`# ${week.name}`);
-    for (const day of week.days) {
-      if (day.description != null) {
-        weekParts.push(
-          day.description
-            .split("\n")
-            .map((l) => `// ${l}`)
-            .join("\n"),
-        );
+  return weeks
+    .map((week) => {
+      let parts: string[] = [];
+      parts.push(...formatAsCommentLines(week.description));
+      parts.push(`# ${week.name}`);
+
+      for (const day of week.days) {
+        parts.push(...formatAsCommentLines(day.description));
+        parts.push(`## ${day.name}`);
+        parts.push(`${day.exerciseText}\n`);
       }
-      weekParts.push(`## ${day.name}`);
-      weekParts.push(`${day.exerciseText}\n`);
-    }
-    allParts.push(weekParts.join("\n"));
-  }
-  return allParts.join("\n");
+      return parts.join("\n");
+    })
+    .join("\n");
 }
 
 //#endregion
