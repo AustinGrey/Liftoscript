@@ -221,18 +221,14 @@ function fillInMetadata(
     };
   }
 
-  metadata.byWeekDayExercise[dayData.week - 1] =
-    metadata.byWeekDayExercise[dayData.week - 1] || {};
-  metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1] =
-    metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1] || {};
+  metadata.byWeekDayExercise[dayData.week - 1] ??= {};
+  metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1] ??= {};
   metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1][
     exercise.key
   ] = exercise;
 
-  metadata.byExerciseWeekDay[exercise.key] =
-    metadata.byExerciseWeekDay[exercise.key] || {};
-  metadata.byExerciseWeekDay[exercise.key][dayData.week - 1] =
-    metadata.byExerciseWeekDay[exercise.key][dayData.week - 1] || {};
+  metadata.byExerciseWeekDay[exercise.key] ??= {};
+  metadata.byExerciseWeekDay[exercise.key][dayData.week - 1] ??= {};
   metadata.byExerciseWeekDay[exercise.key][dayData.week - 1][
     dayData.dayInWeek - 1
   ] = exercise;
@@ -378,9 +374,8 @@ function fillRepeats(
         dayData,
         isRepeat: true,
       };
-      byExerciseWeekDay[exercise.key] = byExerciseWeekDay[exercise.key] || {};
-      byExerciseWeekDay[exercise.key][repeatWeekIndex] =
-        byExerciseWeekDay[exercise.key][repeatWeekIndex] || {};
+      byExerciseWeekDay[exercise.key] ??= {};
+      byExerciseWeekDay[exercise.key][repeatWeekIndex] ??= {};
       byExerciseWeekDay[exercise.key][repeatWeekIndex][dayInWeekIndex] =
         repeatedExercise;
       const day = evaluatedWeeks[repeatWeekIndex]?.[dayInWeekIndex];
