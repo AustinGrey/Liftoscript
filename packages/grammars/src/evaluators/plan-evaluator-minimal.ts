@@ -1975,28 +1975,27 @@ function evaluateProgressImpl(
     const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
     const script = liftoscriptNode ? liftoscriptNode.source : undefined;
     if (script) {
-      try {
-        validateScript(
-          script,
-          fnArgsToStateVars(fnArgs, (message) =>
-            errorPlannerSyntax(message, fnNameNode),
-          ).state,
-          Progress_createEmptyScriptBindings(dayData, settings),
-          Progress_createScriptFunctions(settings),
-          IProgramMode.PLANNER,
-        );
-      } catch (e) {
-        if (e instanceof LiftoscriptSyntaxError && liftoscriptNode) {
-          const { line, from } = liftoscriptNode.getPointer();
-          throw new PlannerSyntaxError(
-            e.message,
-            line + e.line,
-            e.offset,
-            from + e.from,
-            from + e.to,
-          );
+      const [firstError] = validateScript(
+        script,
+        fnArgsToStateVars(fnArgs, (message) =>
+          errorPlannerSyntax(message, fnNameNode),
+        ).state,
+        Progress_createEmptyScriptBindings(dayData, settings),
+        Progress_createScriptFunctions(settings),
+        IProgramMode.PLANNER,
+      );
+      if (firstError) {
+        if (!liftoscriptNode) {
+          throw firstError;
         }
-        throw e;
+        const { line, from } = liftoscriptNode.getPointer();
+        throw new PlannerSyntaxError(
+          firstError.message,
+          line + firstError.line,
+          firstError.offset,
+          from + firstError.from,
+          from + firstError.to,
+        );
       }
     }
     const reuseLiftoscriptNode = valueNode
@@ -4594,33 +4593,26 @@ const weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
 
 //#region ScriptRunner
 
-export function validateScript(
+export function* validateScript(
   script: string,
   state: IProgramState,
   bindings: IScriptBindings,
   fns: IScriptFunctions,
   mode: IProgramMode,
-): void {
+): Generator<LiftoscriptSyntaxError> {
   const trackedVarNames = new Set<string>();
-  const [firstError, ..._rest] = validate(
-    parseBound(LiftoscriptParser, script),
-    {
-      knownFunctions: Object.keys(fns),
-      knownBindings: Object.keys(bindings),
-      knownStateVariables: Object.keys(state),
-      mode,
-      onError: (message, node) => {
-        const { line, offset, from, to } = node.getPointer();
-        throw new LiftoscriptSyntaxError(message, line, offset, from, to);
-      },
-      trackVariable: (name) => trackedVarNames.add(name),
-      isKnownVariable: (name) => trackedVarNames.has(name),
+  yield* validate(parseBound(LiftoscriptParser, script), {
+    knownFunctions: Object.keys(fns),
+    knownBindings: Object.keys(bindings),
+    knownStateVariables: Object.keys(state),
+    mode,
+    onError: (message, node) => {
+      const { line, offset, from, to } = node.getPointer();
+      throw new LiftoscriptSyntaxError(message, line, offset, from, to);
     },
-  );
-  // @todo This seems odd. I should push the decision to throw up as far as it can go.
-  if (firstError) {
-    throw firstError;
-  }
+    trackVariable: (name) => trackedVarNames.add(name),
+    isKnownVariable: (name) => trackedVarNames.has(name),
+  });
 }
 
 /**
