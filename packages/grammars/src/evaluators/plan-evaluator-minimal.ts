@@ -1,7 +1,7 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import { filterUndefined, CollectionUtils_sortBy } from "../utils/collection";
+import { CollectionUtils_sortBy, filterUndefined } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
@@ -65,7 +65,11 @@ import {
   getPreferredUnit,
   type ISettings,
 } from "@/user-settings";
-import { PlannerNodeName } from "@/planner/parsing/guards.ts";
+import {
+  type IPlannerSyntaxPointer,
+  PlannerNodeName,
+  PlannerSyntaxError,
+} from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";
 import { getAverageBodyweight, type IStats } from "@/fitness-stats";
 import {
@@ -1214,52 +1218,6 @@ export interface IPlannerTopLineItem {
   sections?: string;
   sectionsToReuse?: string;
   used?: boolean;
-}
-
-type IPlannerSyntaxPointer = {
-  line: number;
-  offset: number;
-  from: number;
-  to: number;
-};
-
-export class PlannerSyntaxError extends SyntaxError {
-  public readonly line: number;
-  public readonly offset: number;
-  public readonly from: number;
-  public readonly to: number;
-
-  public static fromPoint(
-    fullName: string | undefined,
-    message: string,
-    point: IPlannerSyntaxPointer,
-  ): PlannerSyntaxError {
-    return new PlannerSyntaxError(
-      `${fullName ? `${fullName}: ` : ""}${message} (${point.line}:${point.offset})`,
-      point.line,
-      point.offset,
-      point.from,
-      point.to,
-    );
-  }
-
-  constructor(
-    message: string,
-    line: number,
-    offset: number,
-    from: number,
-    to: number,
-  ) {
-    super(message);
-    this.line = line;
-    this.offset = offset;
-    this.from = from;
-    this.to = to;
-  }
-
-  public toString(): string {
-    return this.message;
-  }
 }
 
 export type IPlannerEvalResult = IEither<
@@ -3566,45 +3524,6 @@ function getRenamedValue(
     return line.value;
   }
 }
-function groupVariationSets(
-  sets: IPlannerProgramExerciseEvaluatedSet[],
-  exercise: IPlannerProgramExercise,
-  index: number,
-): [IPlannerProgramExerciseEvaluatedSet, number][] {
-  if (sets.length === 0) {
-    const originalSets = PlannerProgramExercise_sets(exercise, index)[0];
-    return [
-      [
-        {
-          maxrep: originalSets?.repRange?.maxrep || 1,
-          minrep: originalSets?.repRange?.minrep,
-          weight: originalSets?.weight || w`0lb`,
-          logRpe: originalSets?.logRpe || false,
-          isAmrap: originalSets?.repRange?.isAmrap || false,
-          isQuickAddSet: originalSets?.repRange?.isQuickAddSet || false,
-          askWeight: originalSets?.askWeight || false,
-          rpe: originalSets?.rpe,
-          timer: originalSets?.timer,
-          label: originalSets?.label,
-        },
-        0,
-      ],
-    ];
-  }
-  let lastKey: string | undefined;
-  const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = [];
-  for (const set of sets) {
-    const key = `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
-      set.timer
-    }-${set.label}-${set.askWeight}`;
-    if (lastKey == null || lastKey !== key) {
-      groups.push([set, 0]);
-    }
-    groups[groups.length - 1][1] += 1;
-    lastKey = key;
-  }
-  return groups;
-}
 function groupWarmupsSets(
   sets: IPlannerProgramExerciseWarmupSet[],
 ): [IPlannerProgramExerciseWarmupSet, number][] {
@@ -4213,6 +4132,45 @@ function variationToString(
     resultStr += "! ";
   }
   return resultStr + result.map((r) => r.trim()).join(", ");
+}
+function groupVariationSets(
+  sets: IPlannerProgramExerciseEvaluatedSet[],
+  exercise: IPlannerProgramExercise,
+  index: number,
+): [IPlannerProgramExerciseEvaluatedSet, number][] {
+  if (sets.length === 0) {
+    const originalSets = PlannerProgramExercise_sets(exercise, index).at(0);
+    return [
+      [
+        {
+          maxrep: originalSets?.repRange?.maxrep || 1,
+          minrep: originalSets?.repRange?.minrep,
+          weight: originalSets?.weight || w`0lb`,
+          logRpe: originalSets?.logRpe || false,
+          isAmrap: originalSets?.repRange?.isAmrap || false,
+          isQuickAddSet: originalSets?.repRange?.isQuickAddSet || false,
+          askWeight: originalSets?.askWeight || false,
+          rpe: originalSets?.rpe,
+          timer: originalSets?.timer,
+          label: originalSets?.label,
+        },
+        0,
+      ],
+    ];
+  }
+  let lastKey: string | undefined;
+  const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = [];
+  for (const set of sets) {
+    const key = `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
+      set.timer
+    }-${set.label}-${set.askWeight}`;
+    if (lastKey === undefined || lastKey !== key) {
+      groups.push([set, 0]);
+    }
+    groups[groups.length - 1][1] += 1;
+    lastKey = key;
+  }
+  return groups;
 }
 
 function getGlobals(

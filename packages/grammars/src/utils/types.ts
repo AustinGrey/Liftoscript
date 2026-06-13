@@ -54,3 +54,10 @@ export function isOneOf<TTarget, const TGuard extends TTarget>(
 ): text is TGuard {
   return options.includes(text as TGuard);
 }
+
+/**
+ * Swaps keys for values in a record
+ */
+export type Swap<T extends Record<string, string | number | symbol>> = {
+  [K in keyof T as T[K]]: K;
+};

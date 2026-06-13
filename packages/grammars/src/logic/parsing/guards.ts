@@ -1,23 +1,9 @@
 import * as logicTerms from "./logic.terms.ts";
-import type * as planTerms from "../../planner/parsing/workout-plan.terms.ts";
 import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
 
-/**
- * Swaps keys for values in a record
- */
-type Swap<T extends Record<string, string | number | symbol>> = {
-  [K in keyof T as T[K]]: K;
-};
-
 type IdMap_Logic = typeof logicTerms;
-type IdMap_Plan = typeof planTerms;
-type NameMap_Logic = Swap<IdMap_Logic>;
-type NameMap_Plan = Swap<IdMap_Plan>;
 
 export type NodeNames_Logic = keyof IdMap_Logic;
-type NodeNames_Plan = keyof IdMap_Plan;
-type NodeIds_Logic = IdMap_Logic[NodeNames_Logic];
-type NodeIds_Plan = IdMap_Plan[NodeNames_Plan];
 
 export type TypedLogicNode<T extends NodeNames_Logic> = SourcedSyntaxNode & {
   name: T;

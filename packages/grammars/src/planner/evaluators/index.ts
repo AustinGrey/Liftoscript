@@ -31,7 +31,6 @@ import {
   PlannerProgramExercise_evaluateSetVariations,
   PlannerProgramExercise_getState,
   PlannerProgramExercise_setVariations,
-  PlannerSyntaxError,
   Program_create,
   Program_evaluate,
   Progress_createEmptyScriptBindings,
@@ -56,7 +55,11 @@ import type { IAllCustomExercises, IExerciseType } from "@/exercises";
 import type { IEither, OpenRecord } from "@/utils/types.ts";
 import { filterUndefined } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
-import { PlannerNodeName } from "@/planner/parsing/guards.ts";
+import {
+  PlannerNodeName,
+  PlannerSyntaxError,
+  type TypedPlanNode,
+} from "@/planner/parsing/guards.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 
 //#region Planner Evaluator
@@ -1638,11 +1641,11 @@ function getRepeatRanges(numbers: number[]): string[] {
 }
 
 function topLineMap(
-  programNode: SourcedSyntaxNode,
+  programNode: TypedPlanNode<"Program">,
   exercises: IAllCustomExercises,
 ): IPlannerTopLineItem[] {
   if (programNode.type.name !== PlannerNodeName.Program) {
-    errorPlannerSyntax(
+    return errorPlannerSyntax(
       `Unexpected node type ${programNode.type.name} - should be Program`,
       programNode,
     );
