@@ -91,7 +91,10 @@ import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run, validate } from "@/logic/evaluators";
 import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
-import { LiftoscriptSyntaxError } from "@/logic/evaluators/types.ts";
+import {
+  IProgramMode,
+  LiftoscriptSyntaxError,
+} from "@/logic/evaluators/types.ts";
 import {
   PlannerEvaluator_forceEvaluate,
   PlannerProgram_evaluate,
@@ -293,7 +296,7 @@ function Program_runFinishDayScript(
         prints: [],
       },
       otherStates,
-      "planner",
+      IProgramMode.PLANNER,
     );
     updates = result.updates;
     newState = result.finalState;
@@ -3054,7 +3057,7 @@ function Progress_runUpdateScriptForEntry(
       Progress_createScriptFunctions(settings),
       fnContext,
       structuredClone(otherStates),
-      "update",
+      IProgramMode.UPDATE,
     );
     const newEntry = Progress_applyBindings(entry, bindings, settings);
     newEntry.state = { ...newEntry.state, ...result.finalState };
