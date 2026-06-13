@@ -110,6 +110,7 @@ import {
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { validate as validateLp } from "@/planner/progression-formulas/lp.ts";
+import { validate as validateSumProgression } from "@/planner/progression-formulas/sum.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -1773,27 +1774,7 @@ function* validateProgress(
       yield* validateLp(fnArgs, valueNode);
       break;
     case IProgramExerciseProgressType.SUM:
-      if (fnArgs.length > 2) {
-        errorPlannerSyntax(
-          `Reps Sum Progression 'sum' only has 2 arguments max`,
-          valueNode,
-        );
-      } else if (fnArgs[0] == null || isNaN(parseInt(fnArgs[0], 10))) {
-        errorPlannerSyntax(
-          `1st argument of 'sum' should be a number of reps - i.e. a number`,
-          valueNode,
-        );
-      } else if (
-        fnArgs[1] == null ||
-        (!fnArgs[1].endsWith("lb") &&
-          !fnArgs[1].endsWith("kg") &&
-          !fnArgs[1].endsWith("%"))
-      ) {
-        errorPlannerSyntax(
-          `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-          valueNode,
-        );
-      }
+      yield* validateSumProgression(fnArgs, valueNode);
       break;
     case IProgramExerciseProgressType.DP:
       if (fnArgs.length !== 3) {
