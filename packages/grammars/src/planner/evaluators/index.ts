@@ -1,14 +1,8 @@
 import {
   convertToPlanner,
-  errorPlannerSyntax,
   evaluate,
-  forExerciseInEvaluatedResults,
   forExerciseInEvaluatedWeeks,
   getExercisesInProgram,
-  getIsNotUsed,
-  getNodeSourceEscapedWhiteSpace,
-  getOrder,
-  getRepeat,
   type IDayData,
   type IEvaluatedProgram,
   type IPlannerEvalResult,
@@ -51,15 +45,13 @@ import type {
 } from "@/program";
 import { memoize } from "micro-memoize";
 import { eq, typeOf } from "@/quantities/weight.ts";
-import type { IAllCustomExercises, IExerciseType } from "@/exercises";
-import type { IEither, OpenRecord } from "@/utils/types.ts";
+import type { IExerciseType } from "@/exercises";
+import type { IEither } from "@/utils/types.ts";
 import { filterUndefined } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
 import {
-  asPlanNodeOfTypeOrThrow,
   PlannerNodeName,
   PlannerSyntaxError,
-  type TypedPlanNode,
 } from "@/planner/parsing/guards.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 
@@ -1262,170 +1254,6 @@ export function PlannerProgram_replaceAndValidateExercise(
   }
 }
 
-export function PlannerProgram_compact(
-  oldPlannerProgram: IPlannerProgram,
-  plannerProgram: IPlannerProgram,
-  settings: ISettings,
-  additionalRepeatingExercises?: Set<string>,
-): IPlannerProgram {
-  const repeatingExercises = new Set<string>(additionalRepeatingExercises);
-  const { evaluatedWeeks } = PlannerProgram_evaluate(
-    structuredClone(oldPlannerProgram),
-    settings,
-  );
-  const { evaluatedWeeks: newEvaluatedWeeks } = PlannerProgram_evaluate(
-    structuredClone(plannerProgram),
-    settings,
-  );
-  for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
-    forExerciseInEvaluatedResults(ev, (exercise) => {
-      if (exercise.repeat != null && exercise.repeat.length > 0) {
-        repeatingExercises.add(exercise.key);
-      }
-    });
-  }
-
-  const lastDescriptions: OpenRecord<string, number> = {};
-  plannerProgram.weeks.forEach((week) => {
-    week.days.forEach((day, dayInWeekIndex) => {
-      if (lastDescriptions[dayInWeekIndex] == null) {
-        lastDescriptions[dayInWeekIndex] = day.description;
-      } else if (lastDescriptions[dayInWeekIndex] === day.description) {
-        day.description = undefined;
-      } else {
-        lastDescriptions[dayInWeekIndex] = day.description;
-      }
-    });
-  });
-
-  const mapping = plannerProgram.weeks.map((week) => {
-    return week.days.map((day) => {
-      return topLineMap(
-        asPlanNodeOfTypeOrThrow(
-          "Program",
-          parseBound(plannerExerciseParser, day.exerciseText),
-        ),
-        settings.exercises,
-      );
-    });
-  });
-
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const week = mapping[weekIndex];
-    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
-      for (const line of day) {
-        if (
-          line.type === "exercise" &&
-          !line.used &&
-          repeatingExercises.has(line.value)
-        ) {
-          const repeatRanges: [number, number | undefined][] = [];
-          for (
-            let repeatWeekIndex = weekIndex + 1;
-            repeatWeekIndex < mapping.length;
-            repeatWeekIndex += 1
-          ) {
-            const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
-            const repeatedExercises = (repeatDay || []).filter((e) => {
-              if (
-                e.type !== "exercise" ||
-                e.value !== line.value ||
-                e.sectionsToReuse !== line.sectionsToReuse ||
-                e.exerciseIndex !== line.exerciseIndex ||
-                !ObjectUtils_isEqual(
-                  e.descriptions || [],
-                  line.descriptions || [],
-                )
-              ) {
-                return false;
-              }
-              const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
-              const oldExercise = oldDay.success
-                ? oldDay.data.find((ex) => ex.key === e.value)
-                : undefined;
-              return oldExercise?.repeating?.includes(weekIndex + 1);
-            });
-            for (const e of repeatedExercises) {
-              e.used = true;
-            }
-            if (repeatedExercises.length > 0) {
-              if (
-                repeatRanges.length === 0 ||
-                repeatRanges[repeatRanges.length - 1][1] != null
-              ) {
-                repeatRanges.push([repeatWeekIndex, undefined]);
-              }
-            } else {
-              if (repeatRanges.length > 0) {
-                repeatRanges[repeatRanges.length - 1][1] = repeatWeekIndex;
-              }
-              break;
-            }
-          }
-          if (
-            repeatRanges.length > 0 &&
-            repeatRanges[repeatRanges.length - 1][1] == null
-          ) {
-            repeatRanges[repeatRanges.length - 1][1] = mapping.length;
-          }
-          line.repeatRanges = repeatRanges.map((r) => `${r[0]}-${r[1]}`);
-        }
-      }
-    }
-  }
-
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const programWeek = plannerProgram.weeks[weekIndex];
-    const week = mapping[weekIndex];
-    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
-      const programDay = programWeek.days[dayIndex];
-      let str = "";
-      let ongoingDescriptions = false;
-      for (const line of day) {
-        if (line.type === "description") {
-          ongoingDescriptions = true;
-        } else if (line.type === "exercise") {
-          ongoingDescriptions = false;
-          if (!line.used) {
-            if (line.descriptions && line.descriptions.length > 0) {
-              str += `${line.descriptions.filter((d) => d.trim()).join("\n\n")}\n`;
-            }
-            let repeatStr = "";
-            if (
-              (line.order != null && line.order !== 0) ||
-              (line.repeatRanges && line.repeatRanges.length > 0)
-            ) {
-              const repeatParts = [];
-              if (line.order != null && line.order !== 0) {
-                repeatParts.push(line.order);
-              }
-              if (line.repeatRanges && line.repeatRanges.length > 0) {
-                repeatParts.push(line.repeatRanges.join(","));
-              }
-              repeatStr = `[${repeatParts.join(",")}]`;
-            }
-            str +=
-              [`${line.fullName}${repeatStr}`, line.sections]
-                .filter((r) => r)
-                .join(" / ") + `\n`;
-          }
-        } else if (line.type === "empty") {
-          if (!ongoingDescriptions) {
-            str += line.value + "\n";
-          }
-        } else {
-          str += line.value + "\n";
-        }
-      }
-      programDay.exerciseText = str.trim();
-    }
-  }
-
-  return plannerProgram;
-}
-
 export function PlannerProgram_groupedTopLines(
   topLine: IPlannerTopLineItem[][][],
 ): IPlannerTopLineItem[][][][] {
@@ -1473,58 +1301,6 @@ export function PlannerProgram_groupedTopLines(
     }
   }
   return groupedTopLine;
-}
-
-export function PlannerProgram_topLineItems(
-  plannerProgram: IPlannerProgram,
-  exercises: IAllCustomExercises,
-): IPlannerTopLineItem[][][] {
-  let dayIndex = 0;
-
-  const mapping = plannerProgram.weeks.map((week) => {
-    return week.days.map((day) => {
-      dayIndex += 1;
-
-      return topLineMap(
-        asPlanNodeOfTypeOrThrow(
-          "Program",
-          parseBound(plannerExerciseParser, day.exerciseText),
-        ),
-        exercises,
-      );
-    });
-  });
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const week = mapping[weekIndex];
-    for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
-      for (const exercise of day) {
-        for (const r of exercise.repeat || []) {
-          const reuseDay = mapping[r - 1]?.[dayIndex];
-          if (
-            reuseDay &&
-            !reuseDay.some(
-              (e) => e.type === "exercise" && e.value === exercise.value,
-            )
-          ) {
-            if (exercise.descriptions) {
-              for (let di = 0; di < exercise.descriptions.length; di += 1) {
-                if (di !== 0) {
-                  reuseDay.push({ type: "empty", value: "" });
-                }
-                reuseDay.push({
-                  type: "description",
-                  value: exercise.descriptions[di],
-                });
-              }
-            }
-            reuseDay.push({ ...exercise, repeat: undefined });
-          }
-        }
-      }
-    }
-  }
-  return mapping;
 }
 
 export function PlannerProgram_evaluate(
@@ -1590,117 +1366,6 @@ export function PlannerProgram_generateFullText(
 }
 
 //#endregion
-
-function getRepeatRanges(numbers: number[]): string[] {
-  if (numbers.length === 0) {
-    return [];
-  }
-
-  const ranges: string[] = [];
-  let rangeStart = numbers[0];
-  let rangeEnd = numbers[0];
-
-  for (let i = 1; i < numbers.length; i++) {
-    if (numbers[i] === rangeEnd + 1) {
-      rangeEnd = numbers[i];
-    } else {
-      ranges.push(`${rangeStart}-${rangeEnd}`);
-      rangeStart = numbers[i];
-      rangeEnd = numbers[i];
-    }
-  }
-
-  ranges.push(`${rangeStart}-${rangeEnd}`);
-
-  return ranges;
-}
-
-function topLineMap(
-  programNode: TypedPlanNode<"Program">,
-  exercises: IAllCustomExercises,
-): IPlannerTopLineItem[] {
-  const result: IPlannerTopLineItem[] = [];
-  let lastDescriptions: string[][] = [];
-  let ongoingDescriptions = false;
-  let exerciseIndex = 0;
-  for (const child of queryChildren(programNode)) {
-    if (child.type.name === PlannerNodeName.ExerciseExpression) {
-      ongoingDescriptions = false;
-      const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
-      const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
-      const key = PlannerKey_fromFullName(fullName, exercises);
-      const repeat = getRepeat(child);
-      const repeatRanges = getRepeatRanges(repeat);
-      const order = getOrder(child);
-      const isUsed = !getIsNotUsed(child);
-      const sectionsNode = child.getChildren(PlannerNodeName.ExerciseSection);
-      const sections = sectionsNode
-        .map((section) => section.source.trim())
-        .join(" / ");
-      const sectionsToReuse = sectionsNode
-        .filter((section) => {
-          const properties = section.getChild(PlannerNodeName.ExerciseProperty);
-          if (properties == null) {
-            return true;
-          }
-          const propertyNameNode = properties.getChild(
-            PlannerNodeName.ExercisePropertyName,
-          );
-          const propertyName = propertyNameNode
-            ? getNodeSourceEscapedWhiteSpace(propertyNameNode)
-            : undefined;
-          if (propertyName === "progress") {
-            const none = properties.getChild(PlannerNodeName.None);
-            return none != null;
-          }
-          return false;
-        })
-        .map((section) => section.source.trim())
-        .join(" / ");
-      result.push({
-        type: "exercise",
-        fullName,
-        order,
-        notused: !isUsed,
-        value: key,
-        exerciseIndex,
-        repeat,
-        repeatRanges,
-        descriptions: lastDescriptions.map((d) => d.join("\n")),
-        sections,
-        sectionsToReuse,
-      });
-      if (isUsed) {
-        exerciseIndex += 1;
-      }
-      lastDescriptions = [];
-    } else if (child.type.name === PlannerNodeName.LineComment) {
-      ongoingDescriptions = true;
-      const description = child.source.trim();
-      if (lastDescriptions.length === 0) {
-        lastDescriptions.push([]);
-      }
-      lastDescriptions[lastDescriptions.length - 1].push(description);
-      result.push({ type: "description", value: description });
-    } else if (child.type.name === PlannerNodeName.TripleLineComment) {
-      result.push({
-        type: "comment",
-        value: child.source.trim(),
-      });
-    } else if (child.type.name === PlannerNodeName.EmptyExpression) {
-      result.push({ type: "empty", value: "" });
-      if (ongoingDescriptions) {
-        lastDescriptions.push([]);
-      }
-    } else {
-      errorPlannerSyntax(
-        `Unexpected node type ${child.type.name}, should be only exercise, comment, description or empty line`,
-        child,
-      );
-    }
-  }
-  return result;
-}
 
 /**
  * Walks the program preserving raw lines (including comments) for each day’s exercise text.
