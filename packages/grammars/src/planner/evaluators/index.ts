@@ -168,13 +168,12 @@ function fillInMetadata(
         }),
       )
     ) {
-      const point = exercise.points.progressPoint || exercise.points.fullName;
       throw plannerError(
         exercise.fullName,
         `Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
           `week ${existingProgress.dayData.week + 1}, day ${existingProgress.dayData.dayInWeek + 1} ` +
           `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        point,
+        exercise.points.progressPoint || exercise.points.fullName,
       );
     }
     metadata.properties.progress[exercise.key] = {
@@ -291,23 +290,21 @@ function getPerDayEvaluatedWeeks(
           settings,
         );
         dayIndex += 1;
-        if (result.success) {
-          const exercises = result.data;
-          for (const exercise of exercises) {
-            try {
-              fillInMetadata(exercise, metadata, dayData);
-            } catch (e) {
-              if (e instanceof SourcedSyntaxError) {
-                return { success: false, error: e };
-              } else {
-                throw e;
-              }
-            }
-          }
-          return { success: true, data: exercises };
-        } else {
+        if (!result.success) {
           return result;
         }
+        const exercises = result.data;
+        for (const exercise of exercises) {
+          try {
+            fillInMetadata(exercise, metadata, dayData);
+          } catch (e) {
+            if (e instanceof SourcedSyntaxError) {
+              return { success: false, error: e };
+            }
+            throw e;
+          }
+        }
+        return { success: true, data: exercises };
       });
     },
   );
