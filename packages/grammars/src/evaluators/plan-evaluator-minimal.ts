@@ -95,7 +95,7 @@ import {
   SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { isEqual, omitBy, pick } from "es-toolkit";
+import { omitBy } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run, validate } from "@/logic/evaluators";
 import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
@@ -1286,36 +1286,6 @@ export enum IPlannerExerciseEvaluatorMode {
   PERDAY = "perday",
   FULL = "full",
   FULLTEXT = "fulltext",
-}
-
-export function isEqualProgress(
-  a: IProgramExerciseProgress,
-  b: IProgramExerciseProgress,
-): boolean {
-  const pickA = {
-    ...pick(a, ["type", "state", "stateMetadata", "script"]),
-    reuse: a.reuse?.fullName,
-  };
-  const pickB = {
-    ...pick(b, ["type", "state", "stateMetadata", "script"]),
-    reuse: b.reuse?.fullName,
-  };
-  return isEqual(pickA, pickB);
-}
-
-export function isEqualUpdate(
-  a: IProgramExerciseUpdate,
-  b: IProgramExerciseUpdate,
-): boolean {
-  const pickA = {
-    ...pick(a, ["type", "script"]),
-    reuse: a.reuse?.fullName,
-  };
-  const pickB = {
-    ...pick(b, ["type", "script"]),
-    reuse: b.reuse?.fullName,
-  };
-  return isEqual(pickA, pickB);
 }
 
 export function fnArgsToStateVars(

@@ -12,11 +12,7 @@ import type {
   IPlannerProgramDay,
   IPlannerProgramWeek,
 } from "@/program";
-import { memoize } from "micro-memoize";
-import { eq, typeOf } from "@/quantities/weight.ts";
-import { filterUndefined } from "@/utils/collection.ts";
-import { plannerError, PlannerNodeName } from "@/planner/parsing/guards.ts";
-import { queryChildren } from "@/utils/grammars.ts";
+//#region Dead Layer Imports
 //@todo These imports are coming from higher or dead layers, which should not be imported from
 import type { ISettings } from "@/user-settings";
 import {
@@ -32,10 +28,9 @@ import {
   type IPlannerTopLineItem,
   type IProgramExerciseDescriptions,
   type IProgramExerciseProgress,
+  IProgramExerciseProgressType,
   type IProgramExerciseUpdate,
   IProgramExerciseUpdateType,
-  isEqualProgress,
-  isEqualUpdate,
   type IWeightChange,
   parse,
   PlannerKey_fromFullName,
@@ -46,7 +41,14 @@ import {
   Progress_createEmptyScriptBindings,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+//#endregion
+import { memoize } from "micro-memoize";
+import { eq, typeOf } from "@/quantities/weight.ts";
+import { filterUndefined } from "@/utils/collection.ts";
+import { plannerError, PlannerNodeName } from "@/planner/parsing/guards.ts";
+import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
+import { isEqual, pick } from "es-toolkit";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -100,12 +102,42 @@ if (completedReps >= reps && completedRPE <= RPE) {
 }`;
 }
 
+function isEqualProgress(
+  a: IProgramExerciseProgress,
+  b: IProgramExerciseProgress,
+): boolean {
+  const pickA = {
+    ...pick(a, ["type", "state", "stateMetadata", "script"]),
+    reuse: a.reuse?.fullName,
+  };
+  const pickB = {
+    ...pick(b, ["type", "state", "stateMetadata", "script"]),
+    reuse: b.reuse?.fullName,
+  };
+  return isEqual(pickA, pickB);
+}
+
+function isEqualUpdate(
+  a: IProgramExerciseUpdate,
+  b: IProgramExerciseUpdate,
+): boolean {
+  const pickA = {
+    ...pick(a, ["type", "script"]),
+    reuse: a.reuse?.fullName,
+  };
+  const pickB = {
+    ...pick(b, ["type", "script"]),
+    reuse: b.reuse?.fullName,
+  };
+  return isEqual(pickA, pickB);
+}
+
 function fillInMetadata(
   exercise: IPlannerProgramExercise,
   metadata: IPlannerEvalMetadata,
   dayData: IDayData,
 ): void {
-  if (exercise.progress?.type === "dp") {
+  if (exercise.progress?.type === IProgramExerciseProgressType.DP) {
     const hasRange = exercise.setVariations.some((sv) =>
       sv.sets.some((s) => s.repRange?.minrep != null),
     );
@@ -130,10 +162,7 @@ function fillInMetadata(
   const tagsProp = exercise.tags;
   if (tagsProp != null && tagsProp.length > 0) {
     const existingTags = metadata.properties.id[exercise.key];
-    if (
-      existingTags != null &&
-      !ObjectUtils_isEqual(existingTags.property, tagsProp)
-    ) {
+    if (existingTags != null && !isEqual(existingTags.property, tagsProp)) {
       const point = exercise.points.idPoint || exercise.points.fullName;
       throw plannerError(
         exercise.fullName,
@@ -149,12 +178,14 @@ function fillInMetadata(
     };
   }
 
-  const progressProp = exercise.progress;
-  if (progressProp != null && progressProp.type !== "none") {
+  if (
+    exercise.progress != null &&
+    exercise.progress.type !== IProgramExerciseProgressType.NONE
+  ) {
     const existingProgress = metadata.properties.progress[exercise.key];
     if (
       existingProgress != null &&
-      !isEqualProgress(progressProp, existingProgress.property)
+      !isEqualProgress(exercise.progress, existingProgress.property)
     ) {
       const point = exercise.points.progressPoint || exercise.points.fullName;
       throw plannerError(
@@ -166,7 +197,7 @@ function fillInMetadata(
       );
     }
     metadata.properties.progress[exercise.key] = {
-      property: progressProp,
+      property: exercise.progress,
       dayData,
     };
   }
@@ -213,15 +244,11 @@ function fillInMetadata(
     };
   }
 
-  metadata.byWeekDayExercise[dayData.week - 1] ??= {};
-  metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1] ??= {};
-  metadata.byWeekDayExercise[dayData.week - 1][dayData.dayInWeek - 1][
-    exercise.key
-  ] = exercise;
+  ((metadata.byWeekDayExercise[dayData.week - 1] ??= {})[
+    dayData.dayInWeek - 1
+  ] ??= {})[exercise.key] = exercise;
 
-  metadata.byExerciseWeekDay[exercise.key] ??= {};
-  metadata.byExerciseWeekDay[exercise.key][dayData.week - 1] ??= {};
-  metadata.byExerciseWeekDay[exercise.key][dayData.week - 1][
+  ((metadata.byExerciseWeekDay[exercise.key] ??= {})[dayData.week - 1] ??= {})[
     dayData.dayInWeek - 1
   ] = exercise;
 
@@ -1246,8 +1273,7 @@ function getWeekDayOngoingLinesFullText(
   let commentStarted = false;
   const linesToPreviousExercise: INonExerciseFullTextLine[] = [];
   const nextLines: INonExerciseFullTextLine[] = [];
-  for (let i = 0; i < ongoingLines.length; i++) {
-    const line = ongoingLines[i];
+  for (const line of ongoingLines) {
     if (!anyCommentStarted && line?.type === "empty") {
       continue;
     }
@@ -1265,16 +1291,14 @@ function getWeekDayOngoingLinesFullText(
     }
   }
   for (let i = nextLines.length - 1; i >= 0; i--) {
-    const line = nextLines[i];
-    if (line.type === "empty") {
+    if (nextLines[i].type === "empty") {
       nextLines.pop();
     } else {
       break;
     }
   }
   for (let i = linesToPreviousExercise.length - 1; i >= 0; i--) {
-    const line = linesToPreviousExercise[i];
-    if (line.type === "empty") {
+    if (linesToPreviousExercise[i].type === "empty") {
       linesToPreviousExercise.pop();
     } else {
       break;

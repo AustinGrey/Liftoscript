@@ -26,6 +26,7 @@ export const ObjectUtils_entries = <T extends {}>(obj: T) =>
  * @returns true if the two objects are equal, however it also will warn at compile time if B's type is not assignable to A -> which would likely make the return always false.
  * @param a 1st object to compare
  * @param b 2nd object to compare
+ * @deprecated use {@link isEqual} instead
  */
 export const ObjectUtils_isEqual = <A, B extends A>(a: A, b: B) =>
   isEqual(a, b);
