@@ -1,6 +1,7 @@
 import { PlannerSyntaxError } from "@/planner/parsing/guards.ts";
 import { asBase10Int } from "@/utils/math.ts";
 import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
+import { nodeError } from "@/utils/lezer.ts";
 
 /**
  * @yields any problems found with use of the double progression formula in code
@@ -17,9 +18,9 @@ export const validate: ProgressionFormulaValidator = function* (
     argMaxReps == null ||
     argsRest.length > 0
   ) {
-    yield PlannerSyntaxError.fromNode(
-      `Double Progression 'dp' should have 3 arguments`,
+    yield nodeError(
       valueNode,
+      `Double Progression 'dp' should have 3 arguments`,
     );
     return;
   }
@@ -28,21 +29,21 @@ export const validate: ProgressionFormulaValidator = function* (
     !argWeight.endsWith("kg") &&
     !argWeight.endsWith("%")
   ) {
-    yield PlannerSyntaxError.fromNode(
-      `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+    yield nodeError(
       valueNode,
+      `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
     );
   }
   if (asBase10Int(argMinReps)) {
-    yield PlannerSyntaxError.fromNode(
-      `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
+    yield nodeError(
       valueNode,
+      `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
     );
   }
   if (asBase10Int(argMaxReps)) {
-    yield PlannerSyntaxError.fromNode(
-      `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
+    yield nodeError(
       valueNode,
+      `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
     );
   }
 };

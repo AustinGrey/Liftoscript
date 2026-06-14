@@ -1,5 +1,5 @@
 import { PlannerSyntaxError } from "@/planner/parsing/guards.ts";
-import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { nodeError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { asBase10Int } from "@/utils/math.ts";
 
 /**
@@ -25,21 +25,21 @@ export function* validate(
     !argWeight.endsWith("kg") &&
     !argWeight.endsWith("%")
   ) {
-    yield PlannerSyntaxError.fromNode(
-      `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+    yield nodeError(
       valueNode,
+      `1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
     );
   }
   if (argAttempts != null && asBase10Int(argAttempts)) {
-    yield PlannerSyntaxError.fromNode(
-      `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
+    yield nodeError(
       valueNode,
+      `2nd argument of 'lp' should be a number of attempts - i.e. a number`,
     );
   }
   if (argSuccessfulAttempts != null && asBase10Int(argSuccessfulAttempts)) {
-    yield PlannerSyntaxError.fromNode(
-      `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
+    yield nodeError(
       valueNode,
+      `3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
     );
   }
   if (
@@ -48,30 +48,30 @@ export function* validate(
     !argNextWeight.endsWith("kg") &&
     !argNextWeight.endsWith("%")
   ) {
-    yield PlannerSyntaxError.fromNode(
-      `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+    yield nodeError(
       valueNode,
+      `4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
     );
   }
   if (argFailedAttempts != null && asBase10Int(argFailedAttempts)) {
-    yield PlannerSyntaxError.fromNode(
-      `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
+    yield nodeError(
       valueNode,
+      `5th argument of 'lp' should be a number of failed attempts - i.e. a number`,
     );
   }
   if (
     argFailedAttemptsUpToDate != null &&
     asBase10Int(argFailedAttemptsUpToDate)
   ) {
-    yield PlannerSyntaxError.fromNode(
-      `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
+    yield nodeError(
       valueNode,
+      `6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
     );
   }
   if (argsRest.length > 0) {
-    yield PlannerSyntaxError.fromNode(
-      `Linear Progression 'lp' only has 6 arguments max`,
+    yield nodeError(
       valueNode,
+      `Linear Progression 'lp' only has 6 arguments max`,
     );
   }
 }

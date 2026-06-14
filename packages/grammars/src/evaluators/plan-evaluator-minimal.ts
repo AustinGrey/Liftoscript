@@ -91,6 +91,7 @@ import {
 } from "@/program";
 import {
   type ISyntaxPointer,
+  nodeError,
   parseBound,
   SourcedSyntaxError,
   type SourcedSyntaxNode,
@@ -1865,9 +1866,9 @@ function evaluateProgressImpl(
   const validator = isEnumValue(IProgramExerciseProgressType, fnName)
     ? validatorMap[fnName]
     : function* () {
-        yield PlannerSyntaxError.fromNode(
-          `There's no such progression exists - '${fnName}'`,
+        yield nodeError(
           fnNameNode,
+          `There's no such progression exists - '${fnName}'`,
         );
       };
   const [firstError] = validator(fnArgs, valueNode, (script) =>

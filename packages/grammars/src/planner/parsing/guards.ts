@@ -1,5 +1,9 @@
 import * as planTerms from "./workout-plan.terms.ts";
-import type { ISyntaxPointer, SourcedSyntaxNode } from "@/utils/lezer.ts";
+import {
+  type ISyntaxPointer,
+  SourcedSyntaxError,
+  type SourcedSyntaxNode,
+} from "@/utils/lezer.ts";
 
 type IdMap_Plan = typeof planTerms;
 
@@ -168,13 +172,6 @@ export class PlannerSyntaxError extends SyntaxError {
     );
   }
 
-  public static fromNode(
-    message: string,
-    node: SourcedSyntaxNode,
-  ): PlannerSyntaxError {
-    return PlannerSyntaxError.fromPoint(undefined, message, node.getPointer());
-  }
-
   constructor(
     message: string,
     line: number,
@@ -192,4 +189,18 @@ export class PlannerSyntaxError extends SyntaxError {
   public toString(): string {
     return this.message;
   }
+}
+
+function plannerError(
+  fullName: string | undefined,
+  message: string,
+  point: ISyntaxPointer,
+): SourcedSyntaxError {
+  return new SourcedSyntaxError(
+    `${fullName ? `${fullName}: ` : ""}${message}`,
+    point.line,
+    point.offset,
+    point.from,
+    point.to,
+  );
 }

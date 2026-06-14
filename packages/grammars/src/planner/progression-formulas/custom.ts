@@ -3,6 +3,7 @@ import {
   PlannerSyntaxError,
 } from "@/planner/parsing/guards.ts";
 import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
+import { nodeError } from "@/utils/lezer.ts";
 
 /**
  * @yields any problems found with use of the custom progression formula in code
@@ -22,9 +23,9 @@ export const validate: ProgressionFormulaValidator = function* (
     ?.getChild(PlannerNodeName.ReuseSection)
     ?.getChild(PlannerNodeName.ExerciseName)?.source;
   if (!script && !body) {
-    yield PlannerSyntaxError.fromNode(
-      `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
+    yield nodeError(
       valueNode,
+      `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
     );
   }
   if (script) {
