@@ -158,7 +158,7 @@ export function plannerError(
   point: ISyntaxPointer,
 ): SourcedSyntaxError {
   return new SourcedSyntaxError(
-    `${fullName ? `${fullName}: ` : ""}${message}`,
+    `${fullName ? `${fullName}: ` : ""}${message} (${point.line}:${point.offset})`,
     point.line,
     point.offset,
     point.from,
