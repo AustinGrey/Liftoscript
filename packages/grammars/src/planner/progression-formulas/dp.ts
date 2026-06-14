@@ -1,4 +1,3 @@
-import { PlannerSyntaxError } from "@/planner/parsing/guards.ts";
 import { asBase10Int } from "@/utils/math.ts";
 import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
 import { nodeError } from "@/utils/lezer.ts";
@@ -11,7 +10,7 @@ import { nodeError } from "@/utils/lezer.ts";
 export const validate: ProgressionFormulaValidator = function* (
   [argWeight, argMinReps, argMaxReps, ...argsRest],
   valueNode,
-): Generator<PlannerSyntaxError> {
+) {
   if (
     argWeight == null ||
     argMinReps == null ||

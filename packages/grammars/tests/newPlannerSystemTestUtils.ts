@@ -26,14 +26,15 @@ import {
 import { asProgramScript } from "@/planner/display.ts";
 import type { IExerciseType } from "@/exercises";
 import type { IEither } from "@/utils/types.ts";
-import {
-  PlannerNodeName,
-  PlannerSyntaxError,
-} from "@/planner/parsing/guards.ts";
+import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { filterUndefined } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { build, type IUnit, type IWeight, print } from "@/quantities/weight.ts";
-import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import {
+  parseBound,
+  SourcedSyntaxError,
+  type SourcedSyntaxNode,
+} from "@/utils/lezer.ts";
 import { parser } from "@/logic/parsing/logic.ts";
 import { parser as planParser } from "@/planner/parsing/workout-plan";
 import { Weight_smartConvert } from "@/evaluators/logic-evaluator.ts";
@@ -187,7 +188,7 @@ function PlannerProgram_replaceAndValidateExercise(
     dayData,
   );
   const { evaluatedWeeks } = PlannerEvaluator_evaluate(newPlanner, settings);
-  let error: PlannerSyntaxError | undefined;
+  let error: SourcedSyntaxError | undefined;
   for (const week of evaluatedWeeks) {
     for (const day of week) {
       if (!day.success) {

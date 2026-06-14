@@ -1,4 +1,8 @@
-import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import {
+  parseBound,
+  SourcedSyntaxError,
+  type SourcedSyntaxNode,
+} from "@/utils/lezer.ts";
 import { ObjectUtils_isEqual, ObjectUtils_keys } from "@/utils/object.ts";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { IProgramMode } from "@/logic/evaluators/types.ts";
@@ -11,11 +15,7 @@ import type {
 import { memoize } from "micro-memoize";
 import { eq, typeOf } from "@/quantities/weight.ts";
 import { filterUndefined } from "@/utils/collection.ts";
-import {
-  plannerError,
-  PlannerNodeName,
-  PlannerSyntaxError,
-} from "@/planner/parsing/guards.ts";
+import { plannerError, PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 //@todo These imports are coming from higher or dead layers, which should not be imported from
 import type { ISettings } from "@/user-settings";
@@ -286,7 +286,7 @@ function getPerDayEvaluatedWeeks(
             try {
               fillInMetadata(exercise, metadata, dayData);
             } catch (e) {
-              if (e instanceof PlannerSyntaxError) {
+              if (e instanceof SourcedSyntaxError) {
                 return { success: false, error: e };
               } else {
                 throw e;
@@ -684,7 +684,7 @@ function checkUpdateScript(
         throw firstError;
       }
       const { line, from } = liftoscriptNode.getPointer();
-      throw new PlannerSyntaxError(
+      throw new SourcedSyntaxError(
         firstError.message,
         line + firstError.line,
         firstError.offset,
@@ -1005,7 +1005,7 @@ function iterateOverExercises(
           }
         }
       } catch (e) {
-        if (e instanceof PlannerSyntaxError) {
+        if (e instanceof SourcedSyntaxError) {
           week[dayInWeekIndex] = { success: false, error: e };
         } else {
           throw e;

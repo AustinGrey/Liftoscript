@@ -1,13 +1,13 @@
-import { PlannerSyntaxError } from "@/planner/parsing/guards.ts";
-import { nodeError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { nodeError } from "@/utils/lezer.ts";
 import { asBase10Int } from "@/utils/math.ts";
+import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
 
 /**
  * @yields any problems found with use of the linear progression formula in code
  * @param args The args passed to the function
  * @param valueNode The node where the formula use was defined
  */
-export function* validate(
+export const validate: ProgressionFormulaValidator = function* (
   [
     argWeight,
     argAttempts,
@@ -16,9 +16,9 @@ export function* validate(
     argFailedAttempts,
     argFailedAttemptsUpToDate,
     ...argsRest
-  ]: (string | undefined)[],
-  valueNode: SourcedSyntaxNode,
-): Generator<PlannerSyntaxError> {
+  ],
+  valueNode,
+) {
   if (
     argWeight &&
     !argWeight.endsWith("lb") &&
@@ -74,4 +74,4 @@ export function* validate(
       `Linear Progression 'lp' only has 6 arguments max`,
     );
   }
-}
+};

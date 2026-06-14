@@ -75,7 +75,6 @@ import {
 import {
   asPlanNodeOfTypeOrThrow,
   PlannerNodeName,
-  PlannerSyntaxError,
   type TypedPlanNode,
 } from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";

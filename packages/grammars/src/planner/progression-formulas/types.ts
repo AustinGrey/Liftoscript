@@ -1,5 +1,4 @@
 import { SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
-import type { PlannerSyntaxError } from "@/planner/parsing/guards.ts";
 
 export type ProgressionFormulaValidator = (
   fnArgs: (string | undefined)[],
@@ -8,4 +7,4 @@ export type ProgressionFormulaValidator = (
    * If the progression formula allows logic specified via liftoscript, this function is used to validate the embedded liftoscript.
    */
   validateLiftoscript: (script: string) => Generator<SourcedSyntaxError>,
-) => Generator<PlannerSyntaxError>;
+) => Generator<SourcedSyntaxError>;

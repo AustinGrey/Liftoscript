@@ -1,9 +1,6 @@
-import {
-  PlannerNodeName,
-  PlannerSyntaxError,
-} from "@/planner/parsing/guards.ts";
+import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
-import { nodeError } from "@/utils/lezer.ts";
+import { nodeError, SourcedSyntaxError } from "@/utils/lezer.ts";
 
 /**
  * @yields any problems found with use of the custom progression formula in code
@@ -32,7 +29,7 @@ export const validate: ProgressionFormulaValidator = function* (
     const { line, from } = liftoscriptNode.getPointer();
     yield* validateLiftoscript(script).map(
       (err) =>
-        new PlannerSyntaxError(
+        new SourcedSyntaxError(
           err.message,
           line + err.line,
           err.offset,

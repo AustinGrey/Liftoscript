@@ -152,45 +152,6 @@ export function asPlanNodeOfTypeOrThrow<T extends NodeNames_Plan>(
   return node as TypedPlanNode<T>;
 }
 
-export class PlannerSyntaxError extends SyntaxError {
-  public readonly line: number;
-  public readonly offset: number;
-  public readonly from: number;
-  public readonly to: number;
-
-  public static fromPoint(
-    fullName: string | undefined,
-    message: string,
-    point: ISyntaxPointer,
-  ): PlannerSyntaxError {
-    return new PlannerSyntaxError(
-      `${fullName ? `${fullName}: ` : ""}${message} (${point.line}:${point.offset})`,
-      point.line,
-      point.offset,
-      point.from,
-      point.to,
-    );
-  }
-
-  constructor(
-    message: string,
-    line: number,
-    offset: number,
-    from: number,
-    to: number,
-  ) {
-    super(message);
-    this.line = line;
-    this.offset = offset;
-    this.from = from;
-    this.to = to;
-  }
-
-  public toString(): string {
-    return this.message;
-  }
-}
-
 export function plannerError(
   fullName: string | undefined,
   message: string,
