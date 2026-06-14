@@ -3,7 +3,11 @@ import {
   SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { ObjectUtils_isEqual, ObjectUtils_keys } from "@/utils/object.ts";
+import {
+  isEqualAfterTransform,
+  ObjectUtils_isEqual,
+  ObjectUtils_keys,
+} from "@/utils/object.ts";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { IProgramMode } from "@/logic/evaluators/types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
@@ -102,36 +106,6 @@ if (completedReps >= reps && completedRPE <= RPE) {
 }`;
 }
 
-function isEqualProgress(
-  a: IProgramExerciseProgress,
-  b: IProgramExerciseProgress,
-): boolean {
-  const pickA = {
-    ...pick(a, ["type", "state", "stateMetadata", "script"]),
-    reuse: a.reuse?.fullName,
-  };
-  const pickB = {
-    ...pick(b, ["type", "state", "stateMetadata", "script"]),
-    reuse: b.reuse?.fullName,
-  };
-  return isEqual(pickA, pickB);
-}
-
-function isEqualUpdate(
-  a: IProgramExerciseUpdate,
-  b: IProgramExerciseUpdate,
-): boolean {
-  const pickA = {
-    ...pick(a, ["type", "script"]),
-    reuse: a.reuse?.fullName,
-  };
-  const pickB = {
-    ...pick(b, ["type", "script"]),
-    reuse: b.reuse?.fullName,
-  };
-  return isEqual(pickA, pickB);
-}
-
 function fillInMetadata(
   exercise: IPlannerProgramExercise,
   metadata: IPlannerEvalMetadata,
@@ -185,7 +159,14 @@ function fillInMetadata(
     const existingProgress = metadata.properties.progress[exercise.key];
     if (
       existingProgress != null &&
-      !isEqualProgress(exercise.progress, existingProgress.property)
+      !isEqualAfterTransform(
+        exercise.progress,
+        existingProgress.property,
+        (p) => ({
+          ...pick(p, ["type", "state", "stateMetadata", "script"]),
+          reuse: p.reuse?.fullName,
+        }),
+      )
     ) {
       const point = exercise.points.progressPoint || exercise.points.fullName;
       throw plannerError(
@@ -207,7 +188,10 @@ function fillInMetadata(
     const existingUpdate = metadata.properties.update[exercise.key];
     if (
       existingUpdate != null &&
-      !isEqualUpdate(updateProp, existingUpdate.property)
+      !isEqualAfterTransform(updateProp, existingUpdate.property, (u) => ({
+        ...pick(u, ["type", "script"]),
+        reuse: u.reuse?.fullName,
+      }))
     ) {
       const point = exercise.points.updatePoint || exercise.points.fullName;
       throw plannerError(

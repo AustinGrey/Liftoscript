@@ -31,6 +31,20 @@ export const ObjectUtils_entries = <T extends {}>(obj: T) =>
 export const ObjectUtils_isEqual = <A, B extends A>(a: A, b: B) =>
   isEqual(a, b);
 
+/**
+ * @returns true if the two objects are equal after transforming them with the given function
+ * @param a 1st object to compare
+ * @param b 2nd object to compare
+ * @param transform the function to transform the objects with
+ */
+export function isEqualAfterTransform<TObj, TTransformed>(
+  a: TObj,
+  b: TObj,
+  transform: (obj: TObj) => TTransformed,
+) {
+  return isEqual(transform(a), transform(b));
+}
+
 export function ObjectUtils_filter<T extends {}>(
   obj: T,
   cb: (key: keyof T, value: T[keyof T]) => boolean,
