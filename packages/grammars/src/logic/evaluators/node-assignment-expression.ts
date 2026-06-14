@@ -17,13 +17,14 @@ import {
   changeNumberOfSets,
   recordVariableUpdate,
 } from "@/logic/evaluators/common.ts";
+import { nodeError } from "@/utils/lezer.ts";
 
 export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   const [variableNode, expression] = queryChildren(n, { atLeast: 2 });
   if (isLogicNodeOfType("VariableExpression", variableNode)) {
     const nameNode = variableNode.getChild(NodeName.Keyword);
     if (nameNode == null) {
-      return t.error(`Missing variable name`, variableNode);
+      throw nodeError(variableNode, `Missing variable name`);
     }
     const [...indexExprs] = queryChildren(variableNode, {
       ofType: NodeName.VariableIndex,
@@ -31,7 +32,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     const variable = nameNode.source;
     if (variable === "rm1") {
       if (indexExprs.length > 0) {
-        return t.error(`rm1 is not an array`, n);
+        throw nodeError(n, `rm1 is not an array`);
       }
       const evaluatedValue = t.recurse(expression);
       let value = Array.isArray(evaluatedValue)
@@ -86,7 +87,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     ) {
       return changeBinding(variable, expression, indexExprs, "=", t);
     } else {
-      return t.error(`Unknown variable '${variable}'`, variableNode);
+      throw nodeError(variableNode, `Unknown variable '${variable}'`);
     }
   } else if (isLogicNodeOfType("Variable", variableNode)) {
     const varKey = variableNode.source.replace("var.", "");
@@ -113,7 +114,10 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     );
     return value;
   }
-  return t.error("Cannot assign a value to something other than a variable", n);
+  throw nodeError(
+    n,
+    "Cannot assign a value to something other than a variable",
+  );
 };
 
 export const validator: Validator<"AssignmentExpression"> = function* (n, t) {

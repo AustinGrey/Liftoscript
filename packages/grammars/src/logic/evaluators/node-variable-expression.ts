@@ -10,6 +10,7 @@ import {
   Weight_is,
   Weight_isPct,
 } from "@/evaluators/logic-evaluator.ts";
+import { nodeError } from "@/utils/lezer.ts";
 
 export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
   // Get the variable to be indexed
@@ -35,9 +36,9 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
       indexNode.type.name === NodeName.Wildcard ||
       indexNode.type.name === NodeName.Current
     ) {
-      return t.error(
-        `Can't use '*' or '_' as an index when reading from variables`,
+      throw nodeError(
         indexNode,
+        `Can't use '*' or '_' as an index when reading from variables`,
       );
     }
     const indexEval = t.recurse(indexNode);
@@ -52,12 +53,12 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
     index -= 1;
     const binding = t.getGlobal(name);
     if (!Array.isArray(binding)) {
-      return t.error(`Variable ${name} should be an array`, nameNode);
+      throw nodeError(nameNode, `Variable ${name} should be an array`);
     }
     if (index >= binding.length) {
-      return t.error(
-        `Out of bounds index ${index + 1} for array ${name}`,
+      throw nodeError(
         nameNode,
+        `Out of bounds index ${index + 1} for array ${name}`,
       );
     }
     let value = binding[index];
@@ -66,9 +67,9 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
     }
     return value;
   } else {
-    return t.error(
-      `Can't use [1:1] syntax when reading from the ${name} variable`,
+    throw nodeError(
       n,
+      `Can't use [1:1] syntax when reading from the ${name} variable`,
     );
   }
 };

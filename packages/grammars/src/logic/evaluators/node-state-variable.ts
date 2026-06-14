@@ -5,14 +5,17 @@ import {
 } from "@/logic/evaluators/types.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { queryChild } from "@/utils/grammars.ts";
-import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { nodeError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { throwError } from "@/utils/errors.ts";
 
 export const handler: LogicHandler<"StateVariable"> = (n, t) => {
   const stateKey =
     getStateKey(n) ??
-    t.error(
-      `You cannot read from other exercise's states, you can only write to them`,
-      n,
+    throwError(
+      nodeError(
+        n,
+        `You cannot read from other exercise's states, you can only write to them`,
+      ),
     );
   return t.getState(stateKey, n);
 };

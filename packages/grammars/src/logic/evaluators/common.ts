@@ -21,7 +21,7 @@ import {
   MathUtils_clamp,
   MathUtils_round,
 } from "@/utils/math.ts";
-import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { nodeError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 export function calculateIndexValues(
   indexes: SourcedSyntaxNode[],
@@ -98,7 +98,7 @@ export function changeBinding(
     .filter((x) => x !== undefined);
   const maxTargetLength = 1;
   if (indexes.length > maxTargetLength) {
-    return tools.error(`${key} can only have 1 value inside []`, expression);
+    throw nodeError(expression, `${key} can only have 1 value inside []`);
   }
   const indexValues = calculateIndexValues(indexes, tools);
   const normalizedIndexValues = normalizeTarget(indexValues, maxTargetLength);
@@ -193,29 +193,29 @@ export function recordVariableUpdate(
         : 4;
   if (key === "setVariationIndex") {
     if (indexes.length > maxTargetLength) {
-      return tools.error(
-        `setVariationIndex can only have 2 values inside [*:*]`,
+      throw nodeError(
         expression,
+        `setVariationIndex can only have 2 values inside [*:*]`,
       );
     }
   } else if (key === "descriptionIndex") {
     if (indexes.length > maxTargetLength) {
-      return tools.error(
-        `descriptionIndex can only have 2 values inside [*:*]`,
+      throw nodeError(
         expression,
+        `descriptionIndex can only have 2 values inside [*:*]`,
       );
     }
   } else if (key === "numberOfSets") {
     if (indexes.length > maxTargetLength) {
-      return tools.error(
-        `numberOfSets can only have 3 values inside [*:*:*]`,
+      throw nodeError(
         expression,
+        `numberOfSets can only have 3 values inside [*:*:*]`,
       );
     }
   } else if (indexes.length > maxTargetLength) {
-    return tools.error(
-      `${key} can only have 4 values inside [*:*:*:*]`,
+    throw nodeError(
       expression,
+      `${key} can only have 4 values inside [*:*:*:*]`,
     );
   }
   const indexValues = calculateIndexValues(indexes, tools);

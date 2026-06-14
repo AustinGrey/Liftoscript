@@ -227,3 +227,45 @@ export function parseBound(
 ): SourcedSyntaxNode {
   return bindNode(parser.parse(script).topNode, () => script);
 }
+
+export class SourcedSyntaxError extends SyntaxError {
+  public readonly line: number;
+  public readonly offset: number;
+  public readonly from: number;
+  public readonly to: number;
+
+  constructor(
+    message: string,
+    line: number,
+    offset: number,
+    from: number,
+    to: number,
+  ) {
+    super(message);
+    this.line = line;
+    this.offset = offset;
+    this.from = from;
+    this.to = to;
+  }
+}
+
+/**
+ * Creates a new SourcedSyntaxError from the given node and message
+ * @param node The node this error is for
+ * @param message The message to use. By default the user is told which node encountered and error, but you can override that.
+ *   The line and offset are automatically determined from the node, and appended to the message, which can't be overridden.
+ */
+export function nodeError(
+  node: SourcedSyntaxNode,
+  // This default is carefully chosen so it still makes sense if the node is actually an error node
+  message: string = `Error detected on '${node.type.name}' node`,
+) {
+  const { line, offset, from, to } = node.getPointer();
+  return new SourcedSyntaxError(
+    `${message} (${line}:${offset})`,
+    line,
+    offset,
+    from,
+    to,
+  );
+}

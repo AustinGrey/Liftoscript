@@ -5,15 +5,16 @@ import {
 } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
+import { nodeError } from "@/utils/lezer.ts";
 
 export const handler: LogicHandler<"BuiltinFunctionExpression"> = (n, t) => {
   const fns = t.publicFunctions;
   const [keyword, ...args] = queryChildren(n, { atLeast: 1 });
   // @todo find an alternative to referencing "NodeName" here, either use the NodeNames_Logic structure, or improve query children to allow for a pattern of nodes to expect.
   if (keyword.type.name !== NodeName.Keyword) {
-    return t.error(
-      `Expected ${NodeName.Keyword} node as first child of node, but got ${keyword.type.name}`,
+    throw nodeError(
       n,
+      `Expected ${NodeName.Keyword} node as first child of node, but got ${keyword.type.name}`,
     );
   }
   const name = keyword.source as keyof typeof fns;
@@ -25,7 +26,7 @@ export const handler: LogicHandler<"BuiltinFunctionExpression"> = (n, t) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (fn as any).apply(undefined, [...argValues, t.fnContext, t]);
   } else {
-    return t.error(`Unknown function '${name}'`, keyword);
+    throw nodeError(keyword, `Unknown function '${name}'`);
   }
 };
 
@@ -35,23 +36,17 @@ export const validator: Validator<"BuiltinFunctionExpression"> = function* (
 ) {
   const [keyword, ...fnArgs] = queryChildren(n);
   if (keyword?.type.name !== NodeName.Keyword) {
-    yield LiftoscriptSyntaxError.fromNode(
-      `Expected ${NodeName.Keyword} node as first child of node, but got ${keyword?.type.name}`,
+    yield nodeError(
       n,
+      `Expected ${NodeName.Keyword} node as first child of node, but got ${keyword?.type.name}`,
     );
     return;
   }
   const name = keyword.source;
   if (!t.knownFunctions.includes(name)) {
-    yield LiftoscriptSyntaxError.fromNode(
-      `Unknown function '${name}'`,
-      keyword,
-    );
+    yield nodeError(keyword, `Unknown function '${name}'`);
   }
   if (name === "sets" && fnArgs.length !== 9) {
-    yield LiftoscriptSyntaxError.fromNode(
-      `'sets' function should have 9 arguments`,
-      keyword,
-    );
+    yield nodeError(keyword, `'sets' function should have 9 arguments`);
   }
 };

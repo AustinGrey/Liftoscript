@@ -15,7 +15,7 @@ import type {
   Quantity,
 } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
-import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 
 export enum IProgramMode {
   PLANNER = "planner",
@@ -28,12 +28,6 @@ export type LogicHandler<T extends NodeNames_Logic> = (
 ) => LogicResult;
 
 export type EvaluateTools = {
-  /**
-   * Throws an error related to a node
-   * @param message The message to share
-   * @param node The node to throw the error for
-   */
-  error: (message: string, node: SourcedSyntaxNode) => never;
   /**
    * @todo I don't know what this does.... like... at all, but it seems to be something that is stable for a complete evaluation pass of a program, so we just track it.
    *    This needs documentation
@@ -118,14 +112,13 @@ export type EvaluateTools = {
 export type Validator<T extends NodeNames_Logic> = (
   node: TypedLogicNode<T>,
   tools: ValidationTools,
-) => Iterable<LiftoscriptSyntaxError>;
+) => Iterable<SourcedSyntaxError>;
 
 export type ValidationTools = {
   knownFunctions: string[];
   knownBindings: string[];
   knownStateVariables: string[];
   mode: IProgramMode;
-  onError: (message: string, node: SourcedSyntaxNode) => never;
   /**
    * During validation, nodes should record if a variable has been created by calling this function
    */

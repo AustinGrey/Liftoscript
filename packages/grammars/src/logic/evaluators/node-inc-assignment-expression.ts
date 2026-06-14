@@ -18,6 +18,8 @@ import {
   recordVariableUpdate,
 } from "@/logic/evaluators/common.ts";
 import { isQuantity, type Quantity } from "@/logic/types.ts";
+import { nodeError } from "@/utils/lezer.ts";
+import { throwError } from "@/utils/errors.ts";
 
 // @todo this is a lot of complicated logic - can't this be simplified by just desugaring this to left = left <op> right? We can dispatch this to the existing handlers for binary ops and assignment
 export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
@@ -35,23 +37,39 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       NodeName.Variable,
     )
   ) {
-    return t.error(
-      `missing required nodes for ${NodeName.IncAssignmentExpression}`,
+    throw nodeError(
       n,
+      `missing required nodes for ${NodeName.IncAssignmentExpression}`,
     );
   }
 
   // This function set is more readable unchopped
-  /* prettier-ignore */ const add     = <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a + b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "+", (message)=>t.error(message, n));
-  /* prettier-ignore */ const subtract= <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a - b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "-", (message)=>t.error(message, n));
-  /* prettier-ignore */ const multiply= <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a * b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "*", (message)=>t.error(message, n));
-  /* prettier-ignore */ const divide  = <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a / b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "/", (message)=>t.error(message, n));
+  /* prettier-ignore */ const add     = <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a + b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "+", (message)=>{throw nodeError(n, message)});
+  /* prettier-ignore */ const subtract= <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a - b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "-", (message)=>{throw nodeError(n, message)});
+  /* prettier-ignore */ const multiply= <L extends Quantity | undefined, R extends Quantity | undefined>(l: L, r: R) => operate(l, r, (a, b) => a * b, (d, u)=>convertToWeight(t.getGlobal("rm1"), d, u), "*", (message)=>{throw nodeError(n, message)});
+  /* prettier-ignore */ const divide = <
+    L extends Quantity | undefined,
+    R extends Quantity | undefined,
+  >(
+    l: L,
+    r: R,
+  ) =>
+    operate(
+      l,
+      r,
+      (a, b) => a / b,
+      (d, u) => convertToWeight(t.getGlobal("rm1"), d, u),
+      "/",
+      (message) => {
+        throw nodeError(n, message);
+      },
+    );
 
   switch (stateVar.type.name) {
     case NodeName.VariableExpression: {
       const nameNode = queryChild(stateVar, { ofType: NodeName.Keyword });
       if (nameNode == null) {
-        t.error(`Missing variable name`, stateVar);
+        throw nodeError(stateVar, `Missing variable name`);
       }
       const [...indexExprs] = queryChildren(stateVar, {
         ofType: NodeName.VariableIndex,
@@ -59,7 +77,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
       const variable = nameNode?.source;
       if (variable === "rm1") {
         if (indexExprs.length > 0) {
-          t.error(`rm1 is not an array`, n);
+          throw nodeError(n, `rm1 is not an array`);
         }
         const value = coerceToQuantity(t.recurse(expression));
 
@@ -75,9 +93,11 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
                   ? multiply(rm1, value)
                   : op === "/="
                     ? divide(rm1, value)
-                    : t.error(
-                        `Unknown operator ${op} after ${variable}`,
-                        incAssignmentExpr,
+                    : throwError(
+                        nodeError(
+                          incAssignmentExpr,
+                          `Unknown operator ${op} after ${variable}`,
+                        ),
                       ),
             // @todo why use this.unit? When you can do all the math in kg and just adjust at display time?
             // this.unit
@@ -102,17 +122,21 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         const op = incAssignmentExpr.source;
         return isOneOf(op, "=", "+=", "-=", "*=", "/=")
           ? recordVariableUpdate(variable, expression, indexExprs, op, t)
-          : t.error(
-              `Unknown operator ${op} after ${variable}`,
-              incAssignmentExpr,
+          : throwError(
+              nodeError(
+                incAssignmentExpr,
+                `Unknown operator ${op} after ${variable}`,
+              ),
             );
       } else if (t.mode === "update" && variable === "numberOfSets") {
         const op = incAssignmentExpr.source;
         return isOneOf(op, "=", "+=", "-=", "*=", "/=")
           ? changeNumberOfSets(expression, op, t)
-          : t.error(
-              `Unknown operator ${op} after ${variable}`,
-              incAssignmentExpr,
+          : throwError(
+              nodeError(
+                incAssignmentExpr,
+                `Unknown operator ${op} after ${variable}`,
+              ),
             );
       } else if (
         t.mode === "update" &&
@@ -121,12 +145,14 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         const op = incAssignmentExpr.source;
         return isOneOf(op, "=", "+=", "-=", "*=", "/=")
           ? changeBinding(variable, expression, indexExprs, op, t)
-          : t.error(
-              `Unknown operator ${op} after ${variable}`,
-              incAssignmentExpr,
+          : throwError(
+              nodeError(
+                incAssignmentExpr,
+                `Unknown operator ${op} after ${variable}`,
+              ),
             );
       } else {
-        return t.error(`Unknown variable '${variable}'`, stateVar);
+        throw nodeError(stateVar, `Unknown variable '${variable}'`);
       }
     }
     case NodeName.Variable: {
@@ -150,17 +176,17 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
             return t.updateVar(varKey, divide(t.getVar(varKey), value));
           case "=":
             // @todo this would be solved if we used the desugaring method - this would never be reached
-            return t.error(
-              `Unknown operator ${op} after ${varKey}`,
+            throw nodeError(
               incAssignmentExpr,
+              `Unknown operator ${op} after ${varKey}`,
             );
           default:
             return op satisfies never;
         }
       } else {
-        return t.error(
-          `Unknown operator ${op} after ${varKey}`,
+        throw nodeError(
           incAssignmentExpr,
+          `Unknown operator ${op} after ${varKey}`,
         );
       }
     }
@@ -195,9 +221,11 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
                 ? multiply(currentValue, value)
                 : op === "/="
                   ? divide(currentValue, value)
-                  : t.error(
-                      `Unknown operator ${op} after state.${stateKey}`,
-                      incAssignmentExpr,
+                  : throwError(
+                      nodeError(
+                        incAssignmentExpr,
+                        `Unknown operator ${op} after state.${stateKey}`,
+                      ),
                     ),
         n,
         indexNode ? toNumberUnsafe(t.recurse(indexNode)) : undefined,

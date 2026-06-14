@@ -18,6 +18,7 @@ import { kgToLb, lbToKg } from "@/utils/mass.ts";
 import { equal, toQuantity } from "@/utils/logic-results.ts";
 import { zip } from "es-toolkit";
 import { toWeight } from "@/utils/dynamic-weight.ts";
+import { nodeError } from "@/utils/lezer.ts";
 
 export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   const [leftNode, opNode, rightNode] = queryChildren(n, { atLeast: 3 });
@@ -113,7 +114,7 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
         );
       }
       default:
-        return t.error(`Unsupported operator ${op}`, opNode);
+        throw nodeError(opNode, `Unsupported operator ${op}`);
     }
   });
 

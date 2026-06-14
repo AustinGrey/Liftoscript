@@ -91,6 +91,7 @@ import {
 } from "@/program";
 import {
   type ISyntaxPointer,
+  nodeError,
   parseBound,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
@@ -4502,10 +4503,6 @@ export function* validateScript(
     knownBindings: Object.keys(bindings),
     knownStateVariables: Object.keys(state),
     mode,
-    onError: (message, node) => {
-      const { line, offset, from, to } = node.getPointer();
-      throw new LiftoscriptSyntaxError(message, line, offset, from, to);
-    },
     trackVariable: (name) => trackedVarNames.add(name),
     isKnownVariable: (name) => trackedVarNames.has(name),
   });

@@ -1,4 +1,6 @@
 import type { LogicHandler } from "@/logic/evaluators/types.ts";
+import { nodeError } from "@/utils/lezer.ts";
 
-export const handler: LogicHandler<"LineComment"> = (n, t) =>
-  t.error("Not implemented", n);
+export const handler: LogicHandler<"LineComment"> = (n, t) => {
+  throw nodeError(n, "Not implemented");
+};

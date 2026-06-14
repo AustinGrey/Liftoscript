@@ -19,7 +19,11 @@ import {
   type LogicResult,
 } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
-import { parseBound, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import {
+  nodeError,
+  parseBound,
+  type SourcedSyntaxNode,
+} from "@/utils/lezer.ts";
 import { queryTree } from "@/utils/grammars.ts";
 
 /**
@@ -28,8 +32,9 @@ import { queryTree } from "@/utils/grammars.ts";
  * @param t The tools
  * @deprecated There shouldn't be any unhandled nodes
  */
-const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n, t) =>
-  t.error(`Not implemented - type ${n.type.name}`, n);
+const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n, t) => {
+  throw nodeError(n, `Not implemented - type ${n.type.name}`);
+};
 
 /**
  * Dictionary of evaluation methods for different logic nodes.
@@ -84,7 +89,7 @@ function handleLogic(
     ? (parsers[node.name].handler as LogicHandler<NodeNames_Logic>)
     : undefined;
   if (!handler) {
-    return tools.error(`No handler for node type: ${node.type}`, node);
+    throw nodeError(node, `No handler for node type: ${node.type}`);
   }
   const result = handler(node as TypedLogicNode<NodeNames_Logic>, tools);
   // console.log("EVAL: ", result, " <- ", node.source);
@@ -97,7 +102,7 @@ export function* validate(
 ): Generator<LiftoscriptSyntaxError> {
   for (const n of queryTree(node)) {
     if (n.type.isError) {
-      yield LiftoscriptSyntaxError.fromNode("Syntax error", n);
+      yield nodeError(n);
       return;
     }
 
@@ -137,18 +142,6 @@ export function run(
   const vars: IProgramState = {};
 
   const tools: EvaluateTools = {
-    error(message, node) {
-      const { line, offset, from, to } = node.getPointer();
-      const err = new LiftoscriptSyntaxError(
-        `${message} (${line}:${offset})`,
-        line,
-        offset,
-        from,
-        to,
-      );
-      console.error(err);
-      throw err;
-    },
     mode,
     recurse: (node) => handleLogic(node, tools),
     getState: (key, relatedNode, index) => {
@@ -156,21 +149,21 @@ export function run(
         if (key in state) {
           return state[key];
         }
-        return tools.error(`There's no state variable '${key}'`, relatedNode);
+        throw nodeError(relatedNode, `There's no state variable '${key}'`);
       }
 
       if (index in otherStates && key in otherStates[key]) {
         return otherStates[index][key];
       }
-      return tools.error(
-        `There's no state variable '${key}' in the state dictionary at index '${index}'`,
+      throw nodeError(
         relatedNode,
+        `There's no state variable '${key}' in the state dictionary at index '${index}'`,
       );
     },
     updateState: (key, value, relatedNode, index) => {
       if (index === undefined) {
         if (!(key in state)) {
-          return tools.error(`There's no state variable '${key}'`, relatedNode);
+          throw nodeError(relatedNode, `There's no state variable '${key}'`);
         }
         return (state[key] =
           typeof value === "function" ? value(state[key]) : value);
@@ -180,9 +173,9 @@ export function run(
         return typeof value === "function" ? value(undefined) : value;
       }
       if (!(key in otherStates[index])) {
-        return tools.error(
-          `There's no state variable '${key}' in the state dictionary at index '${index}'`,
+        throw nodeError(
           relatedNode,
+          `There's no state variable '${key}' in the state dictionary at index '${index}'`,
         );
       }
       return (otherStates[index][key] =
