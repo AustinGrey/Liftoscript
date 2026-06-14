@@ -176,28 +176,3 @@ export interface IScriptBindings {
   descriptionIndex: number;
   setIndex: number;
 }
-export class LiftoscriptSyntaxError extends SyntaxError {
-  public readonly line: number;
-  public readonly offset: number;
-  public readonly from: number;
-  public readonly to: number;
-
-  constructor(
-    message: string,
-    line: number,
-    offset: number,
-    from: number,
-    to: number,
-  ) {
-    super(message);
-    this.line = line;
-    this.offset = offset;
-    this.from = from;
-    this.to = to;
-  }
-
-  public static fromNode(message: string, node: SourcedSyntaxNode) {
-    const { line, offset, from, to } = node.getPointer();
-    return new LiftoscriptSyntaxError(message, line, offset, from, to);
-  }
-}

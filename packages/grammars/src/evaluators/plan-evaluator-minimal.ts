@@ -91,18 +91,15 @@ import {
 } from "@/program";
 import {
   type ISyntaxPointer,
-  nodeError,
   parseBound,
+  SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
 import { isEqual, omitBy, pick } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run, validate } from "@/logic/evaluators";
 import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
-import {
-  IProgramMode,
-  LiftoscriptSyntaxError,
-} from "@/logic/evaluators/types.ts";
+import { IProgramMode } from "@/logic/evaluators/types.ts";
 import {
   PlannerEvaluator_forceEvaluate,
   PlannerProgram_evaluate,
@@ -4496,7 +4493,7 @@ export function* validateScript(
   bindings: IScriptBindings,
   fns: IScriptFunctions,
   mode: IProgramMode,
-): Generator<LiftoscriptSyntaxError> {
+): Generator<SourcedSyntaxError> {
   const trackedVarNames = new Set<string>();
   yield* validate(parseBound(LiftoscriptParser, script), {
     knownFunctions: Object.keys(fns),

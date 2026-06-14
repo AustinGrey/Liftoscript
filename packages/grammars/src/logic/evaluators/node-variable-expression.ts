@@ -1,6 +1,5 @@
 import {
   type IScriptBindings,
-  LiftoscriptSyntaxError,
   type LogicHandler,
   type Validator,
 } from "@/logic/evaluators/types.ts";
@@ -77,9 +76,9 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
 export const validator: Validator<"VariableExpression"> = function* (n, t) {
   const [nameNode, indexExpr] = queryChildren(n);
   if (nameNode == null) {
-    yield LiftoscriptSyntaxError.fromNode(
-      `Expected a ${NodeName.VariableExpression} child in a ${NodeName.StateVariable} node, but found none`,
+    yield nodeError(
       n,
+      `Expected a ${NodeName.VariableExpression} child in a ${NodeName.StateVariable} node, but found none`,
     );
     return;
   }
@@ -112,18 +111,12 @@ export const validator: Validator<"VariableExpression"> = function* (n, t) {
       "askweights",
     ];
     if (!validNames.includes(name as keyof IScriptBindings)) {
-      yield LiftoscriptSyntaxError.fromNode(
-        `${name} is not an array variable`,
-        nameNode,
-      );
+      yield nodeError(nameNode, `${name} is not an array variable`);
       return;
     }
   }
 
   if (indexExpr == null && !t.knownBindings.includes(name)) {
-    yield LiftoscriptSyntaxError.fromNode(
-      `${name} is not a valid variable`,
-      nameNode,
-    );
+    yield nodeError(nameNode, `${name} is not a valid variable`);
   }
 };

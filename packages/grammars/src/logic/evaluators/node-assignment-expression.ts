@@ -1,8 +1,4 @@
-import {
-  LiftoscriptSyntaxError,
-  type LogicHandler,
-  type Validator,
-} from "@/logic/evaluators/types.ts";
+import { type LogicHandler, type Validator } from "@/logic/evaluators/types.ts";
 import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
@@ -144,27 +140,21 @@ export const validator: Validator<"AssignmentExpression"> = function* (n, t) {
           "logrpes",
         ].includes(name)
       ) {
-        yield LiftoscriptSyntaxError.fromNode(
-          `Cannot assign to '${name}'`,
-          variableNode,
-        );
+        yield nodeError(variableNode, `Cannot assign to '${name}'`);
         return;
       }
       const indexExprs = queryChildren(variableNode, {
         ofType: NodeName.VariableIndex,
       }).toArray();
       if (name === "numberOfSets" && indexExprs.length > 0) {
-        yield LiftoscriptSyntaxError.fromNode(
-          `${name} is not an array`,
-          variableNode,
-        );
+        yield nodeError(variableNode, `${name} is not an array`);
         return;
       }
 
       if (indexExprs.length > 1) {
-        yield LiftoscriptSyntaxError.fromNode(
-          `Can't assign to set variations, weeks or days here`,
+        yield nodeError(
           variableNode,
+          `Can't assign to set variations, weeks or days here`,
         );
         return;
       }

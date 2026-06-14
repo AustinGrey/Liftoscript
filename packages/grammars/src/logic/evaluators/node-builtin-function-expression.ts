@@ -1,8 +1,4 @@
-import {
-  LiftoscriptSyntaxError,
-  type LogicHandler,
-  type Validator,
-} from "@/logic/evaluators/types.ts";
+import { type LogicHandler, type Validator } from "@/logic/evaluators/types.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { nodeError } from "@/utils/lezer.ts";

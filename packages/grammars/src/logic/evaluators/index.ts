@@ -8,7 +8,6 @@ import {
   IProgramMode,
   type IProgramState,
   type IScriptBindings,
-  LiftoscriptSyntaxError,
   type LogicHandler,
   type ValidationTools,
   type Validator,
@@ -22,6 +21,7 @@ import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 import {
   nodeError,
   parseBound,
+  SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
 import { queryTree } from "@/utils/grammars.ts";
@@ -99,7 +99,7 @@ function handleLogic(
 export function* validate(
   node: SourcedSyntaxNode,
   tools: ValidationTools,
-): Generator<LiftoscriptSyntaxError> {
+): Generator<SourcedSyntaxError> {
   for (const n of queryTree(node)) {
     if (n.type.isError) {
       yield nodeError(n);
