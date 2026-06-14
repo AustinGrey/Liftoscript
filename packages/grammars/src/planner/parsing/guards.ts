@@ -191,7 +191,7 @@ export class PlannerSyntaxError extends SyntaxError {
   }
 }
 
-function plannerError(
+export function plannerError(
   fullName: string | undefined,
   message: string,
   point: ISyntaxPointer,

@@ -114,6 +114,7 @@ import { validate as validateDp } from "@/planner/progression-formulas/dp.ts";
 import { validate as validateSum } from "@/planner/progression-formulas/sum.ts";
 import { validate as validateCustom } from "@/planner/progression-formulas/custom.ts";
 import { validate as validateNone } from "@/planner/progression-formulas/none.ts";
+import { throwError } from "@/utils/errors.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -131,7 +132,7 @@ export interface IEvaluatedProgram {
   name: string;
   nextDay: number;
   errors: {
-    error: PlannerSyntaxError;
+    error: SourcedSyntaxError;
     dayData: IDayData;
   }[];
   weeks: {
@@ -1254,15 +1255,15 @@ export interface IPlannerTopLineItem {
 
 export type IPlannerEvalResult = IEither<
   IPlannerProgramExercise[],
-  PlannerSyntaxError
+  SourcedSyntaxError
 >;
 type IPlannerEvalFullResult = IEither<
   IPlannerExerciseEvaluatorWeek[],
-  PlannerSyntaxError
+  SourcedSyntaxError
 >;
 
 function assert(name: string): never {
-  throw new PlannerSyntaxError(
+  throw new SourcedSyntaxError(
     `Missing required nodes for ${name}, this should never happen`,
     0,
     0,
@@ -1645,14 +1646,14 @@ export function errorPlannerSyntax(
   message: string,
   node: SourcedSyntaxNode,
 ): never {
-  throw PlannerSyntaxError.fromPoint(undefined, message, node.getPointer());
+  throw nodeError(node, message);
 }
 
 export function parse(expr: SourcedSyntaxNode): void {
   const cursor = expr.cursor();
   do {
     if (cursor.node.type.isError) {
-      errorPlannerSyntax("Syntax error", cursor.node);
+      throw nodeError(cursor.node);
     }
   } while (cursor.next());
 }
@@ -1712,7 +1713,7 @@ function evaluateSet(expr: SourcedSyntaxNode): IPlannerProgramExerciseSet {
           .join(" ")
       : undefined;
     if (labelNode && label && label.length > 8) {
-      errorPlannerSyntax("Label length should be 8 chars max", labelNode);
+      throw nodeError(labelNode, "Label length should be 8 chars max");
     }
     return {
       repRange,
@@ -1741,16 +1742,16 @@ function evaluateId(expr: SourcedSyntaxNode): number[] {
     }
     const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
     if (["tags"].indexOf(fnName) === -1) {
-      errorPlannerSyntax(`There's no such id type - '${fnName}'`, fnNameNode);
+      throw nodeError(fnNameNode, `There's no such id type - '${fnName}'`);
     }
     const fnArgs = valueNode
       .getChildren(PlannerNodeName.FunctionArgument)
       .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
     if (fnName === "tags") {
       if (fnArgs.length === 0) {
-        errorPlannerSyntax(
-          `You should provide the list of numbers in "tags"`,
+        throw nodeError(
           fnNameNode,
+          `You should provide the list of numbers in "tags"`,
         );
       }
     }
@@ -1764,7 +1765,7 @@ function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
   if (expr.type.name === PlannerNodeName.ExerciseProperty) {
     const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
     if (valueNode == null) {
-      throw errorPlannerSyntax(`Missing value for the property 'update'`, expr);
+      throw nodeError(expr, `Missing value for the property 'update'`);
     }
     const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
     if (fnNameNode == null) {
@@ -1783,9 +1784,9 @@ function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
         valueNode.getChild(PlannerNodeName.Liftoscript) || undefined;
       script = liftoscriptNode ? liftoscriptNode.source : undefined;
       if (fnArgs.length > 0) {
-        errorPlannerSyntax(
-          `State variables for the update script are taken from "progress" block`,
+        throw nodeError(
           fnNameNode,
+          `State variables for the update script are taken from "progress" block`,
         );
       }
       const reuseLiftoscriptNode = valueNode
@@ -1806,9 +1807,9 @@ function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
         meta = { stateKeys: new Set(allKeys) };
       }
       if (!script && !body) {
-        errorPlannerSyntax(
-          `'custom' update requires either to specify Liftoscript block or specify which one to reuse`,
+        throw nodeError(
           valueNode,
+          `'custom' update requires either to specify Liftoscript block or specify which one to reuse`,
         );
       }
       return {
@@ -1819,9 +1820,9 @@ function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
         reuse: body ? { fullName: body, source: "specific" } : undefined,
       };
     } else {
-      errorPlannerSyntax(
-        `There's no such update progression exists - '${fnName}'`,
+      throw nodeError(
         fnNameNode,
+        `There's no such update progression exists - '${fnName}'`,
       );
     }
   } else {
@@ -1842,7 +1843,7 @@ function evaluateProgressImpl(
     if (expr.getChild(PlannerNodeName.None)) {
       return PlannerProgramExercise_buildProgress("none", []);
     }
-    throw errorPlannerSyntax(`Missing value for the property 'progress'`, expr);
+    throw nodeError(expr, `Missing value for the property 'progress'`);
   }
   const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
   if (fnNameNode == null) {
@@ -1876,7 +1877,7 @@ function evaluateProgressImpl(
       script,
       fnArgsToStateVars(
         fnArgs.filter((a) => a !== undefined),
-        (message) => errorPlannerSyntax(message, valueNode),
+        (message) => throwError(nodeError(valueNode, message)),
       ).state,
       Progress_createEmptyScriptBindings(dayData, settings),
       Progress_createScriptFunctions(settings),
@@ -1916,7 +1917,7 @@ function evaluateProgress(
   if (result.success) {
     return result.data;
   } else {
-    throw errorPlannerSyntax(result.error, expr);
+    throw nodeError(expr, result.error);
   }
 }
 
@@ -1953,10 +1954,7 @@ function evaluateProperty(
     } else if (name === "used") {
       return { type: "used", data: "" };
     } else {
-      errorPlannerSyntax(
-        `There's no such property exists - '${name}'`,
-        nameNode,
-      );
+      throw nodeError(nameNode, `There's no such property exists - '${name}'`);
     }
   } else {
     assert(PlannerNodeName.ExerciseProperty);
@@ -2019,9 +2017,9 @@ export function evaluate(
   try {
     parse(programNode);
     if (programNode.type.name !== PlannerNodeName.Program) {
-      errorPlannerSyntax(
-        `Unexpected node type ${programNode.node.type.name}`,
+      throw nodeError(
         programNode,
+        `Unexpected node type ${programNode.node.type.name}`,
       );
     }
 
@@ -2038,9 +2036,9 @@ export function evaluate(
         }
       } else if (child.type.name === PlannerNodeName.Week) {
         if (mode === "perday") {
-          errorPlannerSyntax(
-            `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
+          throw nodeError(
             child,
+            `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
           );
         }
         const weekName = child.source.replace(/^#+/, "").trim();
@@ -2052,13 +2050,13 @@ export function evaluate(
         };
       } else if (child.type.name === PlannerNodeName.Day) {
         if (mode === "perday") {
-          errorPlannerSyntax(
-            `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
+          throw nodeError(
             child,
+            `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
           );
         }
         if (weeks.length === 0) {
-          errorPlannerSyntax(`You need to specify a week before a day`, child);
+          throw nodeError(child, `You need to specify a week before a day`);
         }
         const dayName = child.source.replace(/^#+/, "").trim();
         weeks[weeks.length - 1].days.push({
@@ -2085,9 +2083,9 @@ export function evaluate(
           mode === IPlannerExerciseEvaluatorMode.FULL &&
           (weeks.length === 0 || weeks[weeks.length - 1].days.length === 0)
         ) {
-          errorPlannerSyntax(
-            `You should first define a week and a day before listing exercises.`,
+          throw nodeError(
             child,
+            `You should first define a week and a day before listing exercises.`,
           );
         } else if (weeks.length === 0) {
           weeks.push({
@@ -2303,15 +2301,12 @@ export function evaluate(
           exerciseIndex += 1;
         }
       } else {
-        errorPlannerSyntax(
-          `Unexpected node type ${child.node.type.name}`,
-          child,
-        );
+        throw nodeError(child, `Unexpected node type ${child.node.type.name}`);
       }
     }
     return { data: weeks, success: true };
   } catch (e) {
-    if (e instanceof PlannerSyntaxError) {
+    if (e instanceof SourcedSyntaxError) {
       return { error: e, success: false };
     } else {
       throw e;
@@ -3914,9 +3909,9 @@ function topLineMap(
         lastDescriptions.push([]);
       }
     } else {
-      errorPlannerSyntax(
-        `Unexpected node type ${child.type.name}, should be only exercise, comment, description or empty line`,
+      throw nodeError(
         child,
+        `Unexpected node type ${child.type.name}, should be only exercise, comment, description or empty line`,
       );
     }
   }
