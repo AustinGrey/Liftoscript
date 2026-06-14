@@ -1319,7 +1319,7 @@ export function isEqualUpdate(
   return isEqual(pickA, pickB);
 }
 
-function fnArgsToStateVars(
+export function fnArgsToStateVars(
   fnArgs: string[],
   onError?: (message: string) => void,
 ): {
@@ -1760,33 +1760,6 @@ function evaluateId(expr: SourcedSyntaxNode): number[] {
     assert(PlannerNodeName.ExerciseProperty);
   }
 }
-const validatorMap: Record<
-  IProgramExerciseProgressType,
-  ProgressionFormulaValidator
-> = {
-  [IProgramExerciseProgressType.LP]: validateLp,
-  [IProgramExerciseProgressType.DP]: validateDp,
-  [IProgramExerciseProgressType.SUM]: validateSum,
-  [IProgramExerciseProgressType.CUSTOM]: validateCustom,
-  [IProgramExerciseProgressType.NONE]: validateNone,
-};
-
-export function* validateProgress(
-  fnName: string,
-  fnArgs: string[],
-  fnNameNode: SourcedSyntaxNode,
-  valueNode: SourcedSyntaxNode,
-): Generator<PlannerSyntaxError> {
-  const validator = isEnumValue(IProgramExerciseProgressType, fnName)
-    ? validatorMap[fnName]
-    : function* () {
-        yield PlannerSyntaxError.fromNode(
-          `There's no such progression exists - '${fnName}'`,
-          fnNameNode,
-        );
-      };
-  yield* validator(fnArgs, valueNode);
-}
 
 function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
   if (expr.type.name === PlannerNodeName.ExerciseProperty) {
@@ -1880,7 +1853,38 @@ function evaluateProgressImpl(
   const fnArgs = valueNode
     .getChildren(PlannerNodeName.FunctionArgument)
     .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
-  const [firstError] = validateProgress(fnName, fnArgs, fnNameNode, valueNode);
+
+  const validatorMap: Record<
+    IProgramExerciseProgressType,
+    ProgressionFormulaValidator
+  > = {
+    [IProgramExerciseProgressType.LP]: validateLp,
+    [IProgramExerciseProgressType.DP]: validateDp,
+    [IProgramExerciseProgressType.SUM]: validateSum,
+    [IProgramExerciseProgressType.CUSTOM]: validateCustom,
+    [IProgramExerciseProgressType.NONE]: validateNone,
+  };
+  const validator = isEnumValue(IProgramExerciseProgressType, fnName)
+    ? validatorMap[fnName]
+    : function* () {
+        yield PlannerSyntaxError.fromNode(
+          `There's no such progression exists - '${fnName}'`,
+          fnNameNode,
+        );
+      };
+  const [firstError] = validator(fnArgs, valueNode, (script) =>
+    validateScript(
+      script,
+      fnArgsToStateVars(
+        fnArgs.filter((a) => a !== undefined),
+        (message) => errorPlannerSyntax(message, valueNode),
+      ).state,
+      Progress_createEmptyScriptBindings(dayData, settings),
+      Progress_createScriptFunctions(settings),
+      IProgramMode.PLANNER,
+    ),
+  );
+
   if (firstError) {
     throw firstError;
   }
@@ -1890,38 +1894,12 @@ function evaluateProgressImpl(
     | undefined = undefined;
 
   if (fnName === IProgramExerciseProgressType.CUSTOM) {
-    const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-    const script = liftoscriptNode?.source;
-    if (script) {
-      const [firstError] = validateScript(
-        script,
-        fnArgsToStateVars(fnArgs, (message) =>
-          errorPlannerSyntax(message, fnNameNode),
-        ).state,
-        Progress_createEmptyScriptBindings(dayData, settings),
-        Progress_createScriptFunctions(settings),
-        IProgramMode.PLANNER,
-      );
-      if (firstError) {
-        if (!liftoscriptNode) {
-          throw firstError;
-        }
-        const { line, from } = liftoscriptNode.getPointer();
-        throw new PlannerSyntaxError(
-          firstError.message,
-          line + firstError.line,
-          firstError.offset,
-          from + firstError.from,
-          from + firstError.to,
-        );
-      }
-    }
     const reuseLiftoscriptNode = valueNode
       .getChild(PlannerNodeName.ReuseLiftoscript)
       ?.getChild(PlannerNodeName.ReuseSection)
       ?.getChild(PlannerNodeName.ExerciseName);
     options = {
-      script,
+      script: valueNode.getChild(PlannerNodeName.Liftoscript)?.source,
       reuseFullname: reuseLiftoscriptNode
         ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
         : undefined,
