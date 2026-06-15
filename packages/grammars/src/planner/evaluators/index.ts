@@ -105,7 +105,7 @@ function getPerDayEvaluatedWeeks(
   settings: ISettings,
 ): {
   evaluatedWeeks: IPlannerEvalResult[][];
-  metadata: IPlannerEvalMetadata;
+  exerciseFullNames: string[];
 } {
   let dayIndex = 0;
   const metadata: IPlannerEvalMetadata = {
@@ -362,7 +362,7 @@ if (completedReps >= reps && completedRPE <= RPE) {
   iterateOverExercises(evaluatedWeeks, (_, __, ___, ____, exercise) => {
     fillEvaluatedSetVariations(exercise);
   });
-  return { evaluatedWeeks, metadata };
+  return { evaluatedWeeks, exerciseFullNames: Array.from(metadata.fullNames) };
 }
 
 function getDayIndexFromWeekAndDayInWeekIndex(
@@ -1026,13 +1026,7 @@ export const PlannerEvaluator_forceEvaluate = (
 ): {
   evaluatedWeeks: IPlannerEvalResult[][];
   exerciseFullNames: string[];
-} => {
-  const { evaluatedWeeks, metadata } = getPerDayEvaluatedWeeks(
-    plannerProgram,
-    settings,
-  );
-  return { evaluatedWeeks, exerciseFullNames: Array.from(metadata.fullNames) };
-};
+} => getPerDayEvaluatedWeeks(plannerProgram, settings);
 
 export const PlannerEvaluator_evaluate = memoize(
   PlannerEvaluator_forceEvaluate,
