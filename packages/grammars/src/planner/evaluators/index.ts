@@ -81,163 +81,6 @@ interface IPlannerEvalMetadata {
   };
 }
 
-function buildDpRangeScript(): string {
-  return `for (var.i in completedReps) {
-  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-    weights[var.i] = completedWeights[var.i]
-  }
-}
-if (completedReps >= reps && completedRPE <= RPE) {
-  minReps = state.minReps
-  for (var.i in completedReps) {
-    var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
-    if (var.isInitial) {
-      weights[var.i] = completedWeights[var.i] + state.increment
-    } else {
-      weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
-    }
-  }
-} else {
-  for (var.i in completedReps) {
-    minReps[var.i] = completedReps[var.i] + 1 > reps[var.i] ?
-      reps[var.i] :
-      completedReps[var.i] + 1
-  }
-}`;
-}
-
-function fillInMetadata(
-  exercise: IPlannerProgramExercise,
-  metadata: IPlannerEvalMetadata,
-  dayData: IDayData,
-): void {
-  if (exercise.progress?.type === IProgramExerciseProgressType.DP) {
-    const hasRange = exercise.setVariations.some((sv) =>
-      sv.sets.some((s) => s.repRange?.minrep != null),
-    );
-    if (hasRange) {
-      exercise.progress = {
-        ...exercise.progress,
-        script: buildDpRangeScript(),
-      };
-    }
-  }
-  if (
-    metadata.byWeekDayExercise[dayData.week - 1]?.[dayData.dayInWeek - 1]?.[
-      exercise.key
-    ] != null
-  ) {
-    throw plannerError(
-      exercise.fullName,
-      `Exercise ${exercise.key} is already used in this day. Combine them together, or add a label to separate out.`,
-      exercise.points.fullName,
-    );
-  }
-  const tagsProp = exercise.tags;
-  if (tagsProp != null && tagsProp.length > 0) {
-    const existingTags = metadata.properties.id[exercise.key];
-    if (existingTags != null && !isEqual(existingTags.property, tagsProp)) {
-      const point = exercise.points.idPoint || exercise.points.fullName;
-      throw plannerError(
-        exercise.fullName,
-        `Same property 'id' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-          `week ${existingTags.dayData.week + 1}, day ${existingTags.dayData.dayInWeek + 1} ` +
-          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        point,
-      );
-    }
-    metadata.properties.id[exercise.key] = {
-      property: tagsProp,
-      dayData,
-    };
-  }
-
-  if (
-    exercise.progress != null &&
-    exercise.progress.type !== IProgramExerciseProgressType.NONE
-  ) {
-    const existingProgress = metadata.properties.progress[exercise.key];
-    if (
-      existingProgress != null &&
-      !isEqualAfterTransform(
-        exercise.progress,
-        existingProgress.property,
-        (p) => ({
-          ...pick(p, ["type", "state", "stateMetadata", "script"]),
-          reuse: p.reuse?.fullName,
-        }),
-      )
-    ) {
-      throw plannerError(
-        exercise.fullName,
-        `Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-          `week ${existingProgress.dayData.week + 1}, day ${existingProgress.dayData.dayInWeek + 1} ` +
-          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        exercise.points.progressPoint || exercise.points.fullName,
-      );
-    }
-    metadata.properties.progress[exercise.key] = {
-      property: exercise.progress,
-      dayData,
-    };
-  }
-
-  const updateProp = exercise.update;
-  if (updateProp != null) {
-    const existingUpdate = metadata.properties.update[exercise.key];
-    if (
-      existingUpdate != null &&
-      !isEqualAfterTransform(updateProp, existingUpdate.property, (u) => ({
-        ...pick(u, ["type", "script"]),
-        reuse: u.reuse?.fullName,
-      }))
-    ) {
-      const point = exercise.points.updatePoint || exercise.points.fullName;
-      throw plannerError(
-        exercise.fullName,
-        `Same property 'update' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-          `week ${existingUpdate.dayData.week + 1}, day ${existingUpdate.dayData.dayInWeek + 1} ` +
-          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        point,
-      );
-    }
-    metadata.properties.update[exercise.key] = {
-      property: updateProp,
-      dayData,
-    };
-  }
-  if (exercise.notused) {
-    metadata.notused.add(exercise.key);
-  }
-  if (exercise.warmupSets != null) {
-    const scheme = JSON.stringify(exercise.warmupSets);
-    const ws = metadata.properties.warmup[exercise.key];
-    if (ws != null && JSON.stringify(ws.warmupSets) !== scheme) {
-      throw plannerError(
-        exercise.fullName,
-        `Different warmup sets are specified in multiple weeks/days for exercise '${exercise.name}': both in ` +
-          `week ${ws.dayData.week + 1}, day ${ws.dayData.dayInWeek + 1} ` +
-          `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-        exercise.points.warmupPoint || exercise.points.fullName,
-      );
-    }
-    metadata.properties.warmup[exercise.key] = {
-      warmupSets: exercise.warmupSets,
-      dayData,
-    };
-  }
-
-  ((metadata.byWeekDayExercise[dayData.week - 1] ??= {})[
-    dayData.dayInWeek - 1
-  ] ??= {})[exercise.key] = exercise;
-
-  ((metadata.byExerciseWeekDay[exercise.key] ??= {})[dayData.week - 1] ??= {})[
-    dayData.dayInWeek - 1
-  ] = exercise;
-
-  metadata.fullNames.add(exercise.fullName);
-}
-
 function evaluateDay(
   day: IPlannerProgramDay,
   dayData: IDayData,
@@ -296,7 +139,162 @@ function getPerDayEvaluatedWeeks(
         const exercises = result.data;
         for (const exercise of exercises) {
           try {
-            fillInMetadata(exercise, metadata, dayData);
+            if (exercise.progress?.type === IProgramExerciseProgressType.DP) {
+              const hasRange = exercise.setVariations.some((sv) =>
+                sv.sets.some((s) => s.repRange?.minrep != null),
+              );
+              if (hasRange) {
+                exercise.progress = {
+                  ...exercise.progress,
+                  script: `for (var.i in completedReps) {
+  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+    weights[var.i] = completedWeights[var.i]
+  }
+}
+if (completedReps >= reps && completedRPE <= RPE) {
+  minReps = state.minReps
+  for (var.i in completedReps) {
+    var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
+    if (var.isInitial) {
+      weights[var.i] = completedWeights[var.i] + state.increment
+    } else {
+      weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
+    }
+  }
+} else {
+  for (var.i in completedReps) {
+    minReps[var.i] = completedReps[var.i] + 1 > reps[var.i] ?
+      reps[var.i] :
+      completedReps[var.i] + 1
+  }
+}`,
+                };
+              }
+            }
+            if (
+              metadata.byWeekDayExercise[dayData.week - 1]?.[
+                dayData.dayInWeek - 1
+              ]?.[exercise.key] != null
+            ) {
+              throw plannerError(
+                exercise.fullName,
+                `Exercise ${exercise.key} is already used in this day. Combine them together, or add a label to separate out.`,
+                exercise.points.fullName,
+              );
+            }
+            const tagsProp = exercise.tags;
+            if (tagsProp != null && tagsProp.length > 0) {
+              const existingTags = metadata.properties.id[exercise.key];
+              if (
+                existingTags != null &&
+                !isEqual(existingTags.property, tagsProp)
+              ) {
+                const point =
+                  exercise.points.idPoint || exercise.points.fullName;
+                throw plannerError(
+                  exercise.fullName,
+                  `Same property 'id' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                    `week ${existingTags.dayData.week + 1}, day ${existingTags.dayData.dayInWeek + 1} ` +
+                    `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                  point,
+                );
+              }
+              metadata.properties.id[exercise.key] = {
+                property: tagsProp,
+                dayData,
+              };
+            }
+
+            if (
+              exercise.progress != null &&
+              exercise.progress.type !== IProgramExerciseProgressType.NONE
+            ) {
+              const existingProgress =
+                metadata.properties.progress[exercise.key];
+              if (
+                existingProgress != null &&
+                !isEqualAfterTransform(
+                  exercise.progress,
+                  existingProgress.property,
+                  (p) => ({
+                    ...pick(p, ["type", "state", "stateMetadata", "script"]),
+                    reuse: p.reuse?.fullName,
+                  }),
+                )
+              ) {
+                throw plannerError(
+                  exercise.fullName,
+                  `Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                    `week ${existingProgress.dayData.week + 1}, day ${existingProgress.dayData.dayInWeek + 1} ` +
+                    `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                  exercise.points.progressPoint || exercise.points.fullName,
+                );
+              }
+              metadata.properties.progress[exercise.key] = {
+                property: exercise.progress,
+                dayData,
+              };
+            }
+
+            const updateProp = exercise.update;
+            if (updateProp != null) {
+              const existingUpdate = metadata.properties.update[exercise.key];
+              if (
+                existingUpdate != null &&
+                !isEqualAfterTransform(
+                  updateProp,
+                  existingUpdate.property,
+                  (u) => ({
+                    ...pick(u, ["type", "script"]),
+                    reuse: u.reuse?.fullName,
+                  }),
+                )
+              ) {
+                const point =
+                  exercise.points.updatePoint || exercise.points.fullName;
+                throw plannerError(
+                  exercise.fullName,
+                  `Same property 'update' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                    `week ${existingUpdate.dayData.week + 1}, day ${existingUpdate.dayData.dayInWeek + 1} ` +
+                    `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                  point,
+                );
+              }
+              metadata.properties.update[exercise.key] = {
+                property: updateProp,
+                dayData,
+              };
+            }
+            if (exercise.notused) {
+              metadata.notused.add(exercise.key);
+            }
+            if (exercise.warmupSets != null) {
+              const scheme = JSON.stringify(exercise.warmupSets);
+              const ws = metadata.properties.warmup[exercise.key];
+              if (ws != null && JSON.stringify(ws.warmupSets) !== scheme) {
+                throw plannerError(
+                  exercise.fullName,
+                  `Different warmup sets are specified in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                    `week ${ws.dayData.week + 1}, day ${ws.dayData.dayInWeek + 1} ` +
+                    `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                  exercise.points.warmupPoint || exercise.points.fullName,
+                );
+              }
+              metadata.properties.warmup[exercise.key] = {
+                warmupSets: exercise.warmupSets,
+                dayData,
+              };
+            }
+
+            ((metadata.byWeekDayExercise[dayData.week - 1] ??= {})[
+              dayData.dayInWeek - 1
+            ] ??= {})[exercise.key] = exercise;
+
+            ((metadata.byExerciseWeekDay[exercise.key] ??= {})[
+              dayData.week - 1
+            ] ??= {})[dayData.dayInWeek - 1] = exercise;
+
+            metadata.fullNames.add(exercise.fullName);
           } catch (e) {
             if (e instanceof SourcedSyntaxError) {
               return { success: false, error: e };
