@@ -117,7 +117,7 @@ function getPerDayEvaluatedWeeks(
   };
   const evaluatedWeeks: IPlannerEvalResult[][] = plannerProgram.weeks.map(
     (week, weekIndex) => {
-      return week.days.map((day, dayInWeekIndex) => {
+      return week.days.map((day, dayInWeekIndex): IPlannerEvalResult => {
         const dayData = {
           week: weekIndex + 1,
           dayInWeek: dayInWeekIndex + 1,
@@ -312,6 +312,7 @@ if (completedReps >= reps && completedRPE <= RPE) {
       });
     },
   );
+  postProcess(evaluatedWeeks, settings, metadata);
   return { evaluatedWeeks, metadata };
 }
 
@@ -1039,7 +1040,6 @@ export const PlannerEvaluator_forceEvaluate = (
     plannerProgram,
     settings,
   );
-  postProcess(evaluatedWeeks, settings, metadata);
   return { evaluatedWeeks, exerciseFullNames: Array.from(metadata.fullNames) };
 };
 
