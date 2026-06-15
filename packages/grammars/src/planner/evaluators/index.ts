@@ -312,7 +312,56 @@ if (completedReps >= reps && completedRPE <= RPE) {
       });
     },
   );
-  postProcess(evaluatedWeeks, settings, metadata);
+  iterateOverExercises(
+    evaluatedWeeks,
+    (weekIndex, dayInWeekIndex, _, __, exercise) => {
+      fillDescriptions(exercise, evaluatedWeeks, weekIndex, dayInWeekIndex);
+      fillRepeats(
+        exercise,
+        evaluatedWeeks,
+        dayInWeekIndex,
+        metadata.byExerciseWeekDay,
+      );
+      fillSingleProperties(exercise, metadata);
+      checkUnknownExercises(exercise, metadata);
+    },
+  );
+
+  iterateOverExercises(
+    evaluatedWeeks,
+    (weekIndex, dayInWeekIndex, _, __, exercise) => {
+      fillSetReuses(exercise, evaluatedWeeks, weekIndex, settings, metadata);
+      fillDescriptionReuses(
+        exercise,
+        weekIndex,
+        metadata.byExerciseWeekDay,
+        settings,
+      );
+      fillProgressReuses(evaluatedWeeks, exercise, settings, metadata);
+      fillUpdateReuses(evaluatedWeeks, exercise, settings, metadata);
+      checkUpdateScript(exercise, settings, {
+        week: weekIndex + 1,
+        dayInWeek: dayInWeekIndex + 1,
+        day: dayInWeekIndex + 1,
+      });
+    },
+  );
+  for (const week of evaluatedWeeks) {
+    for (const day of week) {
+      if (!day.success) {
+        continue;
+      }
+      day.data.sort((ex1, ex2) =>
+        ex1.exerciseIndex === ex2.exerciseIndex
+          ? (ex1.repeating[0] ?? 0) - (ex2.repeating[0] ?? 0)
+          : ex1.exerciseIndex - ex2.exerciseIndex,
+      );
+    }
+  }
+
+  iterateOverExercises(evaluatedWeeks, (_, __, ___, ____, exercise) => {
+    fillEvaluatedSetVariations(exercise);
+  });
   return { evaluatedWeeks, metadata };
 }
 
@@ -798,64 +847,6 @@ function fillUpdateReuses(
       update.reuse.exercise = originalExercise;
     }
   }
-}
-
-function postProcess(
-  evaluatedWeeks: IPlannerEvalResult[][],
-  settings: ISettings,
-  metadata: IPlannerEvalMetadata,
-): void {
-  iterateOverExercises(
-    evaluatedWeeks,
-    (weekIndex, dayInWeekIndex, _, __, exercise) => {
-      fillDescriptions(exercise, evaluatedWeeks, weekIndex, dayInWeekIndex);
-      fillRepeats(
-        exercise,
-        evaluatedWeeks,
-        dayInWeekIndex,
-        metadata.byExerciseWeekDay,
-      );
-      fillSingleProperties(exercise, metadata);
-      checkUnknownExercises(exercise, metadata);
-    },
-  );
-
-  iterateOverExercises(
-    evaluatedWeeks,
-    (weekIndex, dayInWeekIndex, _, __, exercise) => {
-      fillSetReuses(exercise, evaluatedWeeks, weekIndex, settings, metadata);
-      fillDescriptionReuses(
-        exercise,
-        weekIndex,
-        metadata.byExerciseWeekDay,
-        settings,
-      );
-      fillProgressReuses(evaluatedWeeks, exercise, settings, metadata);
-      fillUpdateReuses(evaluatedWeeks, exercise, settings, metadata);
-      checkUpdateScript(exercise, settings, {
-        week: weekIndex + 1,
-        dayInWeek: dayInWeekIndex + 1,
-        day: dayInWeekIndex + 1,
-      });
-    },
-  );
-  for (const week of evaluatedWeeks) {
-    for (const day of week) {
-      if (day.success) {
-        day.data.sort((ex1, ex2) => {
-          if (ex1.exerciseIndex === ex2.exerciseIndex) {
-            return (ex1.repeating[0] ?? 0) - (ex2.repeating[0] ?? 0);
-          } else {
-            return ex1.exerciseIndex - ex2.exerciseIndex;
-          }
-        });
-      }
-    }
-  }
-
-  iterateOverExercises(evaluatedWeeks, (_, __, ___, ____, exercise) => {
-    fillEvaluatedSetVariations(exercise);
-  });
 }
 
 function checkUnknownExercises(
