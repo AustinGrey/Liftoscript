@@ -29,7 +29,6 @@ import {
   type IPlannerProgramExercise,
   type IPlannerProgramExerciseWarmupSet,
   type IPlannerProgramReuse,
-  type IPlannerTopLineItem,
   type IProgramExerciseDescriptions,
   type IProgramExerciseProgress,
   IProgramExerciseProgressType,
@@ -1029,55 +1028,6 @@ export function PlannerProgram_replaceWeight(
     }
   });
   return newEvalutedProgram;
-}
-
-export function PlannerProgram_groupedTopLines(
-  topLine: IPlannerTopLineItem[][][],
-): IPlannerTopLineItem[][][][] {
-  const groupedTopLine: IPlannerTopLineItem[][][][] = [];
-  for (let weekIndex = 0; weekIndex < topLine.length; weekIndex += 1) {
-    const topLineWeek = topLine[weekIndex];
-    groupedTopLine.push([]);
-    for (
-      let dayInWeekIndex = 0;
-      dayInWeekIndex < topLineWeek.length;
-      dayInWeekIndex += 1
-    ) {
-      const topLineDay = topLineWeek[dayInWeekIndex];
-      const group: IPlannerTopLineItem[][] = [];
-      groupedTopLine[weekIndex].push(group);
-      let reset = true;
-      for (let lineIndex = 0; lineIndex < topLineDay.length; lineIndex += 1) {
-        if (reset) {
-          group.push([]);
-          reset = false;
-        }
-        const line = topLineDay[lineIndex];
-        group[group.length - 1] ??= [];
-        group[group.length - 1].push(line);
-        if (line.type === "exercise") {
-          reset = true;
-        }
-      }
-    }
-  }
-  for (const week of groupedTopLine) {
-    for (const day of week) {
-      day.sort((group1, group2) => {
-        const ex1 = group1.find((l) => l.type === "exercise");
-        const ex2 = group2.find((l) => l.type === "exercise");
-        if (ex1 == null || ex2 == null) {
-          return 0;
-        }
-        if (ex1.exerciseIndex === ex2.exerciseIndex) {
-          return (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0);
-        } else {
-          return (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
-        }
-      });
-    }
-  }
-  return groupedTopLine;
 }
 
 export function PlannerProgram_evaluate(

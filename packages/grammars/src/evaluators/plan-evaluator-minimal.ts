@@ -103,7 +103,6 @@ import { IProgramMode } from "@/logic/evaluators/types.ts";
 import {
   PlannerEvaluator_forceEvaluate,
   PlannerProgram_evaluate,
-  PlannerProgram_groupedTopLines,
 } from "@/planner/evaluators";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { asProgramScript } from "@/planner/display.ts";
@@ -3887,6 +3886,53 @@ function topLineMap(
   return result;
 }
 
+function groupTopLines(
+  topLine: IPlannerTopLineItem[][][],
+): IPlannerTopLineItem[][][][] {
+  const groupedTopLine: IPlannerTopLineItem[][][][] = [];
+  for (let weekIndex = 0; weekIndex < topLine.length; weekIndex += 1) {
+    const topLineWeek = topLine[weekIndex];
+    groupedTopLine.push([]);
+    for (
+      let dayInWeekIndex = 0;
+      dayInWeekIndex < topLineWeek.length;
+      dayInWeekIndex += 1
+    ) {
+      const topLineDay = topLineWeek[dayInWeekIndex];
+      const group: IPlannerTopLineItem[][] = [];
+      groupedTopLine[weekIndex].push(group);
+      let reset = true;
+      for (let lineIndex = 0; lineIndex < topLineDay.length; lineIndex += 1) {
+        if (reset) {
+          group.push([]);
+          reset = false;
+        }
+        const line = topLineDay[lineIndex];
+        group[group.length - 1] ??= [];
+        group[group.length - 1].push(line);
+        if (line.type === "exercise") {
+          reset = true;
+        }
+      }
+    }
+  }
+  for (const week of groupedTopLine) {
+    for (const day of week) {
+      day.sort((group1, group2) => {
+        const ex1 = group1.find((l) => l.type === "exercise");
+        const ex2 = group2.find((l) => l.type === "exercise");
+        if (ex1 == null || ex2 == null) {
+          return 0;
+        }
+        return ex1.exerciseIndex === ex2.exerciseIndex
+          ? (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0)
+          : (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
+      });
+    }
+  }
+  return groupedTopLine;
+}
+
 export function convertToPlanner(
   program: IEvaluatedProgram,
   settings: ISettings,
@@ -3900,7 +3946,7 @@ export function convertToPlanner(
     throw error.error;
   }
   const topLineMap = topLineItems(program.planner, settings.exercises);
-  let groupedTopLineMap = PlannerProgram_groupedTopLines(topLineMap);
+  let groupedTopLineMap = groupTopLines(topLineMap);
   groupedTopLineMap = opts.reorder
     ? reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
     : groupedTopLineMap;
