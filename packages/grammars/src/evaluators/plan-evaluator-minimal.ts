@@ -2097,51 +2097,44 @@ export function evaluate(
         let superset: IPlannerProgramExerciseSuperset | undefined;
         for (const sectionNode of sectionNodes) {
           const section = evaluateSection(sectionNode, settings, dayData);
-          if (section.type === "sets") {
-            allSets.push(...section.data);
-            if (section.data.some((set) => set.repRange != null)) {
-              setVariations.push({
-                sets: section.data,
-                isCurrent: section.isCurrent,
-              });
-            }
-          } else if (section.type === "warmup") {
-            allWarmupSets ??= [];
-            allWarmupSets.push(...section.data);
-          } else if (section.type === "progress") {
-            progress = section.data;
-          } else if (section.type === "update") {
-            update = section.data;
-          } else if (section.type === "reuse") {
-            reuse = section.data;
-          } else if (section.type === "id") {
-            tags = tags.concat(section.data);
-          } else if (section.type === "superset") {
-            superset = section.data;
-          } else if (section.type === "used") {
-            notused = true;
-          } else {
-            throw new Error(`Unexpected section type`);
+          switch (section.type) {
+            case "sets":
+              allSets.push(...section.data);
+              if (section.data.some((set) => set.repRange != null)) {
+                setVariations.push({
+                  sets: section.data,
+                  isCurrent: section.isCurrent,
+                });
+              }
+              break;
+            case "warmup":
+              allWarmupSets ??= [];
+              allWarmupSets.push(...section.data);
+              break;
+            case "progress":
+              progress = section.data;
+              break;
+            case "update":
+              update = section.data;
+              break;
+            case "reuse":
+              reuse = section.data;
+              break;
+            case "id":
+              tags = tags.concat(section.data);
+              break;
+            case "superset":
+              superset = section.data;
+              break;
+            case "used":
+              notused = true;
+              break;
+            default:
+              section satisfies never;
+              throw new Error(`Unexpected section type`);
           }
         }
-        const rpe = allSets.find(
-          (set) => set.repRange == null && set.rpe != null,
-        )?.rpe;
-        const timer = allSets.find(
-          (set) => set.repRange == null && set.timer != null,
-        )?.timer;
-        const percentage = allSets.find(
-          (set) => set.repRange == null && set.percentage != null,
-        )?.percentage;
-        const weight = allSets.find(
-          (set) => set.repRange == null && set.weight != null,
-        )?.weight;
-        const logRpe = allSets.find(
-          (set) => set.repRange == null && set.logRpe != null,
-        )?.logRpe;
-        const askWeight = allSets.find(
-          (set) => set.repRange == null && set.askWeight != null,
-        )?.askWeight;
+
         const rawDescriptions: string[] = latestDescriptions.map((d) =>
           d.join("\n"),
         );
@@ -2160,61 +2153,6 @@ export function evaluate(
           value: StringUtils_unindent(d.value),
         }));
         latestDescriptions = [];
-
-        const reuseSetsNode = child
-          .getChildren(PlannerNodeName.ExerciseSection)
-          .map((n) => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
-          .filter((n) => n)[0];
-
-        const progressNode = child
-          .getChildren(PlannerNodeName.ExerciseSection)
-          .map((n) => {
-            const node = n
-              .getChild(PlannerNodeName.ExerciseProperty)
-              ?.getChild(PlannerNodeName.ExercisePropertyName);
-            return node != null && node.source === "progress"
-              ? node
-              : undefined;
-          })
-          .flat(2)
-          .filter((n) => n)[0];
-
-        const updateNode = child
-          .getChildren(PlannerNodeName.ExerciseSection)
-          .map((n) => {
-            const node = n
-              .getChild(PlannerNodeName.ExerciseProperty)
-              ?.getChild(PlannerNodeName.ExercisePropertyName);
-            return node != null && node.source === "update" ? node : undefined;
-          })
-          .flat(2)
-          .filter((n) => n)[0];
-
-        const idNode = child
-          .getChildren(PlannerNodeName.ExerciseSection)
-          .map((n) => {
-            const node = n
-              .getChild(PlannerNodeName.ExerciseProperty)
-              ?.getChild(PlannerNodeName.ExercisePropertyName);
-            return node != null && node.source === "id" ? node : undefined;
-          })
-          .flat(2)
-          .filter((n) => n)[0];
-
-        const warmupNode = child
-          .getChildren(PlannerNodeName.ExerciseSection)
-          .map((n) =>
-            n
-              .getChild(PlannerNodeName.ExerciseProperty)
-              ?.getChild(PlannerNodeName.WarmupExerciseSets),
-          )
-          .flat(2)
-          .filter((n) => n)[0];
-
-        const supersetNode = child
-          .getChildren(PlannerNodeName.ExerciseSection)
-          .map((n) => n.getChild(PlannerNodeName.Superset))
-          .filter((n) => n)[0];
 
         const plannerExercise: IPlannerProgramExercise = {
           id: generateUid(8),
@@ -2245,21 +2183,83 @@ export function evaluate(
           progress,
           update,
           globals: {
-            rpe,
-            logRpe,
-            askWeight,
-            timer,
-            percentage,
-            weight,
+            rpe: allSets.find((set) => set.repRange == null && set.rpe != null)
+              ?.rpe,
+            logRpe: allSets.find(
+              (set) => set.repRange == null && set.logRpe != null,
+            )?.logRpe,
+            askWeight: allSets.find(
+              (set) => set.repRange == null && set.askWeight != null,
+            )?.askWeight,
+            timer: allSets.find(
+              (set) => set.repRange == null && set.timer != null,
+            )?.timer,
+            percentage: allSets.find(
+              (set) => set.repRange == null && set.percentage != null,
+            )?.percentage,
+            weight: allSets.find(
+              (set) => set.repRange == null && set.weight != null,
+            )?.weight,
           },
           points: {
             fullName: nameNode.getPointer(),
-            supersetPoint: supersetNode?.getPointer(),
-            reuseSetPoint: reuseSetsNode?.getPointer(),
-            progressPoint: progressNode?.getPointer(),
-            idPoint: idNode?.getPointer(),
-            updatePoint: updateNode?.getPointer(),
-            warmupPoint: warmupNode?.getPointer(),
+            supersetPoint: child
+              .getChildren(PlannerNodeName.ExerciseSection)
+              .map((n) => n.getChild(PlannerNodeName.Superset))
+              .filter((n) => n)[0]
+              ?.getPointer(),
+            reuseSetPoint: child
+              .getChildren(PlannerNodeName.ExerciseSection)
+              .map((n) => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
+              .filter((n) => n)[0]
+              ?.getPointer(),
+            progressPoint: child
+              .getChildren(PlannerNodeName.ExerciseSection)
+              .map((n) => {
+                const node = n
+                  .getChild(PlannerNodeName.ExerciseProperty)
+                  ?.getChild(PlannerNodeName.ExercisePropertyName);
+                return node != null && node.source === "progress"
+                  ? node
+                  : undefined;
+              })
+              .flat(2)
+              .filter((n) => n)[0]
+              ?.getPointer(),
+            idPoint: child
+              .getChildren(PlannerNodeName.ExerciseSection)
+              .map((n) => {
+                const node = n
+                  .getChild(PlannerNodeName.ExerciseProperty)
+                  ?.getChild(PlannerNodeName.ExercisePropertyName);
+                return node != null && node.source === "id" ? node : undefined;
+              })
+              .flat(2)
+              .filter((n) => n)[0]
+              ?.getPointer(),
+            updatePoint: child
+              .getChildren(PlannerNodeName.ExerciseSection)
+              .map((n) => {
+                const node = n
+                  .getChild(PlannerNodeName.ExerciseProperty)
+                  ?.getChild(PlannerNodeName.ExercisePropertyName);
+                return node != null && node.source === "update"
+                  ? node
+                  : undefined;
+              })
+              .flat(2)
+              .filter((n) => n)[0]
+              ?.getPointer(),
+            warmupPoint: child
+              .getChildren(PlannerNodeName.ExerciseSection)
+              .map((n) =>
+                n
+                  .getChild(PlannerNodeName.ExerciseProperty)
+                  ?.getChild(PlannerNodeName.WarmupExerciseSets),
+              )
+              .flat(2)
+              .filter((n) => n)[0]
+              ?.getPointer(),
           },
         };
         weeks[weeks.length - 1].days[
