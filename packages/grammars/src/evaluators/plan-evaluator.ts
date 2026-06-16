@@ -2,7 +2,12 @@ import { memoize } from "micro-memoize";
 import * as t from "io-ts";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import { unsafeCoerce } from "fp-ts/lib/function";
-import { filterUndefined, CollectionUtils_sortBy } from "../utils/collection";
+import {
+  filterUndefined,
+  definedOnly,
+  CollectionUtils_sortBy,
+  definedOnly,
+} from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
@@ -17545,7 +17550,7 @@ class ProgramToPlanner {
       str += reuseExercise.fullName;
     }
     if (reuse.week || reuse.day) {
-      const weekAndDay = filterUndefined([reuse.week, reuse.day]).join(":");
+      const weekAndDay = [reuse.week, reuse.day].filter(definedOnly).join(":");
       str += `[${weekAndDay}]`;
     }
     return str;
