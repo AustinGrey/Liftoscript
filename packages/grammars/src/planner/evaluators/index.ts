@@ -47,7 +47,7 @@ import {
 //#endregion
 import { memoize } from "micro-memoize";
 import { eq, typeOf } from "@/quantities/weight.ts";
-import { filterUndefined } from "@/utils/collection.ts";
+import { definedOnly } from "@/utils/collection.ts";
 import { plannerError, PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
@@ -1085,7 +1085,7 @@ function evaluatePreservingSource(
 
   let weeksFullText: ITextWeek[] = [];
   let ongoingLinesFullText: INonExerciseFullTextLine[] = [];
-  for (const child of filterUndefined(queryChildren(programNode).toArray())) {
+  for (const child of queryChildren(programNode).filter(definedOnly)) {
     if (child.type.name === PlannerNodeName.Week) {
       const weekName = child.source.replace(/^#+/, "").trim();
       const description = getWeekDayDescriptionAndFillLastDayFullText(

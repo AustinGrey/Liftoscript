@@ -1,5 +1,5 @@
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
-import { filterUndefined } from "@/utils/collection.ts";
+import { definedOnly } from "@/utils/collection.ts";
 import {
   NodeName,
   Weight_build,
@@ -27,7 +27,7 @@ export function calculateIndexValues(
   indexes: SourcedSyntaxNode[],
   tools: EvaluateTools,
 ): (number | "*")[] {
-  return filterUndefined(indexes).map((ie) => {
+  return indexes.filter(definedOnly).map((ie) => {
     if (ie.type.name === NodeName.Wildcard) {
       return "*" as const;
     } else {

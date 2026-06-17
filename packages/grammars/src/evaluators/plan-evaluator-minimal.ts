@@ -1,7 +1,7 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import { CollectionUtils_sortBy, filterUndefined } from "../utils/collection";
+import { CollectionUtils_sortBy, definedOnly } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
@@ -180,10 +180,9 @@ function Program_nextHistoryEntry(
   );
 
   const entry: IHistoryEntry = {
-    id: filterUndefined([
-      programExercise.label,
-      toKey(programExercise.exerciseType),
-    ]).join("_"),
+    id: [programExercise.label, toKey(programExercise.exerciseType)]
+      .filter(definedOnly)
+      .join("_"),
     index,
     exercise: programExercise.exerciseType,
     programExerciseId: programExercise.key,
@@ -1994,7 +1993,7 @@ export function evaluate(
     let weeks: IPlannerExerciseEvaluatorWeek[] = [];
     let exerciseIndex = 0;
     let latestDescriptions: string[][] = [];
-    for (const child of filterUndefined(queryChildren(programNode).toArray())) {
+    for (const child of queryChildren(programNode).filter(definedOnly)) {
       if (
         child.type.name === PlannerNodeName.EmptyExpression ||
         child.type.name === PlannerNodeName.TripleLineComment
@@ -4156,10 +4155,9 @@ export function convertToPlanner(
                       )
                     : reuseExercise.fullName;
                   if (reuse.week || reuse.day) {
-                    const weekAndDay = filterUndefined([
-                      reuse.week,
-                      reuse.day,
-                    ]).join(":");
+                    const weekAndDay = [reuse.week, reuse.day]
+                      .filter(definedOnly)
+                      .join(":");
                     str += `[${weekAndDay}]`;
                   }
                   return str;

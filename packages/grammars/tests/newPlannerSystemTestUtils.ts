@@ -27,7 +27,7 @@ import { asProgramScript } from "@/planner/display.ts";
 import type { IExerciseType } from "@/exercises";
 import type { IEither } from "@/utils/types.ts";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
-import { filterUndefined } from "@/utils/collection.ts";
+import { definedOnly } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { build, type IUnit, type IWeight, print } from "@/quantities/weight.ts";
 import {
@@ -100,7 +100,7 @@ function replaceExercise(
 
   function getLabel(label?: string): string | undefined {
     return (newLabel ?? label) || labelSuffix
-      ? filterUndefined([newLabel ?? label, labelSuffix]).join("-")
+      ? [newLabel ?? label, labelSuffix].filter(definedOnly).join("-")
       : undefined;
   }
 

@@ -1,5 +1,5 @@
 import { type SyntaxNode } from "@lezer/common";
-import { filterUndefined } from "@/utils/collection";
+import { definedOnly } from "@/utils/collection";
 import {
   MathUtils_applyOp,
   MathUtils_clamp,
@@ -1518,7 +1518,7 @@ export class LiftoscriptEvaluator {
   }
 
   private calculateIndexValues(indexes: SyntaxNode[]): (number | "*")[] {
-    return filterUndefined(indexes).map((ie) => {
+    return indexes.filter(definedOnly).map((ie) => {
       if (ie.type.name === NodeName.Wildcard) {
         return "*" as const;
       } else {
@@ -7695,14 +7695,14 @@ export function Exercise_allExpanded(
     .map((id) => getExercise(id, customExercises))
     .concat(
       ObjectUtils_keys(allExercisesList).flatMap((k) => {
-        return filterUndefined(
-          equipments.map((equipment) => {
+        return equipments
+          .map((equipment) => {
             const exerciseType = { id: k, equipment };
             return ExerciseImageUtils_exists(exerciseType, "small")
               ? { ...allExercisesList[k], equipment }
               : undefined;
-          }),
-        );
+          })
+          .filter(definedOnly);
       }),
     );
 }

@@ -2,12 +2,7 @@ import { memoize } from "micro-memoize";
 import * as t from "io-ts";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import { unsafeCoerce } from "fp-ts/lib/function";
-import {
-  filterUndefined,
-  definedOnly,
-  CollectionUtils_sortBy,
-  definedOnly,
-} from "../utils/collection";
+import { definedOnly, CollectionUtils_sortBy } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
@@ -2365,7 +2360,7 @@ function PlannerProgram_replaceExercise(
 
   function getLabel(label?: string): string | undefined {
     return (newLabel ?? label) || labelSuffix
-      ? filterUndefined([newLabel ?? label, labelSuffix]).join("-")
+      ? [newLabel ?? label, labelSuffix].filter(definedOnly).join("-")
       : undefined;
   }
 
@@ -7073,7 +7068,7 @@ export class PlannerExerciseEvaluator {
     if (expr.type.name === PlannerNodeName.Program) {
       this.weeks = [];
       this.exerciseIndex = 0;
-      for (const child of filterUndefined(getChildren(expr))) {
+      for (const child of getChildren(expr).filter(definedOnly)) {
         this.evaluateExercise(child);
       }
       return this.weeks;
@@ -15621,7 +15616,7 @@ function Progress_getEntryId(
   exerciseType: IExerciseType,
   label?: string,
 ): string {
-  return filterUndefined([label, Exercise_toKey(exerciseType)]).join("_");
+  return [label, Exercise_toKey(exerciseType)].filter(definedOnly).join("_");
 }
 
 // function Progress_applyProgramDay(
@@ -18291,7 +18286,7 @@ class PlannerExerciseEvaluatorText {
     if (expr.type.name === PlannerNodeName.Program) {
       this.ongoingLines = [];
       this.weeks = [];
-      for (const child of filterUndefined(PEET_getChildren(expr))) {
+      for (const child of PEET_getChildren(expr).filter(definedOnly)) {
         this.evaluateLine(child);
       }
       return this.weeks;
