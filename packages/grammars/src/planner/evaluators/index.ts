@@ -35,9 +35,9 @@ import {
   type IProgramExerciseUpdate,
   IProgramExerciseUpdateType,
   type IWeightChange,
+  makePlannerKey,
   parse,
   PlannerKey_fromFullName,
-  PlannerKey_fromPlannerExercise,
   PlannerProgramExercise_evaluateSetVariations,
   PlannerProgramExercise_getState,
   PlannerProgramExercise_setVariations,
@@ -52,6 +52,7 @@ import { plannerError, PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
+import { toKey } from "@/exercises";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -884,7 +885,9 @@ function findOriginalExercisesAtWeekDay(
       continue;
     }
     for (const exercise of day.data) {
-      const reusingKey = PlannerKey_fromPlannerExercise(exercise, settings);
+      const reusingKey = exercise.exerciseType
+        ? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
+        : PlannerKey_fromFullName(exercise.fullName, settings.exercises);
       const originalKey = PlannerKey_fromFullName(fullName, settings.exercises);
       if (reusingKey === originalKey) {
         originalExercises.push({

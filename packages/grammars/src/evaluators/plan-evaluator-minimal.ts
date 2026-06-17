@@ -1012,27 +1012,18 @@ export function makePlannerKey(
   return `${label ? `${label}-` : ""}${key}`.toLowerCase() as PlannerKey;
 }
 
-export function PlannerKey_fromPlannerExercise(
-  plannerExercise: IPlannerProgramExercise,
-  settings: ISettings,
-): PlannerKey {
-  return plannerExercise.exerciseType
-    ? makePlannerKey(plannerExercise.label, toKey(plannerExercise.exerciseType))
-    : PlannerKey_fromFullName(plannerExercise.fullName, settings.exercises);
-}
-
-export const PlannerKey_fromFullName = memoize(
-  (fullName: string, exercises: IAllCustomExercises): PlannerKey => {
-    const { label, name, equipment } = extractNameParts(fullName, exercises);
-    return PlannerKey_fromLabelNameAndEquipment(
-      label,
-      name,
-      equipment,
-      exercises,
-    );
-  },
-  { maxSize: 1000 },
-);
+export const PlannerKey_fromFullName = (
+  fullName: string,
+  exercises: IAllCustomExercises,
+): PlannerKey => {
+  const { label, name, equipment } = extractNameParts(fullName, exercises);
+  return PlannerKey_fromLabelNameAndEquipment(
+    label,
+    name,
+    equipment,
+    exercises,
+  );
+};
 
 export const PlannerKey_fromLabelNameAndEquipment = memoize(
   (
@@ -4326,7 +4317,9 @@ export function convertToPlanner(
   const repeatingExercises = new Set<string>();
   forExerciseInEvaluatedWeeks(program.weeks, (exercise) => {
     if (exercise.repeat != null && exercise.repeat.length > 0) {
-      const key = PlannerKey_fromPlannerExercise(exercise, settings);
+      const key = exercise.exerciseType
+        ? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
+        : PlannerKey_fromFullName(exercise.fullName, settings.exercises);
       repeatingExercises.add(key);
     }
   });
