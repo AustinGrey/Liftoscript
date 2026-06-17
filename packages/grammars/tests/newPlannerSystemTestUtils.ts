@@ -5,7 +5,7 @@ import {
   getWeight,
   type IDayData,
   type IWeightChange,
-  PlannerKey_fromExerciseType,
+  makePlannerKey,
   PlannerKey_fromFullName,
   PlannerKey_fromLabelNameAndEquipment,
   Program_applyEvaluatedProgram,
@@ -24,7 +24,7 @@ import {
   PlannerProgram_replaceWeight,
 } from "@/planner/evaluators";
 import { asProgramScript } from "@/planner/display.ts";
-import type { IExerciseType } from "@/exercises";
+import { type IExerciseType, toKey } from "@/exercises";
 import type { IEither } from "@/utils/types.ts";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { definedOnly } from "@/utils/collection.ts";
@@ -118,7 +118,7 @@ function replaceExercise(
               undefined,
               settings.exercises,
             )
-          : PlannerKey_fromExerciseType(toExerciseType, getLabel(e.label));
+          : makePlannerKey(getLabel(e.label), toKey(toExerciseType));
       return (
         e.key === newKey &&
         (!dayData ||
@@ -160,7 +160,7 @@ function replaceExercise(
                   undefined,
                   settings.exercises,
                 )
-              : PlannerKey_fromExerciseType(toExerciseType, newLabel2);
+              : makePlannerKey(newLabel2, toKey(toExerciseType));
           renameMapping[exercise.key] = { to: newKey, dayData };
           exercise.key = newKey;
         }

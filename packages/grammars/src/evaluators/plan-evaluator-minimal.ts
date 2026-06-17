@@ -1005,24 +1005,20 @@ function operation(
 //#region Planner Key
 
 type PlannerKey = Tagged<string, "plannerKey">;
+export function makePlannerKey(
+  label: string | undefined,
+  key: string,
+): PlannerKey {
+  return `${label ? `${label}-` : ""}${key}`.toLowerCase() as PlannerKey;
+}
 
 export function PlannerKey_fromPlannerExercise(
   plannerExercise: IPlannerProgramExercise,
   settings: ISettings,
 ): PlannerKey {
   return plannerExercise.exerciseType
-    ? PlannerKey_fromExerciseType(
-        plannerExercise.exerciseType,
-        plannerExercise.label,
-      )
+    ? makePlannerKey(plannerExercise.label, toKey(plannerExercise.exerciseType))
     : PlannerKey_fromFullName(plannerExercise.fullName, settings.exercises);
-}
-
-export function PlannerKey_fromExerciseType(
-  exerciseType: IExerciseType,
-  label?: string,
-): PlannerKey {
-  return makePlannerKey(label, toKey(exerciseType));
 }
 
 export const PlannerKey_fromFullName = memoize(
@@ -1046,19 +1042,12 @@ export const PlannerKey_fromLabelNameAndEquipment = memoize(
     exercises: IAllCustomExercises,
   ): PlannerKey => {
     const exercise = Exercise_findByNameEquipment(exercises, name, equipment);
-    const key = exercise ? toKey(exercise) : name;
-
-    return makePlannerKey(label, key);
+    return makePlannerKey(label, exercise ? toKey(exercise) : name);
   },
   {
     maxSize: 1000,
   },
 );
-
-function makePlannerKey(label: string | undefined, key: string): PlannerKey {
-  return `${label ? `${label}-` : ""}${key}`.toLowerCase() as PlannerKey;
-}
-
 //#endregion
 
 //#region Pages Planner Model Types
