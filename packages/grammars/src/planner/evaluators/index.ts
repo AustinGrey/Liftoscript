@@ -54,7 +54,7 @@ import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
 import { toKey } from "@/exercises";
-import { nodeFailure } from "@/common-types.ts";
+import { nodeResult } from "@/common-types.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -98,25 +98,6 @@ function checkConsistentProperty<T>({
   return null;
 }
 
-function evaluateDay(
-  day: IPlannerProgramDay,
-  dayData: IDayData,
-  settings: ISettings,
-): IPlannerEvalResult {
-  const result = evaluate(
-    parseBound(plannerExerciseParser, day.exerciseText),
-    settings,
-    IPlannerExerciseEvaluatorMode.PERDAY,
-    dayData,
-  );
-  if (result.success) {
-    const exercises = result.data[0]?.days[0]?.exercises || [];
-    return { success: true, data: exercises };
-  } else {
-    return result;
-  }
-}
-
 function getPerDayEvaluatedWeeks(
   plannerProgram: IPlannerProgram,
   settings: ISettings,
@@ -141,7 +122,15 @@ function getPerDayEvaluatedWeeks(
           day: dayIndex + 1,
         };
         dayIndexByWeekDay[weekIndex][dayInWeekIndex] = dayIndex;
-        const result = evaluateDay(day, dayData, settings);
+        const dayParseResult = evaluate(
+          parseBound(plannerExerciseParser, day.exerciseText),
+          settings,
+          IPlannerExerciseEvaluatorMode.PERDAY,
+          dayData,
+        );
+        const result: IPlannerEvalResult = !dayParseResult.success
+          ? dayParseResult
+          : nodeResult(dayParseResult.data.at(0)?.days.at(0)?.exercises || []);
         dayIndex += 1;
         if (!result.success) {
           return result;
