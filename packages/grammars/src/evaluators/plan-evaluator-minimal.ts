@@ -103,7 +103,11 @@ import {
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { evaluate as evaluateExerciseExpression } from "@/planner/evaluators/node-exercise-expression.ts";
-import { StringUtils_unindent } from "@/utils/string.ts";
+import {
+  hasNonWhitespace,
+  isNonEmpty,
+  StringUtils_unindent,
+} from "@/utils/string.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -2734,21 +2738,18 @@ export function compactPlannerProgram(
   }
 
   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const programWeek = plannerProgram.weeks[weekIndex];
     const week = mapping[weekIndex];
     for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
-      const programDay = programWeek.days[dayIndex];
-      const strParts: string[] = [];
+      const exerciseTextParts: string[] = [];
       let ongoingDescriptions = false;
-      for (const line of day) {
+      for (const line of week[dayIndex]) {
         switch (line.type) {
           case "exercise":
             ongoingDescriptions = false;
             if (line.used) break;
-            strParts.push(
+            exerciseTextParts.push(
               ...line.descriptions
-                .filter((d) => d.trim())
+                .filter(hasNonWhitespace)
                 .map(
                   (d, index, array) =>
                     d + (index !== array.length - 1 ? "\n" : ""),
@@ -2757,17 +2758,14 @@ export function compactPlannerProgram(
             let repeatStr = "";
             if (line.order !== 0 || line.repeatRanges.length > 0) {
               const repeatParts = [];
-              if (line.order !== 0) {
-                repeatParts.push(line.order);
-              }
-              if (line.repeatRanges.length > 0) {
+              if (line.order !== 0) repeatParts.push(line.order);
+              if (line.repeatRanges.length > 0)
                 repeatParts.push(...line.repeatRanges);
-              }
               repeatStr = `[${repeatParts.join(",")}]`;
             }
-            strParts.push(
+            exerciseTextParts.push(
               [`${line.fullName}${repeatStr}`, line.sections]
-                .filter((r) => r)
+                .filter(isNonEmpty)
                 .join(" / "),
             );
             break;
@@ -2776,17 +2774,18 @@ export function compactPlannerProgram(
             break;
           case "empty":
             if (!ongoingDescriptions) {
-              strParts.push(line.value);
+              exerciseTextParts.push(line.value);
             }
             break;
           case "comment":
-            strParts.push(line.value);
+            exerciseTextParts.push(line.value);
             break;
           default:
             line satisfies never;
         }
       }
-      programDay.exerciseText = strParts.join("\n");
+      plannerProgram.weeks[weekIndex].days[dayIndex].exerciseText =
+        exerciseTextParts.join("\n");
     }
   }
 

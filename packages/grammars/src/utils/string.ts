@@ -97,3 +97,19 @@ export const taggedTemplateToString: TaggedTemplateHandler<string> = (
 export function sameCaseInsensitive(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
+
+/**
+ * Common filter predicate, true if the string contains any characters at all
+ * @param a The string to check
+ */
+export function isNonEmpty(a: string): boolean {
+  return !!a;
+}
+
+/**
+ * Common filter predicate, true if the string contains any non-whitespace characters
+ * @param a The string to check
+ */
+export function hasNonWhitespace(a: string): boolean {
+  return !!a.trim();
+}
