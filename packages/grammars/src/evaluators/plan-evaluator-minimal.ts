@@ -1193,9 +1193,9 @@ export type IPlannerTopLineItem =
       descriptions: string[];
       sections: string;
       sectionsToReuse: string;
+      notused: boolean;
       // @todo does having this be nullish mean something? Or was that just lazy typing?
       repeat?: number[];
-      notused?: boolean;
     }
   | {
       type: "comment" | "description" | "empty";
@@ -2742,39 +2742,46 @@ export function compactPlannerProgram(
       let str = "";
       let ongoingDescriptions = false;
       for (const line of day) {
-        if (line.type === "description") {
-          ongoingDescriptions = true;
-        } else if (line.type === "exercise") {
-          ongoingDescriptions = false;
-          if (!line.used) {
-            if (line.descriptions && line.descriptions.length > 0) {
-              str += `${line.descriptions.filter((d) => d.trim()).join("\n\n")}\n`;
-            }
-            let repeatStr = "";
-            if (
-              (line.order != null && line.order !== 0) ||
-              (line.repeatRanges && line.repeatRanges.length > 0)
-            ) {
-              const repeatParts = [];
-              if (line.order != null && line.order !== 0) {
-                repeatParts.push(line.order);
+        switch (line.type) {
+          case "exercise":
+            ongoingDescriptions = false;
+            if (!line.used) {
+              if (line.descriptions && line.descriptions.length > 0) {
+                str += `${line.descriptions.filter((d) => d.trim()).join("\n\n")}\n`;
               }
-              if (line.repeatRanges && line.repeatRanges.length > 0) {
-                repeatParts.push(line.repeatRanges.join(","));
+              let repeatStr = "";
+              if (
+                (line.order != null && line.order !== 0) ||
+                (line.repeatRanges && line.repeatRanges.length > 0)
+              ) {
+                const repeatParts = [];
+                if (line.order != null && line.order !== 0) {
+                  repeatParts.push(line.order);
+                }
+                if (line.repeatRanges && line.repeatRanges.length > 0) {
+                  repeatParts.push(line.repeatRanges.join(","));
+                }
+                repeatStr = `[${repeatParts.join(",")}]`;
               }
-              repeatStr = `[${repeatParts.join(",")}]`;
+              str +=
+                [`${line.fullName}${repeatStr}`, line.sections]
+                  .filter((r) => r)
+                  .join(" / ") + `\n`;
             }
-            str +=
-              [`${line.fullName}${repeatStr}`, line.sections]
-                .filter((r) => r)
-                .join(" / ") + `\n`;
-          }
-        } else if (line.type === "empty") {
-          if (!ongoingDescriptions) {
+            break;
+          case "description":
+            ongoingDescriptions = true;
+            break;
+          case "empty":
+            if (!ongoingDescriptions) {
+              str += line.value + "\n";
+            }
+            break;
+          case "comment":
             str += line.value + "\n";
-          }
-        } else {
-          str += line.value + "\n";
+            break;
+          default:
+            line satisfies never;
         }
       }
       programDay.exerciseText = str.trim();
