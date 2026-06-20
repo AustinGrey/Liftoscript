@@ -4,6 +4,7 @@ import {
   SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
+import { type QueryOptions, tryQueryChildren } from "@/utils/grammars.ts";
 
 type IdMap_Plan = typeof planTerms;
 
@@ -164,4 +165,29 @@ export function plannerError(
     point.from,
     point.to,
   );
+}
+
+// @todo extract to a "queries" module for plan nodes? Or call this guards-and-queries
+export function* tryQueryPlanNodeChildren<TTypes extends NodeNames_Plan>(
+  node: TypedPlanNode<NodeNames_Plan>,
+  options?: QueryOptions<TTypes>,
+): Generator<TypedPlanNode<TTypes> | SourcedSyntaxError> {
+  yield* tryQueryChildren(node, options) as Generator<
+    TypedPlanNode<TTypes> | SourcedSyntaxError
+  >;
+}
+
+/**
+ * Gets child, or returns undefined if there are no (matching) children
+ * @param node The node to get the first matching child of
+ * @param options Additional options to pass along to queryChildren
+ */
+export function queryPlanNodeChild<TTypes extends NodeNames_Plan>(
+  node: TypedPlanNode<NodeNames_Plan>,
+  options?: QueryOptions<TTypes>,
+): TypedPlanNode<TTypes> | undefined {
+  const [result] = tryQueryPlanNodeChildren(node, options).filter(
+    (r): r is TypedPlanNode<TTypes> => !(r instanceof SourcedSyntaxError),
+  );
+  return result;
 }

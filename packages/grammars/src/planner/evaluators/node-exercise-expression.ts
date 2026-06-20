@@ -1,9 +1,15 @@
-import { PlannerNodeName, type PlanNodes } from "@/planner/parsing/guards.ts";
+import {
+  PlannerNodeName,
+  type PlanNodes,
+  queryPlanNodeChild,
+  tryQueryPlanNodeChildren,
+} from "@/planner/parsing/guards.ts";
 import {
   Exercise_findByNameAndEquipment,
   type IAllCustomExercises,
 } from "@/exercises";
 import {
+  isSourcedSyntaxError,
   nodeError,
   parseBound,
   SourcedSyntaxError,
@@ -25,11 +31,13 @@ import { validate as validateCustom } from "@/planner/progression-formulas/custo
 import { validate as validateNone } from "@/planner/progression-formulas/none.ts";
 import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
 import { parsePct, w } from "@/quantities/weight.ts";
-import type {
-  IProgramState,
-  IRepRange,
-  IScriptFunctions,
-  NodeResult,
+import {
+  type IProgramState,
+  type IRepRange,
+  type IScriptFunctions,
+  nodeFailure,
+  nodeResult,
+  type NodeResult,
 } from "@/common-types.ts";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 //#region Forbidden imports - these imports come from higher layers or dead imports, so they should be extracted somewhere else more common to avoid circular dependencies
@@ -57,16 +65,19 @@ import {
   PlannerKey_fromFullName,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+import { splitBy } from "@/utils/iterables.ts";
 //#endregion
 
-//@todo de-duplicate with other asserts
-function assert(name: string): never {
-  throw new SourcedSyntaxError(
-    `Missing required nodes for ${name}, this should never happen`,
-    0,
-    0,
-    0,
-    1,
+function assert(name: string): { success: false; error: SourcedSyntaxError } {
+  return nodeFailure(
+    // @todo should this somehow call nodeError instead?
+    new SourcedSyntaxError(
+      `Missing required nodes for ${name}, this should never happen`,
+      0,
+      0,
+      0,
+      1,
+    ),
   );
 }
 
@@ -106,14 +117,20 @@ export function evaluate(
   let progress: IProgramExerciseProgress | undefined;
   let update: IProgramExerciseUpdate | undefined;
   let superset: IPlannerProgramExerciseSuperset | undefined;
-  for (const sectionNode of child.getChildren(
-    PlannerNodeName.ExerciseSection,
-  )) {
-    const section = evaluateSection(
+  for (const sectionNode of tryQueryPlanNodeChildren(child, {
+    ofType: PlannerNodeName.ExerciseSection,
+  })) {
+    if (sectionNode instanceof SourcedSyntaxError)
+      return nodeFailure(sectionNode);
+    const result = evaluateSection(
       sectionNode,
       createEmptyScriptBindings,
       createScriptFunctions,
     );
+    if (!result.success) {
+      return result;
+    }
+    const section = result.data;
     switch (section.type) {
       case "sets":
         allSets.push(...section.data);
@@ -264,192 +281,193 @@ function PlannerProgramExercise_shortNameFromFullName(
   return `${name}${equipment ? `, ${equipmentName(equipment)}` : ""}`;
 }
 
-function evaluateSet(expr: SourcedSyntaxNode): IPlannerProgramExerciseSet {
-  if (expr.type.name === PlannerNodeName.ExerciseSet) {
-    const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
-    const setParts = setPartNodes
-      .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
-      .join("");
-    const repRange = getRepRange(setParts);
-    const rpeNode = expr.getChild(PlannerNodeName.Rpe);
-    const timerNode = expr.getChild(PlannerNodeName.Timer);
-    const percentageNode = expr.getChild(PlannerNodeName.PercentageWithPlus);
-    const weightNode = expr.getChild(PlannerNodeName.WeightWithPlus);
-    const labelNode = expr.getChild(PlannerNodeName.SetLabel);
-    const askWeightNode = expr.getChild(PlannerNodeName.AskWeight);
-    const askWeight =
-      askWeightNode != null ||
-      (weightNode != null &&
-        getNodeSourceEscapedWhiteSpace(weightNode).indexOf("+") !== -1) ||
-      (percentageNode != null &&
-        getNodeSourceEscapedWhiteSpace(percentageNode).indexOf("+") !== -1);
-    const logRpe =
-      rpeNode == null
-        ? undefined
-        : getNodeSourceEscapedWhiteSpace(rpeNode).indexOf("+") !== -1;
-    let rpe =
-      rpeNode == null
-        ? undefined
-        : parseFloat(
-            getNodeSourceEscapedWhiteSpace(rpeNode)
-              .replace("@", "")
-              .replace("+", ""),
-          );
-    if (rpe != null && isNaN(rpe)) {
-      rpe = undefined;
-    }
-    const timer =
-      timerNode == null
-        ? undefined
-        : parseInt(
-            getNodeSourceEscapedWhiteSpace(timerNode).replace("s", ""),
-            10,
-          );
-    const percentage =
-      percentageNode == null
-        ? undefined
-        : parseFloat(
-            getNodeSourceEscapedWhiteSpace(percentageNode).replace(/[%+]/, ""),
-          );
-    const weight = getWeight(weightNode);
-    const label = labelNode
-      ? queryChildren(labelNode)
-          .map((n) => getNodeSourceEscapedWhiteSpace(n))
-          .toArray()
-          .join(" ")
-      : undefined;
-    if (labelNode && label && label.length > 8) {
-      throw nodeError(labelNode, "Label length should be 8 chars max");
-    }
-    return {
-      repRange,
-      timer,
-      logRpe,
-      rpe,
-      weight,
-      percentage,
-      label,
-      askWeight,
-    };
-  } else {
-    assert(PlannerNodeName.ExerciseSection);
+function evaluateSet(expr: PlanNodes.ExerciseSet): IPlannerProgramExerciseSet {
+  const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
+  const setParts = setPartNodes
+    .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
+    .join("");
+  const repRange = getRepRange(setParts);
+  const rpeNode = expr.getChild(PlannerNodeName.Rpe);
+  const timerNode = expr.getChild(PlannerNodeName.Timer);
+  const percentageNode = expr.getChild(PlannerNodeName.PercentageWithPlus);
+  const weightNode = expr.getChild(PlannerNodeName.WeightWithPlus);
+  const labelNode = expr.getChild(PlannerNodeName.SetLabel);
+  const askWeightNode = expr.getChild(PlannerNodeName.AskWeight);
+  const askWeight =
+    askWeightNode != null ||
+    (weightNode != null &&
+      getNodeSourceEscapedWhiteSpace(weightNode).indexOf("+") !== -1) ||
+    (percentageNode != null &&
+      getNodeSourceEscapedWhiteSpace(percentageNode).indexOf("+") !== -1);
+  const logRpe =
+    rpeNode == null
+      ? undefined
+      : getNodeSourceEscapedWhiteSpace(rpeNode).indexOf("+") !== -1;
+  let rpe =
+    rpeNode == null
+      ? undefined
+      : parseFloat(
+          getNodeSourceEscapedWhiteSpace(rpeNode)
+            .replace("@", "")
+            .replace("+", ""),
+        );
+  if (rpe != null && isNaN(rpe)) {
+    rpe = undefined;
   }
+  const timer =
+    timerNode == null
+      ? undefined
+      : parseInt(
+          getNodeSourceEscapedWhiteSpace(timerNode).replace("s", ""),
+          10,
+        );
+  const percentage =
+    percentageNode == null
+      ? undefined
+      : parseFloat(
+          getNodeSourceEscapedWhiteSpace(percentageNode).replace(/[%+]/, ""),
+        );
+  const weight = getWeight(weightNode);
+  const label = labelNode
+    ? queryChildren(labelNode)
+        .map((n) => getNodeSourceEscapedWhiteSpace(n))
+        .toArray()
+        .join(" ")
+    : undefined;
+  if (labelNode && label && label.length > 8) {
+    throw nodeError(labelNode, "Label length should be 8 chars max");
+  }
+  return {
+    repRange,
+    timer,
+    logRpe,
+    rpe,
+    weight,
+    percentage,
+    label,
+    askWeight,
+  };
 }
 
-function evaluateId(expr: SourcedSyntaxNode): number[] {
-  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-    const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
-    if (valueNode == null) {
-      throw errorPlannerSyntax(`Missing value for the property 'id'`, expr);
-    }
-    const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
-    if (fnNameNode == null) {
-      assert(PlannerNodeName.FunctionName);
-    }
-    const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
-    if (["tags"].indexOf(fnName) === -1) {
-      throw nodeError(fnNameNode, `There's no such id type - '${fnName}'`);
-    }
-    const fnArgs = valueNode
-      .getChildren(PlannerNodeName.FunctionArgument)
-      .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
-    if (fnName === "tags") {
-      if (fnArgs.length === 0) {
-        throw nodeError(
-          fnNameNode,
-          `You should provide the list of numbers in "tags"`,
-        );
-      }
-    }
-    return fnArgs.map((t) => parseInt(t, 10)).filter((t) => !isNaN(t));
-  } else {
-    assert(PlannerNodeName.ExerciseProperty);
+function evaluateId(expr: PlanNodes.ExerciseProperty): NodeResult<number[]> {
+  const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
+  if (valueNode == null) {
+    return nodeFailure(
+      errorPlannerSyntax(`Missing value for the property 'id'`, expr),
+    );
   }
+  const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
+  if (fnNameNode == null) {
+    return assert(PlannerNodeName.FunctionName);
+  }
+  const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
+  if (["tags"].indexOf(fnName) === -1) {
+    throw nodeError(fnNameNode, `There's no such id type - '${fnName}'`);
+  }
+  const fnArgs = valueNode
+    .getChildren(PlannerNodeName.FunctionArgument)
+    .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
+  if (fnName === "tags" && fnArgs.length === 0) {
+    throw nodeError(
+      fnNameNode,
+      `You should provide the list of numbers in "tags"`,
+    );
+  }
+  return nodeResult(
+    fnArgs.map((t) => parseInt(t, 10)).filter((t) => !isNaN(t)),
+  );
 }
 
-function evaluateUpdate(expr: SourcedSyntaxNode): IProgramExerciseUpdate {
-  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-    const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
-    if (valueNode == null) {
-      throw nodeError(expr, `Missing value for the property 'update'`);
-    }
-    const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
-    if (fnNameNode == null) {
-      assert(PlannerNodeName.FunctionName);
-    }
-    const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
-    const fnArgs = valueNode
-      .getChildren(PlannerNodeName.FunctionArgument)
-      .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
-    let script: string | undefined;
-    let body: string | undefined;
-    let meta: { stateKeys: Set<string> } | undefined;
-    let liftoscriptNode: SourcedSyntaxNode | undefined;
-    if (fnName === "custom") {
-      liftoscriptNode =
-        valueNode.getChild(PlannerNodeName.Liftoscript) || undefined;
-      script = liftoscriptNode ? liftoscriptNode.source : undefined;
-      if (fnArgs.length > 0) {
-        throw nodeError(
-          fnNameNode,
-          `State variables for the update script are taken from "progress" block`,
-        );
-      }
-      const reuseLiftoscriptNode = valueNode
-        .getChild(PlannerNodeName.ReuseLiftoscript)
-        ?.getChild(PlannerNodeName.ReuseSection)
-        ?.getChild(PlannerNodeName.ExerciseName);
-      body = reuseLiftoscriptNode
-        ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
-        : undefined;
-      if (script) {
-        const allKeys = queryTree(
-          parseBound(LiftoscriptParser, script),
-          (node) => node.type.name === NodeName.StateVariable,
-        )
-          .map(getStateKey)
-          .filter((key) => key !== undefined);
-
-        meta = { stateKeys: new Set(allKeys) };
-      }
-      if (!script && !body) {
-        throw nodeError(
-          valueNode,
-          `'custom' update requires either to specify Liftoscript block or specify which one to reuse`,
-        );
-      }
-      return {
-        type: IProgramExerciseUpdateType.CUSTOM,
-        script,
-        liftoscriptNode,
-        meta,
-        reuse: body ? { fullName: body, source: "specific" } : undefined,
-      };
-    } else {
-      throw nodeError(
+function evaluateUpdate(
+  expr: PlanNodes.ExerciseProperty,
+): NodeResult<IProgramExerciseUpdate> {
+  const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
+  if (valueNode == null) {
+    return nodeFailure(
+      nodeError(expr, `Missing value for the property 'update'`),
+    );
+  }
+  const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
+  if (fnNameNode == null) {
+    return assert(PlannerNodeName.FunctionName);
+  }
+  const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
+  const fnArgs = valueNode
+    .getChildren(PlannerNodeName.FunctionArgument)
+    .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
+  let script: string | undefined;
+  let body: string | undefined;
+  let meta: { stateKeys: Set<string> } | undefined;
+  let liftoscriptNode: SourcedSyntaxNode | undefined;
+  if (fnName !== "custom") {
+    return nodeFailure(
+      nodeError(
         fnNameNode,
         `There's no such update progression exists - '${fnName}'`,
-      );
-    }
-  } else {
-    assert(PlannerNodeName.ExerciseProperty);
+      ),
+    );
   }
+  liftoscriptNode =
+    valueNode.getChild(PlannerNodeName.Liftoscript) || undefined;
+  script = liftoscriptNode ? liftoscriptNode.source : undefined;
+  if (fnArgs.length > 0) {
+    return nodeFailure(
+      nodeError(
+        fnNameNode,
+        `State variables for the update script are taken from "progress" block`,
+      ),
+    );
+  }
+  const reuseLiftoscriptNode = valueNode
+    .getChild(PlannerNodeName.ReuseLiftoscript)
+    ?.getChild(PlannerNodeName.ReuseSection)
+    ?.getChild(PlannerNodeName.ExerciseName);
+  body = reuseLiftoscriptNode
+    ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
+    : undefined;
+  if (script) {
+    const allKeys = queryTree(
+      parseBound(LiftoscriptParser, script),
+      (node) => node.type.name === NodeName.StateVariable,
+    )
+      .map(getStateKey)
+      .filter((key) => key !== undefined);
+
+    meta = { stateKeys: new Set(allKeys) };
+  }
+  if (!script && !body) {
+    return nodeFailure(
+      nodeError(
+        valueNode,
+        `'custom' update requires either to specify Liftoscript block or specify which one to reuse`,
+      ),
+    );
+  }
+  return nodeResult({
+    type: IProgramExerciseUpdateType.CUSTOM,
+    script,
+    liftoscriptNode,
+    meta,
+    reuse: body ? { fullName: body, source: "specific" } : undefined,
+  });
 }
 
 function evaluateProgressImpl(
-  expr: SourcedSyntaxNode,
+  expr: PlanNodes.ExerciseProperty,
   createEmptyScriptBindings: () => IScriptBindings,
   createScriptFunctions: () => IScriptFunctions,
-): IEither<IProgramExerciseProgress, string> {
-  if (expr.type.name !== PlannerNodeName.ExerciseProperty) {
-    return assert(PlannerNodeName.ExerciseProperty);
-  }
+): IEither<
+  IProgramExerciseProgress,
+  // @todo why string or SyntaxError? See if you can drop the string failure type!
+  string | SourcedSyntaxError
+> {
   const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
   if (valueNode == null) {
-    if (expr.getChild(PlannerNodeName.None)) {
-      return PlannerProgramExercise_buildProgress("none", []);
-    }
-    throw nodeError(expr, `Missing value for the property 'progress'`);
+    return expr.getChild(PlannerNodeName.None)
+      ? PlannerProgramExercise_buildProgress("none", [])
+      : nodeFailure(
+          nodeError(expr, `Missing value for the property 'progress'`),
+        );
   }
   const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
   if (fnNameNode == null) {
@@ -516,71 +534,95 @@ function evaluateProgressImpl(
 }
 
 function evaluateProgress(
-  expr: SourcedSyntaxNode,
+  expr: PlanNodes.ExerciseProperty,
   createEmptyScriptBindings: () => IScriptBindings,
   createScriptFunctions: () => IScriptFunctions,
-): IProgramExerciseProgress {
+): NodeResult<IProgramExerciseProgress> {
   const result = evaluateProgressImpl(
     expr,
     createEmptyScriptBindings,
     createScriptFunctions,
   );
   if (result.success) {
-    return result.data;
-  } else {
-    throw nodeError(expr, result.error);
+    return result;
   }
+  if (typeof result.error === "string") {
+    return nodeFailure(nodeError(expr, result.error));
+  }
+  return nodeFailure(result.error);
 }
 
 function evaluateProperty(
-  expr: SourcedSyntaxNode,
+  expr: PlanNodes.ExerciseProperty,
   createEmptyScriptBindings: () => IScriptBindings,
   createScriptFunctions: () => IScriptFunctions,
-):
+): NodeResult<
   | { type: "progress"; data: IProgramExerciseProgress }
   | { type: "update"; data: IProgramExerciseUpdate }
   | { type: "warmup"; data: IPlannerProgramExerciseWarmupSet[] }
   | { type: "id"; data: number[] }
-  | { type: "used"; data: "" } {
-  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-    const nameNode = expr.getChild(PlannerNodeName.ExercisePropertyName);
-    if (nameNode == null) {
-      assert(PlannerNodeName.ExercisePropertyName);
+  | { type: "used"; data: "" }
+> {
+  const nameNode = expr.getChild(PlannerNodeName.ExercisePropertyName);
+  if (nameNode == null) {
+    return assert(PlannerNodeName.ExercisePropertyName);
+  }
+  const name = getNodeSourceEscapedWhiteSpace(nameNode);
+  switch (name) {
+    case "progress": {
+      const result = evaluateProgress(
+        expr,
+        createEmptyScriptBindings,
+        createScriptFunctions,
+      );
+      return !result.success
+        ? nodeFailure(result.error)
+        : nodeResult({
+            type: "progress",
+            data: result.data,
+          });
     }
-    const name = getNodeSourceEscapedWhiteSpace(nameNode);
-    if (name === "progress") {
-      return {
-        type: "progress",
-        data: evaluateProgress(
-          expr,
-          createEmptyScriptBindings,
-          createScriptFunctions,
-        ),
-      };
-    } else if (name === "update") {
-      return {
-        type: "update",
-        data: evaluateUpdate(expr),
-      };
-    } else if (name === "warmup") {
-      return { type: "warmup", data: evaluateWarmup(expr) };
-    } else if (name === "id") {
-      return { type: "id", data: evaluateId(expr) };
-    } else if (name === "used") {
-      return { type: "used", data: "" };
-    } else {
-      throw nodeError(nameNode, `There's no such property exists - '${name}'`);
+    case "update": {
+      const result = evaluateUpdate(expr);
+      return !result.success
+        ? nodeFailure(result.error)
+        : nodeResult({
+            type: "update",
+            data: result.data,
+          });
     }
-  } else {
-    assert(PlannerNodeName.ExerciseProperty);
+    case "warmup": {
+      const result = evaluateWarmup(expr);
+      return !result.success
+        ? nodeFailure(result.error)
+        : nodeResult({
+            type: "warmup",
+            data: result.data,
+          });
+    }
+    case "id": {
+      const result = evaluateId(expr);
+      return !result.success
+        ? nodeFailure(result.error)
+        : nodeResult({
+            type: "id",
+            data: result.data,
+          });
+    }
+    case "used":
+      return nodeResult({ type: "used", data: "" });
+    default:
+      return nodeFailure(
+        nodeError(nameNode, `There's no such property exists - '${name}'`),
+      );
   }
 }
 
 function evaluateSection(
-  expr: SourcedSyntaxNode,
+  expr: PlanNodes.ExerciseSection,
   createEmptyScriptBindings: () => IScriptBindings,
   createScriptFunctions: () => IScriptFunctions,
-):
+): NodeResult<
   | { type: "sets"; data: IPlannerProgramExerciseSet[]; isCurrent: boolean }
   | { type: "progress"; data: IProgramExerciseProgress }
   | { type: "update"; data: IProgramExerciseUpdate }
@@ -588,120 +630,127 @@ function evaluateSection(
   | { type: "reuse"; data: IPlannerProgramReuse }
   | { type: "warmup"; data: IPlannerProgramExerciseWarmupSet[] }
   | { type: "superset"; data: IPlannerProgramExerciseSuperset }
-  | { type: "used"; data: "" } {
-  if (expr.type.name === PlannerNodeName.ExerciseSection) {
-    const reuseNode = expr.getChild(PlannerNodeName.ReuseSectionWithWeekDay);
-    if (reuseNode != null) {
-      return evaluateReuseNode(reuseNode);
-    }
-    const setsNode = expr.getChild(PlannerNodeName.ExerciseSets);
-    if (setsNode != null) {
-      const sets = setsNode.getChildren(PlannerNodeName.ExerciseSet);
-      const isCurrent =
-        setsNode.getChild(PlannerNodeName.CurrentVariation) != null;
-      if (sets.length > 0) {
-        return {
-          type: "sets",
-          data: sets.map((set) => evaluateSet(set)),
-          isCurrent,
-        };
-      }
-    }
-    const superset = expr.getChild(PlannerNodeName.Superset);
-    if (superset != null) {
-      return evaluateSuperset(superset);
-    }
-    const property = expr.getChild(PlannerNodeName.ExerciseProperty);
-    if (property != null) {
-      return evaluateProperty(
-        property,
-        createEmptyScriptBindings,
-        createScriptFunctions,
-      );
-    } else {
-      assert(PlannerNodeName.ExerciseProperty);
-    }
-  } else {
-    assert(PlannerNodeName.ExerciseSection);
+  | { type: "used"; data: "" }
+> {
+  const reuseNode = queryPlanNodeChild(expr, {
+    ofType: PlannerNodeName.ReuseSectionWithWeekDay,
+  });
+  if (reuseNode != null) {
+    return evaluateReuseNode(reuseNode);
   }
+  const setsNode = queryPlanNodeChild(expr, {
+    ofType: PlannerNodeName.ExerciseSets,
+  });
+  if (setsNode != null) {
+    const [errors, sets] = splitBy(
+      tryQueryPlanNodeChildren(setsNode, {
+        ofType: PlannerNodeName.ExerciseSet,
+      }),
+      isSourcedSyntaxError,
+    );
+    if (errors.length > 0) {
+      nodeFailure(errors[0]);
+    }
+    if (sets.length > 0) {
+      return nodeResult({
+        type: "sets",
+        data: sets.map((set) => evaluateSet(set)),
+        isCurrent: setsNode.getChild(PlannerNodeName.CurrentVariation) != null,
+      });
+    }
+  }
+  const superset = queryPlanNodeChild(expr, {
+    ofType: PlannerNodeName.Superset,
+  });
+  if (superset != null) {
+    return evaluateSuperset(superset);
+  }
+  const property = queryPlanNodeChild(expr, {
+    ofType: PlannerNodeName.ExerciseProperty,
+  });
+  if (property == null) {
+    return assert(PlannerNodeName.ExerciseProperty);
+  }
+  return evaluateProperty(
+    property,
+    createEmptyScriptBindings,
+    createScriptFunctions,
+  );
 }
 
 function evaluateWarmupSet(
-  expr: SourcedSyntaxNode,
+  expr: PlanNodes.WarmupExerciseSet,
 ): IPlannerProgramExerciseWarmupSet {
-  if (expr.type.name === PlannerNodeName.WarmupExerciseSet) {
-    const setPartNodes = expr.getChildren(PlannerNodeName.WarmupSetPart);
-    const setParts = setPartNodes
-      .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
-      .join("");
-    const { numberOfSets, reps } = getWarmupReps(setParts);
-    const percentageNode = expr.getChild(PlannerNodeName.Percentage);
-    const weightNode = expr.getChild(PlannerNodeName.Weight);
-    const percentage =
-      percentageNode == null
-        ? undefined
-        : parseFloat(
-            getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
-          );
-    const weight = getWeight(weightNode);
-    if (percentage) {
-      return {
-        type: "warmup",
-        reps,
-        numberOfSets,
-        percentage,
-      };
-    } else {
-      return {
-        type: "warmup",
-        reps,
-        numberOfSets,
-        weight: weight!,
-      };
-    }
+  const setPartNodes = expr.getChildren(PlannerNodeName.WarmupSetPart);
+  const setParts = setPartNodes
+    .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
+    .join("");
+  const { numberOfSets, reps } = getWarmupReps(setParts);
+  const percentageNode = expr.getChild(PlannerNodeName.Percentage);
+  const weightNode = expr.getChild(PlannerNodeName.Weight);
+  const percentage =
+    percentageNode == null
+      ? undefined
+      : parseFloat(
+          getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
+        );
+  const weight = getWeight(weightNode);
+  if (percentage) {
+    return {
+      type: "warmup",
+      reps,
+      numberOfSets,
+      percentage,
+    };
   } else {
-    assert(PlannerNodeName.ExerciseSection);
+    return {
+      type: "warmup",
+      reps,
+      numberOfSets,
+      weight: weight!,
+    };
   }
 }
 
 function evaluateWarmup(
-  expr: SourcedSyntaxNode,
-): IPlannerProgramExerciseWarmupSet[] {
-  if (expr.type.name === PlannerNodeName.ExerciseProperty) {
-    const none = expr.getChild(PlannerNodeName.None);
-    if (none != null) {
-      return [];
-    }
-    const setsNode = expr.getChild(PlannerNodeName.WarmupExerciseSets);
-    if (setsNode != null) {
-      const sets = setsNode.getChildren(PlannerNodeName.WarmupExerciseSet);
-      if (sets.length > 0) {
-        return sets.map((set) => evaluateWarmupSet(set));
-      }
-    }
-    return [];
-  } else {
-    assert(PlannerNodeName.ExerciseProperty);
+  expr: PlanNodes.ExerciseProperty,
+): NodeResult<IPlannerProgramExerciseWarmupSet[]> {
+  const none = expr.getChild(PlannerNodeName.None);
+  if (none != null) {
+    return nodeResult([]);
   }
+  const setsNode = queryPlanNodeChild(expr, {
+    ofType: PlannerNodeName.WarmupExerciseSets,
+  });
+  if (setsNode != null) {
+    const [errors, sets] = splitBy(
+      tryQueryPlanNodeChildren(setsNode, {
+        ofType: PlannerNodeName.WarmupExerciseSet,
+      }),
+      isSourcedSyntaxError,
+    );
+    if (errors.length > 0) {
+      return nodeFailure(errors[0]);
+    }
+    if (sets.length > 0) {
+      return nodeResult(sets.map((set) => evaluateWarmupSet(set)));
+    }
+  }
+  return nodeResult([]);
 }
 
-function evaluateSuperset(expr: SourcedSyntaxNode): {
+function evaluateSuperset(expr: PlanNodes.Superset): NodeResult<{
   type: "superset";
   data: IPlannerProgramExerciseSuperset;
-} {
-  if (expr.type.name === PlannerNodeName.Superset) {
-    const exerciseNameNode = expr.getChild(PlannerNodeName.ExerciseName);
-    if (exerciseNameNode != null) {
-      const name = getNodeSourceEscapedWhiteSpace(exerciseNameNode);
-      return {
-        type: "superset",
-        data: { name },
-      };
-    } else {
-      assert(PlannerNodeName.ExerciseName);
-    }
+}> {
+  const exerciseNameNode = expr.getChild(PlannerNodeName.ExerciseName);
+  if (exerciseNameNode != null) {
+    return nodeResult({
+      type: "superset",
+      data: { name: getNodeSourceEscapedWhiteSpace(exerciseNameNode) },
+    });
   } else {
-    assert(PlannerNodeName.Superset);
+    return assert(PlannerNodeName.ExerciseName);
   }
 }
 function getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
@@ -731,28 +780,24 @@ function getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
   return { week, day };
 }
 
-function evaluateReuseNode(expr: SourcedSyntaxNode): {
+function evaluateReuseNode(
+  expr: PlanNodes.ReuseSectionWithWeekDay,
+): NodeResult<{
   type: "reuse";
   data: IPlannerProgramReuse;
-} {
-  if (expr.type.name === PlannerNodeName.ReuseSectionWithWeekDay) {
-    const nameNode = expr
-      .getChild(PlannerNodeName.ReuseSection)
-      ?.getChild(PlannerNodeName.ExerciseName);
-    if (nameNode == null) {
-      assert(PlannerNodeName.ExerciseName);
-    }
-    const name = getNodeSourceEscapedWhiteSpace(nameNode);
-    const { week, day } = getReuseWeekDay(
-      expr.getChild(PlannerNodeName.WeekDay),
-    );
-    return {
-      type: "reuse",
-      data: { fullName: name, week, day, source: "overall" },
-    };
-  } else {
-    assert(PlannerNodeName.ReuseSectionWithWeekDay);
+}> {
+  const nameNode = expr
+    .getChild(PlannerNodeName.ReuseSection)
+    ?.getChild(PlannerNodeName.ExerciseName);
+  if (nameNode == null) {
+    return assert(PlannerNodeName.ExerciseName);
   }
+  const name = getNodeSourceEscapedWhiteSpace(nameNode);
+  const { week, day } = getReuseWeekDay(expr.getChild(PlannerNodeName.WeekDay));
+  return nodeResult({
+    type: "reuse",
+    data: { fullName: name, week, day, source: "overall" },
+  });
 }
 
 function getWarmupReps(setParts: string): {

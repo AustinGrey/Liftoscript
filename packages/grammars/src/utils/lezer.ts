@@ -249,6 +249,12 @@ export class SourcedSyntaxError extends SyntaxError {
   }
 }
 
+export function isSourcedSyntaxError(
+  error: unknown,
+): error is SourcedSyntaxError {
+  return error instanceof SourcedSyntaxError;
+}
+
 /**
  * Creates a new SourcedSyntaxError from the given node and message
  * @param node The node this error is for

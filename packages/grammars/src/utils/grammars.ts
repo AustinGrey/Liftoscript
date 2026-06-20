@@ -1,9 +1,14 @@
-import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+import {
+  nodeError,
+  SourcedSyntaxError,
+  type SourcedSyntaxNode,
+} from "@/utils/lezer.ts";
+import { throwError } from "@/utils/errors.ts";
 
 /**
  * Options when querying for children of a syntax node
  */
-type QueryOptions<TTypes extends string> = Partial<{
+export type QueryOptions<TTypes extends string> = Partial<{
   /**
    * If provided, throws an error if the node has fewer than this many children of the given type
    */
@@ -28,15 +33,34 @@ type QueryOptions<TTypes extends string> = Partial<{
  */
 export function* queryChildren<TTypes extends string>(
   node: SourcedSyntaxNode,
-  { atLeast, ofType, includeSkipped }: QueryOptions<TTypes> = {},
+  options?: QueryOptions<TTypes>,
 ): Generator<SourcedSyntaxNode> {
+  yield* tryQueryChildren(node, options).map((r) =>
+    r instanceof SourcedSyntaxError ? throwError(r) : r,
+  );
+}
+
+/**
+ * @yields all children of a syntax node, optionally restricting by type, and potentially returning nothing or an error if conditions aren't met (instead of throwing).
+ *   Might still throw if something other than a SyntaxError is encountered
+ * @param node The node to get the children of
+ * @param options
+ * @param options.atLeast - If provided, yields an error if the node has fewer than this many children
+ * @param options.ofType - If provided, only yields children of this type, and atLeast ensures that there are at least that number of children of this type
+ */
+export function* tryQueryChildren<TTypes extends string>(
+  node: SourcedSyntaxNode,
+  { atLeast, ofType, includeSkipped }: QueryOptions<TTypes> = {},
+): Generator<SourcedSyntaxNode | SourcedSyntaxError> {
   const cur = node.cursor();
   let count = 0;
   if (!cur.firstChild()) {
     if (atLeast !== undefined && atLeast !== 0) {
-      throw new SyntaxError(
+      yield nodeError(
+        node,
         `Expected at least${atLeast} children${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
       );
+      return;
     }
     return;
   }
@@ -51,14 +75,16 @@ export function* queryChildren<TTypes extends string>(
     count++;
   } while (cur.nextSibling());
   if (atLeast !== undefined && count < atLeast) {
-    throw new SyntaxError(
+    yield nodeError(
+      node,
       `Expected at least ${atLeast} children${ofType ? ` of type ${ofType}` : ""}, but got ${count}`,
     );
+    return;
   }
 }
 
 /**
- * Gets child, or throws an error if there are no children
+ * Gets child, or throws an error if there are no (matching) children
  * @param node The node to get the first matching child of
  * @param options Additional options to pass along to queryChildren
  */
@@ -71,7 +97,7 @@ export function getChild<TTypes extends string>(
 }
 
 /**
- * Gets child, or returns undefined if there are no children
+ * Gets child, or returns undefined if there are no (matching) children
  * @param node The node to get the first matching child of
  * @param options Additional options to pass along to queryChildren
  */
