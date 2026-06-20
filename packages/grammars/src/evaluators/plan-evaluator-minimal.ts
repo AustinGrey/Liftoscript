@@ -69,6 +69,7 @@ import {
   asPlanNodeOfTypeOrThrow,
   PlannerNodeName,
   type PlanNodes,
+  tryQueryPlanNodeChildren,
   type TypedPlanNode,
 } from "@/planner/parsing/guards.ts";
 import { evaluateWeight } from "@/quantities-dynamic";
@@ -83,12 +84,12 @@ import {
   type IProgramStateMetadata,
 } from "@/program";
 import {
+  findErrorNode,
   type ISyntaxPointer,
   nodeError,
   parseBound,
   SourcedSyntaxError,
   type SourcedSyntaxNode,
-  findErrorNode,
 } from "@/utils/lezer.ts";
 import { omitBy } from "es-toolkit";
 import type { Tagged } from "type-fest";
@@ -2870,65 +2871,67 @@ function topLineMap(
   const result: IPlannerTopLineItem[] = [];
   let lastDescriptions: string[][] = [];
   let ongoingDescriptions = false;
+  function consumeDescriptions(): string[] {
+    ongoingDescriptions = false;
+    const descriptions = lastDescriptions.map((d) => d.join("\n"));
+    lastDescriptions = [];
+    return descriptions;
+  }
   let exerciseIndex = 0;
-  for (const child of queryChildren(programNode)) {
+  for (const child of tryQueryPlanNodeChildren(programNode)) {
     switch (child.type.name) {
       case PlannerNodeName.ExerciseExpression:
         const exerciseExpression = asPlanNodeOfTypeOrThrow(
           "ExerciseExpression",
           child,
         );
-        ongoingDescriptions = false;
-        const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
-        const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
-        const key = PlannerKey_fromFullName(fullName, exercises);
+        const fullName = getNodeSourceEscapedWhiteSpace(
+          exerciseExpression.getChild(PlannerNodeName.ExerciseName)!,
+        );
         const repeat = getRepeat(exerciseExpression);
-        const repeatRanges = getRepeatRanges(repeat);
-        const order = getOrder(exerciseExpression);
-        const isUsed = !getIsNotUsed(exerciseExpression);
-        const sectionsNode = child.getChildren(PlannerNodeName.ExerciseSection);
-        const sections = sectionsNode
-          .map((section) => section.source.trim())
-          .join(" / ");
-        const sectionsToReuse = sectionsNode
-          .filter((section) => {
-            const properties = section.getChild(
-              PlannerNodeName.ExerciseProperty,
-            );
-            if (properties == null) {
-              return true;
-            }
-            const propertyNameNode = properties.getChild(
-              PlannerNodeName.ExercisePropertyName,
-            );
-            const propertyName = propertyNameNode
-              ? getNodeSourceEscapedWhiteSpace(propertyNameNode)
-              : undefined;
-            if (propertyName === "progress") {
-              const none = properties.getChild(PlannerNodeName.None);
-              return none != null;
-            }
-            return false;
-          })
-          .map((section) => section.source.trim())
-          .join(" / ");
-        result.push({
+        const sectionNodes = tryQueryPlanNodeChildren(exerciseExpression, {
+          ofType: PlannerNodeName.ExerciseSection,
+        }).toArray();
+        const item: IPlannerTopLineItem = {
           type: "exercise",
           fullName,
-          order,
-          notused: !isUsed,
-          value: key,
+          order: getOrder(exerciseExpression),
+          notused: getIsNotUsed(exerciseExpression),
+          value: PlannerKey_fromFullName(fullName, exercises),
           exerciseIndex,
           repeat,
-          repeatRanges,
-          descriptions: lastDescriptions.map((d) => d.join("\n")),
-          sections,
-          sectionsToReuse,
-        });
-        if (isUsed) {
+          repeatRanges: getRepeatRanges(repeat),
+          descriptions: consumeDescriptions(),
+          sections: sectionNodes
+            .map((section) => section.source.trim())
+            .join(" / "),
+          sectionsToReuse: sectionNodes
+            .filter((section) => {
+              const properties = section.getChild(
+                PlannerNodeName.ExerciseProperty,
+              );
+              if (properties == null) {
+                return true;
+              }
+              const propertyNameNode = properties.getChild(
+                PlannerNodeName.ExercisePropertyName,
+              );
+              const propertyName = propertyNameNode
+                ? getNodeSourceEscapedWhiteSpace(propertyNameNode)
+                : undefined;
+              if (propertyName === "progress") {
+                const none = properties.getChild(PlannerNodeName.None);
+                return none != null;
+              }
+              return false;
+            })
+            .map((section) => section.source.trim())
+            .join(" / "),
+        };
+        result.push(item);
+        if (!item.notused) {
           exerciseIndex += 1;
         }
-        lastDescriptions = [];
         break;
       case PlannerNodeName.LineComment:
         ongoingDescriptions = true;
