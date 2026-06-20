@@ -1195,9 +1195,7 @@ export type IPlannerTopLineItem =
       sectionsToReuse: string;
       // @todo does having this be nullish mean something? Or was that just lazy typing?
       repeat?: number[];
-      // @todo having both used and unused is madness.
       notused?: boolean;
-      used?: boolean;
     }
   | {
       type: "comment" | "description" | "empty";
@@ -2610,6 +2608,20 @@ export function compactPlannerProgram(
   settings: ISettings,
   additionalRepeatingExercises?: Set<string>,
 ): IPlannerProgram {
+  // Define augmented types that let us put a "used" flag on the exercises for this algorithm only.
+  type ICompactPlannerTopLineExercise = Extract<
+    IPlannerTopLineItem,
+    { type: "exercise" }
+  > & {
+    used?: boolean;
+  };
+
+  type ICompactPlannerTopLineItem =
+    | ICompactPlannerTopLineExercise
+    | Extract<
+        IPlannerTopLineItem,
+        { type: "comment" | "description" | "empty" }
+      >;
   const repeatingExercises = new Set<string>(additionalRepeatingExercises);
   const { evaluatedWeeks } = PlannerProgram_evaluate(
     structuredClone(oldPlannerProgram),
@@ -2640,17 +2652,19 @@ export function compactPlannerProgram(
     });
   });
 
-  const mapping = plannerProgram.weeks.map((week) => {
-    return week.days.map((day) => {
-      return topLineMap(
-        asPlanNodeOfTypeOrThrow(
-          "Program",
-          parseBound(plannerExerciseParser, day.exerciseText),
-        ),
-        settings.exercises,
-      );
-    });
-  });
+  const mapping: ICompactPlannerTopLineItem[][][] = plannerProgram.weeks.map(
+    (week) => {
+      return week.days.map((day) => {
+        return topLineMap(
+          asPlanNodeOfTypeOrThrow(
+            "Program",
+            parseBound(plannerExerciseParser, day.exerciseText),
+          ),
+          settings.exercises,
+        ) as ICompactPlannerTopLineItem[];
+      });
+    },
+  );
 
   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
     const week = mapping[weekIndex];
@@ -2670,7 +2684,7 @@ export function compactPlannerProgram(
           ) {
             const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
             const repeatedExercises = (repeatDay || []).filter(
-              (e): e is typeof e & { type: "exercise" } => {
+              (e): e is ICompactPlannerTopLineExercise => {
                 if (
                   e.type !== "exercise" ||
                   e.value !== line.value ||
