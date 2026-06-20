@@ -91,7 +91,7 @@ import {
   SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { omitBy } from "es-toolkit";
+import { isEqual, omitBy } from "es-toolkit";
 import type { Tagged } from "type-fest";
 import { run, validate } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
@@ -2544,10 +2544,9 @@ function addExerciseDescriptions(
     return undefined;
   }
   if (
-    exercise?.descriptions.reuse == null ||
-    !ObjectUtils_isEqual(
+    !isEqual(
       exercise.descriptions.values || [],
-      exercise.descriptions.reuse.exercise?.descriptions.values || [],
+      exercise.descriptions.reuse?.exercise?.descriptions.values || [],
     )
   ) {
     const lines: string[] = [];
@@ -2557,13 +2556,11 @@ function addExerciseDescriptions(
       weekIndex,
       dayInWeekIndex,
     );
-    for (let i = 0; i < exercise.descriptions.values.length; i += 1) {
+    for (const [i, description] of exercise.descriptions.values.entries()) {
       if (i > 0) {
         lines.push("");
       }
-      const description = exercise.descriptions.values[i];
-      const parts = description.value.split("\n");
-      for (const part of parts) {
+      for (const part of description.value.split("\n")) {
         if (
           currentIndex !== 0 &&
           currentIndex === i &&
@@ -2577,7 +2574,8 @@ function addExerciseDescriptions(
       }
     }
     return { lines, addedCurrentDescription };
-  } else if (exercise?.descriptions.reuse?.exercise) {
+  }
+  if (exercise.descriptions.reuse?.exercise) {
     const reusedExercise = exercise.descriptions.reuse.exercise;
     const reusedDayData = reusedExercise.dayData;
     const currentWeekReusedExercisesCount = program.weeks[
@@ -2593,17 +2591,15 @@ function addExerciseDescriptions(
         lines: [`// ...${reusedExercise.fullName}`],
         addedCurrentDescription,
       };
-    } else {
-      return {
-        lines: [
-          `// ...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`,
-        ],
-        addedCurrentDescription,
-      };
     }
-  } else {
-    return undefined;
+    return {
+      lines: [
+        `// ...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`,
+      ],
+      addedCurrentDescription,
+    };
   }
+  return undefined;
 }
 
 export function compactPlannerProgram(
