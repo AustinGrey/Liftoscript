@@ -1366,9 +1366,11 @@ export function evaluate(
       return nodeFailure(nodeError(firstError));
     }
     if (programNode.type.name !== PlannerNodeName.Program) {
-      throw nodeError(
-        programNode,
-        `Unexpected node type ${programNode.node.type.name}`,
+      return nodeFailure(
+        nodeError(
+          programNode,
+          `Unexpected node type ${programNode.node.type.name}`,
+        ),
       );
     }
 
@@ -2870,83 +2872,90 @@ function topLineMap(
   let ongoingDescriptions = false;
   let exerciseIndex = 0;
   for (const child of queryChildren(programNode)) {
-    if (child.type.name === PlannerNodeName.ExerciseExpression) {
-      const exerciseExpression = asPlanNodeOfTypeOrThrow(
-        "ExerciseExpression",
-        child,
-      );
-      ongoingDescriptions = false;
-      const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
-      const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
-      const key = PlannerKey_fromFullName(fullName, exercises);
-      const repeat = getRepeat(exerciseExpression);
-      const repeatRanges = getRepeatRanges(repeat);
-      const order = getOrder(exerciseExpression);
-      const isUsed = !getIsNotUsed(exerciseExpression);
-      const sectionsNode = child.getChildren(PlannerNodeName.ExerciseSection);
-      const sections = sectionsNode
-        .map((section) => section.source.trim())
-        .join(" / ");
-      const sectionsToReuse = sectionsNode
-        .filter((section) => {
-          const properties = section.getChild(PlannerNodeName.ExerciseProperty);
-          if (properties == null) {
-            return true;
-          }
-          const propertyNameNode = properties.getChild(
-            PlannerNodeName.ExercisePropertyName,
-          );
-          const propertyName = propertyNameNode
-            ? getNodeSourceEscapedWhiteSpace(propertyNameNode)
-            : undefined;
-          if (propertyName === "progress") {
-            const none = properties.getChild(PlannerNodeName.None);
-            return none != null;
-          }
-          return false;
-        })
-        .map((section) => section.source.trim())
-        .join(" / ");
-      result.push({
-        type: "exercise",
-        fullName,
-        order,
-        notused: !isUsed,
-        value: key,
-        exerciseIndex,
-        repeat,
-        repeatRanges,
-        descriptions: lastDescriptions.map((d) => d.join("\n")),
-        sections,
-        sectionsToReuse,
-      });
-      if (isUsed) {
-        exerciseIndex += 1;
-      }
-      lastDescriptions = [];
-    } else if (child.type.name === PlannerNodeName.LineComment) {
-      ongoingDescriptions = true;
-      const description = child.source.trim();
-      if (lastDescriptions.length === 0) {
-        lastDescriptions.push([]);
-      }
-      lastDescriptions[lastDescriptions.length - 1].push(description);
-      result.push({ type: "description", value: description });
-    } else if (child.type.name === PlannerNodeName.TripleLineComment) {
-      result.push({
-        type: "comment",
-        value: child.source.trim(),
-      });
-    } else if (child.type.name === PlannerNodeName.EmptyExpression) {
-      result.push({ type: "empty", value: "" });
-      if (ongoingDescriptions) {
-        lastDescriptions.push([]);
-      }
-    } else {
-      throw nodeError(
-        child,
-        `Unexpected node type ${child.type.name}, should be only exercise, comment, description or empty line`,
-      );
+    switch (child.type.name) {
+      case PlannerNodeName.ExerciseExpression:
+        const exerciseExpression = asPlanNodeOfTypeOrThrow(
+          "ExerciseExpression",
+          child,
+        );
+        ongoingDescriptions = false;
+        const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
+        const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
+        const key = PlannerKey_fromFullName(fullName, exercises);
+        const repeat = getRepeat(exerciseExpression);
+        const repeatRanges = getRepeatRanges(repeat);
+        const order = getOrder(exerciseExpression);
+        const isUsed = !getIsNotUsed(exerciseExpression);
+        const sectionsNode = child.getChildren(PlannerNodeName.ExerciseSection);
+        const sections = sectionsNode
+          .map((section) => section.source.trim())
+          .join(" / ");
+        const sectionsToReuse = sectionsNode
+          .filter((section) => {
+            const properties = section.getChild(
+              PlannerNodeName.ExerciseProperty,
+            );
+            if (properties == null) {
+              return true;
+            }
+            const propertyNameNode = properties.getChild(
+              PlannerNodeName.ExercisePropertyName,
+            );
+            const propertyName = propertyNameNode
+              ? getNodeSourceEscapedWhiteSpace(propertyNameNode)
+              : undefined;
+            if (propertyName === "progress") {
+              const none = properties.getChild(PlannerNodeName.None);
+              return none != null;
+            }
+            return false;
+          })
+          .map((section) => section.source.trim())
+          .join(" / ");
+        result.push({
+          type: "exercise",
+          fullName,
+          order,
+          notused: !isUsed,
+          value: key,
+          exerciseIndex,
+          repeat,
+          repeatRanges,
+          descriptions: lastDescriptions.map((d) => d.join("\n")),
+          sections,
+          sectionsToReuse,
+        });
+        if (isUsed) {
+          exerciseIndex += 1;
+        }
+        lastDescriptions = [];
+        break;
+      case PlannerNodeName.LineComment:
+        ongoingDescriptions = true;
+        const description = child.source.trim();
+        if (lastDescriptions.length === 0) {
+          lastDescriptions.push([]);
+        }
+        lastDescriptions[lastDescriptions.length - 1].push(description);
+        result.push({ type: "description", value: description });
+        break;
+      case PlannerNodeName.TripleLineComment:
+        result.push({
+          type: "comment",
+          value: child.source.trim(),
+        });
+        break;
+      case PlannerNodeName.EmptyExpression:
+        result.push({ type: "empty", value: "" });
+        if (ongoingDescriptions) {
+          lastDescriptions.push([]);
+        }
+        break;
+      default:
+        throw nodeError(
+          child,
+          `Unexpected node type ${child.type.name}, should be only exercise, comment, description or empty line`,
+        );
     }
   }
   return result;
