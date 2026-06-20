@@ -2626,7 +2626,7 @@ export function compactPlannerProgram(
         IPlannerTopLineItem,
         { type: "comment" | "description" | "empty" }
       >;
-  const repeatingExercises = new Set<string>(additionalRepeatingExercises);
+  const repeatingExercises = new Set(additionalRepeatingExercises);
   const { evaluatedWeeks } = PlannerProgram_evaluate(
     structuredClone(oldPlannerProgram),
     settings,
@@ -2637,37 +2637,37 @@ export function compactPlannerProgram(
   );
   for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
     forExerciseInEvaluatedResults(ev, (exercise) => {
-      if (exercise.repeat != null && exercise.repeat.length > 0) {
+      if ((exercise.repeat?.length ?? 0) > 0) {
         repeatingExercises.add(exercise.key);
       }
     });
   }
 
-  const lastDescriptions: OpenRecord<string, number> = {};
-  plannerProgram.weeks.forEach((week) => {
-    week.days.forEach((day, dayInWeekIndex) => {
-      if (lastDescriptions[dayInWeekIndex] === undefined) {
-        lastDescriptions[dayInWeekIndex] = day.description;
-      } else if (lastDescriptions[dayInWeekIndex] === day.description) {
+  // This snippet cuts out repeated descriptions for days in the program, keeping only the first instance of a description.
+  // If there are multiple DIFFERENT descriptions though, it will keep the first instance of each one every time the description changes.
+  const lastDescriptions: (string | undefined)[] = [];
+  for (const week of plannerProgram.weeks) {
+    for (const [dayInWeekIndex, day] of week.days.entries()) {
+      if (day.description === lastDescriptions[dayInWeekIndex]) {
         day.description = undefined;
-      } else {
-        lastDescriptions[dayInWeekIndex] = day.description;
+        continue;
       }
-    });
-  });
+      lastDescriptions[dayInWeekIndex] = day.description;
+    }
+  }
 
   const mapping: ICompactPlannerTopLineItem[][][] = plannerProgram.weeks.map(
-    (week) => {
-      return week.days.map((day) => {
-        return topLineMap(
-          asPlanNodeOfTypeOrThrow(
-            "Program",
-            parseBound(plannerExerciseParser, day.exerciseText),
-          ),
-          settings.exercises,
-        ) as ICompactPlannerTopLineItem[];
-      });
-    },
+    (week) =>
+      week.days.map(
+        (day) =>
+          topLineMap(
+            asPlanNodeOfTypeOrThrow(
+              "Program",
+              parseBound(plannerExerciseParser, day.exerciseText),
+            ),
+            settings.exercises,
+          ) as ICompactPlannerTopLineItem[],
+      ),
   );
 
   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
@@ -2676,63 +2676,64 @@ export function compactPlannerProgram(
       const day = week[dayIndex];
       for (const line of day) {
         if (
-          line.type === "exercise" &&
-          !line.used &&
-          repeatingExercises.has(line.value)
+          line.type !== "exercise" ||
+          line.used ||
+          !repeatingExercises.has(line.value)
         ) {
-          const repeatRanges: [number, number | undefined][] = [];
-          for (
-            let repeatWeekIndex = weekIndex + 1;
-            repeatWeekIndex < mapping.length;
-            repeatWeekIndex += 1
-          ) {
-            const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
-            const repeatedExercises = (repeatDay || []).filter(
-              (e): e is ICompactPlannerTopLineExercise => {
-                if (
-                  e.type !== "exercise" ||
-                  e.value !== line.value ||
-                  e.sectionsToReuse !== line.sectionsToReuse ||
-                  e.exerciseIndex !== line.exerciseIndex ||
-                  !ObjectUtils_isEqual(
-                    e.descriptions || [],
-                    line.descriptions || [],
-                  )
-                ) {
-                  return false;
-                }
-                const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
-                const oldExercise = oldDay.success
-                  ? oldDay.data.find((ex) => ex.key === e.value)
-                  : undefined;
-                return !!oldExercise?.repeating?.includes(weekIndex + 1);
-              },
-            );
-            for (const e of repeatedExercises) {
-              e.used = true;
-            }
-            if (repeatedExercises.length > 0) {
-              if (
-                repeatRanges.length === 0 ||
-                repeatRanges[repeatRanges.length - 1][1] != null
-              ) {
-                repeatRanges.push([repeatWeekIndex, undefined]);
-              }
-            } else {
-              if (repeatRanges.length > 0) {
-                repeatRanges[repeatRanges.length - 1][1] = repeatWeekIndex;
-              }
-              break;
-            }
-          }
-          if (
-            repeatRanges.length > 0 &&
-            repeatRanges[repeatRanges.length - 1][1] == null
-          ) {
-            repeatRanges[repeatRanges.length - 1][1] = mapping.length;
-          }
-          line.repeatRanges = repeatRanges.map((r) => `${r[0]}-${r[1]}`);
+          continue;
         }
+        const repeatRanges: [number, number | undefined][] = [];
+        for (
+          let repeatWeekIndex = weekIndex + 1;
+          repeatWeekIndex < mapping.length;
+          repeatWeekIndex += 1
+        ) {
+          const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
+          const repeatedExercises = (repeatDay || []).filter(
+            (e): e is ICompactPlannerTopLineExercise => {
+              if (
+                e.type !== "exercise" ||
+                e.value !== line.value ||
+                e.sectionsToReuse !== line.sectionsToReuse ||
+                e.exerciseIndex !== line.exerciseIndex ||
+                !ObjectUtils_isEqual(
+                  e.descriptions || [],
+                  line.descriptions || [],
+                )
+              ) {
+                return false;
+              }
+              const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
+              const oldExercise = oldDay.success
+                ? oldDay.data.find((ex) => ex.key === e.value)
+                : undefined;
+              return !!oldExercise?.repeating?.includes(weekIndex + 1);
+            },
+          );
+          for (const e of repeatedExercises) {
+            e.used = true;
+          }
+          if (repeatedExercises.length > 0) {
+            if (
+              repeatRanges.length === 0 ||
+              repeatRanges[repeatRanges.length - 1][1] != null
+            ) {
+              repeatRanges.push([repeatWeekIndex, undefined]);
+            }
+          } else {
+            if (repeatRanges.length > 0) {
+              repeatRanges[repeatRanges.length - 1][1] = repeatWeekIndex;
+            }
+            break;
+          }
+        }
+        if (
+          repeatRanges.length > 0 &&
+          repeatRanges[repeatRanges.length - 1][1] == null
+        ) {
+          repeatRanges[repeatRanges.length - 1][1] = mapping.length;
+        }
+        line.repeatRanges = repeatRanges.map((r) => `${r[0]}-${r[1]}`);
       }
     }
   }
@@ -2747,22 +2748,22 @@ export function compactPlannerProgram(
           case "exercise":
             ongoingDescriptions = false;
             if (line.used) break;
+
+            const descriptions = line.descriptions.filter(hasNonWhitespace);
             exerciseTextParts.push(
-              ...line.descriptions
-                .filter(hasNonWhitespace)
-                .map(
-                  (d, index, array) =>
-                    d + (index !== array.length - 1 ? "\n" : ""),
-                ),
+              ...descriptions.map(
+                (d, index) =>
+                  d + (index !== descriptions.length - 1 ? "\n" : ""),
+              ),
             );
-            let repeatStr = "";
-            if (line.order !== 0 || line.repeatRanges.length > 0) {
-              const repeatParts = [];
-              if (line.order !== 0) repeatParts.push(line.order);
-              if (line.repeatRanges.length > 0)
-                repeatParts.push(...line.repeatRanges);
-              repeatStr = `[${repeatParts.join(",")}]`;
-            }
+
+            const repeatParts = [
+              ...(line.order !== 0 ? [line.order] : []),
+              ...line.repeatRanges,
+            ];
+            const repeatStr = repeatParts.length
+              ? `[${repeatParts.join(",")}]`
+              : "";
             exerciseTextParts.push(
               [`${line.fullName}${repeatStr}`, line.sections]
                 .filter(isNonEmpty)
@@ -2773,9 +2774,7 @@ export function compactPlannerProgram(
             ongoingDescriptions = true;
             break;
           case "empty":
-            if (!ongoingDescriptions) {
-              exerciseTextParts.push(line.value);
-            }
+            if (!ongoingDescriptions) exerciseTextParts.push(line.value);
             break;
           case "comment":
             exerciseTextParts.push(line.value);
