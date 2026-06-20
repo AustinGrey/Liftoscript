@@ -1423,10 +1423,13 @@ export function evaluate(
           break;
         case PlannerNodeName.Week:
           if (mode === "perday") {
-            throw nodeError(
-              child,
-              `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
-            );
+            return {
+              success: false,
+              error: nodeError(
+                child,
+                `You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
+              ),
+            };
           }
           const weekName = child.source.replace(/^#+/, "").trim();
           weeks.push({
@@ -1442,13 +1445,22 @@ export function evaluate(
           break;
         case PlannerNodeName.Day:
           if (mode === "perday") {
-            throw nodeError(
-              child,
-              `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
-            );
+            return {
+              success: false,
+              error: nodeError(
+                child,
+                `You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
+              ),
+            };
           }
           if (weeks.length === 0) {
-            throw nodeError(child, `You need to specify a week before a day`);
+            return {
+              success: false,
+              error: nodeError(
+                child,
+                `You need to specify a week before a day`,
+              ),
+            };
           }
           const dayName = child.source.replace(/^#+/, "").trim();
           weeks[weeks.length - 1].days.push({
@@ -1479,10 +1491,13 @@ export function evaluate(
             mode === IPlannerExerciseEvaluatorMode.FULL &&
             (weeks.at(-1)?.days ?? []).length === 0
           ) {
-            throw nodeError(
-              child,
-              `You should first define a week and a day before listing exercises.`,
-            );
+            return {
+              success: false,
+              error: nodeError(
+                child,
+                `You should first define a week and a day before listing exercises.`,
+              ),
+            };
           }
           if (weeks.length === 0) {
             weeks.push({
@@ -1527,10 +1542,13 @@ export function evaluate(
           break;
         }
         default:
-          throw nodeError(
-            child,
-            `Unexpected node type ${child.node.type.name}`,
-          );
+          return {
+            success: false,
+            error: nodeError(
+              child,
+              `Unexpected node type ${child.node.type.name}`,
+            ),
+          };
       }
     }
     return { data: weeks, success: true };
