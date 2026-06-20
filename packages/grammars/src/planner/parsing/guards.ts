@@ -4,7 +4,11 @@ import {
   SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { type QueryOptions, tryQueryChildren } from "@/utils/grammars.ts";
+import {
+  type QueryOptions,
+  type TQueryResult,
+  tryQueryChildren,
+} from "@/utils/grammars.ts";
 
 type IdMap_Plan = typeof planTerms;
 
@@ -168,12 +172,30 @@ export function plannerError(
 }
 
 // @todo extract to a "queries" module for plan nodes? Or call this guards-and-queries
-export function* tryQueryPlanNodeChildren<TTypes extends NodeNames_Plan>(
+export function* tryQueryPlanNodeChildren<
+  TOptions extends QueryOptions<NodeNames_Plan>,
+>(
   node: TypedPlanNode<NodeNames_Plan>,
-  options?: QueryOptions<TTypes>,
-): Generator<TypedPlanNode<TTypes> | SourcedSyntaxError> {
+  options?: TOptions,
+): Generator<
+  TQueryResult<
+    TypedPlanNode<
+      TOptions["ofType"] extends NodeNames_Plan
+        ? TOptions["ofType"]
+        : NodeNames_Plan
+    >,
+    TOptions
+  >
+> {
   yield* tryQueryChildren(node, options) as Generator<
-    TypedPlanNode<TTypes> | SourcedSyntaxError
+    TQueryResult<
+      TypedPlanNode<
+        TOptions["ofType"] extends NodeNames_Plan
+          ? TOptions["ofType"]
+          : NodeNames_Plan
+      >,
+      TOptions
+    >
   >;
 }
 
