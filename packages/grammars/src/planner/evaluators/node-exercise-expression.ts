@@ -29,6 +29,7 @@ import type {
   IProgramState,
   IRepRange,
   IScriptFunctions,
+  NodeResult,
 } from "@/common-types.ts";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 //#region Forbidden imports - these imports come from higher layers or dead imports, so they should be extracted somewhere else more common to avoid circular dependencies
@@ -77,7 +78,7 @@ export function evaluate(
   exercises: IAllCustomExercises,
   exerciseIndex: number,
   consumeDescriptions: () => { value: string; isCurrent: boolean }[],
-) {
+): NodeResult<IPlannerProgramExercise> {
   const nameNode = child.getChild(PlannerNodeName.ExerciseName);
   if (nameNode == null) {
     return assert("ExerciseName");
@@ -251,7 +252,7 @@ export function evaluate(
         ?.getPointer(),
     },
   };
-  return plannerExercise;
+  return { success: true, data: plannerExercise };
 }
 
 function PlannerProgramExercise_shortNameFromFullName(

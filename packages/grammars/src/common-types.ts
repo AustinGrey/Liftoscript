@@ -14,6 +14,8 @@ import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { z } from "zod";
 import { TMuscle, TScreenMuscle } from "@/human-body";
 import { type IExerciseType } from "@/exercises";
+import type { IEither } from "@/utils/types.ts";
+import type { SourcedSyntaxError } from "@/utils/lezer.ts";
 
 export interface IScriptFnContext {
   prints: Quantity[][];
@@ -229,3 +231,8 @@ export interface IRepRange {
   isAmrap: boolean;
   isQuickAddSet: boolean;
 }
+
+/**
+ * When a function is dealing with a node, it should return this kind of result instead of throwing due to syntax errors.
+ */
+export type NodeResult<T> = IEither<T, SourcedSyntaxError>;

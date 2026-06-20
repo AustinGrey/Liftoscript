@@ -42,6 +42,7 @@ import {
   type IScriptFnContext,
   type IScriptFunctions,
   type ISet,
+  type NodeResult,
   TProgramState,
   TSet,
 } from "@/common-types.ts";
@@ -1197,20 +1198,6 @@ export type IPlannerEvalResult = IEither<
   IPlannerProgramExercise[],
   SourcedSyntaxError
 >;
-type IPlannerEvalFullResult = IEither<
-  IPlannerExerciseEvaluatorWeek[],
-  SourcedSyntaxError
->;
-
-function assert(name: string): never {
-  throw new SourcedSyntaxError(
-    `Missing required nodes for ${name}, this should never happen`,
-    0,
-    0,
-    0,
-    1,
-  );
-}
 
 interface IPlannerExerciseEvaluatorWeek {
   name: string;
@@ -1315,67 +1302,53 @@ export function getWeight(
   }
 }
 
-export function getOrder(expr: SourcedSyntaxNode): number {
-  if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-    const repeatNode = expr.getChild(PlannerNodeName.Repeat);
-    if (repeatNode == null) {
-      return 0;
-    }
-    for (const childNode of queryChildren(repeatNode)) {
-      if (childNode.type.name === PlannerNodeName.Rep) {
-        return parseInt(getNodeSourceEscapedWhiteSpace(childNode), 10);
-      }
-    }
+export function getOrder(expr: PlanNodes.ExerciseExpression): number {
+  const repeatNode = expr.getChild(PlannerNodeName.Repeat);
+  if (repeatNode == null) {
     return 0;
-  } else {
-    assert(PlannerNodeName.ExerciseExpression);
   }
+  for (const childNode of queryChildren(repeatNode)) {
+    if (childNode.type.name === PlannerNodeName.Rep) {
+      return parseInt(getNodeSourceEscapedWhiteSpace(childNode), 10);
+    }
+  }
+  return 0;
 }
 
-export function getRepeat(expr: SourcedSyntaxNode): number[] {
-  if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-    const repeatNode = expr.getChild(PlannerNodeName.Repeat);
-    if (repeatNode == null) {
-      return [];
-    }
-    const result: Set<number> = new Set();
-    for (const childNode of queryChildren(repeatNode)) {
-      if (childNode.type.name === PlannerNodeName.RepRange) {
-        const [from, to] = queryChildren(childNode, { atLeast: 2 }).map((n) =>
-          parseInt(getNodeSourceEscapedWhiteSpace(n), 10),
-        );
-        for (let i = from; i <= to; i += 1) {
-          result.add(i);
-        }
-        break;
-      }
-    }
-    return Array.from(result).sort((a, b) => a - b);
-  } else {
-    assert(PlannerNodeName.ExerciseExpression);
+export function getRepeat(expr: PlanNodes.ExerciseExpression): number[] {
+  const repeatNode = expr.getChild(PlannerNodeName.Repeat);
+  if (repeatNode == null) {
+    return [];
   }
+  const result: Set<number> = new Set();
+  for (const childNode of queryChildren(repeatNode)) {
+    if (childNode.type.name === PlannerNodeName.RepRange) {
+      const [from, to] = queryChildren(childNode, { atLeast: 2 }).map((n) =>
+        parseInt(getNodeSourceEscapedWhiteSpace(n), 10),
+      );
+      for (let i = from; i <= to; i += 1) {
+        result.add(i);
+      }
+      break;
+    }
+  }
+  return Array.from(result).sort((a, b) => a - b);
 }
 
-export function getIsNotUsed(expr: SourcedSyntaxNode): boolean {
-  if (expr.type.name === PlannerNodeName.ExerciseExpression) {
-    const sections = expr.getChildren(PlannerNodeName.ExerciseSection);
-    for (const section of sections) {
-      const properties = section.getChildren(PlannerNodeName.ExerciseProperty);
-      for (const property of properties) {
-        const nameNode = property.getChild(
-          PlannerNodeName.ExercisePropertyName,
-        );
-        const name = nameNode ? nameNode.source : undefined;
-        const valueNode = property.getChild(PlannerNodeName.None);
-        if (name === "used" && valueNode != null) {
-          return true;
-        }
+export function getIsNotUsed(expr: PlanNodes.ExerciseExpression): boolean {
+  const sections = expr.getChildren(PlannerNodeName.ExerciseSection);
+  for (const section of sections) {
+    const properties = section.getChildren(PlannerNodeName.ExerciseProperty);
+    for (const property of properties) {
+      const nameNode = property.getChild(PlannerNodeName.ExercisePropertyName);
+      const name = nameNode ? nameNode.source : undefined;
+      const valueNode = property.getChild(PlannerNodeName.None);
+      if (name === "used" && valueNode != null) {
+        return true;
       }
     }
-    return false;
-  } else {
-    assert(PlannerNodeName.ExerciseSection);
   }
+  return false;
 }
 
 export function errorPlannerSyntax(
@@ -1399,7 +1372,7 @@ export function evaluate(
   settings: ISettings,
   mode: IPlannerExerciseEvaluatorMode,
   dayData: IDayData | undefined,
-): IPlannerEvalFullResult {
+): NodeResult<IPlannerExerciseEvaluatorWeek[]> {
   dayData ??= { day: 1, week: 1, dayInWeek: 1 };
   try {
     parse(programNode);
@@ -1506,7 +1479,7 @@ export function evaluate(
               days: [{ name: "Day 1", line: 1, exercises: [] }],
             });
           }
-          const plannerExercise = evaluateExerciseExpression(
+          const result = evaluateExerciseExpression(
             child as PlanNodes.ExerciseExpression,
             frozenDayData,
             () => Progress_createEmptyScriptBindings(frozenDayData, settings),
@@ -1535,6 +1508,10 @@ export function evaluate(
               return descriptions;
             },
           );
+          if (!result.success) {
+            return result;
+          }
+          const plannerExercise = result.data;
           weeks.at(-1)?.days.at(-1)?.exercises.push(plannerExercise);
           if (!plannerExercise.notused) {
             exerciseIndex += 1;
@@ -2905,14 +2882,18 @@ function topLineMap(
   let exerciseIndex = 0;
   for (const child of queryChildren(programNode)) {
     if (child.type.name === PlannerNodeName.ExerciseExpression) {
+      const exerciseExpression = asPlanNodeOfTypeOrThrow(
+        "ExerciseExpression",
+        child,
+      );
       ongoingDescriptions = false;
       const nameNode = child.getChild(PlannerNodeName.ExerciseName)!;
       const fullName = getNodeSourceEscapedWhiteSpace(nameNode);
       const key = PlannerKey_fromFullName(fullName, exercises);
-      const repeat = getRepeat(child);
+      const repeat = getRepeat(exerciseExpression);
       const repeatRanges = getRepeatRanges(repeat);
-      const order = getOrder(child);
-      const isUsed = !getIsNotUsed(child);
+      const order = getOrder(exerciseExpression);
+      const isUsed = !getIsNotUsed(exerciseExpression);
       const sectionsNode = child.getChildren(PlannerNodeName.ExerciseSection);
       const sections = sectionsNode
         .map((section) => section.source.trim())
