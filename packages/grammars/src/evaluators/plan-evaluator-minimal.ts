@@ -2745,32 +2745,31 @@ export function compactPlannerProgram(
         switch (line.type) {
           case "exercise":
             ongoingDescriptions = false;
-            if (!line.used) {
-              if (line.descriptions && line.descriptions.length > 0) {
-                strParts.push(
-                  `${line.descriptions.filter((d) => d.trim()).join("\n\n")}`,
-                );
+            if (line.used) break;
+            strParts.push(
+              ...line.descriptions
+                .filter((d) => d.trim())
+                .map(
+                  (d, index, array) =>
+                    d + (index !== array.length - 1 ? "\n" : ""),
+                ),
+            );
+            let repeatStr = "";
+            if (line.order !== 0 || line.repeatRanges.length > 0) {
+              const repeatParts = [];
+              if (line.order !== 0) {
+                repeatParts.push(line.order);
               }
-              let repeatStr = "";
-              if (
-                (line.order != null && line.order !== 0) ||
-                (line.repeatRanges && line.repeatRanges.length > 0)
-              ) {
-                const repeatParts = [];
-                if (line.order != null && line.order !== 0) {
-                  repeatParts.push(line.order);
-                }
-                if (line.repeatRanges && line.repeatRanges.length > 0) {
-                  repeatParts.push(line.repeatRanges.join(","));
-                }
-                repeatStr = `[${repeatParts.join(",")}]`;
+              if (line.repeatRanges.length > 0) {
+                repeatParts.push(...line.repeatRanges);
               }
-              strParts.push(
-                [`${line.fullName}${repeatStr}`, line.sections]
-                  .filter((r) => r)
-                  .join(" / "),
-              );
+              repeatStr = `[${repeatParts.join(",")}]`;
             }
+            strParts.push(
+              [`${line.fullName}${repeatStr}`, line.sections]
+                .filter((r) => r)
+                .join(" / "),
+            );
             break;
           case "description":
             ongoingDescriptions = true;
