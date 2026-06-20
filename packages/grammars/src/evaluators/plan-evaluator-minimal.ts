@@ -2739,7 +2739,7 @@ export function compactPlannerProgram(
     for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
       const day = week[dayIndex];
       const programDay = programWeek.days[dayIndex];
-      let str = "";
+      const strParts: string[] = [];
       let ongoingDescriptions = false;
       for (const line of day) {
         switch (line.type) {
@@ -2747,7 +2747,9 @@ export function compactPlannerProgram(
             ongoingDescriptions = false;
             if (!line.used) {
               if (line.descriptions && line.descriptions.length > 0) {
-                str += `${line.descriptions.filter((d) => d.trim()).join("\n\n")}\n`;
+                strParts.push(
+                  `${line.descriptions.filter((d) => d.trim()).join("\n\n")}`,
+                );
               }
               let repeatStr = "";
               if (
@@ -2763,10 +2765,11 @@ export function compactPlannerProgram(
                 }
                 repeatStr = `[${repeatParts.join(",")}]`;
               }
-              str +=
+              strParts.push(
                 [`${line.fullName}${repeatStr}`, line.sections]
                   .filter((r) => r)
-                  .join(" / ") + `\n`;
+                  .join(" / "),
+              );
             }
             break;
           case "description":
@@ -2774,17 +2777,17 @@ export function compactPlannerProgram(
             break;
           case "empty":
             if (!ongoingDescriptions) {
-              str += line.value + "\n";
+              strParts.push(line.value);
             }
             break;
           case "comment":
-            str += line.value + "\n";
+            strParts.push(line.value);
             break;
           default:
             line satisfies never;
         }
       }
-      programDay.exerciseText = str.trim();
+      programDay.exerciseText = strParts.join("\n");
     }
   }
 
