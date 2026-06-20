@@ -1182,20 +1182,27 @@ export interface IProgramExerciseUpdate {
 //#endregion
 
 //#region Planner Exercise Evaluator
-export interface IPlannerTopLineItem {
-  type: "exercise" | "comment" | "description" | "empty";
-  value: string;
-  exerciseIndex?: number;
-  notused?: boolean;
-  order?: number;
-  fullName?: string;
-  repeat?: number[];
-  repeatRanges?: string[];
-  descriptions?: string[];
-  sections?: string;
-  sectionsToReuse?: string;
-  used?: boolean;
-}
+export type IPlannerTopLineItem =
+  | {
+      type: "exercise";
+      value: string;
+      exerciseIndex: number;
+      order: number;
+      fullName: string;
+      repeatRanges: string[];
+      descriptions: string[];
+      sections: string;
+      sectionsToReuse: string;
+      // @todo does having this be nullish mean something? Or was that just lazy typing?
+      repeat?: number[];
+      // @todo having both used and unused is madness.
+      notused?: boolean;
+      used?: boolean;
+    }
+  | {
+      type: "comment" | "description" | "empty";
+      value: string;
+    };
 
 export type IPlannerEvalResult = IEither<
   IPlannerProgramExercise[],
@@ -2216,7 +2223,6 @@ interface IPlannerToProgramConvertOpts {
     fromIndex: number;
     toIndex: number;
   }[];
-  add?: { dayData: IDayData; index: number; fullName: string }[];
 }
 
 function getUpdate(
@@ -2433,11 +2439,8 @@ function getDereuseDecisions(
 
 function reorderGroupedTopLine(
   groupedTopLine: IPlannerTopLineItem[][][][],
-  reorders: IPlannerToProgramConvertOpts["reorder"],
+  reorders: Exclude<IPlannerToProgramConvertOpts["reorder"], undefined>,
 ): IPlannerTopLineItem[][][][] {
-  if (!reorders) {
-    return groupedTopLine;
-  }
   for (const reorder of reorders) {
     const groupedDay =
       groupedTopLine[reorder.dayData.week - 1]?.[reorder.dayData.dayInWeek - 1];
@@ -2498,29 +2501,6 @@ function groupWarmupsSets(
     lastKey = key;
   }
   return groups;
-}
-
-function addGroupedTopLine(
-  groupedTopLine: IPlannerTopLineItem[][][][],
-  adds: IPlannerToProgramConvertOpts["add"],
-  settings: ISettings,
-): IPlannerTopLineItem[][][][] {
-  if (!adds) {
-    return groupedTopLine;
-  }
-  for (const add of adds) {
-    const groupedDay =
-      groupedTopLine[add.dayData.week - 1]?.[add.dayData.dayInWeek - 1];
-    if (groupedDay) {
-      groupedDay.splice(add.index, 0, [
-        {
-          type: "exercise",
-          value: PlannerKey_fromFullName(add.fullName, settings.exercises),
-        },
-      ]);
-    }
-  }
-  return groupedTopLine;
 }
 
 function getCurrentDescriptionExercise(
@@ -2689,25 +2669,27 @@ export function compactPlannerProgram(
             repeatWeekIndex += 1
           ) {
             const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
-            const repeatedExercises = (repeatDay || []).filter((e) => {
-              if (
-                e.type !== "exercise" ||
-                e.value !== line.value ||
-                e.sectionsToReuse !== line.sectionsToReuse ||
-                e.exerciseIndex !== line.exerciseIndex ||
-                !ObjectUtils_isEqual(
-                  e.descriptions || [],
-                  line.descriptions || [],
-                )
-              ) {
-                return false;
-              }
-              const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
-              const oldExercise = oldDay.success
-                ? oldDay.data.find((ex) => ex.key === e.value)
-                : undefined;
-              return oldExercise?.repeating?.includes(weekIndex + 1);
-            });
+            const repeatedExercises = (repeatDay || []).filter(
+              (e): e is typeof e & { type: "exercise" } => {
+                if (
+                  e.type !== "exercise" ||
+                  e.value !== line.value ||
+                  e.sectionsToReuse !== line.sectionsToReuse ||
+                  e.exerciseIndex !== line.exerciseIndex ||
+                  !ObjectUtils_isEqual(
+                    e.descriptions || [],
+                    line.descriptions || [],
+                  )
+                ) {
+                  return false;
+                }
+                const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
+                const oldExercise = oldDay.success
+                  ? oldDay.data.find((ex) => ex.key === e.value)
+                  : undefined;
+                return !!oldExercise?.repeating?.includes(weekIndex + 1);
+              },
+            );
             for (const e of repeatedExercises) {
               e.used = true;
             }
@@ -2810,7 +2792,7 @@ function topLineItems(
   for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
     const week = mapping[weekIndex];
     for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
+      const day = week[dayIndex].filter((item) => item.type === "exercise");
       for (const exercise of day) {
         for (const r of exercise.repeat || []) {
           const reuseDay = mapping[r - 1]?.[dayIndex];
@@ -2893,7 +2875,7 @@ function topLineMap(
         const sectionNodes = tryQueryPlanNodeChildren(exerciseExpression, {
           ofType: PlannerNodeName.ExerciseSection,
         }).toArray();
-        const item: IPlannerTopLineItem = {
+        const item: IPlannerTopLineItem & { type: "exercise" } = {
           type: "exercise",
           fullName,
           order: getOrder(exerciseExpression),
@@ -3026,12 +3008,7 @@ export function convertToPlanner(
   }
   const topLineMap = topLineItems(program.planner, settings.exercises);
   let groupedTopLineMap = groupTopLines(topLineMap);
-  groupedTopLineMap = opts.reorder
-    ? reorderGroupedTopLine(groupedTopLineMap, opts.reorder)
-    : groupedTopLineMap;
-  groupedTopLineMap = opts.add
-    ? addGroupedTopLine(groupedTopLineMap, opts.add, settings)
-    : groupedTopLineMap;
+  if (opts.reorder) reorderGroupedTopLine(groupedTopLineMap, opts.reorder);
   let dayIndex = 0;
   const addedProgressMap: Record<string, boolean> = {};
   const addedUpdateMap: Record<string, boolean> = {};
@@ -3397,6 +3374,8 @@ export function convertToPlanner(
               exerciseTextArr.push(plannerExercise);
               break;
             }
+            default:
+              line satisfies never;
           }
         }
         if (exerciseTextArr.length > 0) {
