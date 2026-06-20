@@ -4,10 +4,10 @@
 import {
   IterMode,
   NodeProp,
+  NodeType,
   type SyntaxNode,
   Tree,
   TreeCursor,
-  NodeType,
 } from "@lezer/common";
 import { LRParser } from "@lezer/lr";
 
@@ -274,4 +274,19 @@ export function nodeError(
     from,
     to,
   );
+}
+
+/**
+ * @returns The first found node of the provided node and all it's descendants which is an error node, undefined if none found
+ * @param expr The node to look into
+ */
+export function findErrorNode(
+  expr: SourcedSyntaxNode,
+): SourcedSyntaxNode | undefined {
+  const cursor = expr.cursor();
+  do {
+    if (cursor.node.type.isError) {
+      return cursor.node;
+    }
+  } while (cursor.next());
 }

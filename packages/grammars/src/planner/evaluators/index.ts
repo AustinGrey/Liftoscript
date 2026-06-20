@@ -2,6 +2,8 @@ import {
   parseBound,
   SourcedSyntaxError,
   type SourcedSyntaxNode,
+  findErrorNode,
+  nodeError,
 } from "@/utils/lezer.ts";
 import {
   isEqualAfterTransform,
@@ -36,7 +38,6 @@ import {
   IProgramExerciseUpdateType,
   type IWeightChange,
   makePlannerKey,
-  parse,
   PlannerKey_fromFullName,
   PlannerProgramExercise_evaluateSetVariations,
   PlannerProgramExercise_getState,
@@ -53,6 +54,7 @@ import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
 import { toKey } from "@/exercises";
+import { nodeFailure } from "@/common-types.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -1084,7 +1086,10 @@ function evaluatePreservingSource(
   if (programNode.type.name !== PlannerNodeName.Program) {
     throw new Error(`Unexpected node type ${programNode.type.name}`);
   }
-  parse(programNode);
+  const firstError = findErrorNode(programNode);
+  if (firstError) {
+    throw nodeError(firstError);
+  }
 
   let weeksFullText: ITextWeek[] = [];
   let ongoingLinesFullText: INonExerciseFullTextLine[] = [];

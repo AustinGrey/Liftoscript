@@ -42,6 +42,7 @@ import {
   type IScriptFnContext,
   type IScriptFunctions,
   type ISet,
+  nodeFailure,
   type NodeResult,
   TProgramState,
   TSet,
@@ -87,6 +88,7 @@ import {
   parseBound,
   SourcedSyntaxError,
   type SourcedSyntaxNode,
+  findErrorNode,
 } from "@/utils/lezer.ts";
 import { omitBy } from "es-toolkit";
 import type { Tagged } from "type-fest";
@@ -1351,22 +1353,6 @@ export function getIsNotUsed(expr: PlanNodes.ExerciseExpression): boolean {
   return false;
 }
 
-export function errorPlannerSyntax(
-  message: string,
-  node: SourcedSyntaxNode,
-): never {
-  throw nodeError(node, message);
-}
-
-export function parse(expr: SourcedSyntaxNode): void {
-  const cursor = expr.cursor();
-  do {
-    if (cursor.node.type.isError) {
-      throw nodeError(cursor.node);
-    }
-  } while (cursor.next());
-}
-
 export function evaluate(
   programNode: SourcedSyntaxNode,
   settings: ISettings,
@@ -1375,7 +1361,10 @@ export function evaluate(
 ): NodeResult<IPlannerExerciseEvaluatorWeek[]> {
   dayData ??= { day: 1, week: 1, dayInWeek: 1 };
   try {
-    parse(programNode);
+    const firstError = findErrorNode(programNode);
+    if (firstError) {
+      return nodeFailure(nodeError(firstError));
+    }
     if (programNode.type.name !== PlannerNodeName.Program) {
       throw nodeError(
         programNode,

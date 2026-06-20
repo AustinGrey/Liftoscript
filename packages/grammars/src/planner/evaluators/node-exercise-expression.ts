@@ -43,7 +43,6 @@ import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 //#region Forbidden imports - these imports come from higher layers or dead imports, so they should be extracted somewhere else more common to avoid circular dependencies
 import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import {
-  errorPlannerSyntax,
   extractNameParts,
   fnArgsToStateVars,
   getIsNotUsed,
@@ -352,9 +351,7 @@ function evaluateSet(expr: PlanNodes.ExerciseSet): IPlannerProgramExerciseSet {
 function evaluateId(expr: PlanNodes.ExerciseProperty): NodeResult<number[]> {
   const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
   if (valueNode == null) {
-    return nodeFailure(
-      errorPlannerSyntax(`Missing value for the property 'id'`, expr),
-    );
+    return nodeFailure(nodeError(expr, `Missing value for the property 'id'`));
   }
   const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
   if (fnNameNode == null) {
