@@ -9,7 +9,6 @@ import {
   type IAllCustomExercises,
 } from "@/exercises";
 import {
-  isSourcedSyntaxError,
   nodeError,
   parseBound,
   SourcedSyntaxError,
@@ -64,7 +63,6 @@ import {
   PlannerKey_fromFullName,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
-import { splitBy } from "@/utils/iterables.ts";
 //#endregion
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
@@ -639,15 +637,11 @@ function evaluateSection(
     ofType: PlannerNodeName.ExerciseSets,
   });
   if (setsNode != null) {
-    const [errors, sets] = splitBy(
-      tryQueryPlanNodeChildren(setsNode, {
+    const sets = [
+      ...tryQueryPlanNodeChildren(setsNode, {
         ofType: PlannerNodeName.ExerciseSet,
       }),
-      isSourcedSyntaxError,
-    );
-    if (errors.length > 0) {
-      nodeFailure(errors[0]);
-    }
+    ];
     if (sets.length > 0) {
       return nodeResult({
         type: "sets",
@@ -720,15 +714,11 @@ function evaluateWarmup(
     ofType: PlannerNodeName.WarmupExerciseSets,
   });
   if (setsNode != null) {
-    const [errors, sets] = splitBy(
-      tryQueryPlanNodeChildren(setsNode, {
+    const sets = [
+      ...tryQueryPlanNodeChildren(setsNode, {
         ofType: PlannerNodeName.WarmupExerciseSet,
       }),
-      isSourcedSyntaxError,
-    );
-    if (errors.length > 0) {
-      return nodeFailure(errors[0]);
-    }
+    ];
     if (sets.length > 0) {
       return nodeResult(sets.map((set) => evaluateWarmupSet(set)));
     }
