@@ -63,6 +63,7 @@ import {
   PlannerKey_fromFullName,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+import { splitBy } from "@/utils/iterables.ts";
 //#endregion
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
@@ -278,7 +279,9 @@ function PlannerProgramExercise_shortNameFromFullName(
   return `${name}${equipment ? `, ${equipmentName(equipment)}` : ""}`;
 }
 
-function evaluateSet(expr: PlanNodes.ExerciseSet): IPlannerProgramExerciseSet {
+function evaluateSet(
+  expr: PlanNodes.ExerciseSet,
+): NodeResult<IPlannerProgramExerciseSet> {
   const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
   const setParts = setPartNodes
     .map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
@@ -332,9 +335,11 @@ function evaluateSet(expr: PlanNodes.ExerciseSet): IPlannerProgramExerciseSet {
         .join(" ")
     : undefined;
   if (labelNode && label && label.length > 8) {
-    throw nodeError(labelNode, "Label length should be 8 chars max");
+    return nodeFailure(
+      nodeError(labelNode, "Label length should be 8 chars max"),
+    );
   }
-  return {
+  return nodeResult({
     repRange,
     timer,
     logRpe,
@@ -343,7 +348,7 @@ function evaluateSet(expr: PlanNodes.ExerciseSet): IPlannerProgramExerciseSet {
     percentage,
     label,
     askWeight,
-  };
+  });
 }
 
 function evaluateId(expr: PlanNodes.ExerciseProperty): NodeResult<number[]> {
@@ -357,15 +362,16 @@ function evaluateId(expr: PlanNodes.ExerciseProperty): NodeResult<number[]> {
   }
   const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
   if (["tags"].indexOf(fnName) === -1) {
-    throw nodeError(fnNameNode, `There's no such id type - '${fnName}'`);
+    return nodeFailure(
+      nodeError(fnNameNode, `There's no such id type - '${fnName}'`),
+    );
   }
   const fnArgs = valueNode
     .getChildren(PlannerNodeName.FunctionArgument)
     .map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
   if (fnName === "tags" && fnArgs.length === 0) {
-    throw nodeError(
-      fnNameNode,
-      `You should provide the list of numbers in "tags"`,
+    return nodeFailure(
+      nodeError(fnNameNode, `You should provide the list of numbers in "tags"`),
     );
   }
   return nodeResult(
@@ -643,9 +649,18 @@ function evaluateSection(
       }),
     ];
     if (sets.length > 0) {
+      const [successes, failures] = splitBy(
+        sets.map((set) => evaluateSet(set)),
+        (r) => r.success,
+      );
+
+      if (failures.length > 0) {
+        return failures[0];
+      }
+
       return nodeResult({
         type: "sets",
-        data: sets.map((set) => evaluateSet(set)),
+        data: successes.map((r) => r.data),
         isCurrent: setsNode.getChild(PlannerNodeName.CurrentVariation) != null,
       });
     }

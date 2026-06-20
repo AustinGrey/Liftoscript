@@ -2878,6 +2878,7 @@ function topLineMap(
     return descriptions;
   }
   let exerciseIndex = 0;
+
   for (const child of tryQueryPlanNodeChildren(programNode)) {
     switch (child.type.name) {
       case PlannerNodeName.ExerciseExpression:
