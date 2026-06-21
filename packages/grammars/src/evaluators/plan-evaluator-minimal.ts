@@ -174,25 +174,23 @@ function Program_nextHistoryEntry(
     }),
   );
 
-  const entry: IHistoryEntry = {
-    id: [programExercise.label, toKey(programExercise.exerciseType)]
-      .filter(definedOnly)
-      .join("_"),
-    index,
-    exercise: programExercise.exerciseType,
-    programExerciseId: programExercise.key,
-    sets,
-    superset: programExercise.superset?.name,
-    warmupSets: getProgramWarmupSets(
-      programExercise.exerciseType,
-      sets.at(0)?.weight,
-      settings,
-      PlannerProgramExercise_programWarmups(programExercise, settings),
-    ),
-  };
-
   return Progress_runUpdateScriptForEntry(
-    entry,
+    {
+      id: [programExercise.label, toKey(programExercise.exerciseType)]
+        .filter(definedOnly)
+        .join("_"),
+      index,
+      exercise: programExercise.exerciseType,
+      programExerciseId: programExercise.key,
+      sets,
+      superset: programExercise.superset?.name,
+      warmupSets: getProgramWarmupSets(
+        programExercise.exerciseType,
+        sets.at(0)?.weight,
+        settings,
+        PlannerProgramExercise_programWarmups(programExercise, settings),
+      ),
+    },
     dayData,
     programExercise,
     program.states,
@@ -222,7 +220,6 @@ export function Program_nextHistoryRecordFromEvaluated(
     : [];
   const week = program.weeks[dayData.week - 1];
   const isMultiweek = program.weeks.length > 1 && week != null;
-  const dayName = `${isMultiweek ? `${week.name} - ` : ""}${dayData.dayObj?.name}`;
   const now = Date.now();
 
   return {
@@ -234,7 +231,7 @@ export function Program_nextHistoryRecordFromEvaluated(
     day,
     week: dayData.week,
     dayInWeek: dayData.dayInWeek,
-    dayName,
+    dayName: `${isMultiweek ? `${week.name} - ` : ""}${dayData.dayObj?.name}`,
     startTime: now,
     updatedAt: now,
     entries: CollectionUtils_sortBy(dayExercises, "order").map((exercise, i) =>
@@ -263,8 +260,7 @@ function Program_runFinishDayScript(
   const state = PlannerProgramExercise_getState(programExercise);
   const setVariationIndex =
     PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
-  const descriptionIndex =
-    PlannerProgramExercise_currentDescriptionIndex(programExercise);
+
   const bindings = Progress_createScriptBindings(
     dayData,
     entry,
@@ -277,25 +273,21 @@ function Program_runFinishDayScript(
     ),
     undefined,
     setVariationIndex + 1,
-    descriptionIndex + 1,
+    PlannerProgramExercise_currentDescriptionIndex(programExercise) + 1,
   );
-  const fns = Progress_createScriptFunctions(settings);
 
   const otherStates = structuredClone(program.states);
-
-  const script =
-    PlannerProgramExercise_getProgressScript(programExercise) || "";
   let updates: ILiftoscriptEvaluatorUpdate[];
   let newState: IProgramState;
   try {
     const result = run(
-      script,
+      PlannerProgramExercise_getProgressScript(programExercise) || "",
       {
         ...state,
         ...userPromptedStateVars,
       },
       bindings,
-      fns,
+      Progress_createScriptFunctions(settings),
       {
         exerciseType: programExercise.exerciseType,
         unit: settings.units,
