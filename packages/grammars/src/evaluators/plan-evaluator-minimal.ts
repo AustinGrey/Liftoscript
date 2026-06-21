@@ -338,9 +338,11 @@ function Program_runFinishDayScript(
 function Program_getProgramExerciseForKeyAndDay(
   program: IEvaluatedProgram,
   day: number,
-  key: string,
+  key?: string,
 ): IPlannerProgramExerciseWithType | undefined {
-  const programDay = program ? getDayData(program, day).dayObj : undefined;
+  if (!key) return undefined;
+
+  const programDay = getDayData(program, day).dayObj;
   const dayExercises = programDay
     ? Program_getProgramDayUsedExercises(programDay)
     : [];
@@ -384,14 +386,11 @@ export function Program_runAllFinishDayScripts(
     ) {
       continue;
     }
-    const programExercise =
-      program && entry.programExerciseId
-        ? Program_getProgramExerciseForKeyAndDay(
-            newEvaluatedProgram,
-            dayData.day,
-            entry.programExerciseId,
-          )
-        : undefined;
+    const programExercise = Program_getProgramExerciseForKeyAndDay(
+      newEvaluatedProgram,
+      dayData.day,
+      entry.programExerciseId,
+    );
     if (!programExercise) {
       continue;
     }
