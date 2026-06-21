@@ -1921,21 +1921,21 @@ function Progress_createScriptBindings(
     bindings.timers.push(set.timer);
     bindings.isCompleted.push(set.isCompleted ? 1 : 0);
   }
-  bindings.w = bindings.weights;
-  bindings.r = bindings.reps;
-  bindings.cr = bindings.completedReps;
-  bindings.cw = bindings.completedWeights;
-  bindings.mr = bindings.minReps;
-  bindings.ns = entry.sets.length;
-  bindings.programNumberOfSets = programNumberOfSets;
-  bindings.numberOfSets = entry.sets.length;
-  bindings.completedNumberOfSets = entry.sets.filter(
-    (s) => s.isCompleted,
-  ).length;
-  bindings.setIndex = setIndex ?? 1;
-  bindings.setVariationIndex = setVariationIndex ?? 1;
-  bindings.descriptionIndex = descriptionIndex ?? 1;
-  bindings.bodyweight = bodyweight ?? build(0, settings.units);
+  Object.assign(bindings, {
+    w: bindings.weights,
+    r: bindings.reps,
+    cr: bindings.completedReps,
+    cw: bindings.completedWeights,
+    mr: bindings.minReps,
+    ns: entry.sets.length,
+    programNumberOfSets: programNumberOfSets,
+    numberOfSets: entry.sets.length,
+    completedNumberOfSets: entry.sets.filter((s) => s.isCompleted).length,
+    setIndex: setIndex ?? 1,
+    setVariationIndex: setVariationIndex ?? 1,
+    descriptionIndex: descriptionIndex ?? 1,
+    bodyweight: bodyweight ?? build(0, settings.units),
+  });
   return bindings;
 }
 
