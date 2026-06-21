@@ -344,23 +344,21 @@ function Program_getProgramExerciseForKeyAndDay(
   const dayExercises = programDay
     ? Program_getProgramDayUsedExercises(programDay)
     : [];
-  let programExercise = dayExercises.find((pe) => pe.key === key);
-  if (programExercise == null) {
-    const allExercises = program
-      ? getExercisesInProgram(program).filter(
-          (e): e is IPlannerProgramExerciseWithType =>
-            e.exerciseType !== undefined,
-        )
-      : [];
-    programExercise = allExercises.find((pe) => pe.key === key);
-    if (programExercise != null) {
-      programExercise = {
-        ...programExercise,
-        dayData: getDayData(program, day),
-      };
-    }
-  }
-  return programExercise;
+
+  const exerciseFoundInDay = dayExercises.find((pe) => pe.key === key);
+  if (exerciseFoundInDay) return exerciseFoundInDay;
+
+  const exerciseFoundInProgram = getExercisesInProgram(program)
+    .filter(
+      (e): e is IPlannerProgramExerciseWithType => e.exerciseType !== undefined,
+    )
+    .find((pe) => pe.key === key);
+  if (!exerciseFoundInProgram) return undefined;
+
+  return {
+    ...exerciseFoundInProgram,
+    dayData: getDayData(program, day),
+  };
 }
 
 type IExerciseData = OpenRecord<IExerciseDataValue>;
