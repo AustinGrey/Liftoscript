@@ -22,3 +22,16 @@ export function CollectionUtils_sortBy<
     (a, b) => (Number(a[key]) - Number(b[key])) * (isReverse ? -1 : 1),
   );
 }
+
+/**
+ * A typesafe version of findIndex
+ * @param arr the collection to search
+ * @param predicate the predicate to check
+ */
+export function tryFindIndex<T>(
+  arr: T[],
+  predicate: (value: T) => boolean,
+): number | undefined {
+  const result = arr.findIndex(predicate);
+  return result === -1 ? undefined : result;
+}
