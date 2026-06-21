@@ -1852,7 +1852,6 @@ export function Progress_createEmptyScriptBindings(
   settings: ISettings,
   exercise?: IExerciseType,
 ): IScriptBindings {
-  const rm1 = exercise ? getOrmOrStartingWeight(exercise, settings) : w`0lb`;
   return {
     day: dayData.day,
     week: dayData.week,
@@ -1884,7 +1883,7 @@ export function Progress_createEmptyScriptBindings(
     descriptionIndex: 1,
     bodyweight: build(0, settings.units),
     setIndex: 1,
-    rm1,
+    rm1: exercise ? getOrmOrStartingWeight(exercise, settings) : w`0lb`,
   };
 }
 
