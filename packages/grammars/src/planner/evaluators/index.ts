@@ -9,6 +9,7 @@ import {
   isEqualAfterTransform,
   ObjectUtils_isEqual,
   ObjectUtils_keys,
+  ObjectUtils_values,
 } from "@/utils/object.ts";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { IProgramMode } from "@/logic/evaluators/types.ts";
@@ -499,11 +500,11 @@ function forEachSiblingInstance(
   metadata: IPlannerEvalMetadata,
   cb: (other: IPlannerProgramExercise) => void,
 ): void {
-  const byKey = metadata.byExerciseWeekDay[exercise.key];
-  for (const weekKey of ObjectUtils_keys(byKey ?? {})) {
-    const weekEntry = byKey[weekKey];
-    for (const dayKey of ObjectUtils_keys(weekEntry)) {
-      cb(weekEntry[dayKey]);
+  for (const weekEntry of ObjectUtils_values(
+    metadata.byExerciseWeekDay[exercise.key],
+  )) {
+    for (const dayEntry of ObjectUtils_values(weekEntry)) {
+      cb(dayEntry);
     }
   }
 }

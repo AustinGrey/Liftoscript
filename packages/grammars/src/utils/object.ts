@@ -4,23 +4,26 @@ import { isEqual } from "es-toolkit";
  * Gets the well-typed keys of an object.
  * @param obj the object to get the keys of
  */
-export const ObjectUtils_keys = <T extends {}>(obj: T) =>
-  Object.keys(obj) as Array<keyof T>;
+export const ObjectUtils_keys = <T extends {}>(
+  obj: T | undefined,
+): (keyof T)[] => (obj ? (Object.keys(obj) as Array<keyof T>) : []);
 
 /**
- * @deprecated Use {@link Object.values} instead
  * @param obj the object to get the values of
  */
-export const ObjectUtils_values = <T extends {}>(obj: T): Array<T[keyof T]> =>
-  Object.values(obj);
+export const ObjectUtils_values = <T extends {}>(
+  obj: T | undefined,
+): Array<T[keyof T]> => (obj ? Object.values(obj) : []);
 
 /**
  * Get the entries of an object with well typed keys
  * @param obj
  * @constructor
  */
-export const ObjectUtils_entries = <T extends {}>(obj: T) =>
-  Object.entries(obj) as Array<[keyof T, T[keyof T]]>;
+export const ObjectUtils_entries = <T extends {}>(
+  obj: T | undefined,
+): [keyof T, T[keyof T]][] =>
+  obj ? (Object.entries(obj) as Array<[keyof T, T[keyof T]]>) : [];
 
 /**
  * @returns true if the two objects are equal, however it also will warn at compile time if B's type is not assignable to A -> which would likely make the return always false.
