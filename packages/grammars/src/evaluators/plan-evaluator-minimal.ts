@@ -1,7 +1,11 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import { CollectionUtils_sortBy, definedOnly } from "../utils/collection";
+import {
+  CollectionUtils_sortBy,
+  definedOnly,
+  tryFindIndex,
+} from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import {
   MathUtils_applyOp,
@@ -145,7 +149,7 @@ function Program_nextHistoryEntry(
   settings: ISettings,
 ): IHistoryEntry {
   const programSets = programExercise.evaluatedSetVariations.at(
-    PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise),
+    findIndexOfCurrentOrFirst(programExercise.evaluatedSetVariations),
   )?.sets;
   const sets = (programSets ?? []).map(
     (programSet, i): ISet => ({
@@ -258,8 +262,9 @@ function Program_runFinishDayScript(
   string
 > {
   const state = PlannerProgramExercise_getState(programExercise);
-  const setVariationIndex =
-    PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
+  const setVariationIndex = findIndexOfCurrentOrFirst(
+    programExercise.evaluatedSetVariations,
+  );
 
   const bindings = Progress_createScriptBindings(
     dayData,
@@ -273,7 +278,7 @@ function Program_runFinishDayScript(
     ),
     undefined,
     setVariationIndex + 1,
-    PlannerProgramExercise_currentDescriptionIndex(programExercise) + 1,
+    findIndexOfCurrentOrFirst(programExercise.descriptions.values) + 1,
   );
 
   const otherStates = structuredClone(program.states);
@@ -726,32 +731,28 @@ export function ProgramExercise_weightChanges(
 ): IWeightChange[] {
   const results: Record<string, IWeightChange> = {};
   forExerciseInEvaluatedWeeks(program.weeks, (exercise) => {
-    if (exercise.key === programExerciseKey) {
-      const currentVariationIndex =
-        PlannerProgramExercise_currentEvaluatedSetVariationIndex(exercise);
-      for (
-        let variationIndex = 0;
-        variationIndex < exercise.evaluatedSetVariations.length;
-        variationIndex += 1
-      ) {
-        const variation = exercise.evaluatedSetVariations[variationIndex];
-        for (
-          let setIndex = 0;
-          setIndex < variation.sets.length;
-          setIndex += 1
-        ) {
-          const set = variation.sets[setIndex];
-          if (set.weight) {
-            const key = print(set.weight);
-            results[key] = {
-              originalWeight: set.weight,
-              weight: set.weight,
-              current:
-                results[key]?.current ||
-                variationIndex + 1 === currentVariationIndex,
-            };
-          }
+    if (exercise.key !== programExerciseKey) {
+      return;
+    }
+    const currentVariationIndex = findIndexOfCurrentOrFirst(
+      exercise.evaluatedSetVariations,
+    );
+    for (const [
+      variationIndex,
+      variation,
+    ] of exercise.evaluatedSetVariations.entries()) {
+      for (const set of variation.sets) {
+        if (!set.weight) {
+          continue;
         }
+        const key = print(set.weight);
+        results[key] = {
+          originalWeight: set.weight,
+          weight: set.weight,
+          current:
+            results[key]?.current ||
+            variationIndex + 1 === currentVariationIndex,
+        };
       }
     }
   });
@@ -872,10 +873,9 @@ function ProgramExercise_applyVariables(
               if (value.op === "=") {
                 indexValue = value.value - 1;
               } else {
-                const currentSetVariationIndex =
-                  PlannerProgramExercise_currentEvaluatedSetVariationIndex(
-                    exercise,
-                  );
+                const currentSetVariationIndex = findIndexOfCurrentOrFirst(
+                  exercise.evaluatedSetVariations,
+                );
                 indexValue = applyOp(
                   undefined,
                   currentSetVariationIndex,
@@ -901,8 +901,9 @@ function ProgramExercise_applyVariables(
               if (value.op === "=") {
                 indexValue = value.value - 1;
               } else {
-                const currentDescriptionIndex =
-                  PlannerProgramExercise_currentDescriptionIndex(exercise);
+                const currentDescriptionIndex = findIndexOfCurrentOrFirst(
+                  exercise.descriptions.values,
+                );
                 indexValue = applyOp(
                   undefined,
                   currentDescriptionIndex,
@@ -1622,18 +1623,15 @@ function PlannerProgramExercise_sets(
   const reusedSets = exercise.reuse?.exercise
     ? exercise.reuse?.exercise?.setVariations[
         variationIndex ??
-          PlannerProgramExercise_currentSetVariationIndex(
-            exercise.reuse?.exercise,
-          )
+          findIndexOfCurrentOrFirst(exercise.reuse?.exercise.setVariations)
       ]?.sets
     : undefined;
   const reusedGlobals = exercise.reuse?.exercise?.globals || {};
   variationIndex =
-    variationIndex ?? PlannerProgramExercise_currentSetVariationIndex(exercise);
+    variationIndex ?? findIndexOfCurrentOrFirst(exercise.setVariations);
   const currentSets = exercise.setVariations[variationIndex]?.sets;
   const currentGlobals = exercise.globals;
-  const sets = currentSets || reusedSets || [];
-  return sets.map((aSet) => {
+  return (currentSets || reusedSets || []).map((aSet) => {
     const set: IPlannerProgramExerciseSet = structuredClone(aSet);
     set.rpe =
       currentGlobals.rpe != null
@@ -1668,25 +1666,14 @@ function PlannerProgramExercise_sets(
   });
 }
 
-function PlannerProgramExercise_currentSetVariationIndex(
-  exercise: IPlannerProgramExercise,
+/**
+ * Finds the index of the first item in the collection that is marked as current, or the first item if none are marked as current.
+ * @param collection The collection to search.
+ */
+function findIndexOfCurrentOrFirst(
+  collection: { isCurrent: boolean }[],
 ): number {
-  const index = exercise.setVariations.findIndex((sv) => sv.isCurrent);
-  return index === -1 ? 0 : index;
-}
-
-function PlannerProgramExercise_currentEvaluatedSetVariationIndex(
-  exercise: IPlannerProgramExercise,
-): number {
-  const index = exercise.evaluatedSetVariations.findIndex((sv) => sv.isCurrent);
-  return index === -1 ? 0 : index;
-}
-
-function PlannerProgramExercise_currentDescriptionIndex(
-  exercise: IPlannerProgramExercise,
-): number {
-  const index = exercise.descriptions.values.findIndex((d) => d.isCurrent);
-  return index === -1 ? 0 : index;
+  return tryFindIndex(collection, (item) => item.isCurrent) ?? 0;
 }
 
 function PlannerProgramExercise_getProgressScript(
@@ -1950,10 +1937,12 @@ function Progress_runUpdateScriptForEntry(
   const state = structuredClone(
     PlannerProgramExercise_getState(programExercise),
   );
-  const setVariationIndex =
-    PlannerProgramExercise_currentEvaluatedSetVariationIndex(programExercise);
-  const descriptionIndex =
-    PlannerProgramExercise_currentDescriptionIndex(programExercise);
+  const setVariationIndex = findIndexOfCurrentOrFirst(
+    programExercise.evaluatedSetVariations,
+  );
+  const descriptionIndex = findIndexOfCurrentOrFirst(
+    programExercise.descriptions.values,
+  );
   const bindings = Progress_createScriptBindings(
     dayData,
     entry,
@@ -2338,10 +2327,8 @@ function getDereuseDecisions(
     dereuseDecisions.add("sets");
   }
   if (
-    PlannerProgramExercise_currentEvaluatedSetVariationIndex(
-      programExercise,
-    ) !==
-    PlannerProgramExercise_currentEvaluatedSetVariationIndex(reuseExercise)
+    findIndexOfCurrentOrFirst(programExercise.evaluatedSetVariations) !==
+    findIndexOfCurrentOrFirst(reuseExercise.evaluatedSetVariations)
   ) {
     dereuseDecisions.add("sets");
   }
