@@ -79,13 +79,21 @@ import {
 import { evaluateWeight } from "@/quantities-dynamic";
 import { getAverageBodyweight, type IStats } from "@/fitness-stats";
 import {
+  getDayData,
+  getTotalDaysInProgram,
   getWarmupSets as getProgramWarmupSets,
+  type IDayData,
+  type IEvaluatedProgramDay,
   type IPlannerProgram,
   type IPlannerProgramDay,
   type IPlannerProgramWeek,
   type IProgram,
   type IProgramExerciseWarmupSet,
   type IProgramStateMetadata,
+  Program_getProgramDayUsedExercises,
+  Program_getProgramExercise,
+  Program_getProgramExerciseForKeyAndDay,
+  Program_nextDay,
 } from "@/program";
 import {
   findErrorNode,
@@ -112,15 +120,8 @@ import {
   isNonEmpty,
   StringUtils_unindent,
 } from "@/utils/string.ts";
-import { as1, castAs0, type IndexFrom1 } from "@/utils/indexes.ts";
 
 //#region Program
-interface IEvaluatedProgramDay {
-  name: string;
-  dayData: IDayData;
-  description?: string;
-  exercises: IPlannerProgramExercise[];
-}
 
 type IByTag<T> = Record<number, T>;
 
@@ -336,34 +337,6 @@ function Program_runFinishDayScript(
   };
 }
 
-function Program_getProgramExerciseForKeyAndDay(
-  program: IEvaluatedProgram,
-  day: number,
-  key?: string,
-): IPlannerProgramExerciseWithType | undefined {
-  if (!key) return undefined;
-
-  const programDay = getDayData(program, day).dayObj;
-  const dayExercises = programDay
-    ? Program_getProgramDayUsedExercises(programDay)
-    : [];
-
-  const exerciseFoundInDay = dayExercises.find((pe) => pe.key === key);
-  if (exerciseFoundInDay) return exerciseFoundInDay;
-
-  const exerciseFoundInProgram = getExercisesInProgram(program)
-    .filter(
-      (e): e is IPlannerProgramExerciseWithType => e.exerciseType !== undefined,
-    )
-    .find((pe) => pe.key === key);
-  if (!exerciseFoundInProgram) return undefined;
-
-  return {
-    ...exerciseFoundInProgram,
-    dayData: getDayData(program, day),
-  };
-}
-
 type IExerciseData = OpenRecord<IExerciseDataValue>;
 export function Program_runAllFinishDayScripts(
   program: IProgram,
@@ -451,14 +424,6 @@ export function Program_runAllFinishDayScripts(
   };
 }
 
-export function getExercisesInProgram(
-  evaluatedProgram: IEvaluatedProgram,
-): IPlannerProgramExercise[] {
-  return evaluatedProgram.weeks.flatMap((w) =>
-    w.days.flatMap((d) => d.exercises),
-  );
-}
-
 function Program_forceEvaluate(
   program: IProgram,
   settings: ISettings,
@@ -541,54 +506,6 @@ function Program_forceEvaluate(
   };
 }
 
-function getTotalDaysInProgram(program: IEvaluatedProgram): number {
-  return program.weeks.reduce((sum, week) => sum + week.days.length, 0);
-}
-
-/**
- * Determines information about an absolute day in a program
- * @param program The program to get information about
- * @param day The absolute day to get information about
- */
-function getDayData(
-  program: IEvaluatedProgram,
-  day: number,
-): IDayData & {
-  /**
-   * The actual day object at this absolute day index of the program
-   */
-  dayObj: IEvaluatedProgramDay | undefined;
-} {
-  let week = 1;
-  let dayInWeek = 1;
-  let daysTotal = 0;
-  for (let i = 0; i < program.weeks.length; i++) {
-    const weekLength = program.weeks[i].days.length;
-    daysTotal += weekLength;
-    if (daysTotal >= day) {
-      week = i + 1;
-      dayInWeek = day - (daysTotal - weekLength);
-      break;
-    }
-  }
-
-  return {
-    day,
-    week,
-    dayInWeek,
-    dayObj: program.weeks[week - 1]?.days[dayInWeek - 1],
-  };
-}
-
-function Program_getProgramDayUsedExercises(
-  programDay: IEvaluatedProgramDay,
-): IPlannerProgramExerciseWithType[] {
-  return programDay.exercises.filter(
-    (e): e is IPlannerProgramExerciseWithType =>
-      !e.notused && e.exerciseType != null,
-  );
-}
-
 export function Program_applyEvaluatedProgram(
   program: IProgram,
   evaluatedProgram: IEvaluatedProgram,
@@ -601,31 +518,10 @@ export function Program_applyEvaluatedProgram(
   };
 }
 
-function Program_getProgramExercise(
-  day: number,
-  program?: IEvaluatedProgram,
-  key?: string,
-): IPlannerProgramExercise | undefined {
-  if (key == null || program == null) {
-    return undefined;
-  }
-  return getDayData(program, day).dayObj?.exercises.find((e) => e.key === key);
-}
-
-/**
- * Gets which day of the program is next, the index returned is 1-indexed
- * @param program The program
- * @param day The current day, ?1-indexed?
- */
-function Program_nextDay(program: IEvaluatedProgram, day?: number): IndexFrom1 {
-  const index = castAs0(day != null ? day % getTotalDaysInProgram(program) : 0);
-  return as1(index, 1);
-}
-
 export function Program_create(name: string, id?: string): IProgram {
   return {
     id: id || generateUid(8),
-    name: name,
+    name,
     url: "",
     author: "",
     shortDescription: "",
@@ -699,24 +595,6 @@ const THistoryRecord = z.strictObject({
   updatedAt: z.number().optional(),
 });
 type IHistoryRecord = z.infer<typeof THistoryRecord>;
-
-export type IDayData = {
-  /**
-   * Which week of the program the day falls into
-   * 1-indexed
-   */
-  week: number;
-  /**
-   * The absolute day of the program
-   * @todo 1-indexed? 0-indexed?
-   */
-  day: number;
-  /**
-   * Which day, 1-indexed, within the week the absolute day falls into
-   * e.g. If there are 2 days in a week, and the day is 3, then this is 1
-   */
-  dayInWeek: number;
-};
 
 //#endregion
 
@@ -1033,7 +911,7 @@ export const PlannerKey_fromLabelNameAndEquipment = memoize(
 //#endregion
 
 //#region Pages Planner Model Types
-type IPlannerProgramExerciseWithType = IPlannerProgramExercise &
+export type IPlannerProgramExerciseWithType = IPlannerProgramExercise &
   Required<Pick<IPlannerProgramExercise, "exerciseType">>;
 
 export type IPlannerProgramExercise = {

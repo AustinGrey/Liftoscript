@@ -15,6 +15,7 @@ import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.
 import { IProgramMode } from "@/logic/evaluators/types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import type {
+  IDayData,
   IPlannerProgram,
   IPlannerProgramDay,
   IPlannerProgramWeek,
@@ -25,7 +26,6 @@ import type { ISettings } from "@/user-settings";
 import {
   evaluate,
   forExerciseInEvaluatedWeeks,
-  type IDayData,
   type IEvaluatedProgram,
   type IPlannerEvalResult,
   IPlannerExerciseEvaluatorMode,

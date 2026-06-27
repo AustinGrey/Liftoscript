@@ -17,6 +17,14 @@ import { type ISet, TProgramState } from "@/common-types.ts";
 import { isNumber } from "@/utils/types.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { z } from "zod";
+import { as1, castAs0, type IndexFrom1 } from "@/utils/indexes.ts";
+//#region Forbidden imports - these imports are being pulled from later in the layers and should not be
+import type {
+  IEvaluatedProgram,
+  IPlannerProgramExercise,
+  IPlannerProgramExerciseWithType,
+} from "@/evaluators/plan-evaluator-minimal.ts";
+//#endregion
 
 export const TProgramExerciseWarmupSet = z.strictObject({
   reps: z.number(),
@@ -236,3 +244,136 @@ const TProgram = z.object({
   source: z.string().nullish(),
 });
 export type IProgram = z.infer<typeof TProgram>;
+export function Program_getProgramExerciseForKeyAndDay(
+  program: IEvaluatedProgram,
+  day: number,
+  key?: string,
+): IPlannerProgramExerciseWithType | undefined {
+  if (!key) return undefined;
+
+  const programDay = getDayData(program, day).dayObj;
+  const dayExercises = programDay
+    ? Program_getProgramDayUsedExercises(programDay)
+    : [];
+
+  const exerciseFoundInDay = dayExercises.find((pe) => pe.key === key);
+  if (exerciseFoundInDay) return exerciseFoundInDay;
+
+  const exerciseFoundInProgram = getExercisesInProgram(program)
+    .filter(
+      (e): e is IPlannerProgramExerciseWithType => e.exerciseType !== undefined,
+    )
+    .find((pe) => pe.key === key);
+  if (!exerciseFoundInProgram) return undefined;
+
+  return {
+    ...exerciseFoundInProgram,
+    dayData: getDayData(program, day),
+  };
+}
+
+export function getExercisesInProgram(
+  evaluatedProgram: IEvaluatedProgram,
+): IPlannerProgramExercise[] {
+  return evaluatedProgram.weeks.flatMap((w) =>
+    w.days.flatMap((d) => d.exercises),
+  );
+}
+
+export function getTotalDaysInProgram(program: IEvaluatedProgram): number {
+  return program.weeks.reduce((sum, week) => sum + week.days.length, 0);
+}
+
+/**
+ * Determines information about an absolute day in a program
+ * @param program The program to get information about
+ * @param day The absolute day to get information about
+ */
+export function getDayData(
+  program: IEvaluatedProgram,
+  day: number,
+): IDayData & {
+  /**
+   * The actual day object at this absolute day index of the program
+   */
+  dayObj: IEvaluatedProgramDay | undefined;
+} {
+  let week = 1;
+  let dayInWeek = 1;
+  let daysTotal = 0;
+  for (let i = 0; i < program.weeks.length; i++) {
+    const weekLength = program.weeks[i].days.length;
+    daysTotal += weekLength;
+    if (daysTotal >= day) {
+      week = i + 1;
+      dayInWeek = day - (daysTotal - weekLength);
+      break;
+    }
+  }
+
+  return {
+    day,
+    week,
+    dayInWeek,
+    dayObj: program.weeks[week - 1]?.days[dayInWeek - 1],
+  };
+}
+
+export function Program_getProgramDayUsedExercises(
+  programDay: IEvaluatedProgramDay,
+): IPlannerProgramExerciseWithType[] {
+  return programDay.exercises.filter(
+    (e): e is IPlannerProgramExerciseWithType =>
+      !e.notused && e.exerciseType != null,
+  );
+}
+
+export function Program_getProgramExercise(
+  day: number,
+  program?: IEvaluatedProgram,
+  key?: string,
+): IPlannerProgramExercise | undefined {
+  if (key == null || program == null) {
+    return undefined;
+  }
+  return getDayData(program, day).dayObj?.exercises.find((e) => e.key === key);
+}
+
+/**
+ * Gets which day of the program is next, the index returned is 1-indexed
+ * @param program The program
+ * @param day The current day, ?1-indexed?
+ */
+export function Program_nextDay(
+  program: IEvaluatedProgram,
+  day?: number,
+): IndexFrom1 {
+  return as1(
+    castAs0(day != null ? day % getTotalDaysInProgram(program) : 0),
+    1,
+  );
+}
+
+export type IDayData = {
+  /**
+   * Which week of the program the day falls into
+   * 1-indexed
+   */
+  week: number;
+  /**
+   * The absolute day of the program
+   * @todo 1-indexed? 0-indexed?
+   */
+  day: number;
+  /**
+   * Which day, 1-indexed, within the week the absolute day falls into
+   * e.g. If there are 2 days in a week, and the day is 3, then this is 1
+   */
+  dayInWeek: number;
+};
+export interface IEvaluatedProgramDay {
+  name: string;
+  dayData: IDayData;
+  description?: string;
+  exercises: IPlannerProgramExercise[];
+}

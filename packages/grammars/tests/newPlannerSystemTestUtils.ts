@@ -1,9 +1,7 @@
 import {
   convertToPlanner,
   forExerciseInEvaluatedWeeks,
-  getExercisesInProgram,
   getWeight,
-  type IDayData,
   type IWeightChange,
   makePlannerKey,
   PlannerKey_fromFullName,
@@ -16,7 +14,12 @@ import {
   ProgramExercise_weightChanges,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 import type { IStats } from "@/fitness-stats";
-import type { IPlannerProgram, IProgram } from "@/program";
+import {
+  getExercisesInProgram,
+  type IDayData,
+  type IPlannerProgram,
+  type IProgram,
+} from "@/program";
 import { type ISettings, Settings_build } from "@/user-settings";
 import {
   PlannerEvaluator_evaluate,

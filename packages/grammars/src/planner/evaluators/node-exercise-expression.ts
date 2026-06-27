@@ -49,7 +49,6 @@ import {
   getOrder,
   getRepeat,
   getWeight,
-  type IDayData,
   type IPlannerProgramExercise,
   type IPlannerProgramExerciseSet,
   type IPlannerProgramExerciseSetVariation,
@@ -64,6 +63,7 @@ import {
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 import { splitBy } from "@/utils/iterables.ts";
+import type { IDayData } from "@/program";
 //#endregion
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
