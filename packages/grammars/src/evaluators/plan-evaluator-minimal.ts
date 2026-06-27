@@ -749,13 +749,12 @@ function ProgramExercise_applyVariables(
             let indexValue =
               value.op === "="
                 ? value.value - 1
-                : // @todo This cast should not be necessary, and is dangerous
-                  (applyOp(
+                : applyOp(
                     undefined,
                     findIndexOfCurrentOrFirst(structureToIndex),
                     value.value,
                     value.op,
-                  ) as number);
+                  );
             indexValue = indexValue % structureToIndex.length;
             // Ensures 1 and only 1 of the items is marked "current".
             structureToIndex.forEach((s, index) => {

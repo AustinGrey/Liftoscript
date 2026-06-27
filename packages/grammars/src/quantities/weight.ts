@@ -703,14 +703,39 @@ function coerceToQuantity(value: Quantity | boolean | undefined): Quantity {
   return isBoolean(value) ? (value ? 1 : 0) : (value ?? 0);
 }
 
-export function applyOp(
+/** Result type of {@link op} based on operand types. */
+export type OpResult<A extends Quantity, B extends Quantity> = [A, B] extends [
+  number,
+  number,
+]
+  ? number
+  : A extends IWeight
+    ? IWeight
+    : B extends IWeight
+      ? IWeight
+      : A extends IDynamicWeight
+        ? IDynamicWeight
+        : B extends IDynamicWeight
+          ? IDynamicWeight
+          : Quantity;
+
+export function applyOp<
+  TA extends Quantity | boolean | undefined,
+  TB extends Quantity,
+  TOpr extends "+=" | "-=" | "*=" | "/=" | "=",
+>(
   onerm: IWeight | undefined,
-  oldValueRaw: Quantity | boolean | undefined,
-  value: Quantity,
-  opr: "+=" | "-=" | "*=" | "/=" | "=",
-): Quantity {
+  oldValueRaw: TA,
+  value: TB,
+  opr: TOpr,
+): TOpr extends "="
+  ? TB
+  : OpResult<TA extends boolean | undefined ? Quantity : TA, TB> {
   const oldValue = coerceToQuantity(oldValueRaw);
-  if (opr === "=") return value;
+  if (opr === "=")
+    return value as TOpr extends "="
+      ? TB
+      : OpResult<TA extends boolean | undefined ? Quantity : TA, TB>;
   return op(onerm, oldValue, value, (a, b): number => {
     if (opr === "+=") return a + b;
     if (opr === "-=") return a - b;
@@ -718,51 +743,35 @@ export function applyOp(
     if (opr === "/=") return MathUtils_roundTo005(a / b);
     opr satisfies never;
     throw new Error(`Invalid operator: ${opr}`);
-  });
+  }) as TOpr extends "="
+    ? TB
+    : OpResult<TA extends boolean | undefined ? Quantity : TA, TB>;
 }
 
-export function op(
+export function op<TA extends Quantity, TB extends Quantity>(
   onerm: IWeight | undefined,
-  a: Quantity,
-  b: Quantity,
+  a: TA,
+  b: TB,
   o: (x: number, y: number) => number,
-): Quantity {
-  if (isNumber(a) && isNumber(b)) {
-    return o(a, b);
+): OpResult<
+  TA,
+  TB
+> /* More readable with hand formatting */ /* prettier-ignore*/ {
+  if(isNumber(a)){
+    if (isNumber(b)          ) return o(a, b) as OpResult<TA, TB>;
+    if (is(TDynamicWeight, b)) return percentORM(o(a, b.value)) as OpResult<TA, TB>;
+    if (is(TWeight, b)       ) return operation(a, b, o) as OpResult<TA, TB>;
   }
-  if (isNumber(a) && is(TDynamicWeight, b)) {
-    return percentORM(o(a, b.value));
+  if(is(TDynamicWeight, a)){
+    if (isNumber(b)          ) return percentORM(o(a.value, b)) as OpResult<TA, TB>;
+    if (is(TDynamicWeight, b)) return percentORM(o(a.value, b.value)) as OpResult<TA, TB>;
+    if (is(TWeight, b)       ) return operation(onerm ? multiply(onerm, a.value / 100) : MathUtils_roundFloat(a.value / 100, 4), b, o) as OpResult<TA, TB>;
   }
-  if (isNumber(a) && is(TWeight, b)) {
-    return operation(a, b, o);
+  if(is(TWeight, a)){
+    if (isNumber(b)          ) return operation(a, b, o) as OpResult<TA, TB>;
+    if (is(TDynamicWeight, b)) return operation(a, onerm ? multiply(onerm, b.value / 100) : MathUtils_roundFloat(b.value / 100, 4), o) as OpResult<TA, TB>;
+    if (is(TWeight, b)       ) return operation(a, b, o) as OpResult<TA, TB>;
   }
-
-  if (is(TDynamicWeight, a) && isNumber(b)) {
-    return percentORM(o(a.value, b));
-  }
-  if (is(TDynamicWeight, a) && is(TDynamicWeight, b)) {
-    return percentORM(o(a.value, b.value));
-  }
-  if (is(TDynamicWeight, a) && is(TWeight, b)) {
-    const aWeight = onerm
-      ? multiply(onerm, a.value / 100)
-      : MathUtils_roundFloat(a.value / 100, 4);
-    return operation(aWeight, b, o);
-  }
-
-  if (is(TWeight, a) && isNumber(b)) {
-    return operation(a, b, o);
-  }
-  if (is(TWeight, a) && is(TDynamicWeight, b)) {
-    const bWeight = onerm
-      ? multiply(onerm, b.value / 100)
-      : MathUtils_roundFloat(b.value / 100, 4);
-    return operation(a, bWeight, o);
-  }
-  if (is(TWeight, a) && is(TWeight, b)) {
-    return operation(a, b, o);
-  }
-
   throw new Error(`Can't apply operation to ${a} and ${b}`);
 }
 
