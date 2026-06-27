@@ -112,6 +112,7 @@ import {
   isNonEmpty,
   StringUtils_unindent,
 } from "@/utils/string.ts";
+import { as1, castAs0, type IndexFrom1 } from "@/utils/indexes.ts";
 
 //#region Program
 interface IEvaluatedProgramDay {
@@ -611,9 +612,14 @@ function Program_getProgramExercise(
   return getDayData(program, day).dayObj?.exercises.find((e) => e.key === key);
 }
 
-function Program_nextDay(program: IEvaluatedProgram, day?: number): number {
-  const nd = (day != null ? day % getTotalDaysInProgram(program) : 0) + 1;
-  return isNaN(nd) ? 1 : nd;
+/**
+ * Gets which day of the program is next, the index returned is 1-indexed
+ * @param program The program
+ * @param day The current day, ?1-indexed?
+ */
+function Program_nextDay(program: IEvaluatedProgram, day?: number): IndexFrom1 {
+  const index = castAs0(day != null ? day % getTotalDaysInProgram(program) : 0);
+  return as1(index, 1);
 }
 
 export function Program_create(name: string, id?: string): IProgram {
