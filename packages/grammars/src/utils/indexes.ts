@@ -59,11 +59,12 @@ export function as0<TIndex extends IndexFrom1 | undefined | null>(
 /**
  * Converts an index from 0->1 based.
  * Preserves potential null/undefined values for convenience.
+ * You can pass 0 without casting since it's the only number we can guarantee isn't 1 indexed already.
  *
  * @param indexFrom0 The 0-based index
  * @param ifNaN The value to return if the index is NaN, if not provided NaN will be returned
  */
-export function as1<TIndex extends IndexFrom0 | undefined | null>(
+export function as1<TIndex extends 0 | IndexFrom0 | undefined | null>(
   indexFrom0: TIndex,
   ifNaN?: number,
 ): TIndex extends undefined | null ? TIndex : IndexFrom1 {
@@ -72,4 +73,13 @@ export function as1<TIndex extends IndexFrom0 | undefined | null>(
     return indexFrom0 as ReturnType;
   if (isNaN(indexFrom0)) return (ifNaN ?? indexFrom0) as ReturnType;
   return (indexFrom0 + 1) as ReturnType;
+}
+
+/**
+ * A predicate that can be passed to a normal array map to get access to stronger typed indexes
+ */
+export function withIndex<TElement, TReturn>(
+  mapper: (value: TElement, index: IndexFrom0) => TReturn,
+): (value: TElement, index: number) => TReturn {
+  return mapper as (value: TElement, index: number) => TReturn;
 }
