@@ -710,17 +710,15 @@ export function applyOp(
   opr: "+=" | "-=" | "*=" | "/=" | "=",
 ): Quantity {
   const oldValue = coerceToQuantity(oldValueRaw);
-  if (opr === "=") {
-    return value;
-  } else if (opr === "+=") {
-    return op(onerm, oldValue, value, (a, b) => a + b);
-  } else if (opr === "-=") {
-    return op(onerm, oldValue, value, (a, b) => a - b);
-  } else if (opr === "*=") {
-    return op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a * b));
-  } else {
-    return op(onerm, oldValue, value, (a, b) => MathUtils_roundTo005(a / b));
-  }
+  if (opr === "=") return value;
+  return op(onerm, oldValue, value, (a, b): number => {
+    if (opr === "+=") return a + b;
+    if (opr === "-=") return a - b;
+    if (opr === "*=") return MathUtils_roundTo005(a * b);
+    if (opr === "/=") return MathUtils_roundTo005(a / b);
+    opr satisfies never;
+    throw new Error(`Invalid operator: ${opr}`);
+  });
 }
 
 export function op(

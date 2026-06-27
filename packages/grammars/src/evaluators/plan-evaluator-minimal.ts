@@ -736,7 +736,6 @@ function ProgramExercise_applyVariables(
               });
             break;
           }
-
           case "setVariationIndex":
           case "descriptionIndex": {
             if (!isNumber(value.value)) {
@@ -750,7 +749,8 @@ function ProgramExercise_applyVariables(
             let indexValue =
               value.op === "="
                 ? value.value - 1
-                : (applyOp(
+                : // @todo This cast should not be necessary, and is dangerous
+                  (applyOp(
                     undefined,
                     findIndexOfCurrentOrFirst(structureToIndex),
                     value.value,
