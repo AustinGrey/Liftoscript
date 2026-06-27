@@ -651,10 +651,8 @@ function ProgramExercise_applyVariables(
   update: ILiftoscriptEvaluatorUpdate,
   settings: ISettings,
 ): void {
-  const key = update.type;
-  const value = update.value;
+  const { type: key, value } = update;
   const [week, day, variation, set] = value.target;
-  let dayIndex = 0;
   for (const [weekIndex, programWeek] of program.weeks.entries()) {
     for (const [dayInWeekIndex, dayInWeek] of programWeek.days.entries()) {
       for (const exercise of dayInWeek.exercises.filter(hasExerciseType)) {
@@ -738,65 +736,37 @@ function ProgramExercise_applyVariables(
               });
             break;
           }
-          case "setVariationIndex": {
-            if (!isNumber(value.value)) {
-              break;
-            }
-            let indexValue: number;
-            if (value.op === "=") {
-              indexValue = value.value - 1;
-            } else {
-              const currentSetVariationIndex = findIndexOfCurrentOrFirst(
-                exercise.evaluatedSetVariations,
-              );
-              indexValue = applyOp(
-                undefined,
-                currentSetVariationIndex,
-                value.value,
-                update.value.op,
-              ) as number;
-            }
-            indexValue = indexValue % exercise.evaluatedSetVariations.length;
-            exercise.evaluatedSetVariations.forEach(
-              (s) => (s.isCurrent = false),
-            );
-            const sv = exercise.evaluatedSetVariations[indexValue];
-            if (sv != null) {
-              sv.isCurrent = true;
-            }
-            break;
-          }
+
+          case "setVariationIndex":
           case "descriptionIndex": {
             if (!isNumber(value.value)) {
               break;
             }
-            let indexValue: number;
-            if (value.op === "=") {
-              indexValue = value.value - 1;
-            } else {
-              const currentDescriptionIndex = findIndexOfCurrentOrFirst(
-                exercise.descriptions.values,
-              );
-              indexValue = applyOp(
-                undefined,
-                currentDescriptionIndex,
-                value.value,
-                value.op,
-              ) as number;
-            }
-            indexValue = indexValue % exercise.descriptions.values.length;
-            exercise.descriptions.values.forEach((s) => (s.isCurrent = false));
-            const d = exercise.descriptions.values[indexValue];
-            if (d != null) {
-              d.isCurrent = true;
-            }
+
+            const structureToIndex =
+              key === "descriptionIndex"
+                ? exercise.descriptions.values
+                : exercise.evaluatedSetVariations;
+            let indexValue =
+              value.op === "="
+                ? value.value - 1
+                : (applyOp(
+                    undefined,
+                    findIndexOfCurrentOrFirst(structureToIndex),
+                    value.value,
+                    value.op,
+                  ) as number);
+            indexValue = indexValue % structureToIndex.length;
+            // Ensures 1 and only 1 of the items is marked "current".
+            structureToIndex.forEach((s, index) => {
+              s.isCurrent = index === indexValue;
+            });
             break;
           }
           default:
             key satisfies never;
         }
       }
-      dayIndex += 1;
     }
   }
 }
