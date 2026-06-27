@@ -4,11 +4,12 @@ Javacript is zero indexed (arrays start at 0), but many system we interface with
 Mixing indexes is a significant source of bugs. This file provides utilities to convert between the two index types and keep
 them distinct to avoid accidental mixing.
  */
+import { z } from "zod";
 
-import type { Tagged } from "type-fest";
-
-export type IndexFrom0 = Tagged<number, "zero-indexed">;
-export type IndexFrom1 = Tagged<number, "one-indexed">;
+export const zIndexFrom0 = z.number().brand<"0-indexed">();
+export const zIndexFrom1 = z.number().brand<"1-indexed">();
+export type IndexFrom0 = z.infer<typeof zIndexFrom0>;
+export type IndexFrom1 = z.infer<typeof zIndexFrom1>;
 export type ArrayFrom0<TElement> = Record<IndexFrom0, TElement>;
 export type ArrayFrom1<TElement> = Record<IndexFrom1, TElement>;
 

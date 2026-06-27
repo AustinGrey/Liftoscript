@@ -17,7 +17,13 @@ import { type ISet, TProgramState } from "@/common-types.ts";
 import { isNumber } from "@/utils/types.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { z } from "zod";
-import { as1, castAs0, castAs1, type IndexFrom1 } from "@/utils/indexes.ts";
+import {
+  as1,
+  castAs0,
+  castAs1,
+  type IndexFrom1,
+  zIndexFrom1,
+} from "@/utils/indexes.ts";
 //#region Forbidden imports - these imports are being pulled from later in the layers and should not be
 import type {
   IEvaluatedProgram,
@@ -230,7 +236,7 @@ const TProgram = z.object({
   description: z.string(),
   url: z.string(),
   author: z.string(),
-  nextDay: z.number(),
+  nextDay: zIndexFrom1,
   days: z.array(TProgramDay),
   weeks: z.array(TProgramWeek),
   deletedDays: z.array(z.string()).optional(),

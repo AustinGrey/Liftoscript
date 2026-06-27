@@ -104,7 +104,7 @@ import {
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
 import { isEqual, omitBy } from "es-toolkit";
-import type { Tagged } from "type-fest";
+import type { SetRequired, Tagged } from "type-fest";
 import { run, validate } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
 import { IProgramMode } from "@/logic/evaluators/types.ts";
@@ -120,7 +120,7 @@ import {
   isNonEmpty,
   StringUtils_unindent,
 } from "@/utils/string.ts";
-import { as1, castAs1, withIndex } from "@/utils/indexes.ts";
+import { as1, castAs1, type IndexFrom1, withIndex } from "@/utils/indexes.ts";
 
 //#region Program
 
@@ -130,7 +130,7 @@ export interface IEvaluatedProgram {
   id: string;
   planner: IPlannerProgram;
   name: string;
-  nextDay: number;
+  nextDay: IndexFrom1;
   errors: {
     error: SourcedSyntaxError;
     dayData: IDayData;
@@ -397,11 +397,13 @@ export function Program_runAllFinishDayScripts(
         };
       }
     });
-    ProgramExercise_applyVariables(
-      programExercise.key,
-      newEvaluatedProgram,
-      updates,
-      settings,
+    updates.forEach((update) =>
+      ProgramExercise_applyVariables(
+        programExercise.key,
+        newEvaluatedProgram,
+        update,
+        settings,
+      ),
     );
     for (const key of ObjectUtils_keys(otherStates || {})) {
       forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
@@ -529,7 +531,7 @@ export function Program_create(name: string, id?: string): IProgram {
     author: "",
     shortDescription: "",
     description: "",
-    nextDay: 1,
+    nextDay: as1(0),
     weeks: [],
     days: [{ id: generateUid(8), name: "Day 1", exercises: [] }],
     exercises: [],
@@ -646,171 +648,155 @@ export function ProgramExercise_weightChanges(
 function ProgramExercise_applyVariables(
   programExerciseKey: string,
   program: IEvaluatedProgram,
-  updates: ILiftoscriptEvaluatorUpdate[],
+  update: ILiftoscriptEvaluatorUpdate,
   settings: ISettings,
 ): void {
-  for (const update of updates) {
-    const key = update.type;
-    const value = update.value;
-    const [week, day, variation, set] = value.target;
-    let dayIndex = 0;
-    for (let weekIndex = 0; weekIndex < program.weeks.length; weekIndex += 1) {
-      const programWeek = program.weeks[weekIndex];
-      for (
-        let dayInWeekIndex = 0;
-        dayInWeekIndex < programWeek.days.length;
-        dayInWeekIndex += 1
-      ) {
-        const dayExercises = programWeek.days[dayInWeekIndex].exercises.filter(
-          (e): e is IPlannerProgramExerciseWithType => e.exerciseType != null,
-        );
-        for (const exercise of dayExercises) {
-          if (
-            exercise.key !== programExerciseKey ||
-            (week !== "*" && week !== weekIndex + 1) ||
-            (day !== "*" && day !== dayInWeekIndex + 1)
-          ) {
-            continue;
-          }
-          switch (key) {
-            case "numberOfSets": {
-              const val = value.value;
-              if (!isNumber(val)) break;
-              exercise.evaluatedSetVariations
-                .entries()
-                .filter(
-                  ([variationIndex]) =>
-                    variation === "*" || variation === variationIndex + 1,
-                )
-                .forEach(([, evaluatedVariation]) => {
-                  const sets = evaluatedVariation.sets;
-                  const newValue = MathUtils_applyOp(
-                    sets.length,
-                    val,
-                    value.op,
-                  );
-                  const lastSet = sets[sets.length - 1] || {
-                    maxrep: 1,
-                    weight: w`100lb`,
-                    logRpe: false,
-                    isAmrap: false,
-                    isQuickAddSet: false,
-                    askWeight: false,
-                  };
-                  sets.splice(newValue);
-                  for (let i = sets.length; i < newValue; i += 1) {
-                    sets.push(structuredClone(lastSet));
-                  }
-                });
-              break;
-            }
-            case "RPE":
-            case "reps":
-            case "minReps":
-            case "timers":
-            case "weights":
-            case "amraps":
-            case "logrpes":
-            case "askweights": {
-              exercise.evaluatedSetVariations
-                .entries()
-                .filter(
-                  ([variationIndex]) =>
-                    variation === "*" || variation === variationIndex + 1,
-                )
-                .forEach(([, evaluatedVariation]) => {
-                  for (
-                    let setIndex = 0;
-                    setIndex < evaluatedVariation.sets.length;
-                    setIndex += 1
-                  ) {
-                    if (set === "*" || set === setIndex + 1) {
-                      operation(
-                        exercise,
-                        evaluatedVariation.sets[setIndex],
-                        settings,
-                        (
-                          {
-                            RPE: "rpe",
-                            reps: "maxrep",
-                            minReps: "minrep",
-                            timers: "timer",
-                            weights: "weight",
-                            amraps: "isAmrap",
-                            logrpes: "logRpe",
-                            askweights: "askWeight",
-                          } as const
-                        )[key],
-                        value.value,
-                        value.op,
-                      );
-                    }
-                  }
-                });
-              break;
-            }
-            case "setVariationIndex": {
-              if (!isNumber(value.value)) {
-                break;
-              }
-              let indexValue: number;
-              if (value.op === "=") {
-                indexValue = value.value - 1;
-              } else {
-                const currentSetVariationIndex = findIndexOfCurrentOrFirst(
-                  exercise.evaluatedSetVariations,
-                );
-                indexValue = applyOp(
-                  undefined,
-                  currentSetVariationIndex,
-                  value.value,
-                  update.value.op,
-                ) as number;
-              }
-              indexValue = indexValue % exercise.evaluatedSetVariations.length;
-              exercise.evaluatedSetVariations.forEach(
-                (s) => (s.isCurrent = false),
-              );
-              const sv = exercise.evaluatedSetVariations[indexValue];
-              if (sv != null) {
-                sv.isCurrent = true;
-              }
-              break;
-            }
-            case "descriptionIndex": {
-              if (!isNumber(value.value)) {
-                break;
-              }
-              let indexValue: number;
-              if (value.op === "=") {
-                indexValue = value.value - 1;
-              } else {
-                const currentDescriptionIndex = findIndexOfCurrentOrFirst(
-                  exercise.descriptions.values,
-                );
-                indexValue = applyOp(
-                  undefined,
-                  currentDescriptionIndex,
-                  value.value,
-                  value.op,
-                ) as number;
-              }
-              indexValue = indexValue % exercise.descriptions.values.length;
-              exercise.descriptions.values.forEach(
-                (s) => (s.isCurrent = false),
-              );
-              const d = exercise.descriptions.values[indexValue];
-              if (d != null) {
-                d.isCurrent = true;
-              }
-              break;
-            }
-            default:
-              key satisfies never;
-          }
+  const key = update.type;
+  const value = update.value;
+  const [week, day, variation, set] = value.target;
+  let dayIndex = 0;
+  for (const [weekIndex, programWeek] of program.weeks.entries()) {
+    for (const [dayInWeekIndex, dayInWeek] of programWeek.days.entries()) {
+      for (const exercise of dayInWeek.exercises.filter(hasExerciseType)) {
+        if (
+          exercise.key !== programExerciseKey ||
+          (week !== "*" && week !== weekIndex + 1) ||
+          (day !== "*" && day !== dayInWeekIndex + 1)
+        ) {
+          continue;
         }
-        dayIndex += 1;
+        switch (key) {
+          case "numberOfSets": {
+            const val = value.value;
+            if (!isNumber(val)) break;
+            exercise.evaluatedSetVariations
+              .entries()
+              .filter(
+                ([variationIndex]) =>
+                  variation === "*" || variation === variationIndex + 1,
+              )
+              .forEach(([, evaluatedVariation]) => {
+                const sets = evaluatedVariation.sets;
+                const newValue = MathUtils_applyOp(sets.length, val, value.op);
+                const lastSet = sets[sets.length - 1] || {
+                  maxrep: 1,
+                  weight: w`100lb`,
+                  logRpe: false,
+                  isAmrap: false,
+                  isQuickAddSet: false,
+                  askWeight: false,
+                };
+                sets.splice(newValue);
+                for (let i = sets.length; i < newValue; i += 1) {
+                  sets.push(structuredClone(lastSet));
+                }
+              });
+            break;
+          }
+          case "RPE":
+          case "reps":
+          case "minReps":
+          case "timers":
+          case "weights":
+          case "amraps":
+          case "logrpes":
+          case "askweights": {
+            exercise.evaluatedSetVariations
+              .entries()
+              .filter(
+                ([variationIndex]) =>
+                  variation === "*" || variation === variationIndex + 1,
+              )
+              .forEach(([, evaluatedVariation]) => {
+                for (
+                  let setIndex = 0;
+                  setIndex < evaluatedVariation.sets.length;
+                  setIndex += 1
+                ) {
+                  if (set === "*" || set === setIndex + 1) {
+                    operation(
+                      exercise,
+                      evaluatedVariation.sets[setIndex],
+                      settings,
+                      (
+                        {
+                          RPE: "rpe",
+                          reps: "maxrep",
+                          minReps: "minrep",
+                          timers: "timer",
+                          weights: "weight",
+                          amraps: "isAmrap",
+                          logrpes: "logRpe",
+                          askweights: "askWeight",
+                        } as const
+                      )[key],
+                      value.value,
+                      value.op,
+                    );
+                  }
+                }
+              });
+            break;
+          }
+          case "setVariationIndex": {
+            if (!isNumber(value.value)) {
+              break;
+            }
+            let indexValue: number;
+            if (value.op === "=") {
+              indexValue = value.value - 1;
+            } else {
+              const currentSetVariationIndex = findIndexOfCurrentOrFirst(
+                exercise.evaluatedSetVariations,
+              );
+              indexValue = applyOp(
+                undefined,
+                currentSetVariationIndex,
+                value.value,
+                update.value.op,
+              ) as number;
+            }
+            indexValue = indexValue % exercise.evaluatedSetVariations.length;
+            exercise.evaluatedSetVariations.forEach(
+              (s) => (s.isCurrent = false),
+            );
+            const sv = exercise.evaluatedSetVariations[indexValue];
+            if (sv != null) {
+              sv.isCurrent = true;
+            }
+            break;
+          }
+          case "descriptionIndex": {
+            if (!isNumber(value.value)) {
+              break;
+            }
+            let indexValue: number;
+            if (value.op === "=") {
+              indexValue = value.value - 1;
+            } else {
+              const currentDescriptionIndex = findIndexOfCurrentOrFirst(
+                exercise.descriptions.values,
+              );
+              indexValue = applyOp(
+                undefined,
+                currentDescriptionIndex,
+                value.value,
+                value.op,
+              ) as number;
+            }
+            indexValue = indexValue % exercise.descriptions.values.length;
+            exercise.descriptions.values.forEach((s) => (s.isCurrent = false));
+            const d = exercise.descriptions.values[indexValue];
+            if (d != null) {
+              d.isCurrent = true;
+            }
+            break;
+          }
+          default:
+            key satisfies never;
+        }
       }
+      dayIndex += 1;
     }
   }
 }
@@ -914,8 +900,15 @@ export const PlannerKey_fromLabelNameAndEquipment = memoize(
 //#endregion
 
 //#region Pages Planner Model Types
-export type IPlannerProgramExerciseWithType = IPlannerProgramExercise &
-  Required<Pick<IPlannerProgramExercise, "exerciseType">>;
+export type IPlannerProgramExerciseWithType = SetRequired<
+  IPlannerProgramExercise,
+  "exerciseType"
+>;
+function hasExerciseType(
+  exercise: IPlannerProgramExercise,
+): exercise is IPlannerProgramExerciseWithType {
+  return exercise.exerciseType !== undefined;
+}
 
 export type IPlannerProgramExercise = {
   id: string;
