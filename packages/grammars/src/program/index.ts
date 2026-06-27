@@ -17,7 +17,7 @@ import { type ISet, TProgramState } from "@/common-types.ts";
 import { isNumber } from "@/utils/types.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { z } from "zod";
-import { as1, castAs0, type IndexFrom1 } from "@/utils/indexes.ts";
+import { as1, castAs0, castAs1, type IndexFrom1 } from "@/utils/indexes.ts";
 //#region Forbidden imports - these imports are being pulled from later in the layers and should not be
 import type {
   IEvaluatedProgram,
@@ -299,14 +299,14 @@ export function getDayData(
   dayObj: IEvaluatedProgramDay | undefined;
 } {
   let week = 1;
-  let dayInWeek = 1;
+  let dayInWeek: IndexFrom1 = castAs1(1);
   let daysTotal = 0;
   for (let i = 0; i < program.weeks.length; i++) {
     const weekLength = program.weeks[i].days.length;
     daysTotal += weekLength;
     if (daysTotal >= day) {
       week = i + 1;
-      dayInWeek = day - (daysTotal - weekLength);
+      dayInWeek = castAs1(day - (daysTotal - weekLength));
       break;
     }
   }
@@ -366,10 +366,10 @@ export type IDayData = {
    */
   day: number;
   /**
-   * Which day, 1-indexed, within the week the absolute day falls into
+   * Which day within the week the absolute day falls into
    * e.g. If there are 2 days in a week, and the day is 3, then this is 1
    */
-  dayInWeek: number;
+  dayInWeek: IndexFrom1;
 };
 export interface IEvaluatedProgramDay {
   name: string;
