@@ -1870,18 +1870,20 @@ function Progress_applyBindings(
       if (entry.sets[i].isCompleted) {
         continue;
       }
+      //@todo why are the keys in the sets structure not the same as the keys in the bindings object?
+      //   This is requiring a long switch when instead it could have been a single assignment on a dynamic key
       switch (key) {
         case "RPE": {
-          const value = bindings.RPE[i];
-          entry.sets[i].rpe = value !== 0 ? value : undefined;
+          entry.sets[i].rpe =
+            bindings.RPE[i] !== 0 ? bindings.RPE[i] : undefined;
           break;
         }
         case "reps":
           entry.sets[i].reps = bindings.reps[i];
           break;
         case "minReps": {
-          const value = bindings.minReps[i];
-          entry.sets[i].minReps = value !== 0 ? value : undefined;
+          entry.sets[i].minReps =
+            bindings.minReps[i] !== 0 ? bindings.minReps[i] : undefined;
           break;
         }
         case "weights":
@@ -1900,8 +1902,8 @@ function Progress_applyBindings(
           entry.sets[i].askWeight = !!bindings.askweights[i];
           break;
         case "timers": {
-          const value = bindings.timers[i];
-          entry.sets[i].timer = value != null && value >= 0 ? value : undefined;
+          entry.sets[i].timer =
+            (bindings.timers[i] ?? -1) >= 0 ? bindings.timers[i] : undefined;
           break;
         }
         default:

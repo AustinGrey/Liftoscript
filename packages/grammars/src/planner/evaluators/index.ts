@@ -56,6 +56,7 @@ import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
 import { toKey } from "@/exercises";
 import { nodeResult } from "@/common-types.ts";
+import { as1, withIndex } from "@/utils/indexes.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -627,32 +628,33 @@ function findOriginalExercisesAtWeekDay(
   }[] = [];
   const week = program[atWeek - 1];
   const candidateDays = atDay != null ? [week[atDay - 1]] : week;
-  for (
-    let dayInWeekIndex = 0;
-    dayInWeekIndex < candidateDays.length;
-    dayInWeekIndex += 1
-  ) {
-    const day = candidateDays[dayInWeekIndex];
-    if (day == null || !day.success) {
-      continue;
-    }
-    for (const exercise of day.data) {
-      const reusingKey = exercise.exerciseType
-        ? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
-        : PlannerKey_fromFullName(exercise.fullName, settings.exercises);
-      const originalKey = PlannerKey_fromFullName(fullName, settings.exercises);
-      if (reusingKey === originalKey) {
+  candidateDays.forEach(
+    withIndex((day, dayInWeekIndex) => {
+      if (day == null || !day.success) {
+        return;
+      }
+      for (const exercise of day.data) {
+        const reusingKey = exercise.exerciseType
+          ? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
+          : PlannerKey_fromFullName(exercise.fullName, settings.exercises);
+        const originalKey = PlannerKey_fromFullName(
+          fullName,
+          settings.exercises,
+        );
+        if (reusingKey !== originalKey) {
+          continue;
+        }
         originalExercises.push({
           exercise,
           dayData: {
             week: atWeek,
-            dayInWeek: dayInWeekIndex + 1,
+            dayInWeek: as1(dayInWeekIndex),
             day: 1,
           },
         });
       }
-    }
-  }
+    }),
+  );
   return originalExercises;
 }
 
