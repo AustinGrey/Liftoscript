@@ -25,6 +25,7 @@ import {
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
 import { queryTree } from "@/utils/grammars.ts";
+import type { IEither } from "@/utils/types.ts";
 
 /**
  * The handler for when we haven't decided how to handle a node
@@ -121,6 +122,12 @@ export function* validate(
  *   sites. But it doesn't seem necessary to do that since all math can be done in any unit, and then converted after
  *   to display in whichever unit is needed. So I'm leaving that off and will delete this comment once I'm sure it's not needed.
  * @param logic The script to run
+ * @param initialState
+ * @param globalData
+ * @param publicFunctions
+ * @param fnContext
+ * @param otherStates
+ * @param mode
  */
 export function run(
   logic: string,
@@ -132,7 +139,7 @@ export function run(
   otherStates: Record<string | number, IProgramState>,
   mode: IProgramMode,
 ): {
-  result: LogicResult;
+  result: IEither<LogicResult, string>;
   finalState: IProgramState;
   updates: ILiftoscriptEvaluatorUpdate[];
 } {
@@ -204,8 +211,23 @@ export function run(
     fnContext,
   };
 
+  // @todo this should keep getting pushed down so you can collect ALL errors before returning, rather than returning only the first error?
+  let result: IEither<LogicResult, string>;
+  try {
+    result = {
+      success: true,
+      data: handleLogic(parseBound(parser, logic), tools),
+    };
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      result = { success: false, error: e.message };
+    } else {
+      throw e;
+    }
+  }
+
   return {
-    result: handleLogic(parseBound(parser, logic), tools),
+    result,
     finalState: state,
     updates,
   };

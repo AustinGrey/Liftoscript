@@ -13,9 +13,10 @@ import {
   TWeight,
   w,
 } from "@/quantities/weight.ts";
-import type {
-  IProgramState,
-  IScriptBindings,
+import {
+  IProgramMode,
+  type IProgramState,
+  type IScriptBindings,
 } from "@/logic/evaluators/types.ts";
 import type { LogicResult, Quantity } from "@/logic/types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
@@ -71,11 +72,6 @@ const testSettings: ISettings = {
   gyms: [],
   deletedGyms: [],
   exercises: {},
-  statsEnabled: {
-    weight: {},
-    length: {},
-    percentage: {},
-  },
   units: "kg",
   lengthUnits: "cm",
   volume: 0,
@@ -88,7 +84,6 @@ const testSettings: ISettings = {
     weeklyFrequency: {},
   },
   muscleGroups: {
-    vtype: "muscle_groups_settings",
     data: {},
   },
   appleHealthSyncWorkout: false,
@@ -675,7 +670,7 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
             publicFunctions,
             testFnContext,
             {},
-            "update",
+            IProgramMode.UPDATE,
           );
 
           // The old system would round on every operation, propagating errors.
@@ -695,9 +690,12 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
           }
 
           if ("result" in case_) {
+            if (!output.success) {
+              expect.fail("Script should evaluate successfully");
+            }
             expect
               .soft(
-                round(output, rounder),
+                round(output.data, rounder),
                 "Script should evaluate to the expected result",
               )
               .toEqual(case_.result);
