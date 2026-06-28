@@ -739,6 +739,7 @@ export function applyOp<
   return op(onerm, oldValue, value, (a, b): number => {
     if (opr === "+=") return a + b;
     if (opr === "-=") return a - b;
+    // @todo Rounding here just propagates errors. Rounding should happen only right before display.
     if (opr === "*=") return MathUtils_roundTo005(a * b);
     if (opr === "/=") return MathUtils_roundTo005(a / b);
     opr satisfies never;

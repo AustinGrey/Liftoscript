@@ -738,10 +738,6 @@ function ProgramExercise_applyVariables(
           }
           case "setVariationIndex":
           case "descriptionIndex": {
-            if (!isNumber(value.value)) {
-              break;
-            }
-
             const structureToIndex =
               key === "descriptionIndex"
                 ? exercise.descriptions.values
