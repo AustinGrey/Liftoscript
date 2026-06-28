@@ -1001,11 +1001,7 @@ export function PlannerProgram_replaceWeight(
   programExerciseId: string,
   weightChanges: IWeightChange[],
 ): IEvaluatedProgram {
-  if (
-    weightChanges.every((wc) =>
-      ObjectUtils_isEqual(wc.originalWeight, wc.weight),
-    )
-  ) {
+  if (weightChanges.every((wc) => isEqual(wc.originalWeight, wc.weight))) {
     return program;
   }
   const newEvalutedProgram = structuredClone(program);

@@ -2492,10 +2492,8 @@ export function compactPlannerProgram(
       ),
   );
 
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const week = mapping[weekIndex];
-    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const day = week[dayIndex];
+  for (const [weekIndex, week] of mapping.entries()) {
+    for (const [dayIndex, day] of week.entries()) {
       for (const line of day) {
         if (
           line.type !== "exercise" ||
@@ -2560,12 +2558,11 @@ export function compactPlannerProgram(
     }
   }
 
-  for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-    const week = mapping[weekIndex];
-    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
+  for (const [weekIndex, week] of mapping.entries()) {
+    for (const [dayIndex, day] of week.entries()) {
       const exerciseTextParts: string[] = [];
       let ongoingDescriptions = false;
-      for (const line of week[dayIndex]) {
+      for (const line of day) {
         switch (line.type) {
           case "exercise":
             ongoingDescriptions = false;
