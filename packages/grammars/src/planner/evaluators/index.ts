@@ -109,7 +109,7 @@ function checkConsistentProperty<T>({
 function fillRepeats(
   exercise: IPlannerProgramExercise,
   evaluatedWeeks: IPlannerEvalResult[][],
-  dayInWeekIndex: number,
+  dayInWeekIndex: IndexFrom0,
   byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>,
   dayIndexByWeekDay: number[][],
 ): void {
@@ -121,7 +121,7 @@ function fillRepeats(
     ) {
       const dayData = {
         week: repeatWeek,
-        dayInWeek: dayInWeekIndex + 1,
+        dayInWeek: as1(dayInWeekIndex),
         day: (dayIndexByWeekDay[repeatWeekIndex]?.[dayInWeekIndex] ?? 0) + 1,
       };
       const repeatedExercise: IPlannerProgramExercise = {
