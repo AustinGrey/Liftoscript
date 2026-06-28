@@ -56,7 +56,13 @@ import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
 import { toKey } from "@/exercises";
 import { nodeResult } from "@/common-types.ts";
-import { as1, withIndex } from "@/utils/indexes.ts";
+import {
+  as1,
+  type IndexFrom0,
+  next,
+  withIndex,
+  ZERO,
+} from "@/utils/indexes.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -689,41 +695,43 @@ function iterateOverExercises(
   program: IPlannerEvalResult[][],
   cb: (
     weekIndex: number,
-    dayInWeekIndex: number,
-    dayIndex: number,
+    dayInWeekIndex: IndexFrom0,
+    dayIndex: IndexFrom0,
     exerciseIndex: number,
     exercise: IPlannerProgramExercise,
   ) => void,
 ): void {
-  let dayIndex = 0;
+  let dayIndex = ZERO;
   for (const [weekIndex, week] of program.entries()) {
-    for (const [dayInWeekIndex, day] of week.entries()) {
-      try {
-        if (day?.success) {
-          const exercises = day.data;
-          for (
-            let exerciseIndex = 0;
-            exerciseIndex < exercises.length;
-            exerciseIndex += 1
-          ) {
-            cb(
-              weekIndex,
-              dayInWeekIndex,
-              dayIndex,
-              exerciseIndex,
-              exercises[exerciseIndex],
-            );
+    week.forEach(
+      withIndex((day, dayInWeekIndex) => {
+        try {
+          if (day?.success) {
+            const exercises = day.data;
+            for (
+              let exerciseIndex = 0;
+              exerciseIndex < exercises.length;
+              exerciseIndex += 1
+            ) {
+              cb(
+                weekIndex,
+                dayInWeekIndex,
+                dayIndex,
+                exerciseIndex,
+                exercises[exerciseIndex],
+              );
+            }
+          }
+        } catch (e) {
+          if (e instanceof SourcedSyntaxError) {
+            week[dayInWeekIndex] = { success: false, error: e };
+          } else {
+            throw e;
           }
         }
-      } catch (e) {
-        if (e instanceof SourcedSyntaxError) {
-          week[dayInWeekIndex] = { success: false, error: e };
-        } else {
-          throw e;
-        }
-      }
-      dayIndex += 1;
-    }
+        dayIndex = next(dayIndex);
+      }),
+    );
   }
 }
 
@@ -745,37 +753,38 @@ export const PlannerEvaluator_forceEvaluate = (
     (week, weekIndex) => {
       dayIndexByWeekDay[weekIndex] ??= [];
       return week.days.map(
-        (day: IPlannerProgramDay, dayInWeekIndex): IPlannerEvalResult => {
-          const dayData: IDayData = {
-            week: weekIndex + 1,
-            dayInWeek: dayInWeekIndex + 1,
-            day: dayIndex + 1,
-          };
-          dayIndexByWeekDay[weekIndex][dayInWeekIndex] = dayIndex;
-          const dayParseResult = evaluate(
-            parseBound(plannerExerciseParser, day.exerciseText),
-            settings,
-            IPlannerExerciseEvaluatorMode.PERDAY,
-            dayData,
-          );
-          const result: IPlannerEvalResult = !dayParseResult.success
-            ? dayParseResult
-            : nodeResult(
-                dayParseResult.data.at(0)?.days.at(0)?.exercises || [],
-              );
-          dayIndex += 1;
-          if (!result.success) {
-            return result;
-          }
-          const exercises = result.data;
-          const keysInDay = new Set<string>();
-          for (const exercise of exercises) {
-            if (exercise.progress?.type === IProgramExerciseProgressType.DP) {
-              const hasRange = exercise.setVariations.some((sv) =>
-                sv.sets.some((s) => s.repRange?.minrep != null),
-              );
-              if (hasRange) {
-                exercise.progress.script = `for (var.i in completedReps) {
+        withIndex(
+          (day: IPlannerProgramDay, dayInWeekIndex): IPlannerEvalResult => {
+            const dayData: IDayData = {
+              week: weekIndex + 1,
+              dayInWeek: as1(dayInWeekIndex),
+              day: dayIndex + 1,
+            };
+            dayIndexByWeekDay[weekIndex][dayInWeekIndex] = dayIndex;
+            const dayParseResult = evaluate(
+              parseBound(plannerExerciseParser, day.exerciseText),
+              settings,
+              IPlannerExerciseEvaluatorMode.PERDAY,
+              dayData,
+            );
+            const result: IPlannerEvalResult = !dayParseResult.success
+              ? dayParseResult
+              : nodeResult(
+                  dayParseResult.data.at(0)?.days.at(0)?.exercises || [],
+                );
+            dayIndex += 1;
+            if (!result.success) {
+              return result;
+            }
+            const exercises = result.data;
+            const keysInDay = new Set<string>();
+            for (const exercise of exercises) {
+              if (exercise.progress?.type === IProgramExerciseProgressType.DP) {
+                const hasRange = exercise.setVariations.some((sv) =>
+                  sv.sets.some((s) => s.repRange?.minrep != null),
+                );
+                if (hasRange) {
+                  exercise.progress.script = `for (var.i in completedReps) {
   if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
     weights[var.i] = completedWeights[var.i]
   }
@@ -797,124 +806,125 @@ if (completedReps >= reps && completedRPE <= RPE) {
       completedReps[var.i] + 1
   }
 }`;
+                }
               }
-            }
-            if (keysInDay.has(exercise.key)) {
-              return {
-                success: false,
-                error: plannerError(
-                  exercise.fullName,
-                  `Exercise ${exercise.key} is already used in this day. Combine them together, or add a label to separate out.`,
-                  exercise.points.fullName,
-                ),
-              };
-            }
-            keysInDay.add(exercise.key);
-
-            const tagsProp = exercise.tags;
-            if (tagsProp != null && tagsProp.length > 0) {
-              const idError = checkConsistentProperty({
-                key: exercise.key,
-                value: tagsProp,
-                canonical: metadata.properties.id,
-                dayData,
-                isEqual,
-                makeError: (prevDayData) =>
-                  plannerError(
+              if (keysInDay.has(exercise.key)) {
+                return {
+                  success: false,
+                  error: plannerError(
                     exercise.fullName,
-                    `Same property 'id' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-                      `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
-                      `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-                    exercise.points.idPoint || exercise.points.fullName,
+                    `Exercise ${exercise.key} is already used in this day. Combine them together, or add a label to separate out.`,
+                    exercise.points.fullName,
                   ),
-              });
-              if (idError != null) {
-                return idError;
+                };
               }
-            }
+              keysInDay.add(exercise.key);
 
-            if (
-              exercise.progress != null &&
-              exercise.progress.type !== IProgramExerciseProgressType.NONE
-            ) {
-              const progressError = checkConsistentProperty({
-                key: exercise.key,
-                value: exercise.progress,
-                canonical: metadata.properties.progress,
-                dayData,
-                isEqual: (a, b) =>
-                  isEqualAfterTransform(a, b, (p) => ({
-                    ...pick(p, ["type", "state", "stateMetadata", "script"]),
-                    reuse: p.reuse?.fullName,
-                  })),
-                makeError: (prevDayData) =>
-                  plannerError(
-                    exercise.fullName,
-                    `Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-                      `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
-                      `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-                    exercise.points.progressPoint || exercise.points.fullName,
-                  ),
-              });
-              if (progressError != null) {
-                return progressError;
+              const tagsProp = exercise.tags;
+              if (tagsProp != null && tagsProp.length > 0) {
+                const idError = checkConsistentProperty({
+                  key: exercise.key,
+                  value: tagsProp,
+                  canonical: metadata.properties.id,
+                  dayData,
+                  isEqual,
+                  makeError: (prevDayData) =>
+                    plannerError(
+                      exercise.fullName,
+                      `Same property 'id' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                        `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
+                        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                      exercise.points.idPoint || exercise.points.fullName,
+                    ),
+                });
+                if (idError != null) {
+                  return idError;
+                }
               }
-            }
 
-            if (exercise.update != null) {
-              const updateError = checkConsistentProperty({
-                key: exercise.key,
-                value: exercise.update,
-                canonical: metadata.properties.update,
-                dayData,
-                isEqual: (a, b) =>
-                  isEqualAfterTransform(a, b, (u) => ({
-                    ...pick(u, ["type", "script"]),
-                    reuse: u.reuse?.fullName,
-                  })),
-                makeError: (prevDayData) =>
-                  plannerError(
-                    exercise.fullName,
-                    `Same property 'update' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
-                      `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
-                      `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-                    exercise.points.updatePoint || exercise.points.fullName,
-                  ),
-              });
-              if (updateError != null) {
-                return updateError;
+              if (
+                exercise.progress != null &&
+                exercise.progress.type !== IProgramExerciseProgressType.NONE
+              ) {
+                const progressError = checkConsistentProperty({
+                  key: exercise.key,
+                  value: exercise.progress,
+                  canonical: metadata.properties.progress,
+                  dayData,
+                  isEqual: (a, b) =>
+                    isEqualAfterTransform(a, b, (p) => ({
+                      ...pick(p, ["type", "state", "stateMetadata", "script"]),
+                      reuse: p.reuse?.fullName,
+                    })),
+                  makeError: (prevDayData) =>
+                    plannerError(
+                      exercise.fullName,
+                      `Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                        `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
+                        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                      exercise.points.progressPoint || exercise.points.fullName,
+                    ),
+                });
+                if (progressError != null) {
+                  return progressError;
+                }
               }
-            }
-            if (exercise.notused) {
-              metadata.notused.add(exercise.key);
-            }
-            if (exercise.warmupSets != null) {
-              const warmupError = checkConsistentProperty({
-                key: exercise.key,
-                value: exercise.warmupSets,
-                canonical: metadata.properties.warmup,
-                dayData,
-                isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
-                makeError: (prevDayData) =>
-                  plannerError(
-                    exercise.fullName,
-                    `Different warmup sets are specified in multiple weeks/days for exercise '${exercise.name}': both in ` +
-                      `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
-                      `and week ${dayData.week}, day ${dayData.dayInWeek}`,
-                    exercise.points.warmupPoint || exercise.points.fullName,
-                  ),
-              });
-              if (warmupError != null) {
-                return warmupError;
-              }
-            }
 
-            ((metadata.byExerciseWeekDay[exercise.key] ??= {})[
-              dayData.week - 1
-            ] ??= {})[dayData.dayInWeek - 1] = exercise;
-          }
-          return { success: true, data: exercises };
-        },
+              if (exercise.update != null) {
+                const updateError = checkConsistentProperty({
+                  key: exercise.key,
+                  value: exercise.update,
+                  canonical: metadata.properties.update,
+                  dayData,
+                  isEqual: (a, b) =>
+                    isEqualAfterTransform(a, b, (u) => ({
+                      ...pick(u, ["type", "script"]),
+                      reuse: u.reuse?.fullName,
+                    })),
+                  makeError: (prevDayData) =>
+                    plannerError(
+                      exercise.fullName,
+                      `Same property 'update' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                        `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
+                        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                      exercise.points.updatePoint || exercise.points.fullName,
+                    ),
+                });
+                if (updateError != null) {
+                  return updateError;
+                }
+              }
+              if (exercise.notused) {
+                metadata.notused.add(exercise.key);
+              }
+              if (exercise.warmupSets != null) {
+                const warmupError = checkConsistentProperty({
+                  key: exercise.key,
+                  value: exercise.warmupSets,
+                  canonical: metadata.properties.warmup,
+                  dayData,
+                  isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+                  makeError: (prevDayData) =>
+                    plannerError(
+                      exercise.fullName,
+                      `Different warmup sets are specified in multiple weeks/days for exercise '${exercise.name}': both in ` +
+                        `week ${prevDayData.week + 1}, day ${prevDayData.dayInWeek + 1} ` +
+                        `and week ${dayData.week}, day ${dayData.dayInWeek}`,
+                      exercise.points.warmupPoint || exercise.points.fullName,
+                    ),
+                });
+                if (warmupError != null) {
+                  return warmupError;
+                }
+              }
+
+              ((metadata.byExerciseWeekDay[exercise.key] ??= {})[
+                dayData.week - 1
+              ] ??= {})[dayData.dayInWeek - 1] = exercise;
+            }
+            return { success: true, data: exercises };
+          },
+        ),
       );
     },
   );
@@ -942,7 +952,7 @@ if (completedReps >= reps && completedRPE <= RPE) {
       fillUpdateReuses(evaluatedWeeks, exercise, settings, metadata);
       checkUpdateScript(exercise, settings, {
         week: weekIndex + 1,
-        dayInWeek: dayInWeekIndex + 1,
+        dayInWeek: as1(dayInWeekIndex),
         day: globalDayIndex + 1,
       });
     },
