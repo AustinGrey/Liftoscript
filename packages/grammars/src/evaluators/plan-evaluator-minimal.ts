@@ -126,7 +126,9 @@ import {
   castAs1,
   type IndexFrom0,
   type IndexFrom1,
+  safeFindLastIndex,
   withIndex,
+  ZERO,
 } from "@/utils/indexes.ts";
 
 //#region Program
@@ -1833,7 +1835,17 @@ function Progress_applyBindings(
   bindings: IScriptBindings,
   settings: ISettings,
 ): IHistoryEntry {
-  const keys = [
+  const entry = structuredClone(oldEntry);
+  const lastCompletedIndex = safeFindLastIndex(
+    bindings.completedReps,
+    (r) => r != null,
+    ZERO,
+  );
+  entry.sets = entry.sets.slice(
+    0,
+    Math.max(lastCompletedIndex, bindings.numberOfSets, 0),
+  );
+  for (const key of [
     "RPE",
     "minReps",
     "reps",
@@ -1843,15 +1855,7 @@ function Progress_applyBindings(
     "timers",
     "originalWeights",
     "askweights",
-  ] as const;
-  const entry = structuredClone(oldEntry);
-  const lastCompletedIndex =
-    bindings.completedReps.findLastIndex((r) => r != null) + 1;
-  entry.sets = entry.sets.slice(
-    0,
-    Math.max(lastCompletedIndex, bindings.numberOfSets, 0),
-  );
-  for (const key of keys) {
+  ] as const) {
     for (let i = 0; i < bindings[key].length; i += 1) {
       entry.sets[i] ??= {
         id: generateUid(6),
