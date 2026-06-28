@@ -719,6 +719,13 @@ export type OpResult<A extends Quantity, B extends Quantity> = [A, B] extends [
           ? IDynamicWeight
           : Quantity;
 
+/**
+ * Apply an operation to two quantities.
+ * @param onerm If the quantities are one weight and one dynamic weight, this is necessary to convert the dynamic weight to a weight.
+ * @param oldValueRaw The original value of the quantity before the operation.
+ * @param value The value to apply the operation to.
+ * @param opr The operation to apply.
+ */
 export function applyOp<
   TA extends Quantity | boolean | undefined,
   TB extends Quantity,
@@ -749,7 +756,7 @@ export function applyOp<
     : OpResult<TA extends boolean | undefined ? Quantity : TA, TB>;
 }
 
-export function op<TA extends Quantity, TB extends Quantity>(
+function op<TA extends Quantity, TB extends Quantity>(
   onerm: IWeight | undefined,
   a: TA,
   b: TB,

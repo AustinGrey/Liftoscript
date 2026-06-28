@@ -1,4 +1,5 @@
 import type { ConditionalPick } from "type-fest";
+import { castAs0, type IndexFrom0 } from "@/utils/indexes.ts";
 
 /**
  * A common filter predicate, removed undefined values
@@ -31,7 +32,7 @@ export function CollectionUtils_sortBy<
 export function tryFindIndex<T>(
   arr: T[],
   predicate: (value: T) => boolean,
-): number | undefined {
+): IndexFrom0 | undefined {
   const result = arr.findIndex(predicate);
-  return result === -1 ? undefined : result;
+  return result === -1 ? undefined : castAs0(result);
 }

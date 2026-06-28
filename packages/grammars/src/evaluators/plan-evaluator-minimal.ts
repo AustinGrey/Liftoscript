@@ -120,7 +120,14 @@ import {
   isNonEmpty,
   StringUtils_unindent,
 } from "@/utils/string.ts";
-import { as1, castAs1, type IndexFrom1, withIndex } from "@/utils/indexes.ts";
+import {
+  as1,
+  castAs0,
+  castAs1,
+  type IndexFrom0,
+  type IndexFrom1,
+  withIndex,
+} from "@/utils/indexes.ts";
 
 //#region Program
 
@@ -280,8 +287,8 @@ function Program_runFinishDayScript(
       settings.graphOptions.weight?.movingAverageWindowSize,
     ),
     undefined,
-    setVariationIndex + 1,
-    findIndexOfCurrentOrFirst(programExercise.descriptions.values) + 1,
+    as1(setVariationIndex),
+    as1(findIndexOfCurrentOrFirst(programExercise.descriptions.values)),
   );
 
   const otherStates = structuredClone(program.states);
@@ -309,15 +316,14 @@ function Program_runFinishDayScript(
   } catch (e) {
     if (e instanceof SyntaxError) {
       return { success: false, error: e.message };
-    } else {
-      throw e;
     }
+    throw e;
   }
 
   const diffOtherStates = ObjectUtils_keys(otherStates).reduce<
     IByTag<IProgramState>
   >((memo, key) => {
-    if (!ObjectUtils_isEqual(otherStates[key], program.states[key])) {
+    if (!isEqual(otherStates[key], program.states[key])) {
       memo[key] = ObjectUtils_keys(otherStates[key]).reduce<IProgramState>(
         (memo2, key2) => {
           if (!eq(otherStates[key][key2], program.states[key][key2])) {
@@ -1514,10 +1520,15 @@ function PlannerProgramExercise_sets(
  */
 function findIndexOfCurrentOrFirst(
   collection: { isCurrent: boolean }[],
-): number {
-  return tryFindIndex(collection, (item) => item.isCurrent) ?? 0;
+): IndexFrom0 {
+  return tryFindIndex(collection, (item) => item.isCurrent) ?? castAs0(0);
 }
 
+/**
+ * Finds and returns which script to use to calculate the progress of a program exercise.
+ * @param exercise The program exercise to find the script for.
+ * @todo why is this so complicated? Having FIVE duplicate locations for the script is insane. These data structures need simplification
+ */
 function PlannerProgramExercise_getProgressScript(
   exercise: IPlannerProgramExercise,
 ): string | undefined {
@@ -1715,8 +1726,8 @@ function Progress_createScriptBindings(
   programNumberOfSets: number,
   bodyweight: IWeight | undefined,
   setIndex?: number,
-  setVariationIndex?: number,
-  descriptionIndex?: number,
+  setVariationIndex?: IndexFrom1,
+  descriptionIndex?: IndexFrom1,
 ): IScriptBindings {
   const bindings = Progress_createEmptyScriptBindings(
     dayData,
@@ -1782,9 +1793,7 @@ function Progress_runUpdateScriptForEntry(
   const setVariationIndex = findIndexOfCurrentOrFirst(
     programExercise.evaluatedSetVariations,
   );
-  const descriptionIndex = findIndexOfCurrentOrFirst(
-    programExercise.descriptions.values,
-  );
+
   const bindings = Progress_createScriptBindings(
     dayData,
     entry,
@@ -1796,8 +1805,8 @@ function Progress_runUpdateScriptForEntry(
       settings.graphOptions.weight?.movingAverageWindowSize,
     ),
     setIndex + 1,
-    setVariationIndex,
-    descriptionIndex,
+    as1(setVariationIndex),
+    as1(findIndexOfCurrentOrFirst(programExercise.descriptions.values)),
   );
   try {
     const fnContext: IScriptFnContext = {
