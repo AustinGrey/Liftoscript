@@ -104,3 +104,13 @@ export function safeFindLastIndex<TElement, TDefault extends IndexFrom0>(
           ? IndexFrom0
           : IndexFrom0 | undefined);
 }
+
+/**
+ * Gets the next index, while preserving the type information
+ * @param idx The index to get the next index of
+ */
+export function next<TIndex extends IndexFrom0 | IndexFrom1>(
+  idx: TIndex,
+): TIndex {
+  return (idx + 1) as TIndex;
+}

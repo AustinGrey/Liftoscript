@@ -696,14 +696,8 @@ function iterateOverExercises(
   ) => void,
 ): void {
   let dayIndex = 0;
-  for (let weekIndex = 0; weekIndex < program.length; weekIndex += 1) {
-    const week = program[weekIndex];
-    for (
-      let dayInWeekIndex = 0;
-      dayInWeekIndex < week.length;
-      dayInWeekIndex += 1
-    ) {
-      const day = week[dayInWeekIndex];
+  for (const [weekIndex, week] of program.entries()) {
+    for (const [dayInWeekIndex, day] of week.entries()) {
       try {
         if (day?.success) {
           const exercises = day.data;
