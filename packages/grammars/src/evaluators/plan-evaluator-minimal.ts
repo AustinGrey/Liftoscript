@@ -292,34 +292,28 @@ function Program_runFinishDayScript(
   );
 
   const otherStates = structuredClone(program.states);
-  let updates: ILiftoscriptEvaluatorUpdate[];
-  let newState: IProgramState;
-  try {
-    const result = run(
-      PlannerProgramExercise_getProgressScript(programExercise) || "",
-      {
-        ...state,
-        ...userPromptedStateVars,
-      },
-      bindings,
-      Progress_createScriptFunctions(settings),
-      {
-        exerciseType: programExercise.exerciseType,
-        unit: settings.units,
-        prints: [],
-      },
-      otherStates,
-      IProgramMode.PLANNER,
-    );
-    updates = result.updates;
-    newState = result.finalState;
-  } catch (e) {
-    if (e instanceof SyntaxError) {
-      return { success: false, error: e.message };
-    }
-    throw e;
-  }
+  // @todo replace all syntaxerror throws with returns, and unwrap this try/catch. Confirmed that only run itself throws, not the functions called to make the args.
+  const result = run(
+    PlannerProgramExercise_getProgressScript(programExercise) || "",
+    {
+      ...state,
+      ...userPromptedStateVars,
+    },
+    bindings,
+    Progress_createScriptFunctions(settings),
+    {
+      exerciseType: programExercise.exerciseType,
+      unit: settings.units,
+      prints: [],
+    },
+    otherStates,
+    IProgramMode.PLANNER,
+  );
 
+  const stateDiff = omitBy(
+    result.finalState,
+    (value, key) => state[key] === value,
+  );
   const diffOtherStates = ObjectUtils_keys(otherStates).reduce<
     IByTag<IProgramState>
   >((memo, key) => {
@@ -337,10 +331,14 @@ function Program_runFinishDayScript(
     return memo;
   }, {});
 
-  const stateDiff = omitBy(newState, (value, key) => state[key] === value);
   return {
     success: true,
-    data: { state: stateDiff, otherStates: diffOtherStates, updates, bindings },
+    data: {
+      state: stateDiff,
+      otherStates: diffOtherStates,
+      updates: result.updates,
+      bindings,
+    },
   };
 }
 
@@ -1808,33 +1806,26 @@ function Progress_runUpdateScriptForEntry(
     as1(setVariationIndex),
     as1(findIndexOfCurrentOrFirst(programExercise.descriptions.values)),
   );
-  try {
-    const fnContext: IScriptFnContext = {
-      exerciseType: exercise,
-      unit: settings.units,
-      prints: [],
-    };
-    const result = run(
-      script,
-      state,
-      bindings,
-      Progress_createScriptFunctions(settings),
-      fnContext,
-      structuredClone(otherStates),
-      IProgramMode.UPDATE,
-    );
-    const newEntry = Progress_applyBindings(entry, bindings, settings);
-    newEntry.state = { ...newEntry.state, ...result.finalState };
-    if (fnContext.prints.length > 0) {
-      newEntry.updatePrints = fnContext.prints;
-    }
-    return newEntry;
-  } catch (error) {
-    const e = error as Error;
-    console.error(e);
-
-    return entry;
+  const fnContext: IScriptFnContext = {
+    exerciseType: exercise,
+    unit: settings.units,
+    prints: [],
+  };
+  const { finalState } = run(
+    script,
+    state,
+    bindings,
+    Progress_createScriptFunctions(settings),
+    fnContext,
+    structuredClone(otherStates),
+    IProgramMode.UPDATE,
+  );
+  const newEntry = Progress_applyBindings(entry, bindings, settings);
+  newEntry.state = { ...newEntry.state, ...finalState };
+  if (fnContext.prints.length > 0) {
+    newEntry.updatePrints = fnContext.prints;
   }
+  return newEntry;
 }
 
 function Progress_applyBindings(
