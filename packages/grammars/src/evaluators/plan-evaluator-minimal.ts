@@ -1860,7 +1860,7 @@ function Progress_applyBindings(
     for (let i = 0; i < bindings[key].length; i += 1) {
       entry.sets[i] ??= {
         id: generateUid(6),
-        index: i,
+        index: castAs0(i),
         isUnilateral: isUnilateral(entry.exercise, settings),
         reps: 0,
         weight: w`0lb`,

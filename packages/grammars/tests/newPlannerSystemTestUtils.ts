@@ -400,11 +400,10 @@ export function PlannerTestUtils_finish(
       }
     }
   }
-  const { program: newProgram } = Program_runAllFinishDayScripts(
+  return Program_runAllFinishDayScripts(
     program,
     nextHistoryRecord,
     stats,
     settings,
   );
-  return { program: newProgram };
 }
