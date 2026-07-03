@@ -6,7 +6,6 @@ import {
   makePlannerKey,
   PlannerKey_fromFullName,
   PlannerKey_fromLabelNameAndEquipment,
-  Program_applyEvaluatedProgram,
   Program_create,
   Program_evaluate,
   Program_nextHistoryRecordFromEvaluated,
@@ -68,22 +67,18 @@ export function PlannerTestUtils_changeWeight(
   const settings = Settings_build();
   const evaluatedProgram = Program_evaluate(program, settings);
   const programExercise = evaluatedProgram.weeks[0].days[0].exercises[0];
-  const weightChanges = ProgramExercise_weightChanges(
-    evaluatedProgram,
-    programExercise.key,
+  return asProgramScript(
+    convertToPlanner(
+      PlannerProgram_replaceWeight(
+        evaluatedProgram,
+        programExercise.key,
+        cb(
+          ProgramExercise_weightChanges(evaluatedProgram, programExercise.key),
+        ),
+      ),
+      settings,
+    ),
   );
-  const newWeightChanges = cb(weightChanges);
-  const newEvaluatedProgram = PlannerProgram_replaceWeight(
-    evaluatedProgram,
-    programExercise.key,
-    newWeightChanges,
-  );
-  const newProgram = Program_applyEvaluatedProgram(
-    program,
-    newEvaluatedProgram,
-    settings,
-  );
-  return newProgram.planner ? asProgramScript(newProgram.planner) : "";
 }
 
 function replaceExercise(

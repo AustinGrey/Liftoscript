@@ -518,18 +518,6 @@ function Program_forceEvaluate(
   };
 }
 
-export function Program_applyEvaluatedProgram(
-  program: IProgram,
-  evaluatedProgram: IEvaluatedProgram,
-  settings: ISettings,
-): IProgram {
-  return {
-    ...structuredClone(program),
-    planner: convertToPlanner(evaluatedProgram, settings),
-    nextDay: evaluatedProgram.nextDay,
-  };
-}
-
 export function Program_create(name: string, id?: string): IProgram {
   return {
     id: id || generateUid(8),
