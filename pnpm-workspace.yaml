@@ -21,19 +21,15 @@ catalog:
   type-fest: ^5.6.0
   typescript: ^5
   unitmath: ^1.1.1
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vite-plus: latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
+  vite: npm:@voidzero-dev/vite-plus-core@0.2.2
+  vite-plus: 0.2.2
   zod: ^4.3.6
 
 catalogMode: prefer
 overrides:
-  vite: "catalog:"
-  vitest: "catalog:"
+  vite: 'catalog:'
 peerDependencyRules:
   allowAny:
     - vite
-    - vitest
   allowedVersions:
-    vite: "*"
-    vitest: "*"
+    vite: '*'

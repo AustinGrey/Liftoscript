@@ -8,6 +8,7 @@
     "dev": "vp run website#dev"
   },
   "devDependencies": {
+    "vite": "catalog:",
     "vite-plus": "catalog:"
   },
   "engines": {
