@@ -16,6 +16,7 @@ import { TMuscle, TScreenMuscle } from "@/human-body";
 import { type IExerciseType } from "@/exercises";
 import type { IEither } from "@/utils/types.ts";
 import type { SourcedSyntaxError } from "@/utils/lezer.ts";
+import { zIndexFrom0 } from "@/utils/indexes.ts";
 
 export interface IScriptFnContext {
   prints: Quantity[][];
@@ -171,7 +172,7 @@ export const TPlate = z.object({
 });
 export type IPlate = z.infer<typeof TPlate>;
 export const TSet = z.strictObject({
-  index: z.number(),
+  index: zIndexFrom0,
   id: z.string(),
   reps: z.number().optional(),
   originalWeight: z.union([TWeight, TDynamicWeight]).optional(),
@@ -190,7 +191,7 @@ export const TSet = z.strictObject({
   completedReps: z.number().optional(),
   completedWeight: TWeight.optional(),
   completedRpe: z.number().optional(),
-  programSetIndex: z.number().optional(),
+  programSetIndex: zIndexFrom0.optional(),
 });
 
 export type ISet = z.infer<typeof TSet>;

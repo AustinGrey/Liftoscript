@@ -160,35 +160,36 @@ function Program_nextHistoryEntry(
   stats: IStats,
   settings: ISettings,
 ): IHistoryEntry {
-  const programSets = programExercise.evaluatedSetVariations.at(
-    findIndexOfCurrentOrFirst(programExercise.evaluatedSetVariations),
-  )?.sets;
-  const sets = (programSets ?? []).map(
-    (programSet, i): ISet => ({
-      id: generateUid(6),
-      reps: programSet.maxrep,
-      index: i,
-      minReps:
-        programSet.minrep != null && programSet.minrep !== programSet.maxrep
-          ? programSet.minrep
-          : undefined,
-      weight: ProgramSet_getEvaluatedWeight(
-        programSet,
-        programExercise.exerciseType,
-        settings,
+  const sets = programExercise.evaluatedSetVariations
+    .at(findIndexOfCurrentOrFirst(programExercise.evaluatedSetVariations))
+    ?.sets.map(
+      withIndex(
+        (programSet, i): ISet => ({
+          id: generateUid(6),
+          reps: programSet.maxrep,
+          index: i,
+          minReps:
+            programSet?.minrep !== programSet.maxrep
+              ? programSet.minrep
+              : undefined,
+          weight: ProgramSet_getEvaluatedWeight(
+            programSet,
+            programExercise.exerciseType,
+            settings,
+          ),
+          isUnilateral: isUnilateral(programExercise.exerciseType, settings),
+          rpe: programSet.rpe,
+          timer: programSet.timer,
+          logRpe: programSet.logRpe,
+          askWeight: programSet.askWeight,
+          originalWeight: programSet.weight,
+          isAmrap: programSet.isAmrap,
+          label: programSet.label,
+          isCompleted: false,
+          programSetIndex: i,
+        }),
       ),
-      isUnilateral: isUnilateral(programExercise.exerciseType, settings),
-      rpe: programSet.rpe,
-      timer: programSet.timer,
-      logRpe: programSet.logRpe,
-      askWeight: programSet.askWeight,
-      originalWeight: programSet.weight,
-      isAmrap: programSet.isAmrap,
-      label: programSet.label,
-      isCompleted: false,
-      programSetIndex: i,
-    }),
-  );
+    );
 
   return Progress_runUpdateScriptForEntry(
     {
@@ -198,11 +199,11 @@ function Program_nextHistoryEntry(
       index,
       exercise: programExercise.exerciseType,
       programExerciseId: programExercise.key,
-      sets,
+      sets: sets ?? [],
       superset: programExercise.superset?.name,
       warmupSets: getProgramWarmupSets(
         programExercise.exerciseType,
-        sets.at(0)?.weight,
+        sets?.at(0)?.weight,
         settings,
         PlannerProgramExercise_programWarmups(programExercise, settings),
       ),
