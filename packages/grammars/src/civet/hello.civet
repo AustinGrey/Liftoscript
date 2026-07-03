@@ -1,0 +1,5 @@
+export add := (a: number, b: number): number =>
+  a + b
+
+export greet := (name: string): string =>
+  `Hello, ${name}!`

@@ -1,0 +1,25 @@
+{
+  "parseOptions": {
+    "js": true
+  },
+  "tsConfig": {
+    "include": ["packages/grammars/src/civet/**/*.civet", "packages/grammars/tests/**/*.civet"],
+    "compilerOptions": {
+      "target": "esnext",
+      "lib": ["esnext"],
+      "paths": {
+        "@/*": ["./packages/grammars/src/*"]
+      },
+      "module": "esnext",
+      "moduleResolution": "bundler",
+      "resolveJsonModule": true,
+      "strict": true,
+      "noEmit": true,
+      "allowImportingTsExtensions": true,
+      "esModuleInterop": true,
+      "isolatedModules": true,
+      "verbatimModuleSyntax": true,
+      "skipLibCheck": true
+    }
+  }
+}

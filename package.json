@@ -4,10 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ready": "vp check && vp run -r test && vp run -r build",
+    "check:civet": "civet --typecheck packages/grammars/src/civet/hello.civet packages/grammars/tests/civet.test.civet",
+    "ready": "vp check && pnpm check:civet && vp run -r test && vp run -r build",
     "dev": "vp run website#dev"
   },
   "devDependencies": {
+    "@danielx/civet": "catalog:",
+    "@danielx/civet-language-server": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:"
   },

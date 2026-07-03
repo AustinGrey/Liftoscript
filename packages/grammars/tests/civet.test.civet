@@ -1,0 +1,17 @@
+import { describe, expect, test } from "vite-plus/test";
+import { add, greet } from "@/civet/hello.civet";
+import { MathUtils_round } from "@/utils/math.ts";
+
+describe("civet smoke", () => {
+  test("adds numbers with civet syntax", () => {
+    expect(add(1, 2)).toBe(3);
+  });
+
+  test("greets by name", () => {
+    expect(greet("Liftoscript")).toBe("Hello, Liftoscript!");
+  });
+
+  test("imports existing TypeScript modules", () => {
+    expect(MathUtils_round(1.234, 0.1)).toBe(1.2);
+  });
+});
