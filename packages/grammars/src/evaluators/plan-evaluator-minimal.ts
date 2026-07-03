@@ -20,7 +20,11 @@ import {
   ObjectUtils_isEqual,
   ObjectUtils_keys,
 } from "@/utils/object";
-import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate } from "@/logic/types";
+import type {
+  IAssignmentOp,
+  ILiftoscriptEvaluatorUpdate,
+  Quantity,
+} from "@/logic/types";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import {
   applyOp,
@@ -774,7 +778,7 @@ function operation(
     | "logRpe"
     | "isAmrap"
     | "askWeight",
-  value: IWeight | IDynamicWeight | number,
+  value: Quantity,
   op: IAssignmentOp,
 ): void {
   const valueToAssign = applyOp(
@@ -860,16 +864,6 @@ export const PlannerKey_fromLabelNameAndEquipment = memoize(
 //#endregion
 
 //#region Pages Planner Model Types
-export type IPlannerProgramExerciseWithType = SetRequired<
-  IPlannerProgramExercise,
-  "exerciseType"
->;
-function hasExerciseType(
-  exercise: IPlannerProgramExercise,
-): exercise is IPlannerProgramExerciseWithType {
-  return exercise.exerciseType !== undefined;
-}
-
 export type IPlannerProgramExercise = {
   id: string;
   key: PlannerKey;
@@ -915,6 +909,16 @@ export type IPlannerProgramExercise = {
     warmupPoint?: ISyntaxPointer;
   };
 };
+
+export type IPlannerProgramExerciseWithType = SetRequired<
+  IPlannerProgramExercise,
+  "exerciseType"
+>;
+function hasExerciseType(
+  exercise: IPlannerProgramExercise,
+): exercise is IPlannerProgramExerciseWithType {
+  return exercise.exerciseType !== undefined;
+}
 
 export interface IPlannerProgramExerciseSetVariation {
   sets: IPlannerProgramExerciseSet[];

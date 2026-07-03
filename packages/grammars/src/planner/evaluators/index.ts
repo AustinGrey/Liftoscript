@@ -292,16 +292,23 @@ function fillDescriptions(
     exercise.descriptions == null ||
     exercise.descriptions.values.length === 0
   ) {
-    const lastWeekExercise = findLastWeekExercise(
-      evaluatedWeeks,
-      weekIndex,
-      dayIndex,
-      exercise,
-      (ex) => ex.descriptions != null,
-    );
-    if (lastWeekExercise && lastWeekExercise.descriptions) {
-      exercise.descriptions = structuredClone(lastWeekExercise.descriptions);
+    for (
+      let i = weekIndex - 1, lastWeekDay = evaluatedWeeks[i]?.[dayIndex];
+      i >= 0 && lastWeekDay != null;
+      i -= 1, lastWeekDay = evaluatedWeeks[i]?.[dayIndex]
+    ) {
+      if (!lastWeekDay.success) {
+        continue;
+      }
+      const lastWeekExercise = lastWeekDay.data.find(
+        (ex) => ex.key === exercise.key,
+      );
+      if (lastWeekExercise) {
+        exercise.descriptions = structuredClone(lastWeekExercise.descriptions);
+        return;
+      }
     }
+    return undefined;
   }
 }
 
@@ -662,33 +669,6 @@ function findOriginalExercisesAtWeekDay(
     }),
   );
   return originalExercises;
-}
-
-function findLastWeekExercise(
-  program: IPlannerEvalResult[][],
-  weekIndex: number,
-  dayIndex: number,
-  exercise: IPlannerProgramExercise,
-  cond?: (ex: IPlannerProgramExercise) => boolean,
-): IPlannerProgramExercise | undefined {
-  for (
-    let i = weekIndex - 1, lastWeekDay = program[i]?.[dayIndex];
-    i >= 0 && lastWeekDay != null;
-    i -= 1, lastWeekDay = program[i]?.[dayIndex]
-  ) {
-    if (lastWeekDay.success) {
-      const lastWeekExercise = lastWeekDay.data.find(
-        (ex) => ex.key === exercise.key,
-      );
-      if (
-        lastWeekExercise != null &&
-        (cond == null || cond(lastWeekExercise))
-      ) {
-        return lastWeekExercise;
-      }
-    }
-  }
-  return undefined;
 }
 
 function iterateOverExercises(
