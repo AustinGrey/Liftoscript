@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev",
-    "build": "tsc && vp build",
+    "build": "vp build",
     "preview": "vp preview"
   },
   "dependencies": {
@@ -14,9 +14,16 @@
     "@codemirror/state": "catalog:",
     "@codemirror/view": "catalog:",
     "@lezer/highlight": "catalog:",
-    "grammars": "workspace:*"
+    "grammars": "workspace:*",
+    "vue": "catalog:",
+    "vue-router": "catalog:"
   },
   "devDependencies": {
+    "@types/js-yaml": "catalog:",
+    "@types/markdown-it": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "js-yaml": "catalog:",
+    "markdown-it": "catalog:",
     "typescript": "~6.0.2",
     "vite": "catalog:",
     "vite-plus": "catalog:"

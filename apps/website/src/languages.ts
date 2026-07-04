@@ -1,4 +1,9 @@
-import { LRLanguage, LanguageSupport } from "@codemirror/language";
+import {
+  HighlightStyle,
+  LRLanguage,
+  LanguageSupport,
+} from "@codemirror/language";
+import { EditorView } from "@codemirror/view";
 import { styleTags, tags as t } from "@lezer/highlight";
 import { logicParser, workoutPlanParser } from "grammars";
 
@@ -93,3 +98,60 @@ export function workoutPlanLanguage(): LanguageSupport {
     }),
   );
 }
+
+/**
+ * A syntax highlight style driven by CSS variables (see style.css) so it adapts
+ * to light and dark themes.
+ */
+export const playgroundHighlightStyle = HighlightStyle.define([
+  { tag: t.lineComment, color: "var(--cm-comment)", fontStyle: "italic" },
+  { tag: t.docComment, color: "var(--cm-comment)", fontStyle: "italic" },
+  { tag: t.meta, color: "var(--cm-comment)" },
+  { tag: t.heading, color: "var(--cm-heading)", fontWeight: "700" },
+  { tag: t.heading1, color: "var(--cm-heading)", fontWeight: "700" },
+  { tag: t.name, color: "var(--cm-exercise)", fontWeight: "600" },
+  { tag: t.keyword, color: "var(--cm-keyword)" },
+  { tag: t.number, color: "var(--cm-number)" },
+  { tag: t.integer, color: "var(--cm-number)" },
+  { tag: t.float, color: "var(--cm-number)" },
+  { tag: t.literal, color: "var(--cm-weight)", fontWeight: "600" },
+  { tag: t.unit, color: "var(--cm-unit)" },
+  { tag: t.propertyName, color: "var(--cm-prop)" },
+  { tag: t.function(t.variableName), color: "var(--cm-func)" },
+  { tag: t.variableName, color: "var(--cm-var)" },
+  { tag: t.labelName, color: "var(--cm-label)", fontWeight: "600" },
+  { tag: t.string, color: "var(--cm-string)" },
+  { tag: t.typeName, color: "var(--cm-type)" },
+  { tag: t.arithmeticOperator, color: "var(--cm-op)" },
+  { tag: t.compareOperator, color: "var(--cm-op)" },
+  { tag: t.logicOperator, color: "var(--cm-op)" },
+]);
+
+/** A minimal, transparent editor theme that inherits page colors. */
+export const playgroundEditorTheme = EditorView.theme({
+  "&": {
+    backgroundColor: "transparent",
+    color: "var(--text)",
+    fontSize: "13px",
+  },
+  ".cm-content": {
+    fontFamily: "var(--mono)",
+    caretColor: "var(--text)",
+  },
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    color: "var(--text-faint)",
+    border: "none",
+  },
+  ".cm-activeLine": {
+    backgroundColor: "color-mix(in srgb, var(--border) 22%, transparent)",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "transparent",
+    color: "var(--text-muted)",
+  },
+  "&.cm-focused": { outline: "none" },
+  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+    backgroundColor: "color-mix(in srgb, var(--accent) 25%, transparent)",
+  },
+});

@@ -63,6 +63,31 @@ const TStats = z.strictObject({
 export type IStats = z.infer<typeof TStats>;
 
 /**
+ * Builds an empty {@link IStats} object with no recorded samples in any series.
+ * Useful as a starting point for simulations or tests where body measurements
+ * are not relevant.
+ */
+export function Stats_build(): IStats {
+  return {
+    weight: [],
+    neck: [],
+    shoulders: [],
+    bicepLeft: [],
+    bicepRight: [],
+    forearmLeft: [],
+    forearmRight: [],
+    chest: [],
+    waist: [],
+    hips: [],
+    thighLeft: [],
+    thighRight: [],
+    calfLeft: [],
+    calfRight: [],
+    bodyfat: [],
+  };
+}
+
+/**
  * Calculates a moving average of the body weight stat based on a given window size
  * @param stats The source statistics
  * @param resultingUnits The units to return the moving average in

@@ -570,7 +570,7 @@ const THistoryEntry = z.strictObject({
     .array(z.array(z.union([z.number(), TWeight, TDynamicWeight])))
     .optional(),
 });
-type IHistoryEntry = z.infer<typeof THistoryEntry>;
+export type IHistoryEntry = z.infer<typeof THistoryEntry>;
 
 const THistoryRecord = z.strictObject({
   date: z.string(),
@@ -604,7 +604,7 @@ const THistoryRecord = z.strictObject({
   notes: z.string().optional(),
   updatedAt: z.number().optional(),
 });
-type IHistoryRecord = z.infer<typeof THistoryRecord>;
+export type IHistoryRecord = z.infer<typeof THistoryRecord>;
 
 //#endregion
 
