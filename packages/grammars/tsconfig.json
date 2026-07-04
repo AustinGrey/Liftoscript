@@ -6,7 +6,8 @@
       "@/*": ["./src/*"]
     },
     "moduleDetection": "force",
-    "module": "nodenext",
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,

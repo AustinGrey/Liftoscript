@@ -13,6 +13,42 @@ export type TypedLogicNode<T extends NodeNames_Logic> = SourcedSyntaxNode & {
   };
 };
 
+export enum LogicNodeName {
+  LineComment = "LineComment",
+  Program = "Program",
+  BinaryExpression = "BinaryExpression",
+  Plus = "Plus",
+  Times = "Times",
+  Cmp = "Cmp",
+  AndOr = "AndOr",
+  NumberExpression = "NumberExpression",
+  Number = "Number",
+  Percentage = "Percentage",
+  WeightExpression = "WeightExpression",
+  ParenthesisExpression = "ParenthesisExpression",
+  BlockExpression = "BlockExpression",
+  Ternary = "Ternary",
+  IfExpression = "IfExpression",
+  ForExpression = "ForExpression",
+  ForInExpression = "ForInExpression",
+  If = "If",
+  Else = "Else",
+  AssignmentExpression = "AssignmentExpression",
+  IncAssignmentExpression = "IncAssignmentExpression",
+  StateVariable = "StateVariable",
+  StateVariableIndex = "StateVariableIndex",
+  Variable = "Variable",
+  BuiltinFunctionExpression = "BuiltinFunctionExpression",
+  Keyword = "Keyword",
+  VariableExpression = "VariableExpression",
+  VariableIndex = "VariableIndex",
+  Current = "Current",
+  Wildcard = "Wildcard",
+  UnaryExpression = "UnaryExpression",
+  Not = "Not",
+  Unit = "Unit",
+}
+
 export namespace LogicNodes {
   export type LineComment = TypedLogicNode<"LineComment">;
   export type Program = TypedLogicNode<"Program">;

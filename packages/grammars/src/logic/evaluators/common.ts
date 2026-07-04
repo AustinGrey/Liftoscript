@@ -1,14 +1,11 @@
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { definedOnly } from "@/utils/collection.ts";
-import {
-  NodeName,
-  Weight_build,
-  Weight_buildAny,
-  Weight_convertToWeight,
-} from "@/evaluators/logic-evaluator.ts";
 import { is, isNumber } from "@/utils/types.ts";
 import * as Weight from "@/quantities/weight.ts";
 import {
+  build,
+  buildAny,
+  convertToWeight,
   type IDynamicWeight,
   type IWeight,
   TDynamicWeight,
@@ -22,13 +19,14 @@ import {
   MathUtils_round,
 } from "@/utils/math.ts";
 import { nodeError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
+import { LogicNodeName } from "@/logic/parsing/guards.ts";
 
 export function calculateIndexValues(
   indexes: SourcedSyntaxNode[],
   tools: EvaluateTools,
 ): (number | "*")[] {
   return indexes.filter(definedOnly).map((ie) => {
-    if (ie.type.name === NodeName.Wildcard) {
+    if (ie.type.name === LogicNodeName.Wildcard) {
       return "*" as const;
     } else {
       const v = tools.recurse(ie);
@@ -114,7 +112,7 @@ export function changeBinding(
         const newValue = Weight.applyOp(
           tools.getGlobal("rm1"),
           tools.getGlobal("weights")[i] ??
-            Weight_build(
+            build(
               0,
               // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
               //     I don't think that's necessary, we can always convert to KG, do math in KG, and then convert to whatever unit we want afterwards
@@ -124,7 +122,7 @@ export function changeBinding(
           evalutedValue,
           op,
         );
-        value = Weight_convertToWeight(
+        value = convertToWeight(
           tools.getGlobal("rm1"),
           newValue,
           // @TODO original liftoscript used "this.unit" which implied some sort of preference of units at the time the script is being executed
@@ -298,7 +296,7 @@ export function changeNumberOfSets(
     chopOrFill(
       x,
       // Copy the last entry to fill
-      Weight_buildAny(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
+      buildAny(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
     ),
   );
   tools.updateGlobal("timers", (x) => chopOrFill(x, x[ns]));

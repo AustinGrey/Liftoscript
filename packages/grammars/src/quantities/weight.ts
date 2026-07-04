@@ -113,6 +113,17 @@ export function build(value: number, unit: IUnit): IWeight {
       });
 }
 
+export function buildAny(
+  value: number,
+  unit: IUnit | "%",
+): IWeight | IDynamicWeight {
+  if (unit === "%") {
+    return percentORM(value);
+  } else {
+    return build(value, unit);
+  }
+}
+
 export function convertTo(weight: IWeight, unit: IUnit): IWeight;
 export function convertTo(
   weight: IDynamicWeight,
