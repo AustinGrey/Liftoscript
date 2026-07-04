@@ -92,8 +92,8 @@ export function getChild<TTypes extends NodeNames_Logic>(
 export function queryChild<TTypes extends NodeNames_Logic>(
   node: SourcedSyntaxNode,
   options: QueryOptions<TTypes> = {},
-): SourcedSyntaxNode | undefined {
-  return originalQueryChild(node, options);
+): TypedLogicNode<TTypes> | undefined {
+  return originalQueryChild(node, options) as TypedLogicNode<TTypes>;
 }
 
 /**

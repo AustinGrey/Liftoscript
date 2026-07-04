@@ -1,10 +1,10 @@
 import { type LogicHandler, type Validator } from "@/logic/evaluators/types.ts";
-import { queryChild, queryChildren } from "@/utils/grammars.ts";
 import {
-  NodeName,
-  Weight_convertToWeight,
-} from "@/evaluators/logic-evaluator.ts";
-import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
+  getChild,
+  isLogicNodeOfType,
+  queryChild,
+  queryChildren,
+} from "@/logic/parsing/guards.ts";
 import { isQuantity } from "@/logic/types.ts";
 import { toNumberUnsafe } from "@/logic/result-handling.ts";
 import { isOneOf } from "@/utils/types.ts";
@@ -14,16 +14,18 @@ import {
   recordVariableUpdate,
 } from "@/logic/evaluators/common.ts";
 import { nodeError } from "@/utils/lezer.ts";
+import { convertToWeight } from "@/quantities/weight.ts";
+import { NodeName } from "@/evaluators/logic-evaluator.ts";
 
 export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   const [variableNode, expression] = queryChildren(n, { atLeast: 2 });
   if (isLogicNodeOfType("VariableExpression", variableNode)) {
-    const nameNode = variableNode.getChild(NodeName.Keyword);
+    const nameNode = getChild(variableNode, { ofType: "Keyword" });
     if (nameNode == null) {
       throw nodeError(variableNode, `Missing variable name`);
     }
     const [...indexExprs] = queryChildren(variableNode, {
-      ofType: NodeName.VariableIndex,
+      ofType: "VariableIndex",
     });
     const variable = nameNode.source;
     if (variable === "rm1") {
@@ -36,7 +38,7 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
         : evaluatedValue;
       value = value ?? 0;
       value = value === true ? 1 : value === false ? 0 : value;
-      value = Weight_convertToWeight(
+      value = convertToWeight(
         t.getGlobal("rm1"),
         value,
 
@@ -90,12 +92,13 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
     const value = t.recurse(expression);
     return t.updateVar(varKey, isQuantity(value) ? value : value ? 1 : 0);
   } else if (isLogicNodeOfType("StateVariable", variableNode)) {
-    const indexNode = variableNode.getChild(NodeName.StateVariableIndex);
-    const stateKeyNode = variableNode.getChild(NodeName.Keyword);
-    if (stateKeyNode == null) {
+    const indexNode = queryChild(variableNode, {
+      ofType: "StateVariableIndex",
+    });
+    const stateKey = queryChild(variableNode, { ofType: "Keyword" })?.source;
+    if (stateKey == null) {
       return 0;
     }
-    const stateKey = stateKeyNode.source;
 
     // There are two different state sources - the normal "state" and the "otherStates" collection of various states
     // @TODO Why? What makes these two different from each other? Hypothesis - "state" is the state of the current exercise, while otherStates is the state of all the other exercises, indexed by set
@@ -119,45 +122,46 @@ export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
 export const validator: Validator<"AssignmentExpression"> = function* (n, t) {
   const [variableNode] = queryChildren(n);
 
-  if (variableNode?.type.name === NodeName.Variable) {
+  if (isLogicNodeOfType("Variable", variableNode)) {
     t.trackVariable(variableNode.source);
     return;
   }
 
-  if (variableNode?.type.name === NodeName.VariableExpression) {
-    const name = queryChild(variableNode, { ofType: NodeName.Keyword })?.source;
-    if (name !== undefined && t.mode === "update") {
-      if (
-        ![
-          "reps",
-          "weights",
-          "RPE",
-          "minReps",
-          "numberOfSets",
-          "timers",
-          "askweights",
-          "amraps",
-          "logrpes",
-        ].includes(name)
-      ) {
-        yield nodeError(variableNode, `Cannot assign to '${name}'`);
-        return;
-      }
-      const indexExprs = queryChildren(variableNode, {
-        ofType: NodeName.VariableIndex,
-      }).toArray();
-      if (name === "numberOfSets" && indexExprs.length > 0) {
-        yield nodeError(variableNode, `${name} is not an array`);
-        return;
-      }
+  if (!isLogicNodeOfType("VariableExpression", variableNode)) {
+    return;
+  }
+  const name = queryChild(variableNode, { ofType: NodeName.Keyword })?.source;
+  if (name !== undefined && t.mode === "update") {
+    if (
+      ![
+        "reps",
+        "weights",
+        "RPE",
+        "minReps",
+        "numberOfSets",
+        "timers",
+        "askweights",
+        "amraps",
+        "logrpes",
+      ].includes(name)
+    ) {
+      yield nodeError(variableNode, `Cannot assign to '${name}'`);
+      return;
+    }
+    const indexExprs = queryChildren(variableNode, {
+      ofType: NodeName.VariableIndex,
+    }).toArray();
+    if (name === "numberOfSets" && indexExprs.length > 0) {
+      yield nodeError(variableNode, `${name} is not an array`);
+      return;
+    }
 
-      if (indexExprs.length > 1) {
-        yield nodeError(
-          variableNode,
-          `Can't assign to set variations, weeks or days here`,
-        );
-        return;
-      }
+    if (indexExprs.length > 1) {
+      yield nodeError(
+        variableNode,
+        `Can't assign to set variations, weeks or days here`,
+      );
+      return;
     }
   }
 };
