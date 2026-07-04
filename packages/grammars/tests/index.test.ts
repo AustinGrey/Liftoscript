@@ -1,6 +1,4 @@
 import { describe, expect, test } from "vite-plus/test";
-import { parser } from "@/logic/parsing/logic.ts";
-import { LiftoscriptEvaluator } from "@/evaluators/logic-evaluator";
 import { run } from "@/logic/evaluators";
 import type { RequireAtLeastOne } from "type-fest";
 import { toMerged } from "es-toolkit";
@@ -608,51 +606,6 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
       "Result is $result for case %#: $description",
       (case_) => {
         const { initialState, adjustEmptyGlobals, finalState } = case_;
-        test("old system", () => {
-          if (case_.debug) {
-            console.error(
-              "This case has debug_ set true. The debugger will be called. If your debugger doesn't automatically break here, set a breakpoint.",
-            );
-            debugger;
-          }
-
-          const state = initialState?.() ?? {};
-          const evaluator = new LiftoscriptEvaluator(
-            script,
-            state,
-            {},
-            {
-              ...emptyGlobalData(),
-              ...adjustEmptyGlobals,
-            },
-            publicFunctions,
-            testFnContext,
-            "kg",
-            "planner",
-          );
-
-          if (case_.expectOldSystemToThrow) {
-            expect(
-              () => evaluator.evaluate(parser.parse(script).topNode),
-              case_.expectOldSystemToThrow,
-            ).toThrow();
-            return;
-          }
-
-          const output = evaluator.evaluate(parser.parse(script).topNode);
-
-          if ("result" in case_) {
-            expect
-              .soft(output, "Script should evaluate to the expected result")
-              .toEqual(case_.result);
-          }
-          if (finalState) {
-            // State in the old system is mutable, the object itself is modified
-            expect
-              .soft(state, "State after evaluation completes should match")
-              .toEqual(finalState);
-          }
-        });
         test("new system", () => {
           if (case_.debug) {
             console.error(
