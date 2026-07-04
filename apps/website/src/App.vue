@@ -6,7 +6,7 @@ import { RouterLink, RouterView } from "vue-router";
   <div class="app-shell">
     <header class="topbar">
       <RouterLink to="/" class="brand">
-        <span class="brand-mark">Lifto</span><span class="brand-rest">script</span>
+        <span><span class="brand-mark">Lifto</span><span class="brand-rest">script</span></span>
         <span class="brand-tag">Playground</span>
       </RouterLink>
       <nav class="topnav">

@@ -90,8 +90,7 @@ export {
 //#endregion
 
 //#region Shared types
-export {
-  type ISet,
-  type IProgramState,
-} from "@/common-types.ts";
+export { type ISet, type IProgramState } from "@/common-types.ts";
 //#endregion
+
+export { ObjectUtils_entries } from "./utils/object";

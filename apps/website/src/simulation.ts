@@ -11,6 +11,8 @@ import {
   Settings_build,
   Stats_build,
   toKey,
+   type IExerciseTypeKey,
+    ObjectUtils_entries,
 } from "grammars";
 import type { IProgram, ISettings, IUnit, IWeight } from "grammars";
 
@@ -74,11 +76,11 @@ function buildProgram(plannerText: string): IProgram {
 
 function buildSettings(
   units: IUnit,
-  oneRepMaxes: Record<string, IWeight | undefined>,
+  oneRepMaxes: Record<IExerciseTypeKey, IWeight | undefined>,
 ): ISettings {
   const settings = Settings_build();
   settings.units = units;
-  for (const [key, orm] of Object.entries(oneRepMaxes)) {
+  for (const [key, orm] of ObjectUtils_entries(oneRepMaxes)) {
     if (orm) {
       settings.exerciseData[key] = { ...settings.exerciseData[key], rm1: orm };
     }
@@ -187,8 +189,9 @@ export function runSimulation(
       program = result.program;
 
       const mergedExerciseData = { ...settings.exerciseData };
-      for (const [key, data] of Object.entries(result.exerciseData)) {
-        mergedExerciseData[key] = { ...mergedExerciseData[key], ...data };
+      for (const [key, data] of ObjectUtils_entries(result.exerciseData)) {
+        //@todo not a fan of these casts, how to work around it?
+        mergedExerciseData[key as IExerciseTypeKey] = { ...mergedExerciseData[key as IExerciseTypeKey], ...data };
       }
       settings = { ...settings, exerciseData: mergedExerciseData };
     } catch (e) {
