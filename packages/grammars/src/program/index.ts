@@ -22,6 +22,8 @@ import {
   castAs0,
   castAs1,
   type IndexFrom1,
+  next,
+  ZERO,
   zIndexFrom1,
 } from "@/utils/indexes.ts";
 //#region Forbidden imports - these imports are being pulled from later in the layers and should not be
@@ -54,7 +56,7 @@ function warmup(
     settings: ISettings,
     exerciseType?: IExerciseType,
   ): ISet[] => {
-    let index = 0;
+    let index = ZERO;
     return programExerciseWarmupSets.reduce<ISet[]>(
       (memo, programExerciseWarmupSet) => {
         if (
@@ -84,7 +86,7 @@ function warmup(
               originalWeight: warmupWeight,
               isCompleted: false,
             });
-            index += 1;
+            index = next(index);
           }
         }
         return memo;
@@ -252,7 +254,7 @@ const TProgram = z.object({
 export type IProgram = z.infer<typeof TProgram>;
 export function Program_getProgramExerciseForKeyAndDay(
   program: IEvaluatedProgram,
-  day: number,
+  day: IndexFrom1,
   key?: string,
 ): IPlannerProgramExerciseWithType | undefined {
   if (!key) return undefined;
@@ -297,21 +299,21 @@ export function getTotalDaysInProgram(program: IEvaluatedProgram): number {
  */
 export function getDayData(
   program: IEvaluatedProgram,
-  day: number,
+  day: IndexFrom1,
 ): IDayData & {
   /**
    * The actual day object at this absolute day index of the program
    */
   dayObj: IEvaluatedProgramDay | undefined;
 } {
-  let week = 1;
+  let week = as1(0);
   let dayInWeek: IndexFrom1 = castAs1(1);
   let daysTotal = 0;
-  for (let i = 0; i < program.weeks.length; i++) {
+  for (let i = ZERO; i < program.weeks.length; i = next(i)) {
     const weekLength = program.weeks[i].days.length;
     daysTotal += weekLength;
     if (daysTotal >= day) {
-      week = i + 1;
+      week = as1(i);
       dayInWeek = castAs1(day - (daysTotal - weekLength));
       break;
     }
@@ -335,7 +337,7 @@ export function Program_getProgramDayUsedExercises(
 }
 
 export function Program_getProgramExercise(
-  day: number,
+  day: IndexFrom1,
   program?: IEvaluatedProgram,
   key?: string,
 ): IPlannerProgramExercise | undefined {
@@ -365,12 +367,11 @@ export type IDayData = {
    * Which week of the program the day falls into
    * 1-indexed
    */
-  week: number;
+  week: IndexFrom1;
   /**
    * The absolute day of the program
-   * @todo 1-indexed? 0-indexed?
    */
-  day: number;
+  day: IndexFrom1;
   /**
    * Which day within the week the absolute day falls into
    * e.g. If there are 2 days in a week, and the day is 3, then this is 1

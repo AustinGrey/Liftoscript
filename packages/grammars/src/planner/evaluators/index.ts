@@ -56,8 +56,10 @@ import { isEqual, pick } from "es-toolkit";
 import { toKey } from "@/exercises";
 import { nodeResult } from "@/common-types.ts";
 import {
+  as0,
   as1,
   type IndexFrom0,
+  type IndexFrom1,
   next,
   withIndex,
   ZERO,
@@ -161,7 +163,7 @@ function fillRepeats(
 function fillSetReuses(
   exercise: IPlannerProgramExercise,
   evaluatedWeeks: IPlannerEvalResult[][],
-  weekIndex: number,
+  weekIndex: IndexFrom0,
   settings: ISettings,
   metadata: IPlannerEvalMetadata,
 ): void {
@@ -171,7 +173,7 @@ function fillSetReuses(
       settings,
       reuse.fullName,
       evaluatedWeeks,
-      reuse.week ?? weekIndex + 1,
+      reuse.week ?? as1(weekIndex),
       reuse.day,
     );
     if (originalExercises.length > 1) {
@@ -185,7 +187,7 @@ function fillSetReuses(
     if (!originalExercise) {
       throw plannerError(
         exercise.fullName,
-        `No such exercise ${reuse.fullName} at week: ${reuse.week ?? weekIndex + 1}${
+        `No such exercise ${reuse.fullName} at week: ${reuse.week ?? as1(weekIndex)}${
           reuse.day != null ? `, day: ${reuse.day}` : ""
         }`,
         exercise.points.reuseSetPoint,
@@ -635,15 +637,15 @@ function findOriginalExercisesAtWeekDay(
   settings: ISettings,
   fullName: string,
   program: IPlannerEvalResult[][],
-  atWeek: number,
-  atDay?: number,
+  atWeek: IndexFrom1,
+  atDay?: IndexFrom1,
 ): { exercise: IPlannerProgramExercise; dayData: IDayData }[] {
   const originalExercises: {
     exercise: IPlannerProgramExercise;
     dayData: IDayData;
   }[] = [];
-  const week = program[atWeek - 1];
-  const candidateDays = atDay != null ? [week[atDay - 1]] : week;
+  const week = program[as0(atWeek)];
+  const candidateDays = atDay != null ? [week[as0(atDay)]] : week;
   candidateDays.forEach(
     withIndex((day, dayInWeekIndex) => {
       if (day == null || !day.success) {

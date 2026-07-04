@@ -969,8 +969,8 @@ export interface IPlannerProgramExerciseSuperset {
 export interface IPlannerProgramReuse {
   fullName: string;
   source: "specific" | "overall";
-  week?: number;
-  day?: number;
+  week?: IndexFrom1;
+  day?: IndexFrom1;
   exercise?: IPlannerProgramExercise;
 }
 
