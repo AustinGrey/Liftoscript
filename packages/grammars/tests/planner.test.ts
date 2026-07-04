@@ -2108,11 +2108,11 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
     };
     const newResult = newPlannerProgram_evaluate(newPlanner, Settings_build())
       .evaluatedWeeks[2][0];
-    expect.soft(newResult.success, "New system should fail").to.be.false;
+    expect.soft(newResult.success, "New system should fail").toBe(false);
     if (!newResult.success) {
       expect
         .soft(newResult.error.message, "New system error message")
-        .to.equal("Squat: No such exercise tmp: Squat at week: 3 (4:13)");
+        .toEqual("Squat: No such exercise tmp: Squat at week: 3 (4:13)");
     }
   });
 });

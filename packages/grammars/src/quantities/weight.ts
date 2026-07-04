@@ -471,13 +471,13 @@ function calculatePlatesInternalFast(
   );
 
   // Max contribution from plates at index i and beyond (for pruning)
-  const maxFrom = new Array(plateTypes.length + 1).fill(0);
+  const maxFrom = Array.from<number>({ length: plateTypes.length + 1 }).fill(0);
   for (let i = plateTypes.length - 1; i >= 0; i--) {
     maxFrom[i] = maxFrom[i + 1] + intWeights[i] * plateTypes[i].maxUnits;
   }
 
-  const best = new Array(plateTypes.length).fill(0);
-  const current = new Array(plateTypes.length).fill(0);
+  const best = Array.from<number>({ length: plateTypes.length }).fill(0);
+  const current = Array.from<number>({ length: plateTypes.length }).fill(0);
   let bestRemaining = intTarget + 1;
   let iterations = 0;
 
@@ -672,7 +672,7 @@ export const w: TaggedTemplateHandler<IWeight, string> = (s, ...v) => {
  * @param str
  */
 export function parse(str: string): IWeight | undefined {
-  const match = str.match(/^([\-+]?[0-9.]+)\s*(kg|lb)$/);
+  const match = str.match(/^([-+]?[0-9.]+)\s*(kg|lb)$/);
   if (match) {
     return build(
       MathUtils_roundFloat(parseFloat(match[1]), 2),
@@ -691,7 +691,7 @@ export function parsePct(str?: string): IDynamicWeight | IWeight | undefined {
   if (str == null) {
     return undefined;
   }
-  const match = str.match(/^([\-+]?[0-9.]+)%$/);
+  const match = str.match(/^([-+]?[0-9.]+)%$/);
   if (match) {
     return percentORM(MathUtils_roundFloat(parseFloat(match[1]), 2));
   } else {
