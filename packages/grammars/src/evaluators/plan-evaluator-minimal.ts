@@ -130,9 +130,11 @@ import {
   castAs1,
   type IndexFrom0,
   type IndexFrom1,
+  next,
   safeFindLastIndex,
   withIndex,
   ZERO,
+  zIndexFrom1,
 } from "@/utils/indexes.ts";
 
 //#region Program
@@ -227,11 +229,13 @@ export function Program_nextHistoryRecordFromEvaluated(
   stats: IStats,
   dayIndex?: number,
 ): IHistoryRecord {
-  const day = Math.max(
-    1,
-    Math.min(
-      getTotalDaysInProgram(program),
-      Math.max(1, (dayIndex || program.nextDay) ?? 0),
+  const day: IndexFrom1 = castAs1(
+    Math.max(
+      1,
+      Math.min(
+        getTotalDaysInProgram(program),
+        Math.max(1, (dayIndex || program.nextDay) ?? 0),
+      ),
     ),
   );
 
@@ -461,7 +465,7 @@ function Program_forceEvaluate(
           days: [
             {
               name: "Day 1",
-              dayData: { day: 1, week: 1, dayInWeek: as1(0) },
+              dayData: { day: as1(0), week: as1(0), dayInWeek: as1(0) },
               exercises: [],
             },
           ],
@@ -471,36 +475,38 @@ function Program_forceEvaluate(
     };
   }
   const { evaluatedWeeks } = PlannerEvaluator_forceEvaluate(planner, settings);
-  let dayNum = 0;
+  let dayNum = as1(0);
   const errors: IEvaluatedProgram["errors"] = [];
-  const weeks = planner.weeks.map((week, weekIndex) => {
-    const evaluatedWeek = evaluatedWeeks[weekIndex];
-    const days = week.days.map(
-      withIndex((day, dayInWeekIndex) => {
-        dayNum += 1;
-        const evaluatedDay = evaluatedWeek[dayInWeekIndex];
-        const dayData = {
-          day: dayNum,
-          week: weekIndex + 1,
-          dayInWeek: as1(dayInWeekIndex),
-        };
-        const evaluatedExercises = CollectionUtils_sortBy(
-          evaluatedDay.success ? evaluatedDay.data : [],
-          "order",
-        );
-        if (!evaluatedDay.success) {
-          errors.push({ error: evaluatedDay.error, dayData });
-        }
-        return {
-          name: day.name,
-          description: day.description,
-          dayData,
-          exercises: evaluatedExercises,
-        };
-      }),
-    );
-    return { name: week.name, description: week.description, days };
-  });
+  const weeks = planner.weeks.map(
+    withIndex((week, weekIndex) => {
+      const evaluatedWeek = evaluatedWeeks[weekIndex];
+      const days = week.days.map(
+        withIndex((day, dayInWeekIndex) => {
+          const evaluatedDay = evaluatedWeek[dayInWeekIndex];
+          const dayData: IDayData = {
+            day: dayNum,
+            week: as1(weekIndex),
+            dayInWeek: as1(dayInWeekIndex),
+          };
+          dayNum = next(dayNum);
+          const evaluatedExercises = CollectionUtils_sortBy(
+            evaluatedDay.success ? evaluatedDay.data : [],
+            "order",
+          );
+          if (!evaluatedDay.success) {
+            errors.push({ error: evaluatedDay.error, dayData });
+          }
+          return {
+            name: day.name,
+            description: day.description,
+            dayData,
+            exercises: evaluatedExercises,
+          };
+        }),
+      );
+      return { name: week.name, description: week.description, days };
+    }),
+  );
   const states: IByTag<IProgramState> = {};
   forExerciseInEvaluatedResults(evaluatedWeeks, (exercise) => {
     for (const tag of exercise.tags) {
@@ -517,7 +523,7 @@ function Program_forceEvaluate(
     planner,
     name: program.name,
     nextDay: program.nextDay,
-    weeks: weeks,
+    weeks,
     states,
   };
 }
@@ -570,7 +576,7 @@ const THistoryRecord = z.strictObject({
   date: z.string(),
   programId: z.string(),
   programName: z.string(),
-  day: z.number(),
+  day: zIndexFrom1,
   dayName: z.string(),
   entries: z.array(THistoryEntry),
   startTime: z.number(),
@@ -1203,7 +1209,11 @@ export function evaluate(
   mode: IPlannerExerciseEvaluatorMode,
   dayDataRaw: IDayData | undefined,
 ): NodeResult<IPlannerExerciseEvaluatorWeek[]> {
-  let dayData: IDayData = dayDataRaw ?? { day: 1, week: 1, dayInWeek: as1(0) };
+  let dayData: IDayData = dayDataRaw ?? {
+    day: as1(0),
+    week: as1(0),
+    dayInWeek: as1(0),
+  };
   try {
     const firstError = findErrorNode(programNode);
     if (firstError) {
@@ -1247,7 +1257,7 @@ export function evaluate(
           });
           dayData = {
             day: dayData.day,
-            week: weeks.length + 1,
+            week: as1(castAs0(weeks.length)),
             dayInWeek: castAs1(0),
           };
           break;
@@ -1277,7 +1287,7 @@ export function evaluate(
             exercises: [],
           });
           dayData = {
-            day: dayData.day + 1,
+            day: next(dayData.day),
             week: dayData.week,
             dayInWeek: dayData.dayInWeek,
           };
@@ -2842,7 +2852,7 @@ export function convertToPlanner(
   const topLineMap = topLineItems(program.planner, settings.exercises);
   let groupedTopLineMap = groupTopLines(topLineMap);
   if (opts.reorder) reorderGroupedTopLine(groupedTopLineMap, opts.reorder);
-  let dayIndex = 0;
+  let dayIndex = ZERO;
   const addedProgressMap: Record<string, boolean> = {};
   const addedUpdateMap: Record<string, boolean> = {};
   const addedWarmupsMap: Record<string, boolean> = {};
@@ -2966,7 +2976,7 @@ export function convertToPlanner(
                 dayInWeekIndex,
               );
               const evalExercise = Program_getProgramExercise(
-                dayIndex + 1,
+                as1(dayIndex),
                 program,
                 value,
               )!;
@@ -3218,7 +3228,7 @@ export function convertToPlanner(
       plannerDay.exerciseText = groupTextArr.join("\n");
       plannerDay.description = programDay.description;
       plannerWeek.days.push(plannerDay);
-      dayIndex += 1;
+      dayIndex = next(dayIndex);
     }
     plannerWeeks.push(plannerWeek);
   }

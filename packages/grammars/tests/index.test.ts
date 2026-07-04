@@ -59,6 +59,8 @@ function emptyGlobalData(): IScriptBindings {
 }
 
 const testSettings: ISettings = {
+  graphOptions: {},
+  workoutSettings: undefined,
   timers: {
     warmup: 0,
     workout: 0,
