@@ -1,12 +1,11 @@
 import { type LogicHandler, type Validator } from "@/logic/evaluators/types.ts";
-import { NodeName } from "@/evaluators/logic-evaluator.ts";
-import { getChild } from "@/utils/grammars.ts";
 import { nodeError } from "@/utils/lezer.ts";
+import { getChild } from "@/logic/parsing/guards.ts";
 
 export const handler: LogicHandler<"ForExpression"> = (n, t) => {
-  const variableNode = getChild(n, { ofType: NodeName.Variable });
-  const forInExpression = getChild(n, { ofType: NodeName.ForInExpression });
-  const blockNode = getChild(n, { ofType: NodeName.BlockExpression });
+  const variableNode = getChild(n, { ofType: "Variable" });
+  const forInExpression = getChild(n, { ofType: "ForInExpression" });
+  const blockNode = getChild(n, { ofType: "BlockExpression" });
   const forIn = t.recurse(forInExpression);
   if (!Array.isArray(forIn)) {
     throw nodeError(
@@ -23,7 +22,7 @@ export const handler: LogicHandler<"ForExpression"> = (n, t) => {
 };
 
 export const validator: Validator<"ForExpression"> = function* (n, t) {
-  const varName = getChild(n, { ofType: NodeName.Variable })?.source;
+  const varName = getChild(n, { ofType: "Variable" })?.source;
   if (varName != null) {
     t.trackVariable(varName);
   }

@@ -1,6 +1,5 @@
 import type { LogicHandler } from "@/logic/evaluators/types.ts";
-import { NodeName } from "@/evaluators/logic-evaluator.ts";
-import { queryChildren } from "@/utils/grammars.ts";
+import { queryChildren } from "@/logic/parsing/guards.ts";
 
 export const handler: LogicHandler<"IfExpression"> = (n, t) => {
   // if/else chains are just linear lists of conditions (in parenthesis) and
@@ -9,12 +8,10 @@ export const handler: LogicHandler<"IfExpression"> = (n, t) => {
   // the conditions to determine where to short circuit
   const conditionNodes = [
     ...queryChildren(n, {
-      ofType: NodeName.ParenthesisExpression,
+      ofType: "ParenthesisExpression",
     }),
   ];
-  const blockNodes = [
-    ...queryChildren(n, { ofType: NodeName.BlockExpression }),
-  ];
+  const blockNodes = [...queryChildren(n, { ofType: "BlockExpression" })];
   while (conditionNodes.length > 0) {
     const conditionNode = conditionNodes.shift()!;
     const blockNode = blockNodes.shift()!;

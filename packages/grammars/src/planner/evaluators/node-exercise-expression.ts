@@ -28,7 +28,7 @@ import { validate as validateDp } from "@/planner/progression-formulas/dp.ts";
 import { validate as validateSum } from "@/planner/progression-formulas/sum.ts";
 import { validate as validateCustom } from "@/planner/progression-formulas/custom.ts";
 import { validate as validateNone } from "@/planner/progression-formulas/none.ts";
-import { queryChild, queryChildren, queryTree } from "@/utils/grammars.ts";
+import { queryChildren, queryTree } from "@/utils/grammars.ts";
 import { parsePct, w } from "@/quantities/weight.ts";
 import {
   type IProgramState,
@@ -40,7 +40,6 @@ import {
 } from "@/common-types.ts";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 //#region Forbidden imports - these imports come from higher layers or dead imports, so they should be extracted somewhere else more common to avoid circular dependencies
-import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import {
   extractNameParts,
   fnArgsToStateVars,
@@ -62,9 +61,11 @@ import {
   PlannerKey_fromFullName,
   validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+//#endregion
 import { splitBy } from "@/utils/iterables.ts";
 import type { IDayData } from "@/program";
-//#endregion
+import { isLogicNodeOfType, queryChild } from "@/logic/parsing/guards.ts";
+import { castAs1, type IndexFrom1 } from "@/utils/indexes.ts";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
   return nodeFailure(
@@ -427,9 +428,8 @@ function evaluateUpdate(
     ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
     : undefined;
   if (script) {
-    const allKeys = queryTree(
-      parseBound(LiftoscriptParser, script),
-      (node) => node.type.name === NodeName.StateVariable,
+    const allKeys = queryTree(parseBound(LiftoscriptParser, script), (node) =>
+      isLogicNodeOfType("StateVariable", node),
     )
       .map(getStateKey)
       .filter((key) => key !== undefined);
@@ -1027,8 +1027,8 @@ if (completedReps >= reps && completedRPE <= RPE) {
  * @param expr The node to get the state key from
  */
 function getStateKey(expr: SourcedSyntaxNode): string | undefined {
-  return queryChild(expr, { ofType: NodeName.StateVariableIndex }) !== undefined
+  return queryChild(expr, { ofType: "StateVariableIndex" }) !== undefined
     ? // If there's an index, then there isn't going to be a named state key
       undefined
-    : queryChild(expr, { ofType: NodeName.Keyword })?.source;
+    : queryChild(expr, { ofType: "Keyword" })?.source;
 }
