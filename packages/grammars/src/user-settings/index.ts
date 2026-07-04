@@ -92,17 +92,21 @@ export type ISettings = z.infer<typeof TSettings>;
  *   - The gym in the settings with the provided id
  *   - The gym in the settings matching the currentGymId in the settings
  *   - The first gym
- *   - @todo what if this list is empty? The types are wrong here and I think this should throw? Or create a default gym?
+ *   - or undefined if all that fails
  * @param settings The settings object to use
  * @param gymId The id of the gym to find, if desired.
  */
-export function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
+export function getGymByIdOrCurrent(
+  settings: ISettings,
+  gymId?: string,
+): IGym | undefined {
   const targetId = gymId ?? settings.currentGymId;
   return settings.gyms.find((g) => g.id === targetId) ?? settings.gyms.at(0);
 }
 
-export const getCurrentEquipment = (settings: ISettings): IAllEquipment =>
-  getGymByIdOrCurrent(settings).equipment;
+export const getCurrentEquipment = (
+  settings: ISettings,
+): IAllEquipment | undefined => getGymByIdOrCurrent(settings)?.equipment;
 
 /**
  * @returns The user's equipment settings for the given exercise type
@@ -114,6 +118,7 @@ function getEquipmentData(
   exerciseType: IExerciseType,
 ): IEquipmentData | undefined {
   const gym = getGymByIdOrCurrent(settings);
+  if (!gym) return undefined;
   // @todo what is the string value of this function supposed to represent? The two strings it might be set to seem unrelated to each other?
   let id: string | undefined;
   if (exerciseType) {

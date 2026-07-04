@@ -1778,7 +1778,7 @@ export type IAllCustomExercises = OpenRecord<ICustomExercise>;
 
 export function getExerciseOrDefault(
   type: IExerciseType,
-  customExercises: IAllCustomExercises,
+  customExercises: IAllCustomExercises | undefined,
 ): IExercise {
   const exercise =
     maybeGetExercise(type.id, customExercises) ?? allExercisesList.squat;
@@ -1790,10 +1790,10 @@ export function getExerciseOrDefault(
 
 export function maybeGetExercise(
   id: IExerciseId | undefined,
-  customExercises: IAllCustomExercises,
+  customExercises: IAllCustomExercises | undefined,
 ): IExercise | undefined {
   if (id === undefined) return undefined;
-  const custom = customExercises[id];
+  const custom = customExercises?.[id];
   return custom != null
     ? {
         ...custom,
@@ -1922,7 +1922,7 @@ export function Exercise_findByName(
  */
 export function Exercise_fullName(
   exercise: IExercise,
-  allEquipment: IAllEquipment,
+  allEquipment: IAllEquipment | undefined,
   label?: string,
 ): string {
   const equipmentLabel =
