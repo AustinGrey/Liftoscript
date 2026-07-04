@@ -2056,8 +2056,9 @@ Bench Press / ...Squat / progress: custom() {~ ~}
       newPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect.soft(newEvaluatedWeeks[0][0].success, "New system should succeed").to
-      .be.true;
+    expect
+      .soft(newEvaluatedWeeks[0][0].success, "New system should succeed")
+      .toBe(true);
   });
 
   it("doesn't show an error if original exercise update reuses another exercise but overrides update", () => {
@@ -2075,8 +2076,9 @@ Bench Press / ...Squat / update: custom() {~ ~}
       newPlanner,
       Settings_build(),
     ).evaluatedWeeks;
-    expect.soft(newEvaluatedWeeks[0][0].success, "New system should succeed").to
-      .be.true;
+    expect
+      .soft(newEvaluatedWeeks[0][0].success, "New system should succeed")
+      .toBe(true);
   });
 
   it("show an error for reuse/repeat mismatch", () => {

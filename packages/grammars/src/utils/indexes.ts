@@ -16,7 +16,7 @@ export type ArrayFrom1<TElement> = Record<IndexFrom1, TElement>;
 /**
  * For convenience, a pre-defined zero index, so you don't need to cast all the time
  */
-export const ZERO: IndexFrom0 = 0;
+export const ZERO: IndexFrom0 = 0 as IndexFrom0;
 
 /**
  * Cast a number as a 0-based index.

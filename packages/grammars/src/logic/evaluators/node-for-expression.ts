@@ -21,9 +21,10 @@ export const handler: LogicHandler<"ForExpression"> = (n, t) => {
   return forIn.length;
 };
 
-export const validator: Validator<"ForExpression"> = function* (n, t) {
+export const validator: Validator<"ForExpression"> = function (n, t): [] {
   const varName = getChild(n, { ofType: "Variable" })?.source;
   if (varName != null) {
     t.trackVariable(varName);
   }
+  return [];
 };

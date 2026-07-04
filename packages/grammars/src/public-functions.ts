@@ -81,13 +81,13 @@ export function Progress_createScriptFunctions(
         context?.exerciseType,
       );
     },
-    calculateTrainingMax: (weight, reps, context) => {
+    calculateTrainingMax: (weight, reps) => {
       if (!is(TWeight, weight)) {
         weight = Weight.build(weight, settings.units);
       }
       return Weight.getTrainingMax(weight, reps || 0, settings);
     },
-    calculate1RM: (weight, reps, context) => {
+    calculate1RM: (weight, reps) => {
       if (!is(TWeight, weight)) {
         weight = Weight.build(weight, settings.units);
       }

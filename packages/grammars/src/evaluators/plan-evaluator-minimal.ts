@@ -1167,18 +1167,18 @@ export function getOrder(expr: PlanNodes.ExerciseExpression): number {
   return 0;
 }
 
-export function getRepeat(expr: PlanNodes.ExerciseExpression): number[] {
+export function getRepeat(expr: PlanNodes.ExerciseExpression): IndexFrom1[] {
   const repeatNode = expr.getChild(PlannerNodeName.Repeat);
   if (repeatNode == null) {
     return [];
   }
-  const result: Set<number> = new Set();
+  const result: Set<IndexFrom1> = new Set();
   for (const childNode of queryChildren(repeatNode)) {
     if (childNode.type.name === PlannerNodeName.RepRange) {
       const [from, to] = queryChildren(childNode, { atLeast: 2 }).map((n) =>
-        parseInt(getNodeSourceEscapedWhiteSpace(n), 10),
+        castAs1(parseInt(getNodeSourceEscapedWhiteSpace(n), 10)),
       );
-      for (let i = from; i <= to; i += 1) {
+      for (let i = from; i <= to; i = next(i)) {
         result.add(i);
       }
       break;

@@ -30,10 +30,9 @@ import type { IEither } from "@/utils/types.ts";
 /**
  * The handler for when we haven't decided how to handle a node
  * @param n The node
- * @param t The tools
  * @deprecated There shouldn't be any unhandled nodes
  */
-const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n, t) => {
+const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n) => {
   throw nodeError(n, `Not implemented - type ${n.type.name}`);
 };
 
