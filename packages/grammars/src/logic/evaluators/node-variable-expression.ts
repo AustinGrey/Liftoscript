@@ -33,9 +33,10 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
     // There is only one index expression, so we can evaluate it
     const [indexNode] = queryChildren(firstIndexExpression, { atLeast: 1 });
     if (
-      isLogicNodeOfType("Wildcard", indexNode) ||
-      // @todo clearly "current" is the node name for the "_" sigil, but that's not in the grammar? Why? Should this condition be removed?
-      isLogicNodeOfType("Current", indexNode)
+      isLogicNodeOfType("Wildcard", indexNode)
+      // @todo Original liftoscript had this condition, which is invalid
+      //    clearly "current" is the node name for the "_" sigil, but that's not in the grammar? Why? Should it be added into the grammar?
+      // || isLogicNodeOfType("Current", indexNode)
     ) {
       throw nodeError(
         indexNode,
