@@ -12,10 +12,8 @@ import {
 } from "./newPlannerSystemTestUtils.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import {
-  Weight_build,
   Settings_build as OLD_Settings_build,
   PlannerProgram_switchToUnit as OLD_PlannerProgram_switchToUnit,
-  type ISettings,
   type IPlannerProgram,
   PlannerProgram_evaluateText,
   PlannerProgram_evaluate,
@@ -26,9 +24,9 @@ import {
   PlannerProgram_evaluate as newPlannerProgram_evaluate,
   PlannerProgram_evaluateText as newPlannerProgram_evaluateText,
 } from "@/planner/evaluators";
-import type { IWeight } from "@/quantities/weight.ts";
+import { build, type IWeight } from "@/quantities/weight.ts";
 import type { IStats } from "@/fitness-stats";
-import { Settings_build } from "@/user-settings";
+import { type ISettings, Settings_build } from "@/user-settings";
 
 type PlannerTestCase = {
   plan: string;
@@ -133,7 +131,7 @@ Squat / 2x5 / 105lb / progress: lp(5lb)
 Squat / 1x5 / progress: lp(5lb)`,
       completed: {
         reps: [[5]],
-        weights: [[Weight_build(100, "lb")]],
+        weights: [[build(100, "lb")]],
       },
       result: `# Week 1
 ## Day 1
@@ -158,7 +156,7 @@ Squat / ...main
 Squat / 1x5 / 100lb`,
       completed: {
         reps: [[5]],
-        weights: [[Weight_build(100, "lb")]],
+        weights: [[build(100, "lb")]],
       },
       result: `# Week 1
 ## Day 1
@@ -1605,9 +1603,9 @@ Squat / 1x10 / 100lb / progress: custom() {~
       settings: (() => {
         const equipment = structuredClone(Settings_defaultEquipment());
         equipment.barbell!.plates = [
-          { weight: Weight_build(10, "lb"), num: 2 },
-          { weight: Weight_build(25, "lb"), num: 2 },
-          { weight: Weight_build(45, "lb"), num: 2 },
+          { weight: build(10, "lb"), num: 2 },
+          { weight: build(25, "lb"), num: 2 },
+          { weight: build(45, "lb"), num: 2 },
         ];
         return {
           ...OLD_Settings_build(),
@@ -1643,9 +1641,9 @@ Squat / 1x10 / 100lb / progress: custom() {~
         const equipment = structuredClone(Settings_defaultEquipment());
         equipment.barbell!.isFixed = true;
         equipment.barbell!.fixed = [
-          Weight_build(45, "lb"),
-          Weight_build(100, "lb"),
-          Weight_build(120, "lb"),
+          build(45, "lb"),
+          build(100, "lb"),
+          build(120, "lb"),
         ];
         return {
           ...OLD_Settings_build(),
@@ -1710,11 +1708,11 @@ Squat / 1x10 / 100lb / progress: custom() {~
       oldSystemStats: {
         weight: {
           weight: [
-            { vtype: "stat", value: Weight_build(200, "lb"), timestamp: 10 },
-            { vtype: "stat", value: Weight_build(220, "lb"), timestamp: 30 },
-            { vtype: "stat", value: Weight_build(210, "lb"), timestamp: 20 },
-            { vtype: "stat", value: Weight_build(240, "lb"), timestamp: 50 },
-            { vtype: "stat", value: Weight_build(230, "lb"), timestamp: 40 },
+            { vtype: "stat", value: build(200, "lb"), timestamp: 10 },
+            { vtype: "stat", value: build(220, "lb"), timestamp: 30 },
+            { vtype: "stat", value: build(210, "lb"), timestamp: 20 },
+            { vtype: "stat", value: build(240, "lb"), timestamp: 50 },
+            { vtype: "stat", value: build(230, "lb"), timestamp: 40 },
           ],
         },
         length: {},
@@ -1722,11 +1720,11 @@ Squat / 1x10 / 100lb / progress: custom() {~
       },
       stats: {
         weight: [
-          { value: Weight_build(200, "lb"), timestamp: 10 },
-          { value: Weight_build(220, "lb"), timestamp: 30 },
-          { value: Weight_build(210, "lb"), timestamp: 20 },
-          { value: Weight_build(240, "lb"), timestamp: 50 },
-          { value: Weight_build(230, "lb"), timestamp: 40 },
+          { value: build(200, "lb"), timestamp: 10 },
+          { value: build(220, "lb"), timestamp: 30 },
+          { value: build(210, "lb"), timestamp: 20 },
+          { value: build(240, "lb"), timestamp: 50 },
+          { value: build(230, "lb"), timestamp: 40 },
         ],
         neck: [],
         shoulders: [],
@@ -2092,7 +2090,7 @@ Squat / 1x5 100lb, 1x3 250lb / 60s / progress: lp(5lb)`;
     const oldText = PlannerTestUtils_changeWeight(
       programText,
       (weightChanges) => {
-        weightChanges[1].weight = Weight_build(250, "lb");
+        weightChanges[1].weight = build(250, "lb");
         return weightChanges;
       },
     );
@@ -2101,7 +2099,7 @@ Squat / 1x5 100lb, 1x3 250lb / 60s / progress: lp(5lb)`;
       .to.equal(expected);
 
     const newText = newSystemChangeWeight(programText, (weightChanges) => {
-      weightChanges[1].weight = Weight_build(250, "lb");
+      weightChanges[1].weight = build(250, "lb");
       return weightChanges;
     });
     expect
@@ -2121,7 +2119,7 @@ Squat / 1x5, 1x3 / 100lb 60s / progress: lp(80lb)`;
     const oldText = PlannerTestUtils_changeWeight(
       programText,
       (weightChanges) => {
-        weightChanges[0].weight = Weight_build(100, "lb");
+        weightChanges[0].weight = build(100, "lb");
         return weightChanges;
       },
     );
@@ -2130,7 +2128,7 @@ Squat / 1x5, 1x3 / 100lb 60s / progress: lp(80lb)`;
       .to.equal(expected);
 
     const newText = newSystemChangeWeight(programText, (weightChanges) => {
-      weightChanges[0].weight = Weight_build(100, "lb");
+      weightChanges[0].weight = build(100, "lb");
       return weightChanges;
     });
     expect
@@ -2150,8 +2148,8 @@ Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`;
     const oldText = PlannerTestUtils_changeWeight(
       programText,
       (weightChanges) => {
-        weightChanges[0].weight = Weight_build(100, "lb");
-        weightChanges[1].weight = Weight_build(150, "lb");
+        weightChanges[0].weight = build(100, "lb");
+        weightChanges[1].weight = build(150, "lb");
         return weightChanges;
       },
     );
@@ -2160,8 +2158,8 @@ Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`;
       .to.equal(expected);
 
     const newText = newSystemChangeWeight(programText, (weightChanges) => {
-      weightChanges[0].weight = Weight_build(100, "lb");
-      weightChanges[1].weight = Weight_build(150, "lb");
+      weightChanges[0].weight = build(100, "lb");
+      weightChanges[1].weight = build(150, "lb");
       return weightChanges;
     });
     expect
