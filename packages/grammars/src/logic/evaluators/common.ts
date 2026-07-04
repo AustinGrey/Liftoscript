@@ -19,14 +19,14 @@ import {
   MathUtils_round,
 } from "@/utils/math.ts";
 import { nodeError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
-import { LogicNodeName } from "@/logic/parsing/guards.ts";
+import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 
 export function calculateIndexValues(
   indexes: SourcedSyntaxNode[],
   tools: EvaluateTools,
 ): (number | "*")[] {
   return indexes.filter(definedOnly).map((ie) => {
-    if (ie.type.name === LogicNodeName.Wildcard) {
+    if (isLogicNodeOfType("Wildcard", ie)) {
       return "*" as const;
     } else {
       const v = tools.recurse(ie);
