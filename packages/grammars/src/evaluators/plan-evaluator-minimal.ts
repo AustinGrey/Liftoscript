@@ -879,7 +879,7 @@ export type IPlannerProgramExercise = {
   exerciseType?: IExerciseType;
   label?: string;
   exerciseIndex: number;
-  repeat: number[];
+  repeat: IndexFrom1[];
   repeating: number[];
   order: number;
   isRepeat?: boolean;

@@ -112,7 +112,7 @@ function fillRepeats(
   evaluatedWeeks: IPlannerEvalResult[][],
   dayInWeekIndex: IndexFrom0,
   byExerciseWeekDay: IByExerciseWeekDay<IPlannerProgramExercise>,
-  dayIndexByWeekDay: number[][],
+  dayIndexByWeekDay: IndexFrom0[][],
 ): void {
   for (const repeatWeek of exercise.repeat ?? []) {
     const repeatWeekIndex = repeatWeek - 1;
@@ -120,10 +120,10 @@ function fillRepeats(
       byExerciseWeekDay[exercise.key]?.[repeatWeekIndex]?.[dayInWeekIndex] ==
       null
     ) {
-      const dayData = {
+      const dayData: IDayData = {
         week: repeatWeek,
         dayInWeek: as1(dayInWeekIndex),
-        day: (dayIndexByWeekDay[repeatWeekIndex]?.[dayInWeekIndex] ?? 0) + 1,
+        day: as1(dayIndexByWeekDay[repeatWeekIndex]?.[dayInWeekIndex] ?? ZERO),
       };
       const repeatedExercise: IPlannerProgramExercise = {
         ...exercise,
@@ -667,7 +667,7 @@ function findOriginalExercisesAtWeekDay(
           dayData: {
             week: atWeek,
             dayInWeek: as1(dayInWeekIndex),
-            day: 1,
+            day: as1(0),
           },
         });
       }
@@ -679,45 +679,45 @@ function findOriginalExercisesAtWeekDay(
 function iterateOverExercises(
   program: IPlannerEvalResult[][],
   cb: (
-    weekIndex: number,
+    weekIndex: IndexFrom0,
     dayInWeekIndex: IndexFrom0,
     dayIndex: IndexFrom0,
-    exerciseIndex: number,
+    exerciseIndex: IndexFrom0,
     exercise: IPlannerProgramExercise,
   ) => void,
 ): void {
   let dayIndex = ZERO;
-  for (const [weekIndex, week] of program.entries()) {
-    week.forEach(
-      withIndex((day, dayInWeekIndex) => {
-        try {
-          if (day?.success) {
-            const exercises = day.data;
-            for (
-              let exerciseIndex = 0;
-              exerciseIndex < exercises.length;
-              exerciseIndex += 1
-            ) {
-              cb(
-                weekIndex,
-                dayInWeekIndex,
-                dayIndex,
-                exerciseIndex,
-                exercises[exerciseIndex],
+  program.forEach(
+    withIndex((week, weekIndex) => {
+      week.forEach(
+        withIndex((day, dayInWeekIndex) => {
+          try {
+            if (day?.success) {
+              const exercises = day.data;
+              exercises.forEach(
+                withIndex((exercise, exerciseIndex) => {
+                  cb(
+                    weekIndex,
+                    dayInWeekIndex,
+                    dayIndex,
+                    exerciseIndex,
+                    exercise,
+                  );
+                }),
               );
             }
+          } catch (e) {
+            if (e instanceof SourcedSyntaxError) {
+              week[dayInWeekIndex] = { success: false, error: e };
+            } else {
+              throw e;
+            }
           }
-        } catch (e) {
-          if (e instanceof SourcedSyntaxError) {
-            week[dayInWeekIndex] = { success: false, error: e };
-          } else {
-            throw e;
-          }
-        }
-        dayIndex = next(dayIndex);
-      }),
-    );
-  }
+          dayIndex = next(dayIndex);
+        }),
+      );
+    }),
+  );
 }
 
 export const PlannerEvaluator_forceEvaluate = (
@@ -727,23 +727,23 @@ export const PlannerEvaluator_forceEvaluate = (
   evaluatedWeeks: IPlannerEvalResult[][];
   exerciseFullNames: string[];
 } => {
-  let dayIndex = 0;
-  const dayIndexByWeekDay: number[][] = [];
+  let dayIndex = ZERO;
+  const dayIndexByWeekDay: IndexFrom0[][] = [];
   const metadata: IPlannerEvalMetadata = {
     byExerciseWeekDay: {},
     notused: new Set(),
     properties: { progress: {}, update: {}, warmup: {}, id: {} },
   };
   const evaluatedWeeks: IPlannerEvalResult[][] = plannerProgram.weeks.map(
-    (week, weekIndex) => {
+    withIndex((week, weekIndex) => {
       dayIndexByWeekDay[weekIndex] ??= [];
       return week.days.map(
         withIndex(
           (day: IPlannerProgramDay, dayInWeekIndex): IPlannerEvalResult => {
             const dayData: IDayData = {
-              week: weekIndex + 1,
+              week: as1(weekIndex),
               dayInWeek: as1(dayInWeekIndex),
-              day: dayIndex + 1,
+              day: as1(dayIndex),
             };
             dayIndexByWeekDay[weekIndex][dayInWeekIndex] = dayIndex;
             const dayParseResult = evaluate(
@@ -757,7 +757,7 @@ export const PlannerEvaluator_forceEvaluate = (
               : nodeResult(
                   dayParseResult.data.at(0)?.days.at(0)?.exercises || [],
                 );
-            dayIndex += 1;
+            dayIndex = next(dayIndex);
             if (!result.success) {
               return result;
             }
@@ -911,7 +911,7 @@ if (completedReps >= reps && completedRPE <= RPE) {
           },
         ),
       );
-    },
+    }),
   );
   iterateOverExercises(
     evaluatedWeeks,
@@ -936,9 +936,9 @@ if (completedReps >= reps && completedRPE <= RPE) {
       fillProgressReuses(evaluatedWeeks, exercise, settings, metadata);
       fillUpdateReuses(evaluatedWeeks, exercise, settings, metadata);
       checkUpdateScript(exercise, settings, {
-        week: weekIndex + 1,
+        week: as1(weekIndex),
         dayInWeek: as1(dayInWeekIndex),
-        day: globalDayIndex + 1,
+        day: as1(globalDayIndex),
       });
     },
   );
