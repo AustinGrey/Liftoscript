@@ -13,15 +13,4 @@ export default defineConfig({
     },
     exports: true,
   },
-  lint: {
-    options: {
-      typeAware: true,
-      typeCheck: true,
-    },
-  },
-  fmt: {},
-  check: {
-    // This project is formatted with Prettier for now, until I can figure out how to integrate my IDE with Vite Plus fmt on save
-    fmt: false,
-  },
 });
