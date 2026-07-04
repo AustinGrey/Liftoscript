@@ -1,13 +1,12 @@
 import {
+  findErrorNode,
+  nodeError,
   parseBound,
   SourcedSyntaxError,
   type SourcedSyntaxNode,
-  findErrorNode,
-  nodeError,
 } from "@/utils/lezer.ts";
 import {
   isEqualAfterTransform,
-  ObjectUtils_isEqual,
   ObjectUtils_keys,
   ObjectUtils_values,
 } from "@/utils/object.ts";
@@ -480,96 +479,100 @@ function checkUpdateScript(
   }
 }
 
+/**
+ * Sets the value of exercise.update.reuse.exercise = originalExercise
+ * @param evaluatedWeeks
+ * @param exercise
+ * @param settings
+ * @param metadata
+ */
 function fillUpdateReuses(
   evaluatedWeeks: IPlannerEvalResult[][],
   exercise: IPlannerProgramExercise,
   settings: ISettings,
   metadata: IPlannerEvalMetadata,
 ): void {
-  const update = exercise.update;
-  if (update?.type === "custom") {
-    const fullName = update.reuse?.fullName;
-    if (update.reuse && fullName) {
-      const key = PlannerKey_fromFullName(fullName, settings.exercises);
-      const point = exercise.points.updatePoint || exercise.points.fullName;
-
-      if (metadata.byExerciseWeekDay[key] == null) {
-        throw plannerError(
-          exercise.fullName,
-          `No such exercise ${fullName}`,
-          point,
-        );
-      }
-      const originalProperty = metadata.properties.update[key];
-      const originalUpdate = originalProperty?.property;
-      const dayData = originalProperty?.dayData;
-      if (!originalUpdate || !dayData) {
-        throw plannerError(
-          exercise.fullName,
-          "Original exercise should specify update",
-          point,
-        );
-      }
-      if (
-        originalUpdate.reuse?.fullName != null &&
-        !originalUpdate.reuse?.exercise?.notused
-      ) {
-        throw plannerError(
-          exercise.fullName,
-          `Original exercise cannot reuse another update`,
-          point,
-        );
-      }
-      if (originalUpdate.type !== "custom") {
-        throw plannerError(
-          exercise.fullName,
-          "Original exercise should specify custom update",
-          point,
-        );
-      }
-      const stateKeys = originalUpdate.meta?.stateKeys || new Set();
-      if (stateKeys.size !== 0) {
-        const progress = exercise.progress;
-        if (progress == null) {
-          throw plannerError(
-            exercise.fullName,
-            "If 'update' block uses state variables, exercise should define them in 'progress' block",
-            point,
-          );
-        }
-        const state = PlannerProgramExercise_getState(exercise);
-        for (const stateKey of stateKeys) {
-          if (state[stateKey] == null) {
-            throw plannerError(
-              exercise.fullName,
-              `Missing state variable ${stateKey} that's used in the original update block`,
-              point,
-            );
-          }
-        }
-      }
-      const originalExercises = findOriginalExercisesAtWeekDay(
-        settings,
-        fullName,
-        evaluatedWeeks,
-        dayData.week,
-        dayData.dayInWeek,
+  if (exercise.update?.type !== "custom") {
+    return;
+  }
+  const fullName = exercise.update.reuse?.fullName;
+  if (!(exercise.update.reuse && fullName)) {
+    return;
+  }
+  const key = PlannerKey_fromFullName(fullName, settings.exercises);
+  const point = exercise.points.updatePoint || exercise.points.fullName;
+  if (metadata.byExerciseWeekDay[key] == null) {
+    throw plannerError(
+      exercise.fullName,
+      `No such exercise ${fullName}`,
+      point,
+    );
+  }
+  const originalProperty = metadata.properties.update[key];
+  const originalUpdate = originalProperty?.property;
+  const dayData = originalProperty?.dayData;
+  if (!originalUpdate || !dayData) {
+    throw plannerError(
+      exercise.fullName,
+      "Original exercise should specify update",
+      point,
+    );
+  }
+  if (
+    originalUpdate.reuse?.fullName != null &&
+    !originalUpdate.reuse?.exercise?.notused
+  ) {
+    throw plannerError(
+      exercise.fullName,
+      `Original exercise cannot reuse another update`,
+      point,
+    );
+  }
+  if (originalUpdate.type !== "custom") {
+    throw plannerError(
+      exercise.fullName,
+      "Original exercise should specify custom update",
+      point,
+    );
+  }
+  const stateKeys = originalUpdate.meta?.stateKeys || new Set();
+  if (stateKeys.size !== 0) {
+    if (exercise.progress == null) {
+      throw plannerError(
+        exercise.fullName,
+        "If 'update' block uses state variables, exercise should define them in 'progress' block",
+        point,
       );
-      const originalExercise = originalExercises[0]?.exercise;
-      if (
-        originalExercise?.reuse != null &&
-        (originalExercise.update == null ||
-          originalExercise.update.reuse != null)
-      ) {
+    }
+    const state = PlannerProgramExercise_getState(exercise);
+    for (const stateKey of stateKeys) {
+      if (state[stateKey] == null) {
         throw plannerError(
           exercise.fullName,
-          `Original exercise '${originalExercise.fullName}' should not reuse other exercise`,
+          `Missing state variable ${stateKey} that's used in the original update block`,
           point,
         );
       }
-      update.reuse.exercise = originalExercise;
     }
   }
+  const originalExercise = findOriginalExercisesAtWeekDay(
+    settings,
+    fullName,
+    evaluatedWeeks,
+    dayData.week,
+    dayData.dayInWeek,
+  ).at(0)?.exercise;
+  if (
+    originalExercise?.reuse != null &&
+    (originalExercise.update == null || originalExercise.update.reuse != null)
+  ) {
+    throw plannerError(
+      exercise.fullName,
+      `Original exercise '${originalExercise.fullName}' should not reuse other exercise`,
+      point,
+    );
+  }
+  exercise.update.reuse.exercise = originalExercise;
 }
 
 function checkUnknownExercises(
