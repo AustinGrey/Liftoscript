@@ -10,7 +10,6 @@ import {
 } from "@/exercises";
 import {
   nodeError,
-  parseBound,
   SourcedSyntaxError,
   type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
@@ -28,7 +27,7 @@ import { validate as validateDp } from "@/planner/progression-formulas/dp.ts";
 import { validate as validateSum } from "@/planner/progression-formulas/sum.ts";
 import { validate as validateCustom } from "@/planner/progression-formulas/custom.ts";
 import { validate as validateNone } from "@/planner/progression-formulas/none.ts";
-import { queryChildren, queryTree } from "@/utils/grammars.ts";
+import { queryChildren } from "@/utils/grammars.ts";
 import { parsePct, w } from "@/quantities/weight.ts";
 import {
   type IProgramState,
@@ -38,7 +37,6 @@ import {
   nodeResult,
   type NodeResult,
 } from "@/common-types.ts";
-import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 //#region Forbidden imports - these imports come from higher layers or dead imports, so they should be extracted somewhere else more common to avoid circular dependencies
 import {
   extractNameParts,
@@ -64,7 +62,14 @@ import {
 //#endregion
 import { splitBy } from "@/utils/iterables.ts";
 import type { IDayData } from "@/program";
-import { isLogicNodeOfType, queryChild } from "@/logic/parsing/guards.ts";
+import {
+  isLogicNodeOfType,
+  type NodeNames_Logic,
+  queryChild,
+  queryTree,
+  type TypedLogicNode,
+  parseBound,
+} from "@/logic/parsing/guards.ts";
 import { castAs1, type IndexFrom1 } from "@/utils/indexes.ts";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
@@ -428,10 +433,17 @@ function evaluateUpdate(
     ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
     : undefined;
   if (script) {
-    const allKeys = queryTree(parseBound(LiftoscriptParser, script), (node) =>
+    const allKeys = queryTree(parseBound(script), (node) =>
       isLogicNodeOfType("StateVariable", node),
     )
-      .map(getStateKey)
+      .map(function (
+        expr: TypedLogicNode<NodeNames_Logic>,
+      ): string | undefined {
+        return queryChild(expr, { ofType: "StateVariableIndex" }) !== undefined
+          ? // If there's an index, then there isn't going to be a named state key
+            undefined
+          : queryChild(expr, { ofType: "Keyword" })?.source;
+      })
       .filter((key) => key !== undefined);
 
     meta = { stateKeys: new Set(allKeys) };
@@ -756,18 +768,18 @@ function evaluateSuperset(expr: PlanNodes.Superset): NodeResult<{
   }
 }
 function getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
-  week?: number;
-  day?: number;
+  week?: IndexFrom1;
+  day?: IndexFrom1;
 } {
-  let week: number | undefined;
-  let day: number | undefined;
+  let week: IndexFrom1 | undefined;
+  let day: IndexFrom1 | undefined;
   if (weekDayNode != null) {
     const result = weekDayNode
       .getChildren(PlannerNodeName.WeekOrDay)
       .map((n) => {
         const [child] = queryChildren(n);
         if (child?.type.name === PlannerNodeName.Int) {
-          return parseInt(getNodeSourceEscapedWhiteSpace(child), 10);
+          return castAs1(parseInt(getNodeSourceEscapedWhiteSpace(child), 10));
         } else {
           return undefined;
         }
@@ -1019,16 +1031,4 @@ if (completedReps >= reps && completedRPE <= RPE) {
     }
   }
 }`;
-}
-
-/**
- * Gets the text of the variable attempting to be accessed on the state
- * e.g. state.foo, this would return 'foo'
- * @param expr The node to get the state key from
- */
-function getStateKey(expr: SourcedSyntaxNode): string | undefined {
-  return queryChild(expr, { ofType: "StateVariableIndex" }) !== undefined
-    ? // If there's an index, then there isn't going to be a named state key
-      undefined
-    : queryChild(expr, { ofType: "Keyword" })?.source;
 }

@@ -1,11 +1,16 @@
 import * as logicTerms from "./logic.terms.ts";
-import type { SourcedSyntaxNode } from "@/utils/lezer.ts";
+import {
+  type SourcedSyntaxNode,
+  parseBound as originalParseBound,
+} from "@/utils/lezer.ts";
 import {
   type QueryOptions,
   getChild as originalGetChild,
   queryChildren as originalQueryChildren,
   queryChild as originalQueryChild,
+  queryTree as originalQueryTree,
 } from "@/utils/grammars.ts";
+import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 
 type IdMap_Logic = typeof logicTerms;
 
@@ -110,4 +115,31 @@ export function* queryChildren<TTypes extends NodeNames_Logic>(
   yield* originalQueryChildren(node, options) as Generator<
     TypedLogicNode<TTypes>
   >;
+}
+
+/**
+ * Gets all nodes in the tree of the node that is passed
+ * @param node The node that is the root of the tree
+ * @param where The filter function to use
+ */
+export function* queryTree(
+  node: TypedLogicNode<NodeNames_Logic>,
+  where?: (node: TypedLogicNode<NodeNames_Logic>) => boolean,
+): Generator<TypedLogicNode<NodeNames_Logic>> {
+  yield* originalQueryTree(
+    node,
+    where as Parameters<typeof originalQueryTree>[1],
+  ) as Generator<TypedLogicNode<NodeNames_Logic>>;
+}
+
+/**
+ * Parses the given script, using the logic parser, and binds the script to the returned nodes so that it can be accessed later when needed.
+ * Lezer parsers normally require you to store the original script and use it to get the original text a node covers, but this simplifies all that storage.
+ * @param script The script to parse
+ */
+export function parseBound(script: string): TypedLogicNode<NodeNames_Logic> {
+  return originalParseBound(
+    LiftoscriptParser,
+    script,
+  ) as TypedLogicNode<NodeNames_Logic>;
 }
