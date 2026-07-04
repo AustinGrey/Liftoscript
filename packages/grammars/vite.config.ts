@@ -20,4 +20,8 @@ export default defineConfig({
     },
   },
   fmt: {},
+  check: {
+    // This project is formatted with Prettier for now, until I can figure out how to integrate my IDE with Vite Plus fmt on save
+    fmt: false,
+  },
 });

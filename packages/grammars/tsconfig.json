@@ -7,7 +7,6 @@
     },
     "moduleDetection": "force",
     "module": "nodenext",
-    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,
