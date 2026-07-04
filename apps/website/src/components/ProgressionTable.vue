@@ -118,3 +118,87 @@ const multiweek = computed(() => grouped.value.length > 1);
     </div>
   </div>
 </template>
+
+<style scoped>
+.progression {
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.week-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.session-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.8rem;
+}
+.session-card {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel-2);
+  padding: 0.8rem 0.9rem;
+}
+.session-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--border);
+}
+.session-ordinal {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 6px;
+  padding: 0.08rem 0.4rem;
+}
+.session-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.exercise-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.exercise-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.exercise-row.muted {
+  color: var(--text-faint);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+.exercise-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.exercise-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.set-scheme {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.05rem 0.4rem;
+  white-space: nowrap;
+}
+</style>

@@ -81,3 +81,12 @@ onBeforeUnmount(() => {
 <template>
   <div ref="host" class="plan-editor"></div>
 </template>
+
+<style scoped>
+.plan-editor :deep(.cm-editor) {
+  background: var(--panel);
+}
+.plan-editor :deep(.cm-scroller) {
+  font-family: var(--mono);
+}
+</style>

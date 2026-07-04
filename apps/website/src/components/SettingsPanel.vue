@@ -99,3 +99,114 @@ function onOrmInput(key: string, event: Event) {
     </section>
   </div>
 </template>
+
+<style scoped>
+.settings-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+.settings-block h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 0.6rem;
+}
+.hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: -0.3rem 0 0.7rem;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.segmented button {
+  border: none;
+  background: var(--panel);
+  color: var(--text-muted);
+  padding: 0.4rem 1.1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.segmented button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.sessions-control {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.sessions-control input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+.sessions-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 2ch;
+  text-align: right;
+}
+
+.orm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.orm-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.orm-list label {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.orm-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.orm-input input {
+  width: 5.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.88rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.orm-input input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.orm-unit {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  width: 1.5rem;
+}
+
+.empty-note {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 1rem 1.1rem;
+  margin: 0;
+}
+</style>

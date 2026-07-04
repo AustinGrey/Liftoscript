@@ -100,8 +100,8 @@ export function workoutPlanLanguage(): LanguageSupport {
 }
 
 /**
- * A syntax highlight style driven by CSS variables (see style.css) so it adapts
- * to light and dark themes.
+ * A syntax highlight style driven by CSS variables (the --cm-* tokens defined
+ * globally in App.vue) so it adapts to light and dark themes.
  */
 export const playgroundHighlightStyle = HighlightStyle.define([
   { tag: t.lineComment, color: "var(--cm-comment)", fontStyle: "italic" },
