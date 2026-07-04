@@ -90,7 +90,7 @@ function handleLogic(
     ? (parsers[node.name].handler as LogicHandler<NodeNames_Logic>)
     : undefined;
   if (!handler) {
-    throw nodeError(node, `No handler for node type: ${node.type}`);
+    throw nodeError(node, `No handler for node type: ${node.type.name}`);
   }
   const result = handler(node as TypedLogicNode<NodeNames_Logic>, tools);
   // console.log("EVAL: ", result, " <- ", node.source);

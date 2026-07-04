@@ -76,9 +76,9 @@ export function StringUtils_fuzzySearch(
  * @param strings The raw string components of the template literal.
  * @param values The values to be interpolated into the template.
  */
-export type TaggedTemplateHandler<TReturn> = (
+export type TaggedTemplateHandler<TReturn, TValues extends unknown> = (
   strings: TemplateStringsArray,
-  ...values: unknown[]
+  ...values: TValues[]
 ) => TReturn;
 
 /**
@@ -89,10 +89,11 @@ export type TaggedTemplateHandler<TReturn> = (
  * @param values - The values to be interpolated into the template.
  * @return The resulting string after merging the strings and interpolated values.
  */
-export const taggedTemplateToString: TaggedTemplateHandler<string> = (
-  strings,
-  ...values
-) => strings.reduce((acc, str, i) => acc + str + String(values[i] ?? ""), "");
+export const taggedTemplateToString: TaggedTemplateHandler<
+  string,
+  string | number
+> = (strings, ...values) =>
+  strings.reduce((acc, str, i) => acc + str + String(values[i] ?? ""), "");
 
 export function sameCaseInsensitive(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();

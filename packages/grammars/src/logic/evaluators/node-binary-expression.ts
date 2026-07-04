@@ -237,7 +237,9 @@ function binaryMathOp(
     return Weight.operation(a, b, o);
   }
 
-  throw new Error(`Can't apply operation ${operator} to ${a} and ${b}`);
+  throw new Error(
+    `Can't apply operation ${operator} to ${typeof a} and ${typeof b}`,
+  );
 }
 
 /**
@@ -364,7 +366,7 @@ function binaryBooleanOp(
     if (val === undefined && coercion.undefined) return coercion.undefined;
     // @todo shouldn't I bubble up the error to give a better, tracable error message?
     throw new Error(
-      `A value needed to be turned into a boolean but could not be. The value was: ${val}`,
+      `A value needed to be turned into a boolean but could not be. The value type was: ${typeof val}`,
     );
   }
   return o(coerceToBoolean(left), coerceToBoolean(right));

@@ -7,8 +7,6 @@ import {
   dw,
   type IDynamicWeight,
   type IWeight,
-  TDynamicWeight,
-  TWeight,
   w,
 } from "@/quantities/weight.ts";
 import {
@@ -18,7 +16,7 @@ import {
 } from "@/logic/evaluators/types.ts";
 import type { LogicResult, Quantity } from "@/logic/types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
-import { is, isNumber } from "@/utils/types.ts";
+import { isNumber } from "@/utils/types.ts";
 import { round } from "@/utils/logic-results.ts";
 import { MathUtils_round } from "@/utils/math.ts";
 import type { IScriptFnContext } from "@/common-types.ts";
@@ -635,11 +633,8 @@ describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
             if (isNumber(q)) {
               return MathUtils_round(q, precision) as TQ;
             }
-            if (is(TWeight, q) || is(TDynamicWeight, q)) {
-              const p: IWeight | IDynamicWeight = q;
-              return { ...p, value: MathUtils_round(p.value, precision) } as TQ;
-            }
-            throw new Error(`Could not round value: ${q}`);
+            const p: IWeight | IDynamicWeight = q;
+            return { ...p, value: MathUtils_round(p.value, precision) } as TQ;
           }
 
           if ("result" in case_) {

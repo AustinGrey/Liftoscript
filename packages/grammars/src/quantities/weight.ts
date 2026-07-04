@@ -237,7 +237,7 @@ export function operateAfterNormalized(
     return operation(a, b, o);
   }
 
-  throw new Error(`Can't apply operation to ${a} and ${b}`);
+  throw new Error(`Can't apply operation to ${typeof a} and ${typeof b}`);
 }
 
 export function increment(
@@ -613,12 +613,15 @@ export function convertToWeight(
 /**
  * Parses template literal as a number with a unit, if possible
  */
-const asRealNumberWithUnit: TaggedTemplateHandler<{
-  amount: number;
-  unit: string;
-  raw: string;
-}> = (s, ...v) => {
-  const raw = taggedTemplateToString(s, v);
+const asRealNumberWithUnit: TaggedTemplateHandler<
+  {
+    amount: number;
+    unit: string;
+    raw: string;
+  },
+  string
+> = (s, ...v) => {
+  const raw = taggedTemplateToString(s, ...v);
   // Flatten everything into a single string before splitting the number away from the unit
   const rawString = raw.replaceAll(/\s+/g, "").split(
     // Finds the 0 width boundaries between the number portion, and the unit portion, splitting on that.
@@ -628,7 +631,7 @@ const asRealNumberWithUnit: TaggedTemplateHandler<{
   const amount = Number(amountRaw);
   if (rest.length || !isRealNumber(amount)) {
     throw new Error(
-      `${rawString} can not be interpreted as a single amount with a unit`,
+      `${rawString.join(", ")} can not be interpreted as a single amount with a unit`,
     );
   }
   return {
@@ -640,8 +643,8 @@ const asRealNumberWithUnit: TaggedTemplateHandler<{
 /**
  * Builds {@link IDynamicWeight} from a string
  */
-export const dw: TaggedTemplateHandler<IDynamicWeight> = (s, ...v) => {
-  const { amount, unit, raw } = asRealNumberWithUnit(s, v);
+export const dw: TaggedTemplateHandler<IDynamicWeight, string> = (s, ...v) => {
+  const { amount, unit, raw } = asRealNumberWithUnit(s, ...v);
   if (unit !== "%") {
     throw new Error(`${raw} is not a valid IDynamicWeight`);
   }
@@ -653,8 +656,8 @@ export const dw: TaggedTemplateHandler<IDynamicWeight> = (s, ...v) => {
 /**
  * Builds {@link IWeight} from a string
  */
-export const w: TaggedTemplateHandler<IWeight> = (s, ...v) => {
-  const { amount, unit, raw } = asRealNumberWithUnit(s, v);
+export const w: TaggedTemplateHandler<IWeight, string> = (s, ...v) => {
+  const { amount, unit, raw } = asRealNumberWithUnit(s, ...v);
   if (unit !== "kg" && unit !== "lb") {
     throw new Error(`${raw} is not a valid IWeight`);
   }
@@ -791,7 +794,7 @@ function op<TA extends Quantity, TB extends Quantity>(
     if (is(TDynamicWeight, b)) return operation(a, onerm ? multiply(onerm, b.value / 100) : MathUtils_roundFloat(b.value / 100, 4), o) as OpResult<TA, TB>;
     if (is(TWeight, b)       ) return operation(a, b, o) as OpResult<TA, TB>;
   }
-  throw new Error(`Can't apply operation to ${a} and ${b}`);
+  throw new Error(`Can't apply operation to ${typeof a} and ${typeof b}`);
 }
 
 /**
