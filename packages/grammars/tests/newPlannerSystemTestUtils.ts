@@ -31,7 +31,13 @@ import type { IEither } from "@/utils/types.ts";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { definedOnly } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
-import { build, type IUnit, type IWeight, print } from "@/quantities/weight.ts";
+import {
+  build,
+  type IUnit,
+  type IWeight,
+  print,
+  smartConvert,
+} from "@/quantities/weight.ts";
 import {
   parseBound,
   SourcedSyntaxError,
@@ -39,7 +45,6 @@ import {
 } from "@/utils/lezer.ts";
 import { parser } from "@/logic/parsing/logic.ts";
 import { parser as planParser } from "@/planner/parsing/workout-plan";
-import { Weight_smartConvert } from "@/evaluators/logic-evaluator.ts";
 import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 
 export interface ICompletedEntries {
@@ -254,9 +259,7 @@ function switchWeightsInPlanToUnit(
           const from = cursor.node.from;
           const to = cursor.node.to;
           const oldWeightStr = print(weight);
-          const newWeightStr = print(
-            Weight_smartConvert(weight, settings.units),
-          );
+          const newWeightStr = print(smartConvert(weight, settings.units));
           script =
             script.substring(0, from + shift) +
             newWeightStr +
@@ -315,7 +318,7 @@ function switchWeightsToUnit(
           const from = cursor.node.from;
           const to = cursor.node.to;
           const oldWeightStr = print(weight);
-          const newWeightStr = print(Weight_smartConvert(weight, toUnit));
+          const newWeightStr = print(smartConvert(weight, toUnit));
           script =
             script.substring(0, from + shift) +
             newWeightStr +
