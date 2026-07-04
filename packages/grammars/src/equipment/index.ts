@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { TUnit, TWeight } from "@/quantities/weight.ts";
 import type { OpenRecord } from "@/utils/types.ts";
-import type { IBuiltinEquipment } from "@/evaluators/logic-evaluator.ts";
 
 export const TEquipmentType = z.string();
 export type IEquipmentType = z.infer<typeof TEquipmentType>;
@@ -24,6 +23,7 @@ export const builtInEquipmentTypes = [
   "trapbar",
 ] as const satisfies IEquipmentType[];
 export const TBuiltinEquipmentTypes = z.enum(builtInEquipmentTypes);
+export type IBuiltinEquipmentTypes = z.infer<typeof TBuiltinEquipmentTypes>;
 
 /**
  * Definition of how to treat a piece of equipment for calculations
@@ -63,7 +63,7 @@ export type IEquipmentData = z.infer<typeof TEquipmentData>;
  */
 export type IAllEquipment = OpenRecord<
   IEquipmentData,
-  | IBuiltinEquipment
+  | IBuiltinEquipmentTypes
   // Because the user can specify their own equipment categories, the key could be any string
   | string
 >;

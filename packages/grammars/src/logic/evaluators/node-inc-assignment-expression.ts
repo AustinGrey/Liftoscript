@@ -1,6 +1,4 @@
 import type { LogicHandler } from "@/logic/evaluators/types.ts";
-import { queryChild, queryChildren } from "@/utils/grammars.ts";
-import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { is, isNumber, isOneOf } from "@/utils/types.ts";
 import {
   TDynamicWeight,
@@ -20,6 +18,7 @@ import {
 import { isQuantity, type Quantity } from "@/logic/types.ts";
 import { nodeError } from "@/utils/lezer.ts";
 import { throwError } from "@/utils/errors.ts";
+import { queryChild, queryChildren } from "@/logic/parsing/guards.ts";
 
 // @todo this is a lot of complicated logic - can't this be simplified by just desugaring this to left = left <op> right? We can dispatch this to the existing handlers for binary ops and assignment
 export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
@@ -32,15 +31,12 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     incAssignmentExpr == null ||
     !isOneOf(
       stateVar.type.name,
-      NodeName.StateVariable,
-      NodeName.VariableExpression,
-      NodeName.Variable,
+      "StateVariable",
+      "VariableExpression",
+      "Variable",
     )
   ) {
-    throw nodeError(
-      n,
-      `missing required nodes for ${NodeName.IncAssignmentExpression}`,
-    );
+    throw nodeError(n, `missing required nodes for IncAssignmentExpression`);
   }
 
   // This function set is more readable unchopped
@@ -66,13 +62,13 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
     );
 
   switch (stateVar.type.name) {
-    case NodeName.VariableExpression: {
-      const nameNode = queryChild(stateVar, { ofType: NodeName.Keyword });
+    case "VariableExpression": {
+      const nameNode = queryChild(stateVar, { ofType: "Keyword" });
       if (nameNode == null) {
         throw nodeError(stateVar, `Missing variable name`);
       }
       const [...indexExprs] = queryChildren(stateVar, {
-        ofType: NodeName.VariableIndex,
+        ofType: "VariableIndex",
       });
       const variable = nameNode?.source;
       if (variable === "rm1") {
@@ -155,7 +151,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         throw nodeError(stateVar, `Unknown variable '${variable}'`);
       }
     }
-    case NodeName.Variable: {
+    case "Variable": {
       const varKey = stateVar.source.replace("var.", "");
       let value = t.recurse(expression);
       if (
@@ -190,11 +186,11 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
         );
       }
     }
-    case NodeName.StateVariable: {
+    case "StateVariable": {
       const indexNode = queryChild(stateVar, {
-        ofType: NodeName.StateVariableIndex,
+        ofType: "StateVariableIndex",
       });
-      const stateKeyNode = queryChild(stateVar, { ofType: NodeName.Keyword });
+      const stateKeyNode = queryChild(stateVar, { ofType: "Keyword" });
       if (stateKeyNode === undefined) {
         // @todo why return 0? why not just undefined?
         return 0;

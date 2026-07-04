@@ -3,13 +3,14 @@ import {
   type LogicHandler,
   type Validator,
 } from "@/logic/evaluators/types.ts";
-import {
-  NodeName,
-  Weight_is,
-  Weight_isPct,
-} from "@/evaluators/logic-evaluator.ts";
 import { nodeError } from "@/utils/lezer.ts";
-import { getChild, queryChildren } from "@/logic/parsing/guards.ts";
+import {
+  getChild,
+  isLogicNodeOfType,
+  queryChildren,
+} from "@/logic/parsing/guards.ts";
+import { is } from "@/utils/types.ts";
+import { TDynamicWeight, TWeight } from "@/quantities/weight.ts";
 
 export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
   // Get the variable to be indexed
@@ -32,8 +33,9 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
     // There is only one index expression, so we can evaluate it
     const [indexNode] = queryChildren(firstIndexExpression, { atLeast: 1 });
     if (
-      indexNode.type.name === NodeName.Wildcard ||
-      indexNode.type.name === NodeName.Current
+      isLogicNodeOfType("Wildcard", indexNode) ||
+      // @todo clearly "current" is the node name for the "_" sigil, but that's not in the grammar? Why? Should this condition be removed?
+      isLogicNodeOfType("Current", indexNode)
     ) {
       throw nodeError(
         indexNode,
@@ -42,7 +44,7 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
     }
     const indexEval = t.recurse(indexNode);
     let index: number;
-    if (Weight_is(indexEval) || Weight_isPct(indexEval)) {
+    if (is(TWeight, indexEval) || is(TDynamicWeight, indexEval)) {
       index = indexEval.value;
     } else if (typeof indexEval === "number") {
       index = indexEval;
@@ -78,7 +80,7 @@ export const validator: Validator<"VariableExpression"> = function* (n, t) {
   if (nameNode == null) {
     yield nodeError(
       n,
-      `Expected a ${NodeName.VariableExpression} child in a ${NodeName.StateVariable} node, but found none`,
+      `Expected a VariableExpression child in a StateVariable node, but found none`,
     );
     return;
   }

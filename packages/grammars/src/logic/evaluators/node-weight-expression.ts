@@ -1,9 +1,7 @@
 import type { EvaluateTools, LogicHandler } from "@/logic/evaluators/types.ts";
-import { type TypedLogicNode } from "@/logic/parsing/guards.ts";
+import { getChild, type TypedLogicNode } from "@/logic/parsing/guards.ts";
 import * as Weight from "@/quantities/weight.ts";
 import { type IWeight, TUnit } from "@/quantities/weight.ts";
-import { getChild } from "@/utils/grammars.ts";
-import { NodeName } from "@/evaluators/logic-evaluator.ts";
 import { is, isNumber } from "@/utils/types.ts";
 import { nodeError } from "@/utils/lezer.ts";
 
@@ -15,8 +13,8 @@ function getWeight(
   expr: TypedLogicNode<"WeightExpression">,
   tools: EvaluateTools,
 ): IWeight | undefined {
-  const numberNode = getChild(expr, { ofType: NodeName.NumberExpression });
-  const unitNode = getChild(expr, { ofType: NodeName.Unit });
+  const numberNode = getChild(expr, { ofType: "NumberExpression" });
+  const unitNode = getChild(expr, { ofType: "Unit" });
   const num = tools.recurse(numberNode);
   if (!isNumber(num)) {
     throw nodeError(numberNode, "WeightExpression must contain a number");
