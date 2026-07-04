@@ -15,7 +15,6 @@ import {
 } from "@/logic/evaluators/common.ts";
 import { nodeError } from "@/utils/lezer.ts";
 import { convertToWeight } from "@/quantities/weight.ts";
-import { NodeName } from "@/evaluators/logic-evaluator.ts";
 
 export const handler: LogicHandler<"AssignmentExpression"> = (n, t) => {
   const [variableNode, expression] = queryChildren(n, { atLeast: 2 });
@@ -130,7 +129,7 @@ export const validator: Validator<"AssignmentExpression"> = function* (n, t) {
   if (!isLogicNodeOfType("VariableExpression", variableNode)) {
     return;
   }
-  const name = queryChild(variableNode, { ofType: NodeName.Keyword })?.source;
+  const name = queryChild(variableNode, { ofType: "Keyword" })?.source;
   if (name !== undefined && t.mode === "update") {
     if (
       ![
@@ -149,7 +148,7 @@ export const validator: Validator<"AssignmentExpression"> = function* (n, t) {
       return;
     }
     const indexExprs = queryChildren(variableNode, {
-      ofType: NodeName.VariableIndex,
+      ofType: "VariableIndex",
     }).toArray();
     if (name === "numberOfSets" && indexExprs.length > 0) {
       yield nodeError(variableNode, `${name} is not an array`);

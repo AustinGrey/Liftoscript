@@ -1,8 +1,7 @@
 import { type LogicHandler, type Validator } from "@/logic/evaluators/types.ts";
-import { NodeName } from "@/evaluators/logic-evaluator.ts";
-import { queryChild } from "@/utils/grammars.ts";
 import { nodeError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { throwError } from "@/utils/errors.ts";
+import { queryChild } from "@/logic/parsing/guards.ts";
 
 export const handler: LogicHandler<"StateVariable"> = (n, t) => {
   const stateKey =
@@ -23,9 +22,9 @@ export const handler: LogicHandler<"StateVariable"> = (n, t) => {
  */
 
 function getStateKey(expr: SourcedSyntaxNode): string | undefined {
-  const index = queryChild(expr, { ofType: NodeName.StateVariableIndex });
+  const index = queryChild(expr, { ofType: "StateVariableIndex" });
   if (index === undefined) {
-    const stateKeyNode = queryChild(expr, { ofType: NodeName.Keyword });
+    const stateKeyNode = queryChild(expr, { ofType: "Keyword" });
     if (stateKeyNode != null) {
       return stateKeyNode.source;
     }

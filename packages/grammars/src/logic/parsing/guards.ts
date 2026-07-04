@@ -78,10 +78,10 @@ export function isLogicNodeName(name: string): name is NodeNames_Logic {
  * @param options Additional options to pass along to queryChildren
  */
 export function getChild<TTypes extends NodeNames_Logic>(
-  node: SourcedSyntaxNode,
+  node: TypedLogicNode<NodeNames_Logic>,
   options: QueryOptions<TTypes> = {},
-): SourcedSyntaxNode {
-  return originalGetChild(node, options);
+): TypedLogicNode<TTypes> {
+  return originalGetChild(node, options) as TypedLogicNode<TTypes>;
 }
 
 /**
@@ -90,7 +90,7 @@ export function getChild<TTypes extends NodeNames_Logic>(
  * @param options Additional options to pass along to queryChildren
  */
 export function queryChild<TTypes extends NodeNames_Logic>(
-  node: SourcedSyntaxNode,
+  node: TypedLogicNode<NodeNames_Logic>,
   options: QueryOptions<TTypes> = {},
 ): TypedLogicNode<TTypes> | undefined {
   return originalQueryChild(node, options) as TypedLogicNode<TTypes>;
@@ -104,8 +104,10 @@ export function queryChild<TTypes extends NodeNames_Logic>(
  * @param options.ofType - If provided, only yields children of this type, and atLeast ensures that there are at least that number of children of this type
  */
 export function* queryChildren<TTypes extends NodeNames_Logic>(
-  node: SourcedSyntaxNode,
+  node: TypedLogicNode<NodeNames_Logic>,
   options?: QueryOptions<TTypes>,
-): Generator<SourcedSyntaxNode> {
-  yield* originalQueryChildren(node, options);
+): Generator<TypedLogicNode<TTypes>> {
+  yield* originalQueryChildren(node, options) as Generator<
+    TypedLogicNode<TTypes>
+  >;
 }

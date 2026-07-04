@@ -3,13 +3,13 @@ import {
   type LogicHandler,
   type Validator,
 } from "@/logic/evaluators/types.ts";
-import { getChild, queryChildren } from "@/utils/grammars.ts";
 import {
   NodeName,
   Weight_is,
   Weight_isPct,
 } from "@/evaluators/logic-evaluator.ts";
 import { nodeError } from "@/utils/lezer.ts";
+import { getChild, queryChildren } from "@/logic/parsing/guards.ts";
 
 export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
   // Get the variable to be indexed
@@ -19,7 +19,7 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
   // Get the logic that will determine which index to pull from the variable
   // Ignore other nodes found here.
   const [firstIndexExpression, ...otherIndexExpressions] = queryChildren(n, {
-    ofType: NodeName.VariableIndex,
+    ofType: "VariableIndex",
   });
   if (!firstIndexExpression) {
     // There is no indexing happening
@@ -30,7 +30,7 @@ export const handler: LogicHandler<"VariableExpression"> = (n, t) => {
     return value;
   } else if (otherIndexExpressions.length === 0) {
     // There is only one index expression, so we can evaluate it
-    const [indexNode] = queryChildren(firstIndexExpression);
+    const [indexNode] = queryChildren(firstIndexExpression, { atLeast: 1 });
     if (
       indexNode.type.name === NodeName.Wildcard ||
       indexNode.type.name === NodeName.Current
