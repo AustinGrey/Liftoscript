@@ -1,3 +1,94 @@
+<template>
+  <div v-if="program" class="program-page">
+    <div class="breadcrumbs">
+      <RouterLink to="/">&larr; All programs</RouterLink>
+    </div>
+
+    <header class="program-header">
+      <div>
+        <h1>{{ program.name }}</h1>
+        <p v-if="program.author" class="program-author">
+          by {{ program.author }}
+          <a
+              v-if="program.url"
+              :href="program.url"
+              target="_blank"
+              rel="noopener"
+              class="source-link"
+          >source &nearr;</a
+          >
+        </p>
+      </div>
+      <div class="program-chips">
+        <Chip v-if="program.goal" variant="goal">{{ program.goal }}</Chip>
+        <Chip v-if="program.frequency">{{ program.frequency }}&times;/week</Chip>
+        <Chip v-if="program.duration">{{ program.duration }} min</Chip>
+        <Chip v-if="program.age">{{ humanize(program.age) }}</Chip>
+      </div>
+    </header>
+
+    <div class="program-layout">
+      <aside class="sidebar">
+        <SettingsPanel :state="state" :exercises="exerciseResult.exercises" />
+      </aside>
+
+      <div class="workbench">
+        <section class="panel editor-section">
+          <div class="panel-head">
+            <h2>Liftoscript plan</h2>
+            <div class="panel-actions">
+              <button type="button" class="ghost" @click="resetPlan">
+                Reset
+              </button>
+              <button
+                  type="button"
+                  class="ghost"
+                  @click="showEditor = !showEditor"
+              >
+                {{ showEditor ? "Hide" : "Show" }}
+              </button>
+            </div>
+          </div>
+          <PlanEditor v-if="showEditor" v-model="plannerText" />
+          <p
+              v-if="exerciseResult.error || simulation.error"
+              class="error-banner"
+          >
+            {{ exerciseResult.error || simulation.error }}
+          </p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Simulated progression</h2>
+            <span class="panel-sub"
+            >{{ simulation.sessions.length }} sessions, all reps
+              completed</span
+            >
+          </div>
+          <ProgressionTable
+              v-if="simulation.sessions.length"
+              :sessions="simulation.sessions"
+          />
+          <p v-else class="empty-note">
+            No sessions to simulate. Check the plan for errors above.
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <section class="about panel">
+      <div class="panel-head"><h2>About this program</h2></div>
+      <div class="markdown-body" v-html="renderedAbout"></div>
+    </section>
+  </div>
+
+  <div v-else class="not-found">
+    <h1>Program not found</h1>
+    <RouterLink to="/">Back to all programs</RouterLink>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
@@ -68,97 +159,6 @@ function humanize(value?: string): string | undefined {
   return value?.replace(/_/g, " ");
 }
 </script>
-
-<template>
-  <div v-if="program" class="program-page">
-    <div class="breadcrumbs">
-      <RouterLink to="/">&larr; All programs</RouterLink>
-    </div>
-
-    <header class="program-header">
-      <div>
-        <h1>{{ program.name }}</h1>
-        <p v-if="program.author" class="program-author">
-          by {{ program.author }}
-          <a
-            v-if="program.url"
-            :href="program.url"
-            target="_blank"
-            rel="noopener"
-            class="source-link"
-            >source &nearr;</a
-          >
-        </p>
-      </div>
-      <div class="program-chips">
-        <Chip v-if="program.goal" variant="goal">{{ program.goal }}</Chip>
-        <Chip v-if="program.frequency">{{ program.frequency }}&times;/week</Chip>
-        <Chip v-if="program.duration">{{ program.duration }} min</Chip>
-        <Chip v-if="program.age">{{ humanize(program.age) }}</Chip>
-      </div>
-    </header>
-
-    <div class="program-layout">
-      <aside class="sidebar">
-        <SettingsPanel :state="state" :exercises="exerciseResult.exercises" />
-      </aside>
-
-      <div class="workbench">
-        <section class="panel editor-section">
-          <div class="panel-head">
-            <h2>Liftoscript plan</h2>
-            <div class="panel-actions">
-              <button type="button" class="ghost" @click="resetPlan">
-                Reset
-              </button>
-              <button
-                type="button"
-                class="ghost"
-                @click="showEditor = !showEditor"
-              >
-                {{ showEditor ? "Hide" : "Show" }}
-              </button>
-            </div>
-          </div>
-          <PlanEditor v-if="showEditor" v-model="plannerText" />
-          <p
-            v-if="exerciseResult.error || simulation.error"
-            class="error-banner"
-          >
-            {{ exerciseResult.error || simulation.error }}
-          </p>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Simulated progression</h2>
-            <span class="panel-sub"
-              >{{ simulation.sessions.length }} sessions, all reps
-              completed</span
-            >
-          </div>
-          <ProgressionTable
-            v-if="simulation.sessions.length"
-            :sessions="simulation.sessions"
-          />
-          <p v-else class="empty-note">
-            No sessions to simulate. Check the plan for errors above.
-          </p>
-        </section>
-      </div>
-    </div>
-
-    <section class="about panel">
-      <div class="panel-head"><h2>About this program</h2></div>
-      <div class="markdown-body" v-html="renderedAbout"></div>
-    </section>
-  </div>
-
-  <div v-else class="not-found">
-    <h1>Program not found</h1>
-    <RouterLink to="/">Back to all programs</RouterLink>
-  </div>
-</template>
 
 <style scoped>
 .breadcrumbs {

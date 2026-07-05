@@ -1,3 +1,7 @@
+<template>
+  <div ref="host" class="plan-editor"></div>
+</template>
+
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
@@ -77,10 +81,6 @@ onBeforeUnmount(() => {
   view = null;
 });
 </script>
-
-<template>
-  <div ref="host" class="plan-editor"></div>
-</template>
 
 <style scoped>
 .plan-editor :deep(.cm-editor) {

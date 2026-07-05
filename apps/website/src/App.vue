@@ -1,7 +1,3 @@
-<script setup lang="ts">
-import { RouterLink, RouterView } from "vue-router";
-</script>
-
 <template>
   <div class="app-shell">
     <header class="topbar">
@@ -11,16 +7,16 @@ import { RouterLink, RouterView } from "vue-router";
       </RouterLink>
       <nav class="topnav">
         <a
-          href="https://www.liftosaur.com/docs/"
-          target="_blank"
-          rel="noopener"
-          >Docs</a
+            href="https://www.liftosaur.com/docs/"
+            target="_blank"
+            rel="noopener"
+        >Docs</a
         >
         <a
-          href="https://github.com/liftosaur/liftosaur"
-          target="_blank"
-          rel="noopener"
-          >GitHub</a
+            href="https://github.com/liftosaur/liftosaur"
+            target="_blank"
+            rel="noopener"
+        >GitHub</a
         >
       </nav>
     </header>
@@ -36,6 +32,10 @@ import { RouterLink, RouterView } from "vue-router";
     </footer>
   </div>
 </template>
+
+<script setup lang="ts">
+import { RouterLink, RouterView } from "vue-router";
+</script>
 
 <style>
 :root {

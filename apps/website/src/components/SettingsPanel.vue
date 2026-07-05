@@ -1,3 +1,69 @@
+<template>
+  <div class="settings-panel">
+    <section class="settings-block">
+      <h3>Units</h3>
+      <div class="segmented" role="group" aria-label="Units">
+        <button
+            type="button"
+            :class="{ active: state.units === 'lb' }"
+            @click="setUnits('lb')"
+        >
+          lb
+        </button>
+        <button
+            type="button"
+            :class="{ active: state.units === 'kg' }"
+            @click="setUnits('kg')"
+        >
+          kg
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-block">
+      <h3>Sessions to simulate</h3>
+      <div class="sessions-control">
+        <input
+            type="range"
+            min="1"
+            max="60"
+            v-model.number="state.numberOfSessions"
+        />
+        <span class="sessions-count">{{ state.numberOfSessions }}</span>
+      </div>
+    </section>
+
+    <section class="settings-block">
+      <h3>Starting 1RM</h3>
+      <p class="hint">
+        The training max each lift is based on. Leave blank to use the library's
+        default starting weight.
+      </p>
+      <div v-if="exercises.length === 0" class="empty-note">
+        No exercises detected yet.
+      </div>
+      <ul v-else class="orm-list">
+        <li v-for="exercise in exercises" :key="exercise.key">
+          <label :for="`orm-${exercise.key}`">{{ exercise.name }}</label>
+          <div class="orm-input">
+            <input
+                :id="`orm-${exercise.key}`"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="5"
+                :placeholder="placeholderFor(exercise.key)"
+                :value="state.oneRepMaxes[exercise.key] ?? ''"
+                @input="onOrmInput(exercise.key, $event)"
+            />
+            <span class="orm-unit">{{ state.units }}</span>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </div>
+</template>
+
 <script setup lang="ts">
 import type { IUnit } from "grammars";
 import type { PlaygroundState } from "../playground.ts";
@@ -33,72 +99,6 @@ function onOrmInput(key: string, event: Event) {
   props.state.oneRepMaxes = next;
 }
 </script>
-
-<template>
-  <div class="settings-panel">
-    <section class="settings-block">
-      <h3>Units</h3>
-      <div class="segmented" role="group" aria-label="Units">
-        <button
-          type="button"
-          :class="{ active: state.units === 'lb' }"
-          @click="setUnits('lb')"
-        >
-          lb
-        </button>
-        <button
-          type="button"
-          :class="{ active: state.units === 'kg' }"
-          @click="setUnits('kg')"
-        >
-          kg
-        </button>
-      </div>
-    </section>
-
-    <section class="settings-block">
-      <h3>Sessions to simulate</h3>
-      <div class="sessions-control">
-        <input
-          type="range"
-          min="1"
-          max="60"
-          v-model.number="state.numberOfSessions"
-        />
-        <span class="sessions-count">{{ state.numberOfSessions }}</span>
-      </div>
-    </section>
-
-    <section class="settings-block">
-      <h3>Starting 1RM</h3>
-      <p class="hint">
-        The training max each lift is based on. Leave blank to use the library's
-        default starting weight.
-      </p>
-      <div v-if="exercises.length === 0" class="empty-note">
-        No exercises detected yet.
-      </div>
-      <ul v-else class="orm-list">
-        <li v-for="exercise in exercises" :key="exercise.key">
-          <label :for="`orm-${exercise.key}`">{{ exercise.name }}</label>
-          <div class="orm-input">
-            <input
-              :id="`orm-${exercise.key}`"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              step="5"
-              :placeholder="placeholderFor(exercise.key)"
-              :value="state.oneRepMaxes[exercise.key] ?? ''"
-              @input="onOrmInput(exercise.key, $event)"
-            />
-            <span class="orm-unit">{{ state.units }}</span>
-          </div>
-        </li>
-      </ul>
-    </section>
-  </div>
-</template>
 
 <style scoped>
 .settings-panel {

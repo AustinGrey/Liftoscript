@@ -1,16 +1,3 @@
-<script setup lang="ts">
-import { RouterLink } from "vue-router";
-import type { ProgramDoc } from "../programs.ts";
-import Chip from "./Chip.vue";
-
-defineProps<{ program: ProgramDoc }>();
-
-function humanize(value?: string): string | undefined {
-  if (!value) return undefined;
-  return value.replace(/_/g, " ");
-}
-</script>
-
 <template>
   <RouterLink :to="`/program/${program.slug}`" class="program-card">
     <div class="card-body">
@@ -23,13 +10,26 @@ function humanize(value?: string): string | undefined {
     <div class="card-meta">
       <Chip v-if="program.goal" variant="goal">{{ program.goal }}</Chip>
       <Chip v-if="program.frequency"
-        >{{ program.frequency }}&times;/week</Chip
+      >{{ program.frequency }}&times;/week</Chip
       >
       <Chip v-if="program.duration">{{ program.duration }} min</Chip>
       <Chip v-if="program.age">{{ humanize(program.age) }}</Chip>
     </div>
   </RouterLink>
 </template>
+
+<script setup lang="ts">
+import { RouterLink } from "vue-router";
+import type { ProgramDoc } from "../programs.ts";
+import Chip from "./Chip.vue";
+
+defineProps<{ program: ProgramDoc }>();
+
+function humanize(value?: string): string | undefined {
+  if (!value) return undefined;
+  return value.replace(/_/g, " ");
+}
+</script>
 
 <style scoped>
 .program-card {

@@ -1,12 +1,12 @@
+<template>
+  <span class="chip" :class="`chip--${variant}`"><slot /></span>
+</template>
+
 <script setup lang="ts">
 withDefaults(defineProps<{ variant?: "default" | "goal" }>(), {
   variant: "default",
 });
 </script>
-
-<template>
-  <span class="chip" :class="`chip--${variant}`"><slot /></span>
-</template>
 
 <style scoped>
 .chip {

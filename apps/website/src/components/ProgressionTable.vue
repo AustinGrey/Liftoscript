@@ -1,3 +1,45 @@
+<template>
+  <div class="progression">
+    <div v-for="block in grouped" :key="block.week" class="week-block">
+      <h4 v-if="multiweek" class="week-title">Week {{ block.week }}</h4>
+      <div class="session-grid">
+        <article
+            v-for="session in block.sessions"
+            :key="session.ordinal"
+            class="session-card"
+        >
+          <header class="session-head">
+            <span class="session-ordinal">#{{ session.ordinal }}</span>
+            <span class="session-name">{{ session.dayName }}</span>
+          </header>
+          <ul class="exercise-list">
+            <li
+                v-for="(entry, i) in session.entries"
+                :key="`${entry.exerciseKey}-${i}`"
+                class="exercise-row"
+            >
+              <span class="exercise-name">{{ entry.exerciseName }}</span>
+              <span class="exercise-sets">
+                <span
+                    v-for="(scheme, j) in entrySchemes(entry)"
+                    :key="j"
+                    class="set-scheme"
+                    :title="scheme.label"
+                >
+                  {{ scheme.text }}
+                </span>
+              </span>
+            </li>
+            <li v-if="session.entries.length === 0" class="exercise-row muted">
+              Rest / no exercises
+            </li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { computed } from "vue";
 import type { SimEntry, SimSession, SimSet } from "../simulation.ts";
@@ -76,48 +118,6 @@ const grouped = computed(() => {
 
 const multiweek = computed(() => grouped.value.length > 1);
 </script>
-
-<template>
-  <div class="progression">
-    <div v-for="block in grouped" :key="block.week" class="week-block">
-      <h4 v-if="multiweek" class="week-title">Week {{ block.week }}</h4>
-      <div class="session-grid">
-        <article
-          v-for="session in block.sessions"
-          :key="session.ordinal"
-          class="session-card"
-        >
-          <header class="session-head">
-            <span class="session-ordinal">#{{ session.ordinal }}</span>
-            <span class="session-name">{{ session.dayName }}</span>
-          </header>
-          <ul class="exercise-list">
-            <li
-              v-for="(entry, i) in session.entries"
-              :key="`${entry.exerciseKey}-${i}`"
-              class="exercise-row"
-            >
-              <span class="exercise-name">{{ entry.exerciseName }}</span>
-              <span class="exercise-sets">
-                <span
-                  v-for="(scheme, j) in entrySchemes(entry)"
-                  :key="j"
-                  class="set-scheme"
-                  :title="scheme.label"
-                >
-                  {{ scheme.text }}
-                </span>
-              </span>
-            </li>
-            <li v-if="session.entries.length === 0" class="exercise-row muted">
-              Rest / no exercises
-            </li>
-          </ul>
-        </article>
-      </div>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .progression {
