@@ -18,7 +18,7 @@ A beginner barbell program and the introductory phase of Starting Strength. Only
 
 ## Origin & Philosophy
 
-Starting Strength was created by **Mark Rippetoe**, a competitive powerlifter and strength coach based in Wichita Falls, Texas. The program is detailed in his book *Starting Strength: Basic Barbell Training*, first published in 2005 and now in its [3rd edition (2011)](https://aasgaardco.com/store/books-702/starting-strength-basic-barbell-training-3rd-edition/). The companion book *Practical Programming for Strength Training* covers the programming theory behind the novice progression.
+Starting Strength was created by **Mark Rippetoe**, a competitive powerlifter and strength coach based in Wichita Falls, Texas. The program is detailed in his book _Starting Strength: Basic Barbell Training_, first published in 2005 and now in its [3rd edition (2011)](https://aasgaardco.com/store/books-702/starting-strength-basic-barbell-training-3rd-edition/). The companion book _Practical Programming for Strength Training_ covers the programming theory behind the novice progression.
 
 The core philosophy: beginners can add weight to the bar every single session for months — the "Novice Effect." Rather than waste this window on machines or complicated periodization, Starting Strength exploits it with a handful of barbell movements, linear loading, and full recovery between sessions. Strength is treated as the most fundamental physical adaptation — muscle size, power, and endurance all improve as side effects of getting stronger.
 
@@ -75,12 +75,12 @@ All sets are straight work sets at the same weight. No AMRAP sets, no back-off s
 
 **Weight increases per session:**
 
-| Lift | Standard increase | First few sessions |
-|------|-------------------|--------------------|
-| [{Squat}] | +5lb | +10lb for first 2–3 sessions |
-| [{Deadlift}] | +5lb | +10–15lb for first few sessions |
-| [{Bench Press}] | +5lb | — |
-| [{Overhead Press}] | +5lb | — |
+| Lift               | Standard increase | First few sessions              |
+| ------------------ | ----------------- | ------------------------------- |
+| [{Squat}]          | +5lb              | +10lb for first 2–3 sessions    |
+| [{Deadlift}]       | +5lb              | +10–15lb for first few sessions |
+| [{Bench Press}]    | +5lb              | —                               |
+| [{Overhead Press}] | +5lb              | —                               |
 
 **When you stall** (can't complete all prescribed reps for 2 consecutive workouts on the same lift):
 

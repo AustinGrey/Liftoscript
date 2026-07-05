@@ -18,7 +18,7 @@ Jon Andersen's Deep Water Method is a 6-week high-volume block built around 10 s
 
 ## Origin & Philosophy
 
-Deep Water was created by [Jon Andersen](https://www.jon-andersen.com/free-deep-water-ebook/), an IFBB Pro bodybuilder who competed at approximately 300 lbs at ~8% body fat, and was also a professional wrestler and strongman competitor. The program is documented in his book *Deep Water: Overcoming the Waves of Life*.
+Deep Water was created by [Jon Andersen](https://www.jon-andersen.com/free-deep-water-ebook/), an IFBB Pro bodybuilder who competed at approximately 300 lbs at ~8% body fat, and was also a professional wrestler and strongman competitor. The program is documented in his book _Deep Water: Overcoming the Waves of Life_.
 
 The core philosophy centers on mental toughness and pushing past perceived physical limits. Andersen describes "portals" — breakthrough moments during extended sets where the lifter realizes they can push further than they thought possible. The name "Deep Water" is a metaphor for being thrown into an extremely challenging situation with no way out but through. The program is not primarily about increasing your 1RM — it's about building your ability to perform enormous amounts of work under progressively harsher conditions.
 

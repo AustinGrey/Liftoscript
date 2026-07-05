@@ -6,8 +6,8 @@ import { partition } from "es-toolkit";
  * @param predicate The condition to split on
  */
 export function splitBy<T, TTruthy extends T>(
-  iterable: Iterable<T>,
-  predicate: (item: T) => item is TTruthy,
+	iterable: Iterable<T>,
+	predicate: (item: T) => item is TTruthy,
 ): [TTruthy[], Exclude<T, TTruthy>[]] {
-  return partition(Array.from(iterable), predicate);
+	return partition(Array.from(iterable), predicate);
 }

@@ -33,6 +33,7 @@ The core philosophy is simple: take a well-established training split (Push/Pull
 ## Pros & Cons
 
 **Pros:**
+
 - Requires only dumbbells, a bench, and a pull-up bar — no barbells, cables, or machines needed
 - Simple double progression removes all guesswork about when to increase weight
 - Each session has only 5 exercises, keeping workouts short and focused
@@ -40,6 +41,7 @@ The core philosophy is simple: take a well-established training split (Push/Pull
 - Covers all major movement patterns: horizontal push, vertical push, horizontal pull, vertical pull, squat, hinge, and isolation work
 
 **Cons:**
+
 - [{Goblet Squat}] will stall first — you'll hit the ceiling of your heaviest dumbbell before other exercises, limiting lower body progression
 - No lateral delt isolation — shoulders get trained through [{Arnold Press}] and [{Reverse Fly}] but side delts aren't directly targeted
 - No hamstring isolation — [{Single Leg Deadlift}] and [{Lunge, Dumbbell}] involve hamstrings but don't isolate them
@@ -55,6 +57,7 @@ The core philosophy is simple: take a well-established training split (Push/Pull
 ## Exercise Selection & Rationale
 
 **Push Day** targets chest, shoulders, and triceps:
+
 - [{Bench Press, Dumbbell}] — primary horizontal press, builds chest mass and pressing strength
 - [{Incline Chest Fly}] — stretches the chest through a deep range of motion at an incline angle, emphasizing upper chest fibers
 - [{Arnold Press}] — the rotation hits all three deltoid heads, giving broader shoulder coverage than a standard press
@@ -62,6 +65,7 @@ The core philosophy is simple: take a well-established training split (Push/Pull
 - [{Hanging Leg Raise}] — direct core work
 
 **Pull Day** targets back, rear delts, traps, and biceps:
+
 - [{Pull Up}] — vertical pull that builds lats and overall back width; the only bodyweight exercise in the program
 - [{Bent Over Row, Dumbbell}] — horizontal pull targeting mid-back thickness and lats
 - [{Reverse Fly}] — isolates rear delts, which are undertrained by rows and pull-ups alone
@@ -69,6 +73,7 @@ The core philosophy is simple: take a well-established training split (Push/Pull
 - [{Bicep Curl}] — isolates biceps, which are worked but not maximized by rows and pull-ups
 
 **Legs Day** targets quads, glutes, hamstrings, and calves:
+
 - [{Goblet Squat}] — primary quad/glute exercise; front-loaded position also challenges core
 - [{Lunge, Dumbbell}] — unilateral movement that builds each leg independently and improves balance
 - [{Single Leg Deadlift}] — hip hinge pattern targeting hamstrings and glutes while building single-leg stability
@@ -118,6 +123,7 @@ No barbells, cable machines, or plate-loaded equipment required.
 Start with the **lightest dumbbell you have** for each exercise and work your way up. This is directly from the original program — the author explicitly recommends starting light.
 
 For most beginners:
+
 - **Compound pressing** ([{Bench Press, Dumbbell}], [{Arnold Press}]): 15-30lb per dumbbell
 - **Isolation** ([{Incline Chest Fly}], [{Reverse Fly}], [{Bicep Curl}], [{Triceps Extension}]): 10-20lb per dumbbell
 - **Lower body** ([{Goblet Squat}], [{Lunge, Dumbbell}], [{Single Leg Deadlift}]): 20-35lb per dumbbell

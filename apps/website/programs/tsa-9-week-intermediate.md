@@ -112,6 +112,7 @@ Run the full 9 weeks. Don't skip week 5 - the deload is essential for the peak t
 Barbell, squat rack, flat bench, weight plates, and a lat pulldown or pull-up station. A leg press or hack squat machine is used on Day 3. Bands for band pull-aparts.
 
 **Home gym substitutions**:
+
 - [{Leg Press}] -> [{Bulgarian Split Squat}] or [{Hack Squat}] if available
 - [{Lat Pulldown}] -> [{Chin Up}] or [{Pull Up}]
 - [{Incline Row}] (chest-supported row) -> [{Bent Over Row}] or [{Pendlay Row}]

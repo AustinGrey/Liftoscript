@@ -115,6 +115,7 @@ Run this program for **8-16 weeks**. The double progression and high volume shou
 - **T-bar row station** or landmine attachment
 
 **Home gym substitutions**:
+
 - [{Incline Chest Press, Leverage Machine}] → [{Incline Bench Press}] or [{Incline Bench Press, Dumbbell}]
 - [{Decline Bench Press, Smith Machine}] → [{Chest Dip}] (lean forward for lower chest emphasis)
 - [{Triceps Dip, Leverage Machine}] → [{Triceps Dip}] (bodyweight)

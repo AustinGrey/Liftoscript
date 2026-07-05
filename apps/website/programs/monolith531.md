@@ -114,6 +114,7 @@ Run Building the Monolith for **exactly 6 weeks**. Do NOT repeat it immediately.
 Barbell, squat rack, bench, weight plates, a pull-up/chin-up bar, and dumbbells for rows and curls. A cable machine for [{Face Pull}]s is ideal but not required.
 
 **Home gym substitutions**:
+
 - [{Face Pull}] → [{Reverse Fly}] with dumbbells, or band pull-aparts
 - [{Bent Over One Arm Row}] → [{Bent Over Row}] with barbell
 - [{Bicep Curl}] → [{Bicep Curl, Barbell}] with straight bar or EZ bar

@@ -26,9 +26,9 @@ export const ZERO: IndexFrom0 = 0 as IndexFrom0;
  * @param indexFrom0 The 1-based index
  */
 export function castAs0<TIndex extends number | undefined | null>(
-  indexFrom0: TIndex,
+	indexFrom0: TIndex,
 ): TIndex extends undefined | null ? TIndex : IndexFrom0 {
-  return indexFrom0 as TIndex extends undefined | null ? TIndex : IndexFrom0;
+	return indexFrom0 as TIndex extends undefined | null ? TIndex : IndexFrom0;
 }
 
 /**
@@ -39,9 +39,9 @@ export function castAs0<TIndex extends number | undefined | null>(
  * @param indexFrom1 The 0-based index
  */
 export function castAs1<TIndex extends number | undefined | null>(
-  indexFrom1: TIndex,
+	indexFrom1: TIndex,
 ): TIndex extends undefined | null ? TIndex : IndexFrom1 {
-  return indexFrom1 as TIndex extends undefined | null ? TIndex : IndexFrom1;
+	return indexFrom1 as TIndex extends undefined | null ? TIndex : IndexFrom1;
 }
 
 /**
@@ -52,14 +52,13 @@ export function castAs1<TIndex extends number | undefined | null>(
  * @param ifNaN The value to return if the index is NaN, if not provided NaN will be returned
  */
 export function as0<TIndex extends IndexFrom1 | undefined | null>(
-  indexFrom1: TIndex,
-  ifNaN?: number,
+	indexFrom1: TIndex,
+	ifNaN?: number,
 ): TIndex extends undefined | null ? TIndex : IndexFrom0 {
-  type ReturnType = TIndex extends undefined | null ? TIndex : IndexFrom0;
-  if (indexFrom1 === undefined || indexFrom1 === null)
-    return indexFrom1 as ReturnType;
-  if (isNaN(indexFrom1)) return (ifNaN ?? indexFrom1) as ReturnType;
-  return (indexFrom1 - 1) as ReturnType;
+	type ReturnType = TIndex extends undefined | null ? TIndex : IndexFrom0;
+	if (indexFrom1 === undefined || indexFrom1 === null) return indexFrom1 as ReturnType;
+	if (isNaN(indexFrom1)) return (ifNaN ?? indexFrom1) as ReturnType;
+	return (indexFrom1 - 1) as ReturnType;
 }
 
 /**
@@ -71,46 +70,41 @@ export function as0<TIndex extends IndexFrom1 | undefined | null>(
  * @param ifNaN The value to return if the index is NaN, if not provided NaN will be returned
  */
 export function as1<TIndex extends 0 | IndexFrom0 | undefined | null>(
-  indexFrom0: TIndex,
-  ifNaN?: number,
+	indexFrom0: TIndex,
+	ifNaN?: number,
 ): TIndex extends undefined | null ? TIndex : IndexFrom1 {
-  type ReturnType = TIndex extends undefined | null ? TIndex : IndexFrom1;
-  if (indexFrom0 === undefined || indexFrom0 === null)
-    return indexFrom0 as ReturnType;
-  if (isNaN(indexFrom0)) return (ifNaN ?? indexFrom0) as ReturnType;
-  return (indexFrom0 + 1) as ReturnType;
+	type ReturnType = TIndex extends undefined | null ? TIndex : IndexFrom1;
+	if (indexFrom0 === undefined || indexFrom0 === null) return indexFrom0 as ReturnType;
+	if (isNaN(indexFrom0)) return (ifNaN ?? indexFrom0) as ReturnType;
+	return (indexFrom0 + 1) as ReturnType;
 }
 
 /**
  * A predicate that can be passed to a normal array map to get access to stronger typed indexes
  */
 export function withIndex<TElement, TReturn>(
-  mapper: (value: TElement, index: IndexFrom0) => TReturn,
+	mapper: (value: TElement, index: IndexFrom0) => TReturn,
 ): (value: TElement, index: number) => TReturn {
-  return mapper as (value: TElement, index: number) => TReturn;
+	return mapper as (value: TElement, index: number) => TReturn;
 }
 
 export function safeFindLastIndex<TElement, TDefault extends IndexFrom0>(
-  arr: TElement[],
-  where: (element: TElement) => boolean,
-  defaults?: TDefault,
+	arr: TElement[],
+	where: (element: TElement) => boolean,
+	defaults?: TDefault,
 ): TDefault extends IndexFrom0 ? IndexFrom0 : IndexFrom0 | undefined {
-  const result = castAs0(arr.findLastIndex(where));
-  return result !== -1
-    ? result
-    : defaults !== undefined
-      ? defaults
-      : (undefined as TDefault extends IndexFrom0
-          ? IndexFrom0
-          : IndexFrom0 | undefined);
+	const result = castAs0(arr.findLastIndex(where));
+	return result !== -1
+		? result
+		: defaults !== undefined
+			? defaults
+			: (undefined as TDefault extends IndexFrom0 ? IndexFrom0 : IndexFrom0 | undefined);
 }
 
 /**
  * Gets the next index, while preserving the type information
  * @param idx The index to get the next index of
  */
-export function next<TIndex extends IndexFrom0 | IndexFrom1>(
-  idx: TIndex,
-): TIndex {
-  return (idx + 1) as TIndex;
+export function next<TIndex extends IndexFrom0 | IndexFrom1>(idx: TIndex): TIndex {
+	return (idx + 1) as TIndex;
 }

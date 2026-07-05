@@ -109,6 +109,7 @@ Run WS4SB indefinitely as long as you're making progress. DeFranco designed it a
 The program needs a barbell, dumbbells, a cable machine, and a box for box squats (a bench or plyo box works).
 
 **Home gym substitutions**:
+
 - [{Lat Pulldown}] -> [{Chin Up}] or [{Pull Up}]
 - [{Cable Crunch}] -> [{Hanging Leg Raise}] or weighted [{Sit Up}]
 - [{Face Pull}] -> [{Reverse Fly}] with dumbbells

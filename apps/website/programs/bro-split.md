@@ -117,6 +117,7 @@ Run the bro split for **8-16 weeks** before reassessing. It's a straightforward 
 - **Leg press, leg extension, and leg curl machines**
 
 **Home gym substitutions**:
+
 - [{Cable Crossover}] → [{Chest Fly}] (additional dumbbell sets)
 - [{Lat Pulldown}] → [{Pull Up}] or [{Chin Up}]
 - [{Seated Row}] → [{Bent Over Row, Dumbbell}] or [{T Bar Row}]

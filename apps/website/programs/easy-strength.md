@@ -57,18 +57,18 @@ The version implemented here is "Even Easier Strength" - Dan John's refined vers
 
 The 10-day cycle repeats 4 times:
 
-| Day | Scheme | Purpose |
-|-----|--------|---------|
-| 1 | 2x5 | Standard practice |
-| 2 | 2x5 | Standard practice |
-| 3 | 5-3-2 | Test day - build up in weight |
-| 4 | 2x5 | Standard practice |
-| 5 | 2x5 | Standard practice |
-| 6 | 2x5 | Standard practice |
-| 7 | 6x1 | Ascending singles - neural drive |
-| 8 | 1x10 | Tonic day - very light recovery |
-| 9 | 2x5 | Standard practice |
-| 10 | 5-3-2 | Test day |
+| Day | Scheme | Purpose                          |
+| --- | ------ | -------------------------------- |
+| 1   | 2x5    | Standard practice                |
+| 2   | 2x5    | Standard practice                |
+| 3   | 5-3-2  | Test day - build up in weight    |
+| 4   | 2x5    | Standard practice                |
+| 5   | 2x5    | Standard practice                |
+| 6   | 2x5    | Standard practice                |
+| 7   | 6x1    | Ascending singles - neural drive |
+| 8   | 1x10   | Tonic day - very light recovery  |
+| 9   | 2x5    | Standard practice                |
+| 10  | 5-3-2  | Test day                         |
 
 ## Exercise Selection & Rationale
 

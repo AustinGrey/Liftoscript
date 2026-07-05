@@ -18,7 +18,7 @@ A 6-week hypertrophy block from K. Black's Tactical Barbell system. Three days p
 
 ## Origin & Philosophy
 
-The Mass Protocol is one of four "General Mass" templates in K. Black's *Tactical Barbell* series, published in 2018. It was designed for tactical athletes (military, law enforcement, firefighters) who need to gain size and strength efficiently without spending hours in the gym. The Tactical Barbell system splits training into focused blocks — Base Building for conditioning, Operator/Fighter for strength maintenance, and Mass Protocol for dedicated hypertrophy phases.
+The Mass Protocol is one of four "General Mass" templates in K. Black's _Tactical Barbell_ series, published in 2018. It was designed for tactical athletes (military, law enforcement, firefighters) who need to gain size and strength efficiently without spending hours in the gym. The Tactical Barbell system splits training into focused blocks — Base Building for conditioning, Operator/Fighter for strength maintenance, and Mass Protocol for dedicated hypertrophy phases.
 
 The core idea: compound-only training with high frequency on a small number of lifts. By hitting [{Squat}], [{Bench Press}], and [{Pull Up}] three times per week, you accumulate significant volume on the movements that matter most for size. Two 3-week waves provide undulating periodization — volume drops and intensity rises within each wave, then resets for the second wave at a slightly different rep scheme.
 
@@ -105,6 +105,7 @@ Run **1-3 blocks** (6-18 weeks) depending on your goals. Most lifters run 1-2 bl
 Barbell, squat rack, bench, weight plates, and a pull-up bar. That's it — the program uses only 4 exercises.
 
 **Home gym substitutions**:
+
 - [{Pull Up}] → [{Chin Up}] or [{Lat Pulldown}] (if you have a cable machine)
 - [{Bench Press}] → [{Bench Press, Dumbbell}] (if no barbell)
 - [{Deadlift}] → [{Trap Bar Deadlift}] or [{Romanian Deadlift}]

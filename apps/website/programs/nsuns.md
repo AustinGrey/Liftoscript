@@ -56,11 +56,13 @@ The core idea is "Wendler in the front, Sheiko in the back" — each session ope
 ## Exercise Selection & Rationale
 
 **T1 (Primary) lifts** rotate through the big four:
+
 - [{Bench Press}] appears twice — Day 1 as a volume day (pyramid up to 85% TM, then descend) and Day 5 as a standard 5/3/1 day. The double exposure is deliberate: bench responds well to frequency, and the two distinct rep schemes provide both heavy practice and accumulated volume.
 - [{Squat}] (Day 2) and [{Deadlift}] (Day 4) each get one 5/3/1 day. They're on separate days to avoid competing for lower body recovery.
 - [{Overhead Press}] (Day 3) gets its own 5/3/1 day, providing direct shoulder pressing volume that also supports bench strength.
 
 **T2 (Secondary) lifts** are chosen to complement the T1 pattern:
+
 - [{Overhead Press}] (Day 1 T2) — pressing variation that supports bench day. Lighter pressing volume trains shoulders without interfering with the heavy bench work.
 - [{Sumo Deadlift}] (Day 2 T2) — hip-dominant pull that provides deadlift-pattern volume on squat day. The sumo stance shifts emphasis to hips and adductors.
 - [{Incline Bench Press}] (Day 3 T2) — upper chest and front delt emphasis that supports both OHP and flat bench strength.
@@ -74,6 +76,7 @@ The core idea is "Wendler in the front, Sheiko in the back" — each session ope
 **T1 Volume Day** (Day 1 [{Bench Press}] only): 9 sets that pyramid up to 3x4 at 85% TM, then descend back down with increasing reps. The final set is AMRAP. This pattern provides ~50 total reps of bench pressing at moderate-to-heavy loads.
 
 **T1 5/3/1 Days** (Days 2-5): 9 sets starting with a 5/3/1 ramp — 5 reps at 75% TM, 3 reps at 85% TM, then 1+ AMRAP at 95% TM. The remaining 6 sets are backoff work at decreasing percentages. The backoff rep pattern varies by lift:
+
 - [{Squat}] and [{Overhead Press}]: 3/3/3/5/5/5+ reps
 - [{Deadlift}]: 3/3/3/3/3/3+ reps (lower backoff reps to manage spinal fatigue)
 - [{Bench Press}]: 3/5/3/5/3/5+ reps (alternating pattern)
@@ -85,6 +88,7 @@ The AMRAP set at 95% TM is the most important set in the program — it determin
 ## Progressive Overload
 
 After each session, the app checks your AMRAP performance on the T1 top set (set 3 at 95% TM). Based on reps achieved:
+
 - **2-3 reps**: Increase 1RM by **5 lbs**
 - **4-5 reps**: Increase 1RM by **10 lbs**
 - **6+ reps**: Increase 1RM by **15 lbs**
@@ -111,6 +115,7 @@ Run nSuns LP for **12-20 weeks**. It's designed for aggressive linear gains, and
 Barbell, squat rack, flat bench, and weight plates for all T1 and T2 lifts. A cable machine for [{Lat Pulldown}], [{Triceps Pushdown}], and [{Face Pull}]. Dumbbells for [{Bicep Curl}], [{Hammer Curl}], and [{Lateral Raise}]. A pull-up bar for [{Chin Up}].
 
 **Home gym substitutions** (for cable/machine exercises):
+
 - [{Lat Pulldown}] → [{Pull Up}] or [{Chin Up}] (bodyweight)
 - [{Triceps Pushdown}] → [{Skullcrusher}] (barbell or dumbbell)
 - [{Face Pull}] → [{Reverse Fly}] (dumbbell) or band pull-apart

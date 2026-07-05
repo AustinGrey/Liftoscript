@@ -93,6 +93,7 @@ Run PHUL for **12-16 weeks** before reassessing. Take a deload week (50% of norm
 The program as written requires a barbell, dumbbells, a cable machine, and a leg press/leg curl/leg extension machine.
 
 **Home gym substitutions**:
+
 - [{Lat Pulldown}] → [{Pull Up}] or [{Chin Up}]
 - [{Leg Press}] → [{Bulgarian Split Squat}] or [{Goblet Squat}]
 - [{Seated Row}] → [{Bent Over Row, Dumbbell}]

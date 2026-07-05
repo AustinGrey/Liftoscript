@@ -55,12 +55,14 @@ The idea is straightforward: compound lifts at low reps (3x5) build strength, is
 ## Exercise Selection & Rationale
 
 **Push days** cover all pressing muscles plus traps:
+
 - [{Bench Press}], [{Overhead Press}], [{Incline Bench Press}] - three barbell presses at 3x5 targeting flat chest, shoulders, and upper chest from different angles. All at low reps to build a strength base.
 - [{Lateral Raise}] - the only way to directly hit the medial delt, which pressing alone doesn't develop
 - [{Triceps Pushdown}] + [{Triceps Extension}] - two tricep movements from different angles (pushdown for lateral head, overhead extension for long head)
 - [{Shrug, Barbell}] - trap development. The original places shrugs on push day, which is unconventional. Move them to pull day if you prefer.
 
 **Pull days** cover back and biceps:
+
 - [{Deadlift}] (1x5) - heavy posterior chain work. One set keeps fatigue manageable given the 2x/week frequency.
 - [{Bent Over Row}] (3x5) - primary horizontal pull for mid-back thickness
 - [{Lat Pulldown}] + [{Seated Row}] - additional back volume at higher reps (3x8-10) for lat width and mid-back
@@ -68,6 +70,7 @@ The idea is straightforward: compound lifts at low reps (3x5) build strength, is
 - [{Bicep Curl, Barbell}] (4 sets) + [{Hammer Curl}] (3 sets) - direct bicep and brachialis work. The extra set on barbell curls gives biceps slightly more volume.
 
 **Legs days** cover quads, hamstrings, and calves:
+
 - [{Squat}] (4x5) - primary quad and glute builder, one extra set compared to the 3x5 presses
 - [{Leg Press}] (3x8-10) - additional quad volume without spinal loading
 - [{Leg Extension}] + [{Lying Leg Curl}] - direct quad and hamstring isolation
@@ -86,6 +89,7 @@ The idea is straightforward: compound lifts at low reps (3x5) build strength, is
 ## Progressive Overload
 
 **Compounds (linear progression):**
+
 - Add **5lb per week** to [{Bench Press}], [{Overhead Press}], [{Incline Bench Press}], [{Bent Over Row}], [{Squat}], and [{Deadlift}]
 - Since each exercise appears twice per week, the app adds 5lb after 2 successful sessions
 - **Deload:** If you fail to complete prescribed reps for 3 consecutive sessions, weight drops by 10%. Work back up from there.
@@ -93,6 +97,7 @@ The idea is straightforward: compound lifts at low reps (3x5) build strength, is
 The original program doesn't specify a failure protocol. This 10% deload after 3 failures is a standard safeguard added by this implementation.
 
 **Isolations (double progression):**
+
 - Start at the bottom of the rep range (10 reps for most, 8 for [{Lat Pulldown}]/[{Seated Row}]/[{Leg Press}])
 - When you hit the top of the range (12 or 10 respectively) on all sets, add 5lb (10lb for [{Leg Press}]) and reset to the bottom
 - This matches Coolcicada's own words: "Once I am able to do 3 sets of 10 at a weight, I move up"
@@ -115,6 +120,7 @@ Run for at least **12 weeks**. One reviewer ran it for 13 weeks (6 on, 1 deload,
 - **Leg press, leg curl, and calf raise machines**
 
 **Home gym substitutions:**
+
 - [{Lat Pulldown}] -> [{Pull Up}] or [{Chin Up}]
 - [{Seated Row}] -> [{Bent Over Row, Dumbbell}] or [{T Bar Row}]
 - [{Triceps Pushdown}] -> [{Skullcrusher}]

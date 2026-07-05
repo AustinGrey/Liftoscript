@@ -8,41 +8,29 @@ import { nodeError } from "@/utils/lezer.ts";
  * @param valueNode The node where the formula use was defined
  */
 export const validate: ProgressionFormulaValidator = function* (
-  [argWeight, argMinReps, argMaxReps, ...argsRest],
-  valueNode,
+	[argWeight, argMinReps, argMaxReps, ...argsRest],
+	valueNode,
 ) {
-  if (
-    argWeight == null ||
-    argMinReps == null ||
-    argMaxReps == null ||
-    argsRest.length > 0
-  ) {
-    yield nodeError(
-      valueNode,
-      `Double Progression 'dp' should have 3 arguments`,
-    );
-    return;
-  }
-  if (
-    !argWeight.endsWith("lb") &&
-    !argWeight.endsWith("kg") &&
-    !argWeight.endsWith("%")
-  ) {
-    yield nodeError(
-      valueNode,
-      `1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-    );
-  }
-  if (asBase10Int(argMinReps)) {
-    yield nodeError(
-      valueNode,
-      `2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
-    );
-  }
-  if (asBase10Int(argMaxReps)) {
-    yield nodeError(
-      valueNode,
-      `3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
-    );
-  }
+	if (argWeight == null || argMinReps == null || argMaxReps == null || argsRest.length > 0) {
+		yield nodeError(valueNode, `Double Progression 'dp' should have 3 arguments`);
+		return;
+	}
+	if (!argWeight.endsWith("lb") && !argWeight.endsWith("kg") && !argWeight.endsWith("%")) {
+		yield nodeError(
+			valueNode,
+			`1st argument of 'dp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+		);
+	}
+	if (asBase10Int(argMinReps)) {
+		yield nodeError(
+			valueNode,
+			`2nd argument of 'dp' should be min reps in the range - i.e. a number, like 8`,
+		);
+	}
+	if (asBase10Int(argMaxReps)) {
+		yield nodeError(
+			valueNode,
+			`3rd argument of 'dp' should be max reps in the range - i.e. a number, like 12`,
+		);
+	}
 };

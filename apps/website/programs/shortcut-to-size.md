@@ -113,6 +113,7 @@ Run for exactly 12 weeks as designed. You can repeat the full 12-week cycle - th
 The program as written requires a barbell, dumbbells, cable machine, leg press, leg extension, leg curl machine, calf raise machines, and a preacher curl bench.
 
 **Home gym substitutions**:
+
 - [{Cable Crossover}] / [{Incline Chest Fly, Cable}] -> [{Chest Fly}] / [{Incline Chest Fly}] with dumbbells
 - [{Triceps Pushdown}] / [{Triceps Extension, Cable}] -> [{Skullcrusher}] / [{Triceps Extension}] with dumbbells
 - [{Lat Pulldown}] -> [{Pull Up}] or [{Chin Up}]

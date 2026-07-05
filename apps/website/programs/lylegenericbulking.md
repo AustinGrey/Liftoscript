@@ -97,6 +97,7 @@ Run for **6-8 weeks per cycle**, with a deload week between cycles. You can repe
 Barbell, dumbbells, leg press machine, seated leg curl machine, standing calf raise machine (or smith machine), seated calf raise machine.
 
 **Home gym substitutions**:
+
 - [{Leg Press}] -> [{Bulgarian Split Squat}] or [{Front Squat}]
 - [{Seated Leg Curl}] -> [{Romanian Deadlift}] or [{Good Morning}]
 - [{Standing Calf Raise}] -> [{Standing Calf Raise, Bodyweight}] (on a step with added weight)

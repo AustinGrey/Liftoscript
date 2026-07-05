@@ -1,32 +1,32 @@
 import {
-  isQuantity,
-  type LogicResult,
-  type LogicResultSingular,
-  type Quantity,
+	isQuantity,
+	type LogicResult,
+	type LogicResultSingular,
+	type Quantity,
 } from "@/logic/types.ts";
 import { isNumber } from "@/utils/types.ts";
 
 export function print(value: LogicResult): string {
-  if (Array.isArray(value)) {
-    return "[" + value.map(printSingular).join(", ") + "]";
-  }
-  return printSingular(value);
+	if (Array.isArray(value)) {
+		return "[" + value.map(printSingular).join(", ") + "]";
+	}
+	return printSingular(value);
 }
 
 function printSingular(value: LogicResultSingular): string {
-  if (value === undefined) {
-    return "UNDEFINED";
-  }
-  if (value === true) {
-    return "TRUE";
-  }
-  if (value === false) {
-    return "FALSE";
-  }
-  if (isNumber(value)) {
-    return value.toString();
-  }
-  return value.value + value.unit;
+	if (value === undefined) {
+		return "UNDEFINED";
+	}
+	if (value === true) {
+		return "TRUE";
+	}
+	if (value === false) {
+		return "FALSE";
+	}
+	if (isNumber(value)) {
+		return value.toString();
+	}
+	return value.value + value.unit;
 }
 
 /**
@@ -36,25 +36,25 @@ function printSingular(value: LogicResultSingular): string {
  * @param coercion How non-quantities will be converted
  */
 export function toQuantity(
-  value: LogicResultSingular,
-  coercion: {
-    true: Quantity | undefined;
-    false: Quantity | undefined;
-    undefined: Quantity | undefined;
-  },
+	value: LogicResultSingular,
+	coercion: {
+		true: Quantity | undefined;
+		false: Quantity | undefined;
+		undefined: Quantity | undefined;
+	},
 ): Quantity {
-  if (isQuantity(value)) return value;
-  if (value === true && coercion.true !== undefined) {
-    return structuredClone(coercion.true);
-  } else if (value === false && coercion.false !== undefined) {
-    return structuredClone(coercion.false);
-  } else if (value === undefined && coercion.undefined !== undefined) {
-    return structuredClone(coercion.undefined);
-  } else
-    // @TODO really? Throwing an error here doesn't seem like a good idea unless we can give the user a better error message to track down where the value came from
-    throw new Error(
-      `A value could not be converted into a Quantity, but is needed to be. The value was: ${print(value)}`,
-    );
+	if (isQuantity(value)) return value;
+	if (value === true && coercion.true !== undefined) {
+		return structuredClone(coercion.true);
+	} else if (value === false && coercion.false !== undefined) {
+		return structuredClone(coercion.false);
+	} else if (value === undefined && coercion.undefined !== undefined) {
+		return structuredClone(coercion.undefined);
+	} else
+		// @TODO really? Throwing an error here doesn't seem like a good idea unless we can give the user a better error message to track down where the value came from
+		throw new Error(
+			`A value could not be converted into a Quantity, but is needed to be. The value was: ${print(value)}`,
+		);
 }
 
 /**
@@ -63,16 +63,16 @@ export function toQuantity(
  * @param rounder The function to use to round quantities
  */
 export function round<T extends LogicResult>(
-  result: T,
-  rounder: <TQ extends Quantity>(q: TQ) => TQ,
+	result: T,
+	rounder: <TQ extends Quantity>(q: TQ) => TQ,
 ): T {
-  if (Array.isArray(result)) {
-    return result.map((r) => round(r, rounder)) as T;
-  }
-  if (isQuantity(result)) {
-    return rounder(result);
-  }
-  return result;
+	if (Array.isArray(result)) {
+		return result.map((r) => round(r, rounder)) as T;
+	}
+	if (isQuantity(result)) {
+		return rounder(result);
+	}
+	return result;
 }
 
 /**
@@ -81,15 +81,15 @@ export function round<T extends LogicResult>(
  * @param right The right hand side of the comparison
  */
 export function equal(left: LogicResult, right: LogicResult): boolean {
-  if (Array.isArray(left)) {
-    return (
-      Array.isArray(right) &&
-      left.length === right.length &&
-      left.every((l, i) => equal(l, right[i]))
-    );
-  }
-  if (Array.isArray(right)) {
-    return false;
-  }
-  return left === right;
+	if (Array.isArray(left)) {
+		return (
+			Array.isArray(right) &&
+			left.length === right.length &&
+			left.every((l, i) => equal(l, right[i]))
+		);
+	}
+	if (Array.isArray(right)) {
+		return false;
+	}
+	return left === right;
 }

@@ -89,6 +89,7 @@ Total weekly volume: ~133 working reps. The descending rep counts with ascending
 Run the program for exactly **3 weeks + 1 deload/test week** (4 weeks total). Unlike the full Smolov, Smolov Jr can be repeated — running 2 consecutive cycles with a rest week between is a common approach for bigger gains (30+ lbs on bench reported).
 
 **Good follow-up programs**:
+
 - [5/3/1: Boring But Big](/programs/the531bbb) — return to balanced training with submaximal bench work to maintain gains
 - [nSuns LP](/programs/nsuns) — high-volume linear progression across all main lifts
 - [GZCLP](/programs/gzclp) — structured linear progression to rebuild neglected lifts

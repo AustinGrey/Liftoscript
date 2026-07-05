@@ -73,7 +73,6 @@ Note that first RM sets are approximate in this example
 
 :::exercise-example{exercise="squat" equipment="barbell" key="squat_barbell"}
 
-
 ### T2a Exercise
 
 The T2a exercise weight is usually based on the T1 Training Max weight (since T2a exercises are auxiliary exercises to T1 ones). The exception is [{Front Squat}], which is using its own TM.
@@ -84,7 +83,6 @@ You skip the exercise on the Week 6 and Week 12, when you measure your 1RM for T
 
 :::exercise-example{exercise="deficitDeadlift" equipment="barbell" key="deficitdeadlift_barbell"}
 
-
 ### T2b and T3 Exercises
 
 T2b and T3 exercises are pretty similar to each other, they just use different first set RM value. So, for the first set, you attempt to do RM for the reps of that set (similar to T1), record the weight, and then you do the so-called Max Rep Sets (MRS). Simply, try to do as many reps as possible with the same weight as you did for the first set. For the 2nd, 3rd, etc Max Reps Set you likely will be able to do less and less reps, but that's okay and expected, as you're accumulating fatigue.
@@ -92,7 +90,6 @@ T2b and T3 exercises are pretty similar to each other, they just use different f
 You skip these exercises on the Week 7 and Week 12
 
 :::exercise-example{exercise="tricepsPushdown" equipment="cable" key="tricepspushdown_cable"}
-
 
 Again, this is just a short description, and for full information and details, please read the [original post with the GZCL applications](http://swoleateveryheight.blogspot.com/2016/02/gzcl-applications-adaptations.html).
 

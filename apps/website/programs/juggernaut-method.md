@@ -55,12 +55,12 @@ The core philosophy: submaximal training done for high volume with maximal bar s
 
 The four waves move from high-rep, lower-intensity work to low-rep, higher-intensity work:
 
-| Wave | Weeks | Rep Target | Focus |
-|------|-------|-----------|-------|
-| 10s | 1-4 | 10+ reps | Hypertrophy & work capacity |
-| 8s | 5-8 | 8+ reps | Hypertrophy with rising intensity |
-| 5s | 9-12 | 5+ reps | Strength-speed transition |
-| 3s | 13-16 | 3+ reps | Maximal strength |
+| Wave | Weeks | Rep Target | Focus                             |
+| ---- | ----- | ---------- | --------------------------------- |
+| 10s  | 1-4   | 10+ reps   | Hypertrophy & work capacity       |
+| 8s   | 5-8   | 8+ reps    | Hypertrophy with rising intensity |
+| 5s   | 9-12  | 5+ reps    | Strength-speed transition         |
+| 3s   | 13-16 | 3+ reps    | Maximal strength                  |
 
 Within each wave, the three working phases follow a predictable pattern:
 
@@ -89,18 +89,21 @@ The main lifts follow a fixed percentage scheme across all 16 weeks. All percent
 Each phase within a wave has a distinct structure:
 
 **Accumulation** - high volume, moderate weight. The last set is AMRAP but leave 2-3 reps in reserve:
+
 - 10s wave: 4x10 + 1x10+ at 54%
 - 8s wave: 4x8 + 1x8+ at 59%
 - 5s wave: 5x5 + 1x5+ at 63%
 - 3s wave: 6x3 + 1x3+ at 68%
 
 **Intensification** - reduced volume (~60% of accumulation), higher intensity. The last working set is AMRAP with 1-2 reps in reserve:
+
 - 10s wave: ramp to 3x10 at 61%
 - 8s wave: ramp to 3x8 at 65%
 - 5s wave: ramp to 4x5 at 70%
 - 3s wave: ramp to 5x3 at 74%
 
 **Realization** - ramp up to a single all-out AMRAP set. No reps left in the tank:
+
 - 10s wave: build to 1x10+ at 68%
 - 8s wave: build to 1x8+ at 72%
 - 5s wave: build to 1x5+ at 77%
@@ -121,6 +124,7 @@ Progression happens once per wave, after the realization AMRAP set (weeks 3, 7, 
 **(AMRAP Reps - Standard Reps) × Increment Per Rep = 1RM Increase**
 
 Where:
+
 - **Standard reps** = the wave's target (10 for the 10s wave, 8 for the 8s, 5 for the 5s, 3 for the 3s)
 - **Increment** = 5lb per extra rep for [{Squat}] and [{Deadlift}], 2.5lb per extra rep for [{Bench Press}] and [{Overhead Press}]
 - **Cap** = maximum 10 extra reps count toward progression (to prevent unrealistic jumps)

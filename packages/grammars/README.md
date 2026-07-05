@@ -34,13 +34,12 @@ Earlier layers should be imported by later layers, but never vice versa.
 
 ## Layer 1 - Nouns, physical things which exist and can be enumerated/defined
 
-- equipment (see ___)
-- gyms (see ___)
-
+- equipment (see \_\_\_)
+- gyms (see \_\_\_)
 
 ## Layer 2 - Common human concepts combining these realities, verbs on the nouns, etc.
 
-- exercises (see ___)
+- exercises (see \_\_\_)
 
 ## Layer 3 - Concepts that are unique to and defined by an individual
 

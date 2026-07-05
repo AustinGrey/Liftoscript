@@ -8,30 +8,22 @@ import { nodeError } from "@/utils/lezer.ts";
  * @param valueNode The node where the formula use was defined
  */
 export const validate: ProgressionFormulaValidator = function* (
-  [argReps, argWeight, ...argsRest],
-  valueNode,
+	[argReps, argWeight, ...argsRest],
+	valueNode,
 ) {
-  if (argReps == null || asBase10Int(argReps)) {
-    yield nodeError(
-      valueNode,
-      `1st argument of 'sum' should be a number of reps - i.e. a number`,
-    );
-  }
-  if (
-    argWeight == null ||
-    (!argWeight.endsWith("lb") &&
-      !argWeight.endsWith("kg") &&
-      !argWeight.endsWith("%"))
-  ) {
-    yield nodeError(
-      valueNode,
-      `2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
-    );
-  }
-  if (argsRest.length > 0) {
-    yield nodeError(
-      valueNode,
-      `Reps Sum Progression 'sum' only has 2 arguments max`,
-    );
-  }
+	if (argReps == null || asBase10Int(argReps)) {
+		yield nodeError(valueNode, `1st argument of 'sum' should be a number of reps - i.e. a number`);
+	}
+	if (
+		argWeight == null ||
+		(!argWeight.endsWith("lb") && !argWeight.endsWith("kg") && !argWeight.endsWith("%"))
+	) {
+		yield nodeError(
+			valueNode,
+			`2nd argument of 'sum' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
+		);
+	}
+	if (argsRest.length > 0) {
+		yield nodeError(valueNode, `Reps Sum Progression 'sum' only has 2 arguments max`);
+	}
 };

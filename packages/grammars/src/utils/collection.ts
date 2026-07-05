@@ -6,7 +6,7 @@ import { castAs0, type IndexFrom0 } from "@/utils/indexes.ts";
  * @param value the value to check
  */
 export function definedOnly<T>(value: T | undefined): value is T {
-  return value !== undefined;
+	return value !== undefined;
 }
 
 /**
@@ -16,12 +16,10 @@ export function definedOnly<T>(value: T | undefined): value is T {
  * @param isReverse Whether to sort in reverse order.
  */
 export function CollectionUtils_sortBy<
-  T extends {},
-  K extends keyof ConditionalPick<T, number> & keyof T,
+	T extends {},
+	K extends keyof ConditionalPick<T, number> & keyof T,
 >(arr: T[], key: K, isReverse?: boolean): T[] {
-  return arr.toSorted(
-    (a, b) => (Number(a[key]) - Number(b[key])) * (isReverse ? -1 : 1),
-  );
+	return arr.toSorted((a, b) => (Number(a[key]) - Number(b[key])) * (isReverse ? -1 : 1));
 }
 
 /**
@@ -30,9 +28,9 @@ export function CollectionUtils_sortBy<
  * @param predicate the predicate to check
  */
 export function tryFindIndex<T>(
-  arr: T[],
-  predicate: (value: T) => boolean,
+	arr: T[],
+	predicate: (value: T) => boolean,
 ): IndexFrom0 | undefined {
-  const result = arr.findIndex(predicate);
-  return result === -1 ? undefined : castAs0(result);
+	const result = arr.findIndex(predicate);
+	return result === -1 ? undefined : castAs0(result);
 }

@@ -123,6 +123,7 @@ Run the full 16 weeks. Don't cut it short - the taper in the final weeks is esse
 Barbell, squat rack with safety pins (for pin squats), flat bench, weight plates, dumbbells (for rows), and a cable machine or lat pulldown station.
 
 **Home gym substitutions**:
+
 - [{Lat Pulldown}] -> [{Chin Up}] or [{Pull Up}]
 - [{Seated Wide Grip Row}] -> [{Bent Over Row}] or [{Pendlay Row}]
 - [{Skullcrusher}] -> [{Bench Press Close Grip}] or [{Triceps Dip}]

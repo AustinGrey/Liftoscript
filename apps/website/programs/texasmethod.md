@@ -85,6 +85,7 @@ The Texas Method uses **weekly linear progression** — you add weight to your I
 **Weekly increases**: ~5lb on [{Squat}] per week, ~5lb on [{Bench Press}] and [{Overhead Press}] per PR session (every 2 weeks each, since they alternate). [{Deadlift}] increases 5lb per week independently.
 
 **When you stall on Intensity Day**: Several options in order of preference:
+
 1. **Cut Monday volume** — drop from 5x5 to 4x5 or 3x5 to reduce accumulated fatigue
 2. **Reduce Monday weight** — drop Volume Day intensity by 5-10% and rebuild
 3. **Cycle rep ranges on Intensity Day** — shift from 1x5 to 2x3, then 3x2, then 5x1, then reset to 1x5 at a new weight
@@ -105,6 +106,7 @@ Run the Texas Method for **3-6 months**. Some lifters get 6-12+ months out of it
 Barbell, squat rack, bench, and weight plates. That's the core.
 
 **Home gym substitutions**:
+
 - [{Clean}] → [{Deadlift}] (lighter, for 5x3) or [{Kettlebell Swing}]
 - [{Back Extension, Bodyweight}] → [{Good Morning}] or [{Romanian Deadlift}] (light weight, high reps)
 - [{Chin Up}] → [{Bent Over Row}] or [{Inverted Row}] if no pull-up bar

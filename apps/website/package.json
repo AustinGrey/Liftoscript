@@ -1,31 +1,31 @@
 {
-  "name": "website",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vp dev",
-    "build": "vp build",
-    "preview": "vp preview"
-  },
-  "dependencies": {
-    "@codemirror/commands": "catalog:",
-    "@codemirror/language": "catalog:",
-    "@codemirror/state": "catalog:",
-    "@codemirror/view": "catalog:",
-    "@lezer/highlight": "catalog:",
-    "grammars": "workspace:*",
-    "vue": "catalog:",
-    "vue-router": "catalog:"
-  },
-  "devDependencies": {
-    "@types/js-yaml": "catalog:",
-    "@types/markdown-it": "catalog:",
-    "@vitejs/plugin-vue": "catalog:",
-    "js-yaml": "catalog:",
-    "markdown-it": "catalog:",
-    "typescript": "~6.0.2",
-    "vite": "catalog:",
-    "vite-plus": "catalog:"
-  }
+	"name": "website",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vp dev",
+		"build": "vp build",
+		"preview": "vp preview"
+	},
+	"dependencies": {
+		"@codemirror/commands": "catalog:",
+		"@codemirror/language": "catalog:",
+		"@codemirror/state": "catalog:",
+		"@codemirror/view": "catalog:",
+		"@lezer/highlight": "catalog:",
+		"grammars": "workspace:*",
+		"vue": "catalog:",
+		"vue-router": "catalog:"
+	},
+	"devDependencies": {
+		"@types/js-yaml": "catalog:",
+		"@types/markdown-it": "catalog:",
+		"@vitejs/plugin-vue": "catalog:",
+		"js-yaml": "catalog:",
+		"markdown-it": "catalog:",
+		"typescript": "~6.0.2",
+		"vite": "catalog:",
+		"vite-plus": "catalog:"
+	}
 }

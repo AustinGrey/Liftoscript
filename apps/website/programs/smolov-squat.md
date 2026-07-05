@@ -71,6 +71,7 @@ During the switching phase, [{Box Squat}] or paused squats can substitute for re
 **Intro Microcycle (Weeks 1-2)**: Mixed sets descending from 8 reps to singles across a range of 65-90% of 1RM. Week 2 uses single sets of 5 at 80-85% to assess readiness.
 
 **Base Mesocycle (Weeks 3-5)**: Four distinct daily rep schemes, all at a fixed percentage:
+
 - Day 1: 4x9 @ 70% — high reps, moderate load for volume accumulation
 - Day 2: 5x7 @ 75% — moderate reps, slightly heavier
 - Day 3: 7x5 @ 80% — heavier load, more sets, fewer reps
@@ -101,6 +102,7 @@ The program uses three distinct progression mechanisms across its phases:
 Run the program for exactly **13 weeks** — it is not designed to be repeated back-to-back. After the final 1RM test, transition to a balanced program that maintains your squat gains while rebuilding other lifts.
 
 **Good follow-up programs**:
+
 - [Texas Method](/programs/texasmethod) — weekly squat progression with full-body work to rebuild bench, deadlift, and press
 - [5/3/1 for Beginners](/programs/the5314b) — monthly progression across all main lifts with manageable volume
 - [Madcow 5x5](/programs/madcow) — weekly progression with full-body training

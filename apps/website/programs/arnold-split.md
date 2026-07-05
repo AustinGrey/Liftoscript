@@ -18,7 +18,7 @@ A 6-day bodybuilding split that pairs chest with back, shoulders with arms, and 
 
 ## Origin & Philosophy
 
-The Arnold Split is named after Arnold Schwarzenegger, seven-time Mr. Olympia (1970–1975, 1980), who used this training structure during his competitive bodybuilding career in the 1970s. The program details come from Arnold's book *The New Encyclopedia of Modern Bodybuilding* (1985, revised 1998), co-authored with Bill Dobbins — widely considered the definitive reference for Golden Era bodybuilding training.
+The Arnold Split is named after Arnold Schwarzenegger, seven-time Mr. Olympia (1970–1975, 1980), who used this training structure during his competitive bodybuilding career in the 1970s. The program details come from Arnold's book _The New Encyclopedia of Modern Bodybuilding_ (1985, revised 1998), co-authored with Bill Dobbins — widely considered the definitive reference for Golden Era bodybuilding training.
 
 The core principle that separates the Arnold Split from other 6-day programs like Push/Pull/Legs is the **agonist-antagonist pairing** of chest and back on the same day. This has two practical consequences: first, it enables supersets between opposing muscles (bench press into rows, for example), where one muscle rests while the other works. Second, it gives arms a completely fresh training session — triceps aren't pre-fatigued from bench pressing, and biceps aren't pre-fatigued from rows, as they would be in a PPL split. Arnold believed this produced better arm development, and for a man with 22-inch arms, the results spoke for themselves.
 

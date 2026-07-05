@@ -109,7 +109,7 @@ Run it for one 5-week cycle, then reassess. You can repeat the cycle with update
 # Week 1
 ## Day 1
 // **T1**. Before starting the sets, set your 1RM - by clicking "Edit" icon at the exercise.
-t1: Squat / 2x4 81%, 1x4+ 81% / 180s 
+t1: Squat / 2x4 81%, 1x4+ 81% / 180s
 // **T2**. Same - set your 1RM before starting the sets
 t2: Incline Bench Press / 3x10 57%, 1x10+ 57% / 120s
 // **T3**. Work up to the RM for the first set, then use the same weight for the rest of the sets

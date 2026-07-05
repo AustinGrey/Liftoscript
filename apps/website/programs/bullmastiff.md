@@ -18,7 +18,7 @@ An 18-week strength program by Alexander Bromley (Empire Barbell) split into a 9
 
 ## Origin & Philosophy
 
-Bullmastiff was created by Alexander Bromley of [Empire Barbell](https://empire-barbell.com/2022/08/09/complete-breakdown-of-bullmastiff-plus-free-pdf-of-the-program/) and originally appeared in his book *Base Strength: Program Design Blueprint*, with an updated version in *Peak Strength*. Bromley also released a [free PDF](https://empire-barbell.com/wp-content/uploads/2022/08/Bullmastiff-PS-PDF.pdf) of the program.
+Bullmastiff was created by Alexander Bromley of [Empire Barbell](https://empire-barbell.com/2022/08/09/complete-breakdown-of-bullmastiff-plus-free-pdf-of-the-program/) and originally appeared in his book _Base Strength: Program Design Blueprint_, with an updated version in _Peak Strength_. Bromley also released a [free PDF](https://empire-barbell.com/wp-content/uploads/2022/08/Bullmastiff-PS-PDF.pdf) of the program.
 
 The core philosophy comes from Doug Young's approach: use AMRAP sets to auto-regulate weekly weight jumps, build a wide base of work capacity first, then sharpen it into peak strength. The name reflects the goal — build a lifter who is big, strong, and thick like a bullmastiff.
 
@@ -69,6 +69,7 @@ Common developmental substitutions: [{Romanian Deadlift, Barbell}] instead of [{
 ## Set & Rep Scheme
 
 **Base phase main lifts** use moderate percentages with ascending volume across waves:
+
 - Wave 1 (Weeks 1-3): 4 sets of 6 reps starting at 65% 1RM
 - Wave 2 (Weeks 4-6): 5 sets of 5 reps starting at 70% 1RM
 - Wave 3 (Weeks 7-9): 6 sets of 4 reps starting at 75% 1RM
@@ -76,6 +77,7 @@ Common developmental substitutions: [{Romanian Deadlift, Barbell}] instead of [{
 The last set each week is AMRAP. Extra reps drive the weight jump for the following week (see Progressive Overload below).
 
 **Peak phase main lifts** flip the structure — sets decrease within each wave as intensity climbs:
+
 - Wave 1 (Weeks 10-12): 5→3→1 sets of 3 reps starting at 80% 1RM
 - Wave 2 (Weeks 13-15): 5→3→1 sets of 2 reps starting at 85% 1RM
 - Wave 3 (Weeks 16-18): 5→3→1 sets of 1 rep starting at 90% 1RM
@@ -120,13 +122,14 @@ Run the full 18 weeks (base + peak), optionally followed by a test week to estab
 
 **Signs it's time to move on**: You've peaked and set new PRs, or you want more exercise variety.
 
-**Transition to**: Another Bromley program like *70s Powerlifter* (more volume and lift variation), or a GZCL program like [The Rippler](/programs/gzcl-the-rippler) or [Jacked & Tan 2.0](/programs/gzcl-jacked-and-tan-2) for a different periodization approach.
+**Transition to**: Another Bromley program like _70s Powerlifter_ (more volume and lift variation), or a GZCL program like [The Rippler](/programs/gzcl-the-rippler) or [Jacked & Tan 2.0](/programs/gzcl-jacked-and-tan-2) for a different periodization approach.
 
 ## Equipment Needed
 
 Barbell, squat rack, bench, weight plates, and a pull-up bar. Cable machine for accessories is ideal but not required.
 
 **Home gym substitutions**:
+
 - [{Lat Pulldown}] → [{Pull Up}] or [{Chin Up}]
 - [{Leg Press}] → [{Bulgarian Split Squat}] or [{Goblet Squat}]
 - [{Seated Leg Curl}] → [{Romanian Deadlift, Barbell}] or [{Good Morning}]

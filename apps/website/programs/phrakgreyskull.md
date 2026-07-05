@@ -52,8 +52,8 @@ The core philosophy inherited from GSLP: every working set scheme ends with an A
 
 A typical two-week cycle on Monday/Wednesday/Friday:
 
-| | Monday | Wednesday | Friday |
-|---|--------|-----------|--------|
+|        | Monday    | Wednesday | Friday    |
+| ------ | --------- | --------- | --------- |
 | Week 1 | Workout A | Workout B | Workout A |
 | Week 2 | Workout B | Workout A | Workout B |
 
@@ -77,10 +77,10 @@ The AMRAP set means "as many reps as possible with good form." Stop at RPE 8-9 (
 
 **After each successful session** (all prescribed reps completed):
 
-| Lift type | Standard increase | Accelerated increase (10+ AMRAP reps) |
-|-----------|------------------|--------------------------------------|
-| Upper body ([{Overhead Press}], [{Bench Press}], [{Chin Up}], [{Bent Over Row}]) | +2.5lb | +5lb |
-| Lower body ([{Squat}], [{Deadlift}]) | +5lb | +10lb |
+| Lift type                                                                        | Standard increase | Accelerated increase (10+ AMRAP reps) |
+| -------------------------------------------------------------------------------- | ----------------- | ------------------------------------- |
+| Upper body ([{Overhead Press}], [{Bench Press}], [{Chin Up}], [{Bent Over Row}]) | +2.5lb            | +5lb                                  |
+| Lower body ([{Squat}], [{Deadlift}])                                             | +5lb              | +10lb                                 |
 
 **On failure** (didn't complete all reps): reduce weight by **10%** and work back up.
 
@@ -93,6 +93,7 @@ The deload-and-rebuild cycle is a feature, not a bug: hitting lighter weights fo
 Run it for **2-4 months**. Move on when you're deloading on multiple lifts frequently and your AMRAP sets barely hit 5 reps.
 
 **Good next programs**:
+
 - [GZCLP](/programs/gzclp) — adds tiered exercise structure with more volume
 - [5/3/1 for Beginners](/programs/the5314b) — periodized progression with built-in assistance work
 

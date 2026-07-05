@@ -74,11 +74,13 @@ All percentages in the book reference a **Training Max** (TM = 90% of true 1RM).
 The 6-week block uses two 3-week waves:
 
 **Wave 1:**
+
 - **Week 1**: 3x5 at 63% 1RM (70% TM) — light entry week. Should feel easy.
 - **Week 2**: 3x5 at 72% 1RM (80% TM) — moderate week. This is the hardest volume week.
 - **Week 3**: 3x3 at 81% 1RM (90% TM) — heavy week, reps drop to 3.
 
 **Wave 2:**
+
 - **Week 4**: 3x5 at 67% 1RM (75% TM) — resets volume, slightly heavier than Week 1.
 - **Week 5**: 3x3 at 76% 1RM (85% TM) — moderate-heavy, reps drop again.
 - **Week 6**: 3x1 at 85% 1RM (95% TM) — peak week. Heavy singles, minimal volume.
@@ -116,6 +118,7 @@ Operator is designed to be run **indefinitely** in 6-week blocks. Many TB practi
 Barbell, squat rack, bench, weight plates, and a pull-up bar. The program uses only 4 exercises — it's designed for a home gym or minimal facility.
 
 **Home gym substitutions**:
+
 - [{Pull Up}] → [{Chin Up}] (no additional equipment needed) or [{Lat Pulldown}] (if you have a cable machine)
 - [{Deadlift}] → [{Trap Bar Deadlift}] (reduces lower back fatigue)
 - [{Bench Press}] → [{Bench Press, Dumbbell}] (if no barbell bench available)

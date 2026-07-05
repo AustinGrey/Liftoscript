@@ -5,5 +5,5 @@
  * @param error The error to throw
  */
 export function throwError(error: Error): never {
-  throw error;
+	throw error;
 }

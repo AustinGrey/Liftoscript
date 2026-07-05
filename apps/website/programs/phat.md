@@ -104,6 +104,7 @@ Run PHAT for 12-16 weeks before reassessing. The first 2-4 weeks will feel bruta
 As written, the program uses a barbell, dumbbells, an EZ curl bar, cable machines, and several machines (hack squat, leg press, leg curl, leg extension, chest press, calf raise).
 
 **Home gym substitutions**:
+
 - [{Hack Squat}] -> [{Bulgarian Split Squat}] or [{Front Squat}]
 - [{Leg Press}] -> [{Front Squat}] or [{Goblet Squat}]
 - [{Leg Extension}] -> [{Bulgarian Split Squat}] or [{Lunge}]

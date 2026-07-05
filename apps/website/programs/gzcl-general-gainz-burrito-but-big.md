@@ -100,7 +100,7 @@ t2_classic / used: none / 1+x8 80%+, 4x4 80% / 180s  / progress: custom() {~
 /// Those are "templates" (i.e. with `used: none`), you can reuse them in your exercises
 
 // **T1 Leader Conditioning**. Similar to Classic, but after
-// the first set, do the conditioning part - do the **"conditioning"** part - 
+// the first set, do the conditioning part - do the **"conditioning"** part -
 // **12-18 reps** total within **10** minutes with the same weight. You can do
 // them by sets of 1 rep, 2 reps or 3 reps, every 60 seconds or so.
 // Use "+" button to add the sets.
@@ -115,7 +115,7 @@ t1_leader_cond / used: none / 1+x6 85%+ 180s / update: custom() {~
 ~}
 
 // **T2 Leader Conditioning**. Similar to Classic, but after
-// the first set, do the conditioning part - do the **"conditioning"** part - 
+// the first set, do the conditioning part - do the **"conditioning"** part -
 // **16-27 reps** total within **10** minutes with the same weight. You can do
 // them by sets of 1 rep, 2 reps or 3 reps, every 60 seconds or so.
 // Use "+" button to add the sets.
@@ -124,7 +124,7 @@ t2_leader_cond / used: none / 1+x8 80%+ 180s / progress: custom() {~
 ~} / update: custom() {~
   var.threshold = reps[1] == 8 ? 16 :
     reps[1] == 10 ? 18 :
-    reps[1] == 11 ? 20 : 22 
+    reps[1] == 11 ? 20 : 22
   if ((sum(completedReps) - reps[1]) < var.threshold) {
     numberOfSets += 1
     sets(numberOfSets, numberOfSets, 1, 3, 0, completedWeights[1], 60, 0, 0)

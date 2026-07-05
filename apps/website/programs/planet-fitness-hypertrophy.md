@@ -107,6 +107,7 @@ This program uses only equipment available at standard Planet Fitness locations:
 No barbells, power racks, or specialty equipment required.
 
 **If training at a non-PF gym** (hotel, apartment, home gym):
+
 - [{Lat Pulldown}] → [{Pull Up}] or [{Chin Up}]
 - [{Leg Press}] → [{Goblet Squat}] or [{Bulgarian Split Squat}]
 - [{Hack Squat}] → [{Goblet Squat}] or [{Front Squat}]

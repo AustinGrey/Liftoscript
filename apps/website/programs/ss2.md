@@ -18,7 +18,7 @@ A beginner barbell program and the classic phase of Starting Strength. [{Power C
 
 ## Origin & Philosophy
 
-Starting Strength was created by **Mark Rippetoe**, a competitive powerlifter and strength coach based in Wichita Falls, Texas. The program is detailed in his book *Starting Strength: Basic Barbell Training*, first published in 2005 and now in its [3rd edition (2011)](https://aasgaardco.com/store/books-702/starting-strength-basic-barbell-training-3rd-edition/). The companion book *Practical Programming for Strength Training* covers the programming theory behind the novice progression.
+Starting Strength was created by **Mark Rippetoe**, a competitive powerlifter and strength coach based in Wichita Falls, Texas. The program is detailed in his book _Starting Strength: Basic Barbell Training_, first published in 2005 and now in its [3rd edition (2011)](https://aasgaardco.com/store/books-702/starting-strength-basic-barbell-training-3rd-edition/). The companion book _Practical Programming for Strength Training_ covers the programming theory behind the novice progression.
 
 The core philosophy: beginners can add weight to the bar every single session for months — the "Novice Effect." Rather than waste this window on machines or complicated periodization, Starting Strength exploits it with a handful of barbell movements, linear loading, and full recovery between sessions. Strength is treated as the most fundamental physical adaptation — muscle size, power, and endurance all improve as side effects of getting stronger.
 
@@ -78,13 +78,13 @@ All sets are straight work sets at the same weight. No AMRAP sets, no back-off s
 
 **Weight increases per session:**
 
-| Lift | Increase |
-|------|----------|
-| [{Squat}] | +5lb |
-| [{Deadlift}] | +5lb |
-| [{Bench Press}] | +5lb |
-| [{Overhead Press}] | +5lb |
-| [{Power Clean}] | +5lb |
+| Lift               | Increase |
+| ------------------ | -------- |
+| [{Squat}]          | +5lb     |
+| [{Deadlift}]       | +5lb     |
+| [{Bench Press}]    | +5lb     |
+| [{Overhead Press}] | +5lb     |
+| [{Power Clean}]    | +5lb     |
 
 When 5lb jumps become too much for upper body lifts (typically after several weeks), switch to **2.5lb jumps** using microplates (1.25lb per side). This extends linear progression significantly on [{Overhead Press}] and [{Bench Press}].
 
@@ -105,6 +105,7 @@ Each lift is tracked independently. Stalling on [{Overhead Press}] doesn't affec
 **Move to Phase 3 when**: Upper body lifts start stalling despite microloading, and you want to add [{Chin Up}] for more pulling volume. Or transition directly to an intermediate program if you've exhausted linear progression on most lifts (typically after 2–3 deload cycles with no sustained progress).
 
 **Good next steps**:
+
 - [Starting Strength Phase 3](/programs/ss3) — adds [{Chin Up}], alternates [{Deadlift}]/[{Power Clean}] on A days
 - [Texas Method](/programs/texasmethod) — the natural intermediate continuation; weekly periodization with volume/recovery/intensity days
 - [Madcow 5x5](/programs/madcow) — weekly progression with ramping sets

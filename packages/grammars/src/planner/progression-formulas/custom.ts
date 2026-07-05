@@ -8,34 +8,30 @@ import { nodeError, SourcedSyntaxError } from "@/utils/lezer.ts";
  * @param valueNode The node where the formula use was defined
  * @param validateLiftoscript The method used to validate embedded liftoscript
  */
-export const validate: ProgressionFormulaValidator = function* (
-  _,
-  valueNode,
-  validateLiftoscript,
-) {
-  const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
-  const script = liftoscriptNode?.source;
-  const body = valueNode
-    .getChild(PlannerNodeName.ReuseLiftoscript)
-    ?.getChild(PlannerNodeName.ReuseSection)
-    ?.getChild(PlannerNodeName.ExerciseName)?.source;
-  if (!script && !body) {
-    yield nodeError(
-      valueNode,
-      `'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
-    );
-  }
-  if (script) {
-    const { line, from } = liftoscriptNode.getPointer();
-    yield* validateLiftoscript(script).map(
-      (err) =>
-        new SourcedSyntaxError(
-          err.message,
-          line + err.line,
-          err.offset,
-          from + err.from,
-          from + err.to,
-        ),
-    );
-  }
+export const validate: ProgressionFormulaValidator = function* (_, valueNode, validateLiftoscript) {
+	const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
+	const script = liftoscriptNode?.source;
+	const body = valueNode
+		.getChild(PlannerNodeName.ReuseLiftoscript)
+		?.getChild(PlannerNodeName.ReuseSection)
+		?.getChild(PlannerNodeName.ExerciseName)?.source;
+	if (!script && !body) {
+		yield nodeError(
+			valueNode,
+			`'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
+		);
+	}
+	if (script) {
+		const { line, from } = liftoscriptNode.getPointer();
+		yield* validateLiftoscript(script).map(
+			(err) =>
+				new SourcedSyntaxError(
+					err.message,
+					line + err.line,
+					err.offset,
+					from + err.from,
+					from + err.to,
+				),
+		);
+	}
 };

@@ -12,7 +12,7 @@ duration: "60-90"
 goal: "hypertrophy"
 ---
 
-The Bootyful Beginnings program from Bret Contreras' *Strong Curves* book. A 12-week, 3-day-per-week program designed to introduce women to strength training with a focus on building the glutes. Progresses from mostly bodyweight exercises in weeks 1-4 to barbell compounds by weeks 9-12.
+The Bootyful Beginnings program from Bret Contreras' _Strong Curves_ book. A 12-week, 3-day-per-week program designed to introduce women to strength training with a focus on building the glutes. Progresses from mostly bodyweight exercises in weeks 1-4 to barbell compounds by weeks 9-12.
 
 <!-- more -->
 
@@ -106,6 +106,7 @@ Run the full **12-week program** as written. After completing it, Contreras reco
 **Weeks 9-12**: All of the above plus: squat rack, Hampton thick bar pad (for hip thrusts).
 
 **Home gym substitutions**:
+
 - [{Lat Pulldown}] → [{Chin Up}] (band-assisted) or [{Bent Over Row, Dumbbell}]
 - [{Seated Row}] → [{Bent Over Row, Dumbbell}] or [{Bent Over One Arm Row}]
 - [{Back Extension, Bodyweight}] → [{Reverse Hyperextension}] off a bench or [{Good Morning}] with light weight

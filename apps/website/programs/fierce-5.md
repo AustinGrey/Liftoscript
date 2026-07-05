@@ -61,6 +61,7 @@ Workout A is the "horizontal" day - [{Bench Press}] (horizontal push) paired wit
 **Workout B** pairs [{Front Squat}] with [{Overhead Press}] and [{Romanian Deadlift, Barbell}]. Front squats develop the quads and core differently than back squats, and the upright torso position has carryover to the overhead press. RDLs at 3x8 build hamstring and glute strength through a full range of motion. [{Lat Pulldown}] provides vertical pulling volume. The superset is [{Cable Crunch}] and [{Bicep Curl}].
 
 **Key substitutions**:
+
 - [{Face Pull}] and [{Reverse Fly}] are interchangeable
 - [{Lat Pulldown}] can be replaced with [{Chin Up}] or [{Pull Up}] (add weight via dip belt once bodyweight gets easy)
 - [{Front Squat}] + [{Romanian Deadlift, Barbell}] can both be swapped for [{Deadlift}] 3x5 + [{Lying Leg Curl}] 3x8-10 if you prefer conventional deadlifts
@@ -80,13 +81,13 @@ All sets are straight sets - no AMRAP, no rep ranges on the main work.
 
 The original program prescribes **weekly** weight increases:
 
-| Lift type | Increase per week |
-|-----------|------------------|
-| Upper body compounds ([{Bench Press}], [{Overhead Press}], [{Pendlay Row}]) | +5lb |
-| Lower body compounds ([{Squat}], [{Front Squat}], [{Romanian Deadlift, Barbell}]) | +5-10lb |
-| [{Face Pull}] / [{Reverse Fly}] | +5lb per month |
-| Accessories (curls, triceps, calves) | Double progression - add reps first, then weight |
-| Ab work | Add reps each week |
+| Lift type                                                                         | Increase per week                                |
+| --------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Upper body compounds ([{Bench Press}], [{Overhead Press}], [{Pendlay Row}])       | +5lb                                             |
+| Lower body compounds ([{Squat}], [{Front Squat}], [{Romanian Deadlift, Barbell}]) | +5-10lb                                          |
+| [{Face Pull}] / [{Reverse Fly}]                                                   | +5lb per month                                   |
+| Accessories (curls, triceps, calves)                                              | Double progression - add reps first, then weight |
+| Ab work                                                                           | Add reps each week                               |
 
 Since each exercise appears 1-2 times per week in the alternating schedule, the app implements this as per-session increases of 5lb for compounds. For accessories, double progression handles the slower advancement - reps increase within a range, then weight goes up and reps reset.
 
@@ -101,6 +102,7 @@ Run Fierce 5 for **4-6 months** while bulking. The weekly progression gives a lo
 **Signs it's time to move on**: You've deloaded and rebuilt on 2+ major lifts and still can't break through. Sessions feel like a grind rather than productive work.
 
 **Good next programs**:
+
 - [Fierce 5 Intermediate Upper/Lower](https://forum.bodybuilding.com/showthread.php?t=162916931) - davisj3537's own 4-day follow-up program
 - [GZCLP](/programs/gzclp) - adds tiered exercise structure with a built-in stage system for handling stalls
 - [5/3/1 for Beginners](/programs/the5314b) - periodized progression that sustains gains much longer

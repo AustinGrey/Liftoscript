@@ -11,13 +11,13 @@ duration: "30-45"
 goal: "strength_and_hypertrophy"
 ---
 
-Mike Mentzer's Consolidated Routine is the most extreme expression of High Intensity Training (HIT) ever devised. Just 4 total exercises split across 2 workouts, with 1 working set per exercise taken to absolute muscular failure, alternated once per week. Published in *Heavy Duty II* in the late 1990s, it represents Mentzer's answer to the question: "What is the minimum amount of training required to stimulate maximum muscular growth?"
+Mike Mentzer's Consolidated Routine is the most extreme expression of High Intensity Training (HIT) ever devised. Just 4 total exercises split across 2 workouts, with 1 working set per exercise taken to absolute muscular failure, alternated once per week. Published in _Heavy Duty II_ in the late 1990s, it represents Mentzer's answer to the question: "What is the minimum amount of training required to stimulate maximum muscular growth?"
 
 <!-- more -->
 
 ### Origin & Philosophy
 
-Mike Mentzer (1951–2001) developed the Consolidated Routine as the final evolution of his Heavy Duty training system, published in *Heavy Duty II* in the late 1990s. Where [Mike Mentzer's Heavy Duty](/programs/mike-mentzer-heavy-duty) used pre-exhaust supersets across 5-6 exercises per session 3 days per week, the Consolidated Routine strips training to the absolute bare minimum: 2 compound exercises per workout, 1 working set each, performed once per week.
+Mike Mentzer (1951–2001) developed the Consolidated Routine as the final evolution of his Heavy Duty training system, published in _Heavy Duty II_ in the late 1990s. Where [Mike Mentzer's Heavy Duty](/programs/mike-mentzer-heavy-duty) used pre-exhaust supersets across 5-6 exercises per session 3 days per week, the Consolidated Routine strips training to the absolute bare minimum: 2 compound exercises per workout, 1 working set each, performed once per week.
 
 The theoretical foundation is Mentzer's concept of the **Indirect Effect**: heavy compound movements trigger a systemic hormonal and neurological response that stimulates growth throughout the entire body, not just the muscles directly worked. A maximal set of deadlifts doesn't just grow your posterior chain — it triggers growth in your arms, shoulders, and chest through systemic mechanisms. This is why, in Mentzer's view, isolation exercises are unnecessary: they add recovery cost without meaningful additional stimulus.
 

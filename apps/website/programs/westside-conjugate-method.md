@@ -85,7 +85,7 @@ The core philosophy: you can train maximally year-round without burning out if y
 
 ## Progressive Overload
 
-**Max Effort**: You progress by attempting a new PR on a variation every time it comes around in the rotation. If you did [{Bench Press Close Grip}] for a 3RM of 225lb three weeks ago, aim for 230lb+ when it returns. The rotation means you're always setting PRs on *something*, even when competition lifts plateau.
+**Max Effort**: You progress by attempting a new PR on a variation every time it comes around in the rotation. If you did [{Bench Press Close Grip}] for a 3RM of 225lb three weeks ago, aim for 230lb+ when it returns. The rotation means you're always setting PRs on _something_, even when competition lifts plateau.
 
 **Dynamic Effort**: Percentages increase across a 3-week wave (e.g., 60% -> 65% -> 70% on box squat). After week 3, reset to the starting percentage. Over time, your 1RM increases, so the same percentages represent heavier absolute loads.
 
@@ -106,6 +106,7 @@ The conjugate method is designed to run indefinitely. There's no built-in endpoi
 Barbell, squat rack, bench, weight plates, dumbbells, cable machine, and ideally a box for box squats (a flat bench works as a substitute).
 
 **Home gym substitutions**:
+
 - [{Lat Pulldown}] -> [{Pull Up}] or [{Chin Up}]
 - [{Lying Leg Curl}] -> [{Romanian Deadlift, Barbell}] or [{Good Morning}]
 - [{Triceps Pushdown}] -> [{Skullcrusher}] or [{Bench Dip}]

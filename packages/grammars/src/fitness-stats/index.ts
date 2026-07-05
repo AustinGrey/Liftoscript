@@ -1,18 +1,11 @@
 import { TLengthUnit } from "@/common-types.ts";
-import {
-  add,
-  build,
-  divide,
-  type IWeight,
-  TDynamicWeight,
-  TWeight,
-} from "@/quantities/weight.ts";
+import { add, build, divide, type IWeight, TDynamicWeight, TWeight } from "@/quantities/weight.ts";
 import { CollectionUtils_sortBy } from "@/utils/collection.ts";
 import { z, type ZodType } from "zod";
 
 const TLength = z.object({
-  value: z.number(),
-  unit: TLengthUnit,
+	value: z.number(),
+	unit: TLengthUnit,
 });
 
 /**
@@ -20,45 +13,45 @@ const TLength = z.object({
  * @param valueSchema
  */
 function dataSeries<TValue extends ZodType>(valueSchema: TValue) {
-  return z.array(
-    z.object({
-      value: valueSchema,
-      timestamp: z.number(),
-    }),
-  );
+	return z.array(
+		z.object({
+			value: valueSchema,
+			timestamp: z.number(),
+		}),
+	);
 }
 
 const TStats = z.strictObject({
-  /** The user's bodyweight */
-  weight: dataSeries(TWeight),
-  /** The measured circumference of the neck */
-  neck: dataSeries(TLength),
-  /** The measured width of the shoulders */
-  shoulders: dataSeries(TLength),
-  /** The measured circumference of the left bicep */
-  bicepLeft: dataSeries(TLength),
-  /** The measured circumference of the right bicep */
-  bicepRight: dataSeries(TLength),
-  /** The measured circumference of the left forearm */
-  forearmLeft: dataSeries(TLength),
-  /** The measured circumference of the right forearm */
-  forearmRight: dataSeries(TLength),
-  /** The measured circumference of the chest */
-  chest: dataSeries(TLength),
-  /** The measured circumference of the waist */
-  waist: dataSeries(TLength),
-  /** The measured circumference of the hips */
-  hips: dataSeries(TLength),
-  /** The measured circumference of the left thigh */
-  thighLeft: dataSeries(TLength),
-  /** The measured circumference of the right thigh */
-  thighRight: dataSeries(TLength),
-  /** The measured circumference of the left calf */
-  calfLeft: dataSeries(TLength),
-  /** The measured circumference of the right calf */
-  calfRight: dataSeries(TLength),
-  /** The measured percent weight of bodyfat */
-  bodyfat: dataSeries(TDynamicWeight),
+	/** The user's bodyweight */
+	weight: dataSeries(TWeight),
+	/** The measured circumference of the neck */
+	neck: dataSeries(TLength),
+	/** The measured width of the shoulders */
+	shoulders: dataSeries(TLength),
+	/** The measured circumference of the left bicep */
+	bicepLeft: dataSeries(TLength),
+	/** The measured circumference of the right bicep */
+	bicepRight: dataSeries(TLength),
+	/** The measured circumference of the left forearm */
+	forearmLeft: dataSeries(TLength),
+	/** The measured circumference of the right forearm */
+	forearmRight: dataSeries(TLength),
+	/** The measured circumference of the chest */
+	chest: dataSeries(TLength),
+	/** The measured circumference of the waist */
+	waist: dataSeries(TLength),
+	/** The measured circumference of the hips */
+	hips: dataSeries(TLength),
+	/** The measured circumference of the left thigh */
+	thighLeft: dataSeries(TLength),
+	/** The measured circumference of the right thigh */
+	thighRight: dataSeries(TLength),
+	/** The measured circumference of the left calf */
+	calfLeft: dataSeries(TLength),
+	/** The measured circumference of the right calf */
+	calfRight: dataSeries(TLength),
+	/** The measured percent weight of bodyfat */
+	bodyfat: dataSeries(TDynamicWeight),
 });
 export type IStats = z.infer<typeof TStats>;
 
@@ -68,23 +61,23 @@ export type IStats = z.infer<typeof TStats>;
  * are not relevant.
  */
 export function Stats_build(): IStats {
-  return {
-    weight: [],
-    neck: [],
-    shoulders: [],
-    bicepLeft: [],
-    bicepRight: [],
-    forearmLeft: [],
-    forearmRight: [],
-    chest: [],
-    waist: [],
-    hips: [],
-    thighLeft: [],
-    thighRight: [],
-    calfLeft: [],
-    calfRight: [],
-    bodyfat: [],
-  };
+	return {
+		weight: [],
+		neck: [],
+		shoulders: [],
+		bicepLeft: [],
+		bicepRight: [],
+		forearmLeft: [],
+		forearmRight: [],
+		chest: [],
+		waist: [],
+		hips: [],
+		thighLeft: [],
+		thighRight: [],
+		calfLeft: [],
+		calfRight: [],
+		bodyfat: [],
+	};
 }
 
 /**
@@ -96,20 +89,17 @@ export function Stats_build(): IStats {
  * @constructor
  */
 export function getAverageBodyweight(
-  stats: IStats,
-  resultingUnits: "kg" | "lb",
-  movingAverageWindowSize: number | undefined,
+	stats: IStats,
+	resultingUnits: "kg" | "lb",
+	movingAverageWindowSize: number | undefined,
 ): IWeight | undefined {
-  const samples = CollectionUtils_sortBy(stats.weight, "timestamp", true).slice(
-    0,
-    movingAverageWindowSize,
-  );
-  if (!movingAverageWindowSize || samples.length < movingAverageWindowSize) {
-    return samples.at(0)?.value;
-  }
-  const totalWeight = samples.reduce(
-    (sum, item) => add(sum, item.value),
-    build(0, resultingUnits),
-  );
-  return divide(totalWeight, samples.length);
+	const samples = CollectionUtils_sortBy(stats.weight, "timestamp", true).slice(
+		0,
+		movingAverageWindowSize,
+	);
+	if (!movingAverageWindowSize || samples.length < movingAverageWindowSize) {
+		return samples.at(0)?.value;
+	}
+	const totalWeight = samples.reduce((sum, item) => add(sum, item.value), build(0, resultingUnits));
+	return divide(totalWeight, samples.length);
 }

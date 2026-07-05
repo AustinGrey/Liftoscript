@@ -6,12 +6,6 @@ import * as Weight from "@/quantities/weight.ts";
  * @param dynamicWeight The dynamic weight to convert
  * @param oneRepMax The one rep max weight
  */
-export function toWeight(
-  dynamicWeight: IDynamicWeight,
-  oneRepMax: IWeight,
-): IWeight {
-  return Weight.build(
-    (oneRepMax.value * dynamicWeight.value) / 100,
-    oneRepMax.unit,
-  );
+export function toWeight(dynamicWeight: IDynamicWeight, oneRepMax: IWeight): IWeight {
+	return Weight.build((oneRepMax.value * dynamicWeight.value) / 100, oneRepMax.unit);
 }

@@ -20,7 +20,7 @@ import type { IPlannerProgram } from "@/program";
  * @param text The text to format
  */
 function formatAsCommentLines(text?: string): string[] {
-  return text?.split("\n").map((l) => (l ? `// ${l}` : "//")) ?? [];
+	return text?.split("\n").map((l) => (l ? `// ${l}` : "//")) ?? [];
 }
 
 /**
@@ -30,26 +30,26 @@ function formatAsCommentLines(text?: string): string[] {
  *   If you really need full compatibility, such as to compare with old output, set addExtraSpace to true.
  */
 export function asProgramScript(
-  program: IPlannerProgram,
-  compatibilityOptions: { addExtraSpace?: boolean } = {},
+	program: IPlannerProgram,
+	compatibilityOptions: { addExtraSpace?: boolean } = {},
 ): string {
-  return (
-    program.weeks
-      .flatMap((week) => [
-        ...formatAsCommentLines(week.description),
-        `# ${week.name}`,
+	return (
+		program.weeks
+			.flatMap((week) => [
+				...formatAsCommentLines(week.description),
+				`# ${week.name}`,
 
-        ...week.days.flatMap((day) => [
-          ...formatAsCommentLines(day.description).map((line) =>
-            compatibilityOptions.addExtraSpace && line === "//" ? "// " : line,
-          ),
-          `## ${day.name}`,
+				...week.days.flatMap((day) => [
+					...formatAsCommentLines(day.description).map((line) =>
+						compatibilityOptions.addExtraSpace && line === "//" ? "// " : line,
+					),
+					`## ${day.name}`,
 
-          // @todo I think it's an error that there is an extra \n here after every exercise. The original program text doesn't have it, so why add it?
-          `${day.exerciseText}\n`,
-        ]),
-        ...(compatibilityOptions.addExtraSpace ? [""] : []),
-      ])
-      .join("\n") + (compatibilityOptions.addExtraSpace ? "\n" : "")
-  );
+					// @todo I think it's an error that there is an extra \n here after every exercise. The original program text doesn't have it, so why add it?
+					`${day.exerciseText}\n`,
+				]),
+				...(compatibilityOptions.addExtraSpace ? [""] : []),
+			])
+			.join("\n") + (compatibilityOptions.addExtraSpace ? "\n" : "")
+	);
 }

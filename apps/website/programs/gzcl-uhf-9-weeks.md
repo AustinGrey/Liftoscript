@@ -142,7 +142,7 @@ t3: Pec Deck[1-9] / ...t3: Seated Row / update: custom() { ...t3: Seated Row }
 ## Day 3
 // **T1**. 3" Deficit Deadlift. Before starting the sets, set your 1RM - by clicking "Edit" icon at the exercise.
 t1: Deadlift / 2x4 71%, 1x4+ 71% / 180s
-// ...t2: Incline Bench Press 
+// ...t2: Incline Bench Press
 t2: Legs Up Bench Press / 3x10 57%, 1x10+ 57% / 120s
 // ...t3: Seated Row
 t3: Pull Up[1-9] / ...t3: Seated Row / update: custom() { ...t3: Seated Row }
@@ -166,7 +166,7 @@ t3: Triceps Extension[1-9] / ...t3: Seated Row / update: custom() { ...t3: Seate
 ## Day 5
 // ...t1: Squat
 t1: Safety Squat Bar Squat / 2x4 67%, 1x4+ 67% / 180s
-// ...t2: Incline Bench Press 
+// ...t2: Incline Bench Press
 t2: Bench Press Close Grip / 3x10 62%, 1x10+ 62% / 120s
 // ...t3: Seated Row
 t3: Stiff Leg Deadlift[1-9] / ...t3: Seated Row / update: custom() { ...t3: Seated Row }

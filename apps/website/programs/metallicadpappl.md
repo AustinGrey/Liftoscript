@@ -32,6 +32,7 @@ The program was designed to solve a common problem: beginners want to train more
 ## Pros & Cons
 
 **Pros:**
+
 - Hits each muscle group twice per week, which is optimal frequency for hypertrophy
 - Includes direct arm, shoulder, and rear delt work that full-body beginner programs typically skip
 - AMRAP sets on main lifts give built-in autoregulation — you get real-time feedback on your progress
@@ -39,6 +40,7 @@ The program was designed to solve a common problem: beginners want to train more
 - High training frequency builds exercise proficiency quickly
 
 **Cons:**
+
 - Requires 6 gym sessions per week — not practical if you can't commit to that schedule
 - No direct ab work in the base program — you'll need to add it yourself
 - Squat has only 3 working sets per session (2x5, 1x5+), which some lifters find insufficient for leg development
@@ -54,6 +56,7 @@ The program was designed to solve a common problem: beginners want to train more
 ## Exercise Selection & Rationale
 
 **Pull days** alternate the main barbell movement each session:
+
 - [{Deadlift}] (1x5+) or [{Bent Over Row}] (4x5, 1x5+) — one heavy posterior chain pull per session, alternating to manage fatigue
 - [{Lat Pulldown}] — vertical pull for lat width; can substitute [{Pull Up}] or [{Chin Up}]
 - [{Seated Row}] — horizontal pull for mid-back thickness
@@ -61,6 +64,7 @@ The program was designed to solve a common problem: beginners want to train more
 - [{Hammer Curl}] + [{Bicep Curl}] — direct arm work hitting both the brachialis and biceps
 
 **Push days** alternate the main press each session:
+
 - [{Bench Press}] (4x5, 1x5+) or [{Overhead Press}] (4x5, 1x5+) — heavy press as the main lift
 - The other press as an accessory at 3x8-12 — maintains frequency on both movements
 - [{Incline Bench Press, Dumbbell}] — upper chest emphasis and unilateral pressing
@@ -68,6 +72,7 @@ The program was designed to solve a common problem: beginners want to train more
 - [{Lateral Raise}] — 6 total sets for medial delt development, which pressing alone doesn't adequately train
 
 **Legs days** are identical both sessions:
+
 - [{Squat}] (2x5, 1x5+) — primary quad/glute movement
 - [{Romanian Deadlift, Barbell}] — hip hinge targeting hamstrings and glutes
 - [{Leg Press}] — additional quad volume without spinal loading
@@ -87,17 +92,20 @@ The program was designed to solve a common problem: beginners want to train more
 ## Progressive Overload
 
 **Compounds (linear progression):**
+
 - Add **5lb per session** to [{Bench Press}], [{Overhead Press}], [{Bent Over Row}], and [{Squat}]
 - Add **10lb per session** to [{Deadlift}]
 - This applies every session you successfully complete all prescribed sets and reps
 
 **Accessories (double progression):**
+
 - Start at the bottom of the rep range (8 reps for most, 15 reps for face pulls and lateral raises)
 - Each session, try to add reps while maintaining good form
 - When you hit the top of the range (12 reps, or 20 for face pulls/lateral raises) for all sets, add 5lb and reset to the bottom
 - [{Leg Press}] uses 10lb increments
 
 **Deload protocol:**
+
 - If you fail to complete the prescribed reps for **3 consecutive sessions** on a lift, deload by **10%**
 - Work back up — your AMRAP sets on the way back up should beat your previous bests, confirming you've recovered and adapted
 
@@ -106,6 +114,7 @@ The program was designed to solve a common problem: beginners want to train more
 Run the program as long as you continue making progress — typically **3-12 months** depending on training history. A beginner is defined as someone who can add weight session-to-session; once this stalls frequently despite deloads, you've exhausted linear progression.
 
 Signs it's time to move on:
+
 - Deloading frequently on multiple lifts (3+ deloads on the same lift)
 - AMRAP sets barely hitting the minimum 5 reps consistently
 - Recovery becoming unsustainable despite adequate sleep and nutrition
@@ -120,6 +129,7 @@ Signs it's time to move on:
 - **Leg press machine** and **leg curl machine**
 
 **Home gym substitutions:**
+
 - [{Lat Pulldown}] → [{Pull Up}] or [{Chin Up}]
 - [{Seated Row}] → [{Bent Over Row, Dumbbell}] or [{T Bar Row}]
 - [{Face Pull}] → [{Reverse Fly}] plus band pull-aparts

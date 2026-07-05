@@ -54,25 +54,25 @@ The 4-4-8 name refers to the rep scheme: exercises alternate between sets of 4 (
 
 **Week A**
 
-| | Day 1 | Day 2 | Day 3 |
-|---|---|---|---|
-| [{Bench Press}] | 4x4 | 4x8 | 3x4 + 1xAMRAP |
-| [{Squat}] | 4x8 | — | 3x4 + 1xAMRAP |
-| [{Deadlift}] | — | 4x4 | — |
-| [{Overhead Press}] | 4x8 | 4x4 | 4x8 |
-| [{Chin Up}] | 4x8 | — | 4x4 |
-| [{Bent Over Row}] | — | 4x8 | — |
+|                    | Day 1 | Day 2 | Day 3         |
+| ------------------ | ----- | ----- | ------------- |
+| [{Bench Press}]    | 4x4   | 4x8   | 3x4 + 1xAMRAP |
+| [{Squat}]          | 4x8   | —     | 3x4 + 1xAMRAP |
+| [{Deadlift}]       | —     | 4x4   | —             |
+| [{Overhead Press}] | 4x8   | 4x4   | 4x8           |
+| [{Chin Up}]        | 4x8   | —     | 4x4           |
+| [{Bent Over Row}]  | —     | 4x8   | —             |
 
 **Week B**
 
-| | Day 1 | Day 2 | Day 3 |
-|---|---|---|---|
-| [{Bench Press}] | 4x8 | 4x4 | 4x8 |
-| [{Squat}] | — | 4x8 | — |
-| [{Deadlift}] | 4x8 | — | 3x4 + 1xAMRAP |
-| [{Overhead Press}] | 4x4 | 4x8 | 3x4 + 1xAMRAP |
-| [{Chin Up}] | — | 4x8 | — |
-| [{Bent Over Row}] | 4x4 | — | 4x8 |
+|                    | Day 1 | Day 2 | Day 3         |
+| ------------------ | ----- | ----- | ------------- |
+| [{Bench Press}]    | 4x8   | 4x4   | 4x8           |
+| [{Squat}]          | —     | 4x8   | —             |
+| [{Deadlift}]       | 4x8   | —     | 3x4 + 1xAMRAP |
+| [{Overhead Press}] | 4x4   | 4x8   | 3x4 + 1xAMRAP |
+| [{Chin Up}]        | —     | 4x8   | —             |
+| [{Bent Over Row}]  | 4x4   | —     | 4x8           |
 
 ## Exercise Selection & Rationale
 
@@ -94,11 +94,11 @@ The alternation between 4-rep and 8-rep days serves a dual purpose: 4-rep sets b
 
 Weight increases are based on the AMRAP set performance each 2-week cycle:
 
-| Lift | Base increase per cycle | If AMRAP ≥ 8 reps |
-|------|----------------------|------------------|
-| [{Squat}] / [{Deadlift}] | +15lb | +30lb |
-| [{Bench Press}] / [{Bent Over Row}] | +10lb | +20lb |
-| [{Overhead Press}] | +5lb | +10lb |
+| Lift                                | Base increase per cycle | If AMRAP ≥ 8 reps |
+| ----------------------------------- | ----------------------- | ----------------- |
+| [{Squat}] / [{Deadlift}]            | +15lb                   | +30lb             |
+| [{Bench Press}] / [{Bent Over Row}] | +10lb                   | +20lb             |
+| [{Overhead Press}]                  | +5lb                    | +10lb             |
 
 The AMRAP serves as an auto-regulation mechanism: if you're advancing quickly and crush 8+ reps on the AMRAP, you get double progression. If you barely make the minimum, you progress at the standard rate.
 
@@ -111,6 +111,7 @@ The AMRAP serves as an auto-regulation mechanism: if you're advancing quickly an
 **Run for 3-4 months.** The aggressive progression rates mean you'll eventually stall on most lifts. Signs it's time to move on: you're deloading frequently on 2+ lifts, your AMRAP sets barely hit 4, or you've been running it for 12+ weeks.
 
 **Good next programs**:
+
 - [GZCLP](/programs/gzclp) — adds tiered exercise structure with more volume and a built-in stall protocol
 - [5/3/1 for Beginners](/programs/the5314b) — slower, periodized progression that sustains progress longer
 - [Phrak's Greyskull LP](/programs/phrakgreyskull) — another beginner program if you want to stay in the LP phase but want a different structure

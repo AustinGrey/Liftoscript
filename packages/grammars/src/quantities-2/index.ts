@@ -7,16 +7,12 @@ type UnitMath = ReturnType<typeof unit.config<number>>;
  * @param options
  * @param options.oneRepMax The 1RM of the user this unitmath should consider.
  */
-export function getUnitMath({
-  oneRepMax,
-}: {
-  oneRepMax: [number, "lb" | "kg"];
-}): UnitMath {
-  return unit.config({
-    definitions: {
-      units: {
-        "%": { value: `${oneRepMax[0] / 100} ${oneRepMax[1]}` },
-      },
-    },
-  });
+export function getUnitMath({ oneRepMax }: { oneRepMax: [number, "lb" | "kg"] }): UnitMath {
+	return unit.config({
+		definitions: {
+			units: {
+				"%": { value: `${oneRepMax[0] / 100} ${oneRepMax[1]}` },
+			},
+		},
+	});
 }

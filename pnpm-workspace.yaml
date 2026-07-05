@@ -12,10 +12,10 @@ catalog:
   "@lezer/generator": ^1.8.0
   "@lezer/highlight": ^1.2.3
   "@lezer/lr": ^1.4.10
-  '@types/js-yaml': ^4.0.9
-  '@types/markdown-it': ^14.1.2
+  "@types/js-yaml": ^4.0.9
+  "@types/markdown-it": ^14.1.2
   "@types/node": ^24
-  '@vitejs/plugin-vue': ^6.0.7
+  "@vitejs/plugin-vue": ^6.0.7
   es-toolkit: ^1.46.0
   fp-ts: ^2.16.11
   io-ts: ^2.2.22
@@ -34,9 +34,9 @@ catalog:
 
 catalogMode: prefer
 overrides:
-  vite: 'catalog:'
+  vite: "catalog:"
 peerDependencyRules:
   allowAny:
     - vite
   allowedVersions:
-    vite: '*'
+    vite: "*"

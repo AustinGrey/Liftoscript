@@ -64,11 +64,11 @@ Each day has a dedicated lift:
 
 The training type rotates across the three lifts in a 3-week pattern:
 
-| Week | Deadlift | Bench Press | Squat |
-|------|----------|-------------|-------|
-| 1 | Heavy | Explosive | Rep |
-| 2 | Explosive | Rep | Heavy |
-| 3 | Rep | Heavy | Explosive |
+| Week | Deadlift  | Bench Press | Squat     |
+| ---- | --------- | ----------- | --------- |
+| 1    | Heavy     | Explosive   | Rep       |
+| 2    | Explosive | Rep         | Heavy     |
+| 3    | Rep       | Heavy       | Explosive |
 
 This pattern repeats for each wave with increasing percentages, followed by a meet/test week.
 

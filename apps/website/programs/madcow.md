@@ -14,12 +14,11 @@ goal: "strength"
 
 An intermediate strength program built on Bill Starr's 5x5 system, designed for lifters who've outgrown beginner programs like Starting Strength or StrongLifts. Instead of adding weight every session, Madcow shifts to weekly linear progression using a Heavy/Light/Medium framework across three full-body days, with ramping sets that build to a single top set each workout.
 
-
 <!-- more -->
 
 ## Origin & Philosophy
 
-The Madcow 5x5 was popularized by a forum poster named "Madcow" (also known as "Madcow2") who was active on [EliteFitness.com](https://www.elitefitness.com/forum/threads/bill-starrs-5-x-5-program-variation-per-madcow2-thanx-so-here-it-is-k-up-now.375215/) and bodybuilding.com in the mid-2000s. It's a modification of Bill Starr's Heavy/Light/Medium 5x5 system from his 1976 book *The Strongest Shall Survive*. Madcow [reportedly spoke with Glenn Pendlay](https://stronglifts.com/stronglifts-5x5/history/) (the Olympic weightlifting coach behind Pendlay Rows and co-creator of the Texas Method) and adapted the original program to be more accessible -- replacing Olympic lifts like Power Cleans with [{Bent Over Row}] and High Pulls with [{Deadlift}].
+The Madcow 5x5 was popularized by a forum poster named "Madcow" (also known as "Madcow2") who was active on [EliteFitness.com](https://www.elitefitness.com/forum/threads/bill-starrs-5-x-5-program-variation-per-madcow2-thanx-so-here-it-is-k-up-now.375215/) and bodybuilding.com in the mid-2000s. It's a modification of Bill Starr's Heavy/Light/Medium 5x5 system from his 1976 book _The Strongest Shall Survive_. Madcow [reportedly spoke with Glenn Pendlay](https://stronglifts.com/stronglifts-5x5/history/) (the Olympic weightlifting coach behind Pendlay Rows and co-creator of the Texas Method) and adapted the original program to be more accessible -- replacing Olympic lifts like Power Cleans with [{Bent Over Row}] and High Pulls with [{Deadlift}].
 
 The core insight: once you can no longer add weight every session (the hallmark of a beginner), you need a longer recovery cycle. Madcow spreads the stress-recovery-adaptation cycle across an entire week. Monday provides the heavy stimulus, Wednesday allows active recovery, and Friday tests a new heavier weight for a triple before next Monday's attempt at a full set of 5. This "preview and prove" approach builds both strength and confidence.
 
@@ -103,6 +102,7 @@ Run Madcow for **12-16 weeks total**. The first 2-3 weeks should feel moderate a
 Barbell, squat rack, flat bench, adjustable incline bench, and weight plates (including 1.25lb/0.5kg plates for microloading upper body lifts). Dumbbells for curls and skullcrushers.
 
 **Home gym substitutions**:
+
 - [{Incline Bench Press}] -> [{Overhead Press}] if no adjustable bench
 - [{Skullcrusher}] -> [{Triceps Extension}] or [{Triceps Dip}]
 - [{Hammer Curl}] -> [{Bicep Curl, Barbell}] or [{Chin Up}]

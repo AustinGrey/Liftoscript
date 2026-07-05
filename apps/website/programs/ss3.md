@@ -18,7 +18,7 @@ A beginner barbell program and the advanced novice phase of Starting Strength. [
 
 ## Origin & Philosophy
 
-Starting Strength was created by **Mark Rippetoe**, a competitive powerlifter and strength coach based in Wichita Falls, Texas. The program is detailed in his book *Starting Strength: Basic Barbell Training*, first published in 2005 and now in its [3rd edition (2011)](https://aasgaardco.com/store/books-702/starting-strength-basic-barbell-training-3rd-edition/). The companion book *Practical Programming for Strength Training* covers the programming theory behind the novice progression.
+Starting Strength was created by **Mark Rippetoe**, a competitive powerlifter and strength coach based in Wichita Falls, Texas. The program is detailed in his book _Starting Strength: Basic Barbell Training_, first published in 2005 and now in its [3rd edition (2011)](https://aasgaardco.com/store/books-702/starting-strength-basic-barbell-training-3rd-edition/). The companion book _Practical Programming for Strength Training_ covers the programming theory behind the novice progression.
 
 The core philosophy: beginners can add weight to the bar every single session for months — the "Novice Effect." Rather than waste this window on machines or complicated periodization, Starting Strength exploits it with a handful of barbell movements, linear loading, and full recovery between sessions. Strength is treated as the most fundamental physical adaptation — muscle size, power, and endurance all improve as side effects of getting stronger.
 
@@ -55,20 +55,20 @@ The core philosophy: beginners can add weight to the bar every single session fo
 
 The press/bench alternation and the deadlift/power clean alternation are now **independent** of each other. This creates 4 distinct workouts:
 
-| Workout | Lift 1 | Lift 2 | Lift 3 |
-|---------|--------|--------|--------|
-| A1 | [{Squat}] | [{Bench Press}] | [{Deadlift}] |
-| B1 | [{Squat}] | [{Overhead Press}] | [{Chin Up}] |
-| A2 | [{Squat}] | [{Overhead Press}] | [{Power Clean}] |
-| B2 | [{Squat}] | [{Bench Press}] | [{Chin Up}] |
+| Workout | Lift 1    | Lift 2             | Lift 3          |
+| ------- | --------- | ------------------ | --------------- |
+| A1      | [{Squat}] | [{Bench Press}]    | [{Deadlift}]    |
+| B1      | [{Squat}] | [{Overhead Press}] | [{Chin Up}]     |
+| A2      | [{Squat}] | [{Overhead Press}] | [{Power Clean}] |
+| B2      | [{Squat}] | [{Bench Press}]    | [{Chin Up}]     |
 
 A sample 3-week rotation training Mon/Wed/Fri:
 
-| | Monday | Wednesday | Friday |
-|---|--------|-----------|--------|
-| Week 1 | A1 | B1 | A2 |
-| Week 2 | B2 | A1 | B1 |
-| Week 3 | A2 | B2 | A1 |
+|        | Monday | Wednesday | Friday |
+| ------ | ------ | --------- | ------ |
+| Week 1 | A1     | B1        | A2     |
+| Week 2 | B2     | A1        | B1     |
+| Week 3 | A2     | B2        | A1     |
 
 ## Exercise Selection & Rationale
 
@@ -93,14 +93,14 @@ A sample 3-week rotation training Mon/Wed/Fri:
 
 **Weight increases per session:**
 
-| Lift | Increase |
-|------|----------|
-| [{Squat}] | +5lb |
-| [{Deadlift}] | +5lb |
-| [{Bench Press}] | +2.5lb (microloading) |
-| [{Overhead Press}] | +2.5lb (microloading) |
-| [{Power Clean}] | +2.5lb (microloading) |
-| [{Chin Up}] | +2.5lb (once doing weighted chin-ups) |
+| Lift               | Increase                              |
+| ------------------ | ------------------------------------- |
+| [{Squat}]          | +5lb                                  |
+| [{Deadlift}]       | +5lb                                  |
+| [{Bench Press}]    | +2.5lb (microloading)                 |
+| [{Overhead Press}] | +2.5lb (microloading)                 |
+| [{Power Clean}]    | +2.5lb (microloading)                 |
+| [{Chin Up}]        | +2.5lb (once doing weighted chin-ups) |
 
 Phase 3 is where **microloading becomes essential** for upper body lifts. You'll need fractional plates (1.25lb each side) to make 2.5lb total jumps. Without them, you'll stall much sooner on [{Overhead Press}] and [{Bench Press}].
 
@@ -119,6 +119,7 @@ Each lift is tracked independently. You may finish linear progression on [{Overh
 **Signs it's time to move on**: You're deloading repeatedly on [{Squat}] and [{Deadlift}] despite good sleep and nutrition. Multiple lifts have stalled through 2–3 deload cycles.
 
 **Good next programs**:
+
 - [Texas Method](/programs/texasmethod) — the natural continuation recommended by Rippetoe; weekly periodization with volume/recovery/intensity days
 - [Madcow 5x5](/programs/madcow) — similar weekly progression with ramping sets
 - [5/3/1 for Beginners](/programs/the5314b) — monthly periodization, very flexible, runs indefinitely
@@ -157,7 +158,7 @@ If starting the program fresh in Phase 3 (not recommended — start from Phase 1
 
 ## Common Modifications
 
-- **Light squat day**: Some advanced novices add a lighter squat session (80% of work weight, 2x5) on the middle training day to aid recovery. This is the "advanced novice" modification from *Practical Programming*.
+- **Light squat day**: Some advanced novices add a lighter squat session (80% of work weight, 2x5) on the middle training day to aid recovery. This is the "advanced novice" modification from _Practical Programming_.
 - **Weighted chin-ups**: Once you can complete 3x10 at bodyweight, alternate between bodyweight chin-ups to failure and weighted 3x5 chin-ups on different B days.
 - **Replace [{Power Clean}] with [{Bent Over Row}]**: Still valid in Phase 3. Rows at 3x5 or 5x3 work well.
 - **Add accessories**: At this stage, some lifters add 1–2 light accessories after the main lifts: [{Back Extension, Bodyweight}] (3x10), [{Bicep Curl}] (3x10), or [{Hanging Leg Raise}] (3x10). Keep them light and don't let them interfere with recovery for the main lifts.

@@ -1,18 +1,14 @@
-import type {
-  LogicResult,
-  LogicResultSingular,
-  Quantity,
-} from "@/logic/types.ts";
+import type { LogicResult, LogicResultSingular, Quantity } from "@/logic/types.ts";
 import { is, isBoolean, isNumber } from "@/utils/types.ts";
 import {
-  build,
-  convertTo,
-  type IDynamicWeight,
-  type IUnit,
-  type IWeight,
-  percentORM,
-  TDynamicWeight,
-  TWeight,
+	build,
+	convertTo,
+	type IDynamicWeight,
+	type IUnit,
+	type IWeight,
+	percentORM,
+	TDynamicWeight,
+	TWeight,
 } from "@/quantities/weight.ts";
 
 /**
@@ -20,42 +16,38 @@ import {
  * @param value The value to coerce
  */
 export function toNumberUnsafe(value: LogicResult): number {
-  if (isNumber(value)) {
-    return value;
-  } else if (isBoolean(value)) {
-    // @TODO why 0, and not 1 for true?
-    return 0;
-  } else if (is(TWeight, value)) {
-    return value.value;
-  } else if (is(TDynamicWeight, value)) {
-    return value.value;
-  } else if (Array.isArray(value)) {
-    return toNumberUnsafe(value[0] ?? 0);
-  } else {
-    return 0;
-  }
+	if (isNumber(value)) {
+		return value;
+	} else if (isBoolean(value)) {
+		// @TODO why 0, and not 1 for true?
+		return 0;
+	} else if (is(TWeight, value)) {
+		return value.value;
+	} else if (is(TDynamicWeight, value)) {
+		return value.value;
+	} else if (Array.isArray(value)) {
+		return toNumberUnsafe(value[0] ?? 0);
+	} else {
+		return 0;
+	}
 }
 
 function toSingular(value: LogicResult): LogicResultSingular | undefined {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-  return value;
+	if (Array.isArray(value)) {
+		return value[0];
+	}
+	return value;
 }
 
 export function coerceToQuantity(value: LogicResult): Quantity {
-  const result = toSingular(value) ?? 0;
-  return result === true ? 1 : result === false ? 0 : result;
+	const result = toSingular(value) ?? 0;
+	return result === true ? 1 : result === false ? 0 : result;
 }
 
 type OperateReturnType<
-  TLeft extends Quantity | undefined,
-  TRight extends Quantity | undefined,
-> = TLeft extends undefined
-  ? TRight extends undefined
-    ? undefined
-    : Quantity
-  : Quantity;
+	TLeft extends Quantity | undefined,
+	TRight extends Quantity | undefined,
+> = TLeft extends undefined ? (TRight extends undefined ? undefined : Quantity) : Quantity;
 
 // This function is more readable with lengthy lines and no chop
 // prettier-ignore

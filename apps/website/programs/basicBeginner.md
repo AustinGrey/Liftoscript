@@ -54,8 +54,8 @@ The design philosophy is "minimum effective dose": do the fewest exercises that 
 
 A typical week on Monday/Wednesday/Friday:
 
-| Monday | Wednesday | Friday |
-|--------|-----------|--------|
+| Monday    | Wednesday | Friday    |
+| --------- | --------- | --------- |
 | Workout A | Workout B | Workout A |
 
 The following week flips: B/A/B.
@@ -82,10 +82,10 @@ The AMRAP set serves double duty: it's your progress indicator (tracking how man
 
 **Success** (completed all prescribed reps):
 
-| Lift type | Increase per session |
-|-----------|---------------------|
-| Upper body ([{Bench Press}], [{Overhead Press}], [{Bent Over Row}], [{Chin Up}]) | +2.5lb |
-| Lower body ([{Squat}], [{Deadlift}]) | +5lb |
+| Lift type                                                                        | Increase per session |
+| -------------------------------------------------------------------------------- | -------------------- |
+| Upper body ([{Bench Press}], [{Overhead Press}], [{Bent Over Row}], [{Chin Up}]) | +2.5lb               |
+| Lower body ([{Squat}], [{Deadlift}])                                             | +5lb                 |
 
 If you hit **more than 10 reps** on the AMRAP set, double the increase (+5lb upper, +10lb lower).
 
@@ -100,6 +100,7 @@ Each exercise is tracked independently. Stalling on [{Bench Press}] doesn't affe
 **Move on when**: You're deloading on multiple lifts regularly. Your AMRAP sets barely hit 5. You've been at it for 8-12 weeks and want more volume or variety.
 
 **Good next programs**:
+
 - [GZCLP](/programs/gzclp) — more volume, tiered exercise structure, still linear progression
 - [5/3/1 for Beginners](/programs/the5314b) — periodized with built-in assistance templates
 - Anything on the [r/Fitness recommended routines page](https://thefitness.wiki/routines/)

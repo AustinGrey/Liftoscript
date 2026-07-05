@@ -76,6 +76,7 @@ The core philosophy: after you stop adding weight every session, you need two th
 All working sets use RPE targets. Each exercise ramps through 2-3 feeder sets at lower RPE (typically @6 and @7) before hitting working sets at the top RPE (@8 or @9). For example, [{Squat}] in week 1 is 1x5 @6, 1x5 @7, 1x5 @8 - three progressively heavier sets of 5.
 
 **Block 1 (weeks 1-4)** - Volume phase:
+
 - Competition lifts: 5 reps per set. Volume increases from 3 sets (week 1) to 6 sets (week 4) by adding repeat sets at the top RPE.
 - Supplemental lifts (CGBP, paused squat): 4 reps at RPE 7/8/9. Volume builds from 3 to 5 sets.
 - Rack pulls: 7 reps at RPE 6/7/8, shifting to @7/8/9 in week 3.
@@ -84,6 +85,7 @@ All working sets use RPE targets. Each exercise ramps through 2-3 feeder sets at
 - Tempo squats: 8 reps, building from 3 to 4 sets.
 
 **Block 2 (weeks 5-7)** - Intensity phase:
+
 - Competition lifts drop to 4 reps (week 5), then add a heavy single at RPE 8 with 3-4 rep back-offs (weeks 6-7). Week 7 drops to 3 reps.
 - [{Overhead Press}] and 1ct paused [{Bench Press}] follow the same pattern, with back-off sets at RPE 9 in week 7.
 - Supplemental lifts (paused bench, pin squat, paused DL) work at 3-4 reps, RPE 7/8/9.
@@ -126,6 +128,7 @@ Run the full 8 weeks. You could repeat it with heavier loads (your RPE 8 should 
 Barbell, squat rack with adjustable safety pins (for pin squats and pin bench), flat bench, weight plates, and a pull-up bar. Cardio equipment (bike, rower, or running shoes) for GPP days.
 
 **Home gym substitutions**:
+
 - Pin squats ([{Box Squat}]) -> Long-pause (3-count) squats if no safety pins at the right height
 - Pin bench (supp: [{Bench Press}]) -> 3ct paused bench (just keep the week 5-6 variation)
 - Rack pulls (rack: [{Deadlift}]) -> [{Deadlift}] from stacked plates or blocks if no rack at mid-shin height

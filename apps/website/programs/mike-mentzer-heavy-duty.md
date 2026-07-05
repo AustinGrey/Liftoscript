@@ -22,7 +22,7 @@ Mike Mentzer (1951–2001) was an IFBB professional bodybuilder who won the 1978
 
 The program's signature technique is **pre-exhaustion supersets**: perform an isolation exercise to fatigue the target muscle, then immediately (no rest) perform a compound exercise for the same muscle group. This ensures the target muscle — not a weaker synergist — is the limiting factor in the compound movement.
 
-Mentzer published several versions of Heavy Duty over his career. This implementation is the 1993 "Ideal Routine" from the second edition of [*Heavy Duty*](https://mikementzer.org/heavy-duty-the-ideal-routine/) — the most widely practiced version and the one he prescribed to most of his personal training clients. For context, Mentzer himself used a different version (the "Evolved OG" — a 2-way A/B split done 3x/week alternating) for his competition prep, and later developed even more minimalist versions including the infamous "Consolidated Routine" (just 3 exercises per workout, 2x/week).
+Mentzer published several versions of Heavy Duty over his career. This implementation is the 1993 "Ideal Routine" from the second edition of [_Heavy Duty_](https://mikementzer.org/heavy-duty-the-ideal-routine/) — the most widely practiced version and the one he prescribed to most of his personal training clients. For context, Mentzer himself used a different version (the "Evolved OG" — a 2-way A/B split done 3x/week alternating) for his competition prep, and later developed even more minimalist versions including the infamous "Consolidated Routine" (just 3 exercises per workout, 2x/week).
 
 ### Who It's For
 

@@ -75,6 +75,7 @@ The program is built almost entirely around the three competition lifts: [{Squat
 ## Set & Rep Scheme
 
 The working percentages follow Prilepin's Table guidelines:
+
 - **70-80% 1RM**: 3-6 reps per set, 15-24 total reps per exercise. This is where most of your work lives.
 - **80-90% 1RM**: 2-4 reps per set, 10-15 total reps. Used more in Blocks #31 and #32.
 - **90%+ 1RM**: 1-2 reps per set, 4-7 total reps. Appears sparingly - mainly in the max test day and final weeks of #31.
@@ -113,6 +114,7 @@ Barbell, squat rack, flat bench, and weight plates. That's it for the main work.
 For accessories: dumbbells (for [{Bench Press, Dumbbell}] and [{Chest Fly}]), and a station for [{Chest Dip}] in Block #31.
 
 **Home gym substitutions**:
+
 - [{Leg Press}] -> [{Lunge}] or [{Bulgarian Split Squat}]
 - [{Chest Dip}] -> [{Bench Press Close Grip}] if no dip station
 - [{Incline Bench Press}] -> [{Overhead Press}]
@@ -134,6 +136,7 @@ Sessions will run 90-120 minutes. If you need to cut session time, shorten rest 
 Enter your current competition 1RM (or best gym 1RM) for [{Squat}], [{Bench Press}], and [{Deadlift}]. Sheiko recommends using about 97% of your true max - so if you're conservative with your 1RM estimate, that's fine.
 
 **Labeled exercises** need their 1RM set separately in the app:
+
 - "aux: Bench Press" and "aux: Squat" - set to your main [{Bench Press}] / [{Squat}] 1RM
 - "halting: Deadlift" and "block: Deadlift" - set to your competition [{Deadlift}] 1RM
 - [{Deficit Deadlift}] - set to your competition [{Deadlift}] 1RM

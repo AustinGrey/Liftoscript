@@ -1,58 +1,58 @@
 {
-  "name": "grammars",
-  "version": "0.0.0",
-  "description": "A starter for creating a TypeScript package.",
-  "homepage": "https://github.com/author/library#readme",
-  "bugs": {
-    "url": "https://github.com/author/library/issues"
-  },
-  "license": "MIT",
-  "author": "Author Name <author.name@mail.com>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/author/library.git"
-  },
-  "files": [
-    "dist"
-  ],
-  "type": "module",
-  "exports": {
-    ".": "./dist/index.mjs",
-    "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "generateGrammarHandlers": "lezer-generator src/grammar-definitions/*.grammar -o src/parsers/* --typeScript --names",
-    "build": "vp pack",
-    "dev": "vp pack --watch",
-    "test": "vp test",
-    "check": "vp check",
-    "prepublishOnly": "vp run build"
-  },
-  "dependencies": {
-    "@lezer/common": "catalog:",
-    "@lezer/generator": "catalog:",
-    "@lezer/lr": "catalog:",
-    "es-toolkit": "catalog:",
-    "fp-ts": "catalog:",
-    "io-ts": "catalog:",
-    "micro-memoize": "catalog:",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@types/node": "^25.6.0",
-    "@typescript/native-preview": "7.0.0-dev.20260328.1",
-    "bumpp": "^11.0.1",
-    "prettier": "catalog:",
-    "type-fest": "catalog:",
-    "typescript": "^6.0.3",
-    "vite": "catalog:",
-    "vite-plus": "catalog:"
-  },
-  "inlinedDependencies": {
-    "tagged-tag": "1.0.0",
-    "type-fest": "5.6.0"
-  }
+	"name": "grammars",
+	"version": "0.0.0",
+	"description": "A starter for creating a TypeScript package.",
+	"homepage": "https://github.com/author/library#readme",
+	"bugs": {
+		"url": "https://github.com/author/library/issues"
+	},
+	"license": "MIT",
+	"author": "Author Name <author.name@mail.com>",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/author/library.git"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"exports": {
+		".": "./dist/index.mjs",
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"generateGrammarHandlers": "lezer-generator src/grammar-definitions/*.grammar -o src/parsers/* --typeScript --names",
+		"build": "vp pack",
+		"dev": "vp pack --watch",
+		"test": "vp test",
+		"check": "vp check",
+		"prepublishOnly": "vp run build"
+	},
+	"dependencies": {
+		"@lezer/common": "catalog:",
+		"@lezer/generator": "catalog:",
+		"@lezer/lr": "catalog:",
+		"es-toolkit": "catalog:",
+		"fp-ts": "catalog:",
+		"io-ts": "catalog:",
+		"micro-memoize": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@types/node": "^25.6.0",
+		"@typescript/native-preview": "7.0.0-dev.20260328.1",
+		"bumpp": "^11.0.1",
+		"prettier": "catalog:",
+		"type-fest": "catalog:",
+		"typescript": "^6.0.3",
+		"vite": "catalog:",
+		"vite-plus": "catalog:"
+	},
+	"inlinedDependencies": {
+		"tagged-tag": "1.0.0",
+		"type-fest": "5.6.0"
+	}
 }

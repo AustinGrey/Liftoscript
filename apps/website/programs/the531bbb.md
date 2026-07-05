@@ -18,7 +18,7 @@ Jim Wendler's most popular 5/3/1 template for building muscle. Each session pair
 
 ## Origin & Philosophy
 
-Boring But Big (BBB) is a supplemental template for Jim Wendler's [5/3/1 system](https://www.jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big), published on his blog and later expanded in his books *Beyond 5/3/1* and *5/3/1 Forever*. Wendler — a former Westside Barbell trainee who squatted 1,000 lbs — created BBB to add a straightforward hypertrophy component to 5/3/1.
+Boring But Big (BBB) is a supplemental template for Jim Wendler's [5/3/1 system](https://www.jimwendler.com/blogs/jimwendler-com/101077382-boring-but-big), published on his blog and later expanded in his books _Beyond 5/3/1_ and _5/3/1 Forever_. Wendler — a former Westside Barbell trainee who squatted 1,000 lbs — created BBB to add a straightforward hypertrophy component to 5/3/1.
 
 The philosophy is brutally simple: after your heavy main work, hammer the same movement pattern with high-rep sets at moderate weight. No complicated exercise selection, no fancy periodization for accessories. Just pick up the bar and do 50 reps. The name is literal — it's boring, but it works.
 
@@ -58,6 +58,7 @@ Each day focuses on one of the four main barbell lifts: [{Overhead Press}], [{De
 The BBB supplemental work uses the **same lift** as the main work. Wendler's reasoning: the best way to get better at a lift is to do more of that lift. Doing [{Bench Press}] for 5x10 after your heavy bench work gives you 80 total reps of benching per week (when including warm-ups), which is significantly more practice than most programs provide.
 
 **Assistance work** follows Wendler's push/pull/core template with two exercises per session. Each day pairs one pulling or arm exercise with one arm or core exercise:
+
 - **OHP day**: [{Chin Up}] balances the pressing with vertical pulling, [{Skullcrusher}] adds direct triceps volume
 - **Deadlift day**: [{Bicep Curl}] for biceps (deadlifts already train the back), [{Hanging Leg Raise}] for core
 - **Bench day**: [{Triceps Extension}] for triceps from a different angle than skullcrushers, [{Hammer Curl}] for biceps and brachialis
@@ -68,6 +69,7 @@ These can be freely swapped for any similar exercise.
 ## Set & Rep Scheme
 
 **Main 5/3/1 work** follows the standard wave. In the original program, percentages are based on a Training Max (TM = 90% of 1RM). In this Liftosaur implementation, percentages are expressed as **% of 1RM directly** (pre-converted from TM), so you just need to set your 1RM:
+
 - **Week 1 (5s)**: 1x5 @ 58%, 1x5 @ 67%, 1x5+ @ 76%
 - **Week 2 (3s)**: 1x3 @ 63%, 1x3 @ 72%, 1x3+ @ 81%
 - **Week 3 (5/3/1)**: 1x5 @ 67%, 1x3 @ 76%, 1x1+ @ 85%
@@ -83,6 +85,7 @@ The final set each week is AMRAP — do as many reps as possible while keeping g
 ## Progressive Overload
 
 After completing each 3-week working cycle (before the deload), increase your 1RM:
+
 - **[{Overhead Press}] and [{Bench Press}]**: +5 lbs
 - **[{Squat}] and [{Deadlift}]**: +10 lbs
 
@@ -98,13 +101,14 @@ Run BBB for **3-6 cycles** (12-24 weeks). It's a template you can return to repe
 
 **Signs it's time to switch**: You're dreading the 5x10 sets every session (mental burnout), recovery is suffering despite adequate sleep/food, or you want to prioritize absolute strength over hypertrophy.
 
-**Transition to**: **BBB 3-Month Challenge** (ramps BBB weight from 50% to 70% TM over 3 cycles for more advanced lifters), [5/3/1 Building the Monolith](/programs/monolith531) (higher volume, more variety), or **5/3/1 First Set Last** (lower volume, better for cutting or recovery phases). Any 5/3/1 template from *5/3/1 Forever* works as a follow-up.
+**Transition to**: **BBB 3-Month Challenge** (ramps BBB weight from 50% to 70% TM over 3 cycles for more advanced lifters), [5/3/1 Building the Monolith](/programs/monolith531) (higher volume, more variety), or **5/3/1 First Set Last** (lower volume, better for cutting or recovery phases). Any 5/3/1 template from _5/3/1 Forever_ works as a follow-up.
 
 ## Equipment Needed
 
 Barbell, squat rack, bench, weight plates, and a pull-up bar for the main lifts and pulling accessories. A pair of dumbbells or an EZ bar for arm isolation work ([{Skullcrusher}], [{Triceps Extension}], [{Bicep Curl}], [{Hammer Curl}]).
 
 **Home gym substitutions**:
+
 - [{Skullcrusher}] → [{Bench Dip}] or [{Triceps Dip}] (bodyweight, no equipment)
 - [{Triceps Extension}] → [{Bench Dip}] or [{Triceps Dip}]
 - [{Bicep Curl}] / [{Hammer Curl}] → extra [{Chin Up}] sets (covers biceps without dumbbells)
@@ -130,7 +134,7 @@ Barbell, squat rack, bench, weight plates, and a pull-up bar for the main lifts 
 
 - **BBB 3-Month Challenge**: Ramp the BBB weight across 3 cycles — 50% TM in month 1, 60% TM in month 2, 70% TM in month 3. More challenging but drives greater adaptation. During the challenge, Wendler recommends NOT doing AMRAP on the last 5/3/1 set — just hit the prescribed reps.
 - **Opposite-lift BBB**: Instead of doing [{Bench Press}] 5x10 after bench 5/3/1, do [{Overhead Press}] 5x10 (and vice versa). Same for [{Squat}]/[{Deadlift}]. Reduces same-pattern fatigue and adds movement variety. Each lift gets trained 2x/week this way.
-- **5s PRO variant** (from *Forever*): Replace the AMRAP sets with straight sets of 5 across all 3 weeks. Reduces CNS fatigue and pairs better with the high BBB volume. Recommended in newer Wendler writings.
+- **5s PRO variant** (from _Forever_): Replace the AMRAP sets with straight sets of 5 across all 3 weeks. Reduces CNS fatigue and pairs better with the high BBB volume. Recommended in newer Wendler writings.
 - **Add [{Face Pull}]**: 3-5 sets of 15-20 reps on pressing days for shoulder health — the program is pressing-heavy.
 
 <!-- faq -->

@@ -53,8 +53,8 @@ The full original program is described on [Muscle & Strength](https://www.muscle
 
 A typical two-week cycle on Monday/Wednesday/Friday:
 
-| | Monday | Wednesday | Friday |
-|---|--------|-----------|--------|
+|        | Monday    | Wednesday | Friday    |
+| ------ | --------- | --------- | --------- |
 | Week 1 | Workout A | Workout B | Workout A |
 | Week 2 | Workout B | Workout A | Workout B |
 
@@ -78,11 +78,11 @@ All sets are straight sets. No AMRAP, no rep ranges. Hit the prescribed reps or 
 
 Add weight every session you complete all prescribed sets and reps:
 
-| Lift type | Increase per session |
-|-----------|---------------------|
-| Lower body ([{Squat}], [{Deadlift}]) | +5lb |
-| Upper body ([{Bench Press}], [{Overhead Press}], [{Bent Over Row}]) | +2.5lb |
-| Accessories | +2.5lb to +5lb |
+| Lift type                                                           | Increase per session |
+| ------------------------------------------------------------------- | -------------------- |
+| Lower body ([{Squat}], [{Deadlift}])                                | +5lb                 |
+| Upper body ([{Bench Press}], [{Overhead Press}], [{Bent Over Row}]) | +2.5lb               |
+| Accessories                                                         | +2.5lb to +5lb       |
 
 **On failure** (didn't complete all reps): repeat the same weight next session. If you fail at the same weight a second time, reduce by **10%** and work back up.
 
@@ -97,6 +97,7 @@ Run ICF for **3-6 months**. Most beginners exhaust the linear progression window
 **Signs it's time to move on**: You're deloading on 2+ exercises frequently. Squat sessions are so heavy you can barely finish the accessories. Sessions are dragging past 2 hours.
 
 **Good next programs**:
+
 - [GZCLP](/programs/gzclp) - adds tiered structure (T1/T2/T3) with a built-in stall protocol across multiple stages
 - [5/3/1 for Beginners](/programs/the5314b) - slower, periodized progression that sustains gains much longer
 - [Texas Method](/programs/texasmethod) - weekly periodization (volume/recovery/intensity) for lifters who want to keep pushing the main lifts
