@@ -1,5 +1,5 @@
 <template>
-  <span class="chip" :class="`chip--${variant}`"><slot /></span>
+  <span class="chip" :class="variant"><slot /></span>
 </template>
 
 <script setup lang="ts">
@@ -18,7 +18,7 @@ withDefaults(defineProps<{ variant?: "default" | "goal" }>(), {
   color: var(--text-muted);
   white-space: nowrap;
 }
-.chip--goal {
+.goal {
   background: var(--accent-soft);
   border-color: transparent;
   color: var(--accent);
