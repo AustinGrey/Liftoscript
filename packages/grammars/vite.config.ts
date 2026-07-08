@@ -10,6 +10,7 @@ export default defineConfig({
 	pack: {
 		dts: {
 			tsgo: true,
+			sourcemap: true,
 		},
 		exports: true,
 	},
