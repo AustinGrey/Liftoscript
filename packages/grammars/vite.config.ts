@@ -12,6 +12,7 @@ export default defineConfig({
 			tsgo: true,
 			sourcemap: true,
 		},
+		unbundle: true,
 		exports: true,
 	},
 });
