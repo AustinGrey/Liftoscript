@@ -24,8 +24,7 @@ import Chip from "./Chip.vue";
 defineProps<{ program: ProgramDoc }>();
 
 function humanize(value?: string): string | undefined {
-	if (!value) return undefined;
-	return value.replace(/_/g, " ");
+	return value?.replace(/_/g, " ");
 }
 </script>
 

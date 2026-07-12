@@ -15,6 +15,7 @@
 		"@codemirror/view": "catalog:",
 		"@lezer/highlight": "catalog:",
 		"grammars": "workspace:*",
+		"utils": "workspace:*",
 		"vue": "catalog:",
 		"vue-router": "catalog:"
 	},

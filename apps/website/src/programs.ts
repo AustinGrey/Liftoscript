@@ -1,4 +1,5 @@
 import { load as loadYaml } from "js-yaml";
+import { isVisibleString } from "utils";
 
 export interface ProgramFrontmatter {
 	id: string;
@@ -103,10 +104,5 @@ export function getProgram(slug: string): ProgramDoc | undefined {
 
 /** The distinct values present for a given frontmatter facet, for building filters. */
 export function facetValues(key: "goal" | "age" | "duration" | "frequency"): string[] {
-	const values = new Set<string>();
-	for (const p of programs) {
-		const v = p[key];
-		if (v != null && v !== "") values.add(String(v));
-	}
-	return [...values].sort();
+	return Array.from(new Set<string>(programs.map((p) => p[key]).filter(isVisibleString))).sort();
 }
