@@ -112,7 +112,8 @@ import {
 	ZERO,
 	zIndexFrom1,
 } from "@/utils/indexes.ts";
-import { pipe, Option } from "effect";
+import { pipe, Option as $ } from "effect";
+import { orUndefined } from "@/utils/effects.ts";
 
 //#region Program
 
@@ -152,7 +153,11 @@ function Program_nextHistoryEntry(
 					reps: programSet.maxrep,
 					index: i,
 					minReps: programSet?.minrep !== programSet.maxrep ? programSet.minrep : undefined,
-					weight: ProgramSet_getEvaluatedWeight(programSet, programExercise.exerciseType, settings),
+					weight: ProgramSet_getEvaluatedWeight(
+						programSet,
+						programExercise.exerciseType,
+						settings,
+					).pipe(orUndefined),
 					isUnilateral: isUnilateral(programExercise.exerciseType, settings),
 					rpe: programSet.rpe,
 					timer: programSet.timer,
@@ -700,7 +705,8 @@ function operation(
 ): void {
 	const valueToAssign = applyOp(
 		getOrmOrStartingWeight(programExercise.exerciseType, settings),
-		set[key] ?? ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings),
+		set[key] ??
+			ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings).pipe(orUndefined),
 		value,
 		op,
 	);
@@ -1478,7 +1484,7 @@ function ProgramSet_getEvaluatedWeight(
 	set: IPlannerProgramExerciseEvaluatedSet,
 	exerciseType: IExerciseType,
 	settings: ISettings,
-): IWeight | undefined {
+): $.Option<IWeight> {
 	return pipe(
 		getOrmOrStartingWeight(getExerciseOrDefault(exerciseType, settings.exercises), settings),
 		(onerm) =>
@@ -1490,7 +1496,7 @@ function ProgramSet_getEvaluatedWeight(
 						: undefined,
 				onerm,
 			),
-		Option.map((evaluatedWeight) =>
+		$.map((evaluatedWeight) =>
 			roundConvertTo(
 				evaluatedWeight,
 				settings,
@@ -1498,7 +1504,6 @@ function ProgramSet_getEvaluatedWeight(
 				exerciseType,
 			),
 		),
-		Option.getOrElse(() => undefined),
 	);
 }
 //#endregion
