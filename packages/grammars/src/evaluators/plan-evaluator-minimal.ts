@@ -1478,10 +1478,14 @@ function ProgramSet_getEvaluatedWeight(
 	exerciseType: IExerciseType,
 	settings: ISettings,
 ): IWeight | undefined {
+	const onerm = getOrmOrStartingWeight(
+		getExerciseOrDefault(exerciseType, settings.exercises),
+		settings,
+	);
 	const evaluatedWeight = set.weight
-		? evaluateWeight(set.weight, exerciseType, settings)
+		? evaluateWeight(set.weight, onerm)
 		: set.maxrep != null && set.rpe != null
-			? evaluateWeight(rpePct(set.maxrep, set.rpe), exerciseType, settings)
+			? evaluateWeight(rpePct(set.maxrep, set.rpe), onerm)
 			: undefined;
 	return evaluatedWeight
 		? roundConvertTo(
