@@ -36,6 +36,7 @@
 		"@lezer/common": "catalog:",
 		"@lezer/generator": "catalog:",
 		"@lezer/lr": "catalog:",
+		"effect": "catalog:",
 		"es-toolkit": "catalog:",
 		"fp-ts": "catalog:",
 		"micro-memoize": "catalog:",

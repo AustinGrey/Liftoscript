@@ -16,6 +16,7 @@ catalog:
   "@types/markdown-it": ^14.1.2
   "@types/node": ^24
   "@vitejs/plugin-vue": ^6.0.7
+  effect: ^3.22.0
   es-toolkit: ^1.46.0
   fp-ts: ^2.16.11
   io-ts: ^2.2.22

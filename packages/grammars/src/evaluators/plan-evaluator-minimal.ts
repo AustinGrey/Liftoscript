@@ -112,6 +112,7 @@ import {
 	ZERO,
 	zIndexFrom1,
 } from "@/utils/indexes.ts";
+import { pipe, Option } from "effect";
 
 //#region Program
 
@@ -1478,23 +1479,25 @@ function ProgramSet_getEvaluatedWeight(
 	exerciseType: IExerciseType,
 	settings: ISettings,
 ): IWeight | undefined {
-	const onerm = getOrmOrStartingWeight(
-		getExerciseOrDefault(exerciseType, settings.exercises),
-		settings,
-	);
-	const evaluatedWeight = set.weight
-		? evaluateWeight(set.weight, onerm)
-		: set.maxrep != null && set.rpe != null
-			? evaluateWeight(rpePct(set.maxrep, set.rpe), onerm)
-			: undefined;
-	return evaluatedWeight
-		? roundConvertTo(
+	return pipe(
+		getOrmOrStartingWeight(getExerciseOrDefault(exerciseType, settings.exercises), settings),
+		(onerm) =>
+			set.weight
+				? evaluateWeight(set.weight, onerm)
+				: set.maxrep != null && set.rpe != null
+					? evaluateWeight(rpePct(set.maxrep, set.rpe), onerm)
+					: undefined,
+		Option.fromNullable,
+		Option.map((evaluatedWeight) =>
+			roundConvertTo(
 				evaluatedWeight,
 				settings,
 				getPreferredUnit(settings, exerciseType),
 				exerciseType,
-			)
-		: undefined;
+			),
+		),
+		Option.getOrElse(() => undefined),
+	);
 }
 //#endregion
 

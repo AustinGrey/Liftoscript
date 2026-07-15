@@ -6,21 +6,54 @@ settings:
 
 catalogs:
   default:
+    '@codemirror/commands':
+      specifier: ^6.10.3
+      version: 6.10.3
+    '@codemirror/language':
+      specifier: ^6.12.3
+      version: 6.12.3
+    '@codemirror/state':
+      specifier: ^6.6.0
+      version: 6.6.0
+    '@codemirror/view':
+      specifier: ^6.41.1
+      version: 6.41.1
     '@lezer/common':
       specifier: ^1.5.2
       version: 1.5.2
     '@lezer/generator':
       specifier: ^1.8.0
       version: 1.8.0
+    '@lezer/highlight':
+      specifier: ^1.2.3
+      version: 1.2.3
     '@lezer/lr':
       specifier: ^1.4.10
       version: 1.4.10
+    '@types/js-yaml':
+      specifier: ^4.0.9
+      version: 4.0.9
+    '@types/markdown-it':
+      specifier: ^14.1.2
+      version: 14.1.2
+    '@vitejs/plugin-vue':
+      specifier: ^6.0.7
+      version: 6.0.7
+    effect:
+      specifier: ^3.22.0
+      version: 3.22.0
     es-toolkit:
       specifier: ^1.46.0
       version: 1.46.0
     fp-ts:
       specifier: ^2.16.11
       version: 2.16.11
+    js-yaml:
+      specifier: ^5.2.1
+      version: 5.2.1
+    markdown-it:
+      specifier: ^14.3.0
+      version: 14.3.0
     micro-memoize:
       specifier: ^5.1.1
       version: 5.1.1
@@ -33,6 +66,12 @@ catalogs:
     vite-plus:
       specifier: 0.2.2
       version: 0.2.2
+    vue:
+      specifier: ^3.5.39
+      version: 3.5.39
+    vue-router:
+      specifier: ^5.1.0
+      version: 5.1.0
     zod:
       specifier: ^4.3.6
       version: 4.3.6
@@ -117,6 +156,9 @@ importers:
       '@lezer/lr':
         specifier: 'catalog:'
         version: 1.4.10
+      effect:
+        specifier: 'catalog:'
+        version: 3.22.0
       es-toolkit:
         specifier: 'catalog:'
         version: 1.46.0
@@ -932,6 +974,9 @@ packages:
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
 
+  effect@3.22.0:
+    resolution: {integrity: sha512-jhYFe0zTlIRqYFrKTS+6luhmS/Tm0f+JLo0K9KUxvtFab1SUGEszQi2ehOP6QzAZvy831lDmTwwzvVDZSPNz3g==}
+
   entities@4.5.0:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
     engines: {node: '>=0.12'}
@@ -958,6 +1003,10 @@ packages:
 
   exsolve@1.1.0:
     resolution: {integrity: sha512-D+42+T12DdIlJM3uepa55qGiL3sYdLBOxIl2ifQCzCHz4c7eiolaHsi3BIqEr7JxBzxv2pYZQX9kw16ziMcEmw==}
+
+  fast-check@3.23.2:
+    resolution: {integrity: sha512-h5+1OzzfCC3Ef7VbtKdcv7zsstUQwUDlYpUTvjeUsJAssPgLn7QzbboPtL5ro04Mq0rPOsMzl7q5hIbRs2wD1A==}
+    engines: {node: '>=8.0.0'}
 
   fast-equals@5.4.0:
     resolution: {integrity: sha512-jt2DW/aNFNwke7AUd+Z+e6pz39KO5rzdbbFCg2sGafS4mk13MI7Z8O5z9cADNn5lhGODIgLwug6TZO2ctf7kcw==}
@@ -1211,6 +1260,9 @@ packages:
   punycode.js@2.3.1:
     resolution: {integrity: sha512-uxFIHU0YlHYhDQtV4R9J6a52SLx28BCjT+4ieh7IGbgwVJWO+km431c4yRlREUAsAmt/uMjQUyQHNEPf0M39CA==}
     engines: {node: '>=6'}
+
+  pure-rand@6.1.0:
+    resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
@@ -2046,6 +2098,11 @@ snapshots:
 
   dom-accessibility-api@0.5.16: {}
 
+  effect@3.22.0:
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      fast-check: 3.23.2
+
   entities@4.5.0: {}
 
   entities@7.0.1: {}
@@ -2063,6 +2120,10 @@ snapshots:
   expect-type@1.4.0: {}
 
   exsolve@1.1.0: {}
+
+  fast-check@3.23.2:
+    dependencies:
+      pure-rand: 6.1.0
 
   fast-equals@5.4.0: {}
 
@@ -2298,6 +2359,8 @@ snapshots:
       react-is: 17.0.2
 
   punycode.js@2.3.1: {}
+
+  pure-rand@6.1.0: {}
 
   quansync@0.2.11: {}
 
