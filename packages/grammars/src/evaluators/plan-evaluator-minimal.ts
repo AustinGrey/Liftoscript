@@ -1482,12 +1482,14 @@ function ProgramSet_getEvaluatedWeight(
 	return pipe(
 		getOrmOrStartingWeight(getExerciseOrDefault(exerciseType, settings.exercises), settings),
 		(onerm) =>
-			set.weight
-				? evaluateWeight(set.weight, onerm)
-				: set.maxrep != null && set.rpe != null
-					? evaluateWeight(rpePct(set.maxrep, set.rpe), onerm)
-					: undefined,
-		Option.fromNullable,
+			evaluateWeight(
+				set.weight
+					? set.weight
+					: set.maxrep != null && set.rpe != null
+						? rpePct(set.maxrep, set.rpe)
+						: undefined,
+				onerm,
+			),
 		Option.map((evaluatedWeight) =>
 			roundConvertTo(
 				evaluatedWeight,
