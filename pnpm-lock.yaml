@@ -6,54 +6,21 @@ settings:
 
 catalogs:
   default:
-    '@codemirror/commands':
-      specifier: ^6.10.3
-      version: 6.10.3
-    '@codemirror/language':
-      specifier: ^6.12.3
-      version: 6.12.3
-    '@codemirror/state':
-      specifier: ^6.6.0
-      version: 6.6.0
-    '@codemirror/view':
-      specifier: ^6.41.1
-      version: 6.41.1
     '@lezer/common':
       specifier: ^1.5.2
       version: 1.5.2
     '@lezer/generator':
       specifier: ^1.8.0
       version: 1.8.0
-    '@lezer/highlight':
-      specifier: ^1.2.3
-      version: 1.2.3
     '@lezer/lr':
       specifier: ^1.4.10
       version: 1.4.10
-    '@types/js-yaml':
-      specifier: ^4.0.9
-      version: 4.0.9
-    '@types/markdown-it':
-      specifier: ^14.1.2
-      version: 14.1.2
-    '@vitejs/plugin-vue':
-      specifier: ^6.0.7
-      version: 6.0.7
     es-toolkit:
       specifier: ^1.46.0
       version: 1.46.0
     fp-ts:
       specifier: ^2.16.11
       version: 2.16.11
-    io-ts:
-      specifier: ^2.2.22
-      version: 2.2.22
-    js-yaml:
-      specifier: ^5.2.1
-      version: 5.2.1
-    markdown-it:
-      specifier: ^14.3.0
-      version: 14.3.0
     micro-memoize:
       specifier: ^5.1.1
       version: 5.1.1
@@ -66,12 +33,6 @@ catalogs:
     vite-plus:
       specifier: 0.2.2
       version: 0.2.2
-    vue:
-      specifier: ^3.5.39
-      version: 3.5.39
-    vue-router:
-      specifier: ^5.1.0
-      version: 5.1.0
     zod:
       specifier: ^4.3.6
       version: 4.3.6
@@ -162,9 +123,6 @@ importers:
       fp-ts:
         specifier: 'catalog:'
         version: 2.16.11
-      io-ts:
-        specifier: 'catalog:'
-        version: 2.2.22(fp-ts@2.16.11)
       micro-memoize:
         specifier: 'catalog:'
         version: 5.1.1
@@ -1027,11 +985,6 @@ packages:
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
-
-  io-ts@2.2.22:
-    resolution: {integrity: sha512-FHCCztTkHoV9mdBsHpocLpdTAfh956ZQcIkWQxxS0U5HT53vtrcuYdQneEJKH6xILaLNzXVl2Cvwtoy8XNN0AA==}
-    peerDependencies:
-      fp-ts: ^2.5.0
 
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
@@ -2125,10 +2078,6 @@ snapshots:
     optional: true
 
   hookable@5.5.3: {}
-
-  io-ts@2.2.22(fp-ts@2.16.11):
-    dependencies:
-      fp-ts: 2.16.11
 
   jiti@2.6.1: {}
 

@@ -38,7 +38,6 @@
 		"@lezer/lr": "catalog:",
 		"es-toolkit": "catalog:",
 		"fp-ts": "catalog:",
-		"io-ts": "catalog:",
 		"micro-memoize": "catalog:",
 		"zod": "catalog:"
 	},
