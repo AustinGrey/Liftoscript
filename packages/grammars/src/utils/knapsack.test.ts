@@ -147,4 +147,19 @@ describe(closestBoundedSum, () => {
 		];
 		expect(closestBoundedSum(items, 10)).toEqual([0, 0]);
 	});
+
+	/**
+	 * When several combinations hit the same best sum, prefer fewer total units
+	 * (e.g. two large plates over many small ones).
+	 */
+	it("among equal closest sums, prefers the fewest total units", () => {
+		const items: BoundedKnapsackItem[] = [
+			{ value: 10, maxCount: 5 },
+			{ value: 5, maxCount: 10 },
+		];
+		const counts = closestBoundedSum(items, 20);
+		expect(boundedSumTotal(items, counts)).toBe(20);
+		expect(counts).toEqual([2, 0]); // not [0, 4] or [1, 2]
+		expect(counts.reduce((a, b) => a + b, 0)).toBe(2);
+	});
 });
