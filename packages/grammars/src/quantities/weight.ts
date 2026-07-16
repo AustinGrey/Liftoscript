@@ -24,6 +24,7 @@ import type { ISettings } from "@/user-settings";
 import { type TaggedTemplateHandler, taggedTemplateToString } from "@/utils/string.ts";
 import { $ } from "@/utils/effects.ts";
 import { by, type SortingPredicate } from "@/utils/sorting.ts";
+import { definedOnly } from "@/utils/collection.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -342,9 +343,12 @@ function calculatePlates(
 ): { totalWeight: IWeight } {
 	const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
 	if (equipmentData == null) {
-		const rounding = Exercise_defaultRounding(exerciseType, settings);
-		allWeight = build(MathUtils_round(allWeight.value, rounding), allWeight.unit);
-		return { totalWeight: allWeight };
+		return {
+			totalWeight: build(
+				MathUtils_round(allWeight.value, Exercise_defaultRounding(exerciseType, settings)),
+				allWeight.unit,
+			),
+		};
 	}
 
 	const absAllWeight = abs(allWeight);
@@ -405,20 +409,13 @@ function calculatePlatesInternalFast(
 		return [];
 	}
 
-	const plateTypes: {
-		weight: IWeight;
-		unitWeight: number;
-		maxUnits: number;
-	}[] = [];
-	for (const p of availablePlates) {
-		if (p.num >= multiplier) {
-			plateTypes.push({
-				weight: p.weight,
-				unitWeight: p.weight.value * multiplier,
-				maxUnits: Math.floor(p.num / multiplier),
-			});
-		}
-	}
+	const plateTypes = availablePlates
+		.filter((p) => p.num >= multiplier)
+		.map((p) => ({
+			weight: p.weight,
+			unitWeight: p.weight.value * multiplier,
+			maxUnits: Math.floor(p.num / multiplier),
+		}));
 	if (plateTypes.length === 0) {
 		return [];
 	}
@@ -484,13 +481,11 @@ function calculatePlatesInternalFast(
 
 	search(0, intTarget);
 
-	const plates: IPlate[] = [];
-	for (let i = 0; i < plateTypes.length; i++) {
-		if (best[i] > 0) {
-			plates.push({ weight: plateTypes[i].weight, num: best[i] * multiplier });
-		}
-	}
-	return plates;
+	return plateTypes
+		.map((plate, i) =>
+			best[i] > 0 ? { weight: plate.weight, num: best[i] * multiplier } : undefined,
+		)
+		.filter(definedOnly);
 }
 
 export function roundConvertTo(
