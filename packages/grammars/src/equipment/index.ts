@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TUnit, TWeight } from "@/quantities/weight.ts";
 import type { OpenRecord } from "@/utils/types.ts";
+import { TPlate } from "@/common-types.ts";
 
 export const TEquipmentType = z.string();
 export type IEquipmentType = z.infer<typeof TEquipmentType>;
@@ -41,12 +42,7 @@ export const TEquipmentData = z.strictObject({
 	/**
 	 * What bar plates are available
 	 */
-	plates: z.array(
-		z.strictObject({
-			weight: TWeight,
-			num: z.number(),
-		}),
-	),
+	plates: z.array(TPlate),
 	fixed: z.array(TWeight),
 	isFixed: z.boolean(),
 	unit: TUnit.optional(),

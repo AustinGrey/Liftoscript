@@ -124,7 +124,7 @@ export const targetTypes = ["target", "lasttime", "platescalculator", "e1rm"] as
 export const TTargetType = z.enum(targetTypes);
 export const exercisePickerSorts = ["name_asc", "similar_muscles"] as const;
 export const TExercisePickerSort = z.enum(exercisePickerSorts);
-export const TPlate = z.object({
+export const TPlate = z.strictObject({
 	weight: TWeight,
 	num: z.number(),
 });
