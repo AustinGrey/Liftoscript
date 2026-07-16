@@ -369,14 +369,27 @@ function calculatePlates(
 			? settings.currentBodyweight
 			: equipmentData.bar[units];
 	const isAssisting = equipmentData.isAssisting || false;
-	const plates: IPlate[] = calculatePlatesInternalFast(
-		roundTo000005(subtract(absAllWeight, barWeight)),
-		equipmentData.plates
-			.filter((p) => p.weight.unit === units)
-			.sort(by((o) => o.weight, compareReverse)),
-		equipmentData.multiplier || 1,
-		isAssisting,
+	const multiplier = equipmentData.multiplier || 1;
+	const availablePlates = equipmentData.plates
+		.filter((p) => p.weight.unit === units)
+		.sort(by((o) => o.weight, compareReverse));
+	const targetValue =
+		roundTo000005(subtract(absAllWeight, barWeight)).value * (isAssisting ? -1 : 1);
+	const plateTypes = availablePlates
+		.filter((p) => p.num >= multiplier)
+		.map((p) => ({
+			weight: p.weight,
+			unitWeight: p.weight.value * multiplier,
+			maxUnits: Math.floor(p.num / multiplier),
+		}));
+	const counts = closestBoundedSum(
+		plateTypes.map((p) => ({ value: p.unitWeight, maxCount: p.maxUnits })),
+		targetValue,
 	);
+	const plates: IPlate[] = plateTypes.flatMap((plate, i) =>
+		counts[i] > 0 ? [{ weight: plate.weight, num: counts[i] * multiplier }] : [],
+	);
+
 	const total = plates.reduce(
 		(memo, plate) => {
 			const weightToAdd = multiply(plate.weight, plate.num);
@@ -396,38 +409,6 @@ function abs(weight: IWeight): IWeight {
 
 function invert(weight: IWeight): IWeight {
 	return build(-weight.value, weight.unit);
-}
-
-function calculatePlatesInternalFast(
-	weight: IWeight,
-	availablePlates: IPlate[],
-	multiplier: number,
-	isAssisting: boolean,
-): IPlate[] {
-	const targetValue = isAssisting ? -weight.value : weight.value;
-	if (targetValue <= 0) {
-		return [];
-	}
-
-	const plateTypes = availablePlates
-		.filter((p) => p.num >= multiplier)
-		.map((p) => ({
-			weight: p.weight,
-			unitWeight: p.weight.value * multiplier,
-			maxUnits: Math.floor(p.num / multiplier),
-		}));
-	if (plateTypes.length === 0) {
-		return [];
-	}
-
-	const counts = closestBoundedSum(
-		plateTypes.map((p) => ({ value: p.unitWeight, maxCount: p.maxUnits })),
-		targetValue,
-	);
-
-	return plateTypes.flatMap((plate, i) =>
-		counts[i] > 0 ? [{ weight: plate.weight, num: counts[i] * multiplier }] : [],
-	);
 }
 
 export function roundConvertTo(
