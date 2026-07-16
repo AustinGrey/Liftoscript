@@ -23,7 +23,7 @@ import type { IExerciseType } from "@/exercises";
 import type { ISettings } from "@/user-settings";
 import { type TaggedTemplateHandler, taggedTemplateToString } from "@/utils/string.ts";
 import { $ } from "@/utils/effects.ts";
-import { by } from "@/utils/sorting.ts";
+import { by, type SortingPredicate } from "@/utils/sorting.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -226,6 +226,11 @@ export function operateAfterNormalized(
 	throw new Error(`Can't apply operation to ${typeof a} and ${typeof b}`);
 }
 
+export const compare: SortingPredicate<IWeight> = (a, b) => a.value - convertTo(b, a.unit).value;
+
+export const compareReverse: SortingPredicate<IWeight> = (a, b) =>
+	convertTo(b, a.unit).value - a.value;
+
 export function increment(
 	weight: IWeight,
 	settings: ISettings,
@@ -334,12 +339,12 @@ function calculatePlates(
 	settings: ISettings,
 	units: IUnit,
 	exerciseType: IExerciseType,
-): { plates: IPlate[]; platesWeight: IWeight; totalWeight: IWeight } {
+): { totalWeight: IWeight } {
 	const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
 	if (equipmentData == null) {
 		const rounding = Exercise_defaultRounding(exerciseType, settings);
 		allWeight = build(MathUtils_round(allWeight.value, rounding), allWeight.unit);
-		return { plates: [], platesWeight: allWeight, totalWeight: allWeight };
+		return { totalWeight: allWeight };
 	}
 
 	const absAllWeight = abs(allWeight);
@@ -348,13 +353,10 @@ function calculatePlates(
 		const fixed = equipmentData.fixed
 			.filter((w) => w.unit === (equipmentData.unit ?? units))
 			.toSorted((a, b) => b.value - a.value);
-		const weight =
-			fixed.find((w) => lte(w, absAllWeight)) || fixed[fixed.length - 1] || absAllWeight;
+		const weight = fixed.find((w) => lte(w, absAllWeight)) || fixed.at(-1) || absAllWeight;
 		let roundedWeight = roundTo005(weight);
 		roundedWeight = inverted ? invert(roundedWeight) : roundedWeight;
 		return {
-			plates: [],
-			platesWeight: roundedWeight,
 			totalWeight: roundedWeight,
 		};
 	}
@@ -378,27 +380,18 @@ function calculatePlates(
 		},
 		build(0, allWeight.unit),
 	);
-	const totalWeight = roundTo000005(
-		inverted ? invert(add(total, barWeight)) : add(total, barWeight),
-	);
-	const thePlatesWeight = inverted ? invert(total) : total;
-	return { plates, platesWeight: thePlatesWeight, totalWeight };
+	const added = add(total, barWeight);
+	return {
+		totalWeight: roundTo000005(inverted ? invert(added) : added),
+	};
 }
 
-export function abs(weight: IWeight): IWeight {
+function abs(weight: IWeight): IWeight {
 	return build(Math.abs(weight.value), weight.unit);
 }
 
-export function invert(weight: IWeight): IWeight {
+function invert(weight: IWeight): IWeight {
 	return build(-weight.value, weight.unit);
-}
-
-export function compare(a: IWeight, b: IWeight): number {
-	return a.value - convertTo(b, a.unit).value;
-}
-
-export function compareReverse(a: IWeight, b: IWeight): number {
-	return convertTo(b, a.unit).value - a.value;
 }
 
 function calculatePlatesInternalFast(
