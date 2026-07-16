@@ -310,7 +310,8 @@ export function round(
 }
 
 /**
- * Tries to round the value to match the available plates
+ * Tries to round the value to match the available plates on the equipment
+ * If you don't care about equipment, just use {@link roundTo005}.
  * @param weight The weight to round
  * @param settings The user's settings
  * @param unit The unit to round to
@@ -320,11 +321,8 @@ export function roundToPlates(
 	weight: $.Option<IWeight>,
 	settings: ISettings,
 	unit: IUnit,
-	exerciseType?: IExerciseType,
+	exerciseType: IExerciseType,
 ): IWeight {
-	if (exerciseType == null) {
-		return roundTo005(weight);
-	}
 	return calculatePlates(weight, settings, unit, exerciseType).totalWeight;
 }
 
@@ -430,11 +428,11 @@ export function roundConvertTo(
 	return round(convertTo(weight, unit), settings, unit, exerciseType);
 }
 
-export function getTrainingMax(weight: IWeight, reps: number, settings: ISettings): IWeight {
+export function getTrainingMax(weight: IWeight, reps: number): IWeight {
 	return pipe(
 		getOneRepMax(weight, reps),
-		onerm => multiply(onerm, 0.9),
-		tMax => round(tMax, settings, weight.unit),
+		oneRm => multiply(oneRm, 0.9),
+		tMax => roundTo005(tMax),
 	);
 }
 

@@ -61,7 +61,7 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 			if (!is(TWeight, weight)) {
 				weight = Weight.build(weight, settings.units);
 			}
-			return Weight.getTrainingMax(weight, reps || 0, settings);
+			return Weight.getTrainingMax(weight, reps || 0);
 		},
 		calculate1RM: (weight, reps) => {
 			if (!is(TWeight, weight)) {
@@ -116,20 +116,20 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 					continue;
 				}
 				const weightValue = Weight.convertToWeight(t.getGlobal("rm1"), weight, context.unit);
-				t.updateGlobal("minReps", (x) => x.toSpliced(i, 1, reps !== minReps ? minReps : undefined));
-				t.updateGlobal("reps", (x) => x.toSpliced(i, 1, reps));
-				t.updateGlobal("originalWeights", (x) => x.toSpliced(i, 1, weightValue));
-				t.updateGlobal("weights", (x) =>
+				t.updateGlobal("minReps", x => x.toSpliced(i, 1, reps !== minReps ? minReps : undefined));
+				t.updateGlobal("reps", x => x.toSpliced(i, 1, reps));
+				t.updateGlobal("originalWeights", x => x.toSpliced(i, 1, weightValue));
+				t.updateGlobal("weights", x =>
 					x.toSpliced(
 						i,
 						1,
 						Weight.round(weightValue, settings, context.unit, context.exerciseType),
 					),
 				);
-				t.updateGlobal("RPE", (x) => x.toSpliced(i, 1, rpe !== 0 ? rpe : undefined));
-				t.updateGlobal("amraps", (x) => x.toSpliced(i, 1, isAmrap !== 0 ? 1 : 0));
-				t.updateGlobal("logrpes", (x) => x.toSpliced(i, 1, logRpe !== 0 ? 1 : 0));
-				t.updateGlobal("timers", (x) => x.toSpliced(i, 1, timer !== 0 ? timer : undefined));
+				t.updateGlobal("RPE", x => x.toSpliced(i, 1, rpe !== 0 ? rpe : undefined));
+				t.updateGlobal("amraps", x => x.toSpliced(i, 1, isAmrap !== 0 ? 1 : 0));
+				t.updateGlobal("logrpes", x => x.toSpliced(i, 1, logRpe !== 0 ? 1 : 0));
+				t.updateGlobal("timers", x => x.toSpliced(i, 1, timer !== 0 ? timer : undefined));
 			}
 			return to - from;
 		},
