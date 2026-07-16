@@ -4,6 +4,7 @@ import {
 	type IDynamicWeight,
 	type IWeight,
 	percentORM,
+	roundTo005,
 	TDynamicWeight,
 	TWeight,
 } from "@/quantities/weight.ts";
@@ -61,13 +62,13 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 			if (!is(TWeight, weight)) {
 				weight = Weight.build(weight, settings.units);
 			}
-			return Weight.getTrainingMax(weight, reps || 0);
+			return roundTo005(Weight.getTrainingMax(weight, reps || 0));
 		},
 		calculate1RM: (weight, reps) => {
 			if (!is(TWeight, weight)) {
 				weight = Weight.build(weight, settings.units);
 			}
-			return Weight.getOneRepMax(weight, reps);
+			return roundTo005(Weight.getOneRepMax(weight, reps));
 		},
 		rpeMultiplier: (repsRaw, rpeRawOrContext, context) => {
 			const reps = is(TWeight, repsRaw) ? repsRaw.value : isNumber(repsRaw) ? repsRaw : 1;

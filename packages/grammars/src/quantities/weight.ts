@@ -429,11 +429,7 @@ export function roundConvertTo(
 }
 
 export function getTrainingMax(weight: IWeight, reps: number): IWeight {
-	return pipe(
-		getOneRepMax(weight, reps),
-		oneRm => multiply(oneRm, 0.9),
-		tMax => roundTo005(tMax),
-	);
+	return multiply(getOneRepMax(weight, reps), 0.9);
 }
 
 export function getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeight {
@@ -442,7 +438,7 @@ export function getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeig
 	} else if (reps === 1) {
 		return weight;
 	} else {
-		return roundTo005(divide(weight, rpeMultiplier(reps, rpe ?? 10)));
+		return divide(weight, rpeMultiplier(reps, rpe ?? 10));
 	}
 }
 
