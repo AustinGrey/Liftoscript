@@ -24,7 +24,7 @@ import type { ISettings } from "@/user-settings";
 import { type TaggedTemplateHandler, taggedTemplateToString } from "@/utils/string.ts";
 import { $ } from "@/utils/effects.ts";
 import { by, type SortingPredicate } from "@/utils/sorting.ts";
-import { definedOnly } from "@/utils/collection.ts";
+import { closestBoundedSum } from "@/utils/knapsack.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -420,72 +420,14 @@ function calculatePlatesInternalFast(
 		return [];
 	}
 
-	// Convert to integers for exact arithmetic
-	const allValues = [targetValue, ...plateTypes.map((p) => p.unitWeight)];
-	let maxDecimals = 0;
-	for (const v of allValues) {
-		const s = v.toString();
-		const dot = s.indexOf(".");
-		if (dot >= 0) {
-			maxDecimals = Math.max(maxDecimals, s.length - dot - 1);
-		}
-	}
-	const precision = Math.pow(10, Math.min(maxDecimals, 6));
-	const intTarget = Math.round(targetValue * precision);
-	const intWeights = plateTypes.map((p) => Math.round(p.unitWeight * precision));
+	const counts = closestBoundedSum(
+		plateTypes.map((p) => ({ value: p.unitWeight, maxCount: p.maxUnits })),
+		targetValue,
+	);
 
-	// Max contribution from plates at index i and beyond (for pruning)
-	const maxFrom = Array.from<number>({ length: plateTypes.length + 1 }).fill(0);
-	for (let i = plateTypes.length - 1; i >= 0; i--) {
-		maxFrom[i] = maxFrom[i + 1] + intWeights[i] * plateTypes[i].maxUnits;
-	}
-
-	const best = Array.from<number>({ length: plateTypes.length }).fill(0);
-	const current = Array.from<number>({ length: plateTypes.length }).fill(0);
-	let bestRemaining = intTarget + 1;
-	let iterations = 0;
-
-	function search(index: number, remaining: number): void {
-		if (bestRemaining === 0 || iterations >= 10000) {
-			return;
-		}
-		if (remaining === 0 || index >= plateTypes.length) {
-			if (remaining < bestRemaining) {
-				bestRemaining = remaining;
-				for (let i = 0; i < index; i++) {
-					best[i] = current[i];
-				}
-				for (let i = index; i < plateTypes.length; i++) {
-					best[i] = 0;
-				}
-			}
-			return;
-		}
-
-		iterations += 1;
-		const w = intWeights[index];
-		const maxCount = Math.min(plateTypes[index].maxUnits, w > 0 ? Math.floor(remaining / w) : 0);
-
-		for (let count = maxCount; count >= 0; count--) {
-			const newRemaining = remaining - count * w;
-			if (newRemaining - maxFrom[index + 1] >= bestRemaining) {
-				continue;
-			}
-			current[index] = count;
-			search(index + 1, newRemaining);
-			if (bestRemaining === 0) {
-				return;
-			}
-		}
-	}
-
-	search(0, intTarget);
-
-	return plateTypes
-		.map((plate, i) =>
-			best[i] > 0 ? { weight: plate.weight, num: best[i] * multiplier } : undefined,
-		)
-		.filter(definedOnly);
+	return plateTypes.flatMap((plate, i) =>
+		counts[i] > 0 ? [{ weight: plate.weight, num: counts[i] * multiplier }] : [],
+	);
 }
 
 export function roundConvertTo(
