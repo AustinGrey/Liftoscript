@@ -335,6 +335,16 @@ export function roundTo000005(weight: IWeight): IWeight {
 	return build(MathUtils_roundTo000005(weight.value), weight.unit);
 }
 
+/**
+ * Calculates which plates can be added to an exercise's machine in order to reach the closest possible weight.
+ * @todo actually also return the plates for the purpose of displaying them in a helpful way
+ * @todo this might belong in the exercise module, it doesn't really make sense in the generic weight module
+ * @param allWeight The target weight to reach
+ * @param settings The user settings
+ * @param units The desired units - which filters available plates if mixed plates are available
+ *     @todo is that even desirable? In a mixed plates setting, you should be able to choose from any available plates rather than focus on only kg or lb plates.
+ * @param exerciseType The exercise type, which determines what settings are involved.
+ */
 function calculatePlates(
 	allWeight: IWeight,
 	settings: ISettings,
@@ -358,10 +368,9 @@ function calculatePlates(
 			.filter((w) => w.unit === (equipmentData.unit ?? units))
 			.toSorted((a, b) => b.value - a.value);
 		const weight = fixed.find((w) => lte(w, absAllWeight)) || fixed.at(-1) || absAllWeight;
-		let roundedWeight = roundTo005(weight);
-		roundedWeight = inverted ? invert(roundedWeight) : roundedWeight;
+		const roundedWeight = roundTo005(weight);
 		return {
-			totalWeight: roundedWeight,
+			totalWeight: inverted ? invert(roundedWeight) : roundedWeight,
 		};
 	}
 	const barWeight =

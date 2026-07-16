@@ -112,25 +112,24 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 			t: EvaluateTools,
 		): number {
 			for (let i = 0; i < t.getGlobal("numberOfSets"); i++) {
-				if (i >= from - 1 && i < to) {
-					const weightValue = Weight.convertToWeight(t.getGlobal("rm1"), weight, context.unit);
-					t.updateGlobal("minReps", (x) =>
-						x.toSpliced(i, 1, reps !== minReps ? minReps : undefined),
-					);
-					t.updateGlobal("reps", (x) => x.toSpliced(i, 1, reps));
-					t.updateGlobal("originalWeights", (x) => x.toSpliced(i, 1, weightValue));
-					t.updateGlobal("weights", (x) =>
-						x.toSpliced(
-							i,
-							1,
-							Weight.round(weightValue, settings, context.unit, context.exerciseType),
-						),
-					);
-					t.updateGlobal("RPE", (x) => x.toSpliced(i, 1, rpe !== 0 ? rpe : undefined));
-					t.updateGlobal("amraps", (x) => x.toSpliced(i, 1, isAmrap !== 0 ? 1 : 0));
-					t.updateGlobal("logrpes", (x) => x.toSpliced(i, 1, logRpe !== 0 ? 1 : 0));
-					t.updateGlobal("timers", (x) => x.toSpliced(i, 1, timer !== 0 ? timer : undefined));
+				if (!(i >= from - 1 && i < to)) {
+					continue;
 				}
+				const weightValue = Weight.convertToWeight(t.getGlobal("rm1"), weight, context.unit);
+				t.updateGlobal("minReps", (x) => x.toSpliced(i, 1, reps !== minReps ? minReps : undefined));
+				t.updateGlobal("reps", (x) => x.toSpliced(i, 1, reps));
+				t.updateGlobal("originalWeights", (x) => x.toSpliced(i, 1, weightValue));
+				t.updateGlobal("weights", (x) =>
+					x.toSpliced(
+						i,
+						1,
+						Weight.round(weightValue, settings, context.unit, context.exerciseType),
+					),
+				);
+				t.updateGlobal("RPE", (x) => x.toSpliced(i, 1, rpe !== 0 ? rpe : undefined));
+				t.updateGlobal("amraps", (x) => x.toSpliced(i, 1, isAmrap !== 0 ? 1 : 0));
+				t.updateGlobal("logrpes", (x) => x.toSpliced(i, 1, logRpe !== 0 ? 1 : 0));
+				t.updateGlobal("timers", (x) => x.toSpliced(i, 1, timer !== 0 ? timer : undefined));
 			}
 			return to - from;
 		},
