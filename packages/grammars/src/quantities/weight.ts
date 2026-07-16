@@ -22,6 +22,8 @@ import type { IPlate } from "@/common-types.ts";
 import type { IExerciseType } from "@/exercises";
 import type { ISettings } from "@/user-settings";
 import { type TaggedTemplateHandler, taggedTemplateToString } from "@/utils/string.ts";
+import { $ } from "@/utils/effects.ts";
+import { by } from "@/utils/sorting.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -300,6 +302,25 @@ export function round(
 	return calculatePlates(weight, settings, unit, exerciseType).totalWeight;
 }
 
+/**
+ * Tries to round the value to match the available plates
+ * @param weight The weight to round
+ * @param settings The user's settings
+ * @param unit The unit to round to
+ * @param exerciseType The type of exercise
+ */
+export function roundToPlates(
+	weight: $.Option<IWeight>,
+	settings: ISettings,
+	unit: IUnit,
+	exerciseType?: IExerciseType,
+): IWeight {
+	if (exerciseType == null) {
+		return roundTo005(weight);
+	}
+	return calculatePlates(weight, settings, unit, exerciseType).totalWeight;
+}
+
 export function roundTo005(weight: IWeight): IWeight {
 	return build(MathUtils_roundTo005(weight.value), weight.unit);
 }
@@ -308,7 +329,7 @@ export function roundTo000005(weight: IWeight): IWeight {
 	return build(MathUtils_roundTo000005(weight.value), weight.unit);
 }
 
-export function calculatePlates(
+function calculatePlates(
 	allWeight: IWeight,
 	settings: ISettings,
 	units: IUnit,
@@ -337,20 +358,17 @@ export function calculatePlates(
 			totalWeight: roundedWeight,
 		};
 	}
-	const availablePlatesArr = equipmentData.plates.filter((p) => p.weight.unit === units);
 	const barWeight =
 		equipmentData.useBodyweightForBar && settings.currentBodyweight
 			? settings.currentBodyweight
 			: equipmentData.bar[units];
-	const multiplier = equipmentData.multiplier || 1;
 	const isAssisting = equipmentData.isAssisting || false;
-	const weight = roundTo000005(subtract(absAllWeight, barWeight));
-	const availablePlates: IPlate[] = JSON.parse(JSON.stringify(availablePlatesArr));
-	availablePlates.sort((a, b) => compareReverse(a.weight, b.weight));
 	const plates: IPlate[] = calculatePlatesInternalFast(
-		weight,
-		availablePlates,
-		multiplier,
+		roundTo000005(subtract(absAllWeight, barWeight)),
+		equipmentData.plates
+			.filter((p) => p.weight.unit === units)
+			.sort(by((o) => o.weight, compareReverse)),
+		equipmentData.multiplier || 1,
 		isAssisting,
 	);
 	const total = plates.reduce(

@@ -25,7 +25,6 @@ import {
 	roundConvertTo,
 	roundTo005,
 	rpeMultiplier,
-	rpePct,
 	TDynamicWeight,
 	TWeight,
 	w,
@@ -112,8 +111,9 @@ import {
 	ZERO,
 	zIndexFrom1,
 } from "@/utils/indexes.ts";
-import { pipe, Option as $ } from "effect";
-import { orUndefined } from "@/utils/effects.ts";
+import { pipe } from "effect";
+import { orUndefined, $ } from "@/utils/effects.ts";
+import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
 
 //#region Program
 
@@ -837,19 +837,6 @@ interface IPlannerProgramExerciseEvaluatedSetVariation {
 	isCurrent: boolean;
 }
 
-interface IPlannerProgramExerciseEvaluatedSet {
-	maxrep?: number;
-	weight?: IWeight | IDynamicWeight;
-	minrep?: number;
-	timer?: number;
-	rpe?: number;
-	logRpe: boolean;
-	label?: string;
-	isAmrap: boolean;
-	isQuickAddSet: boolean;
-	askWeight: boolean;
-}
-
 export interface IPlannerProgramExerciseSet {
 	repRange?: IRepRange;
 	timer?: number;
@@ -1485,17 +1472,14 @@ function ProgramSet_getEvaluatedWeight(
 	exerciseType: IExerciseType,
 	settings: ISettings,
 ): $.Option<IWeight> {
+	const orm = getOrmOrStartingWeight(
+		getExerciseOrDefault(exerciseType, settings.exercises),
+		settings,
+	);
+
 	return pipe(
-		getOrmOrStartingWeight(getExerciseOrDefault(exerciseType, settings.exercises), settings),
-		(onerm) =>
-			evaluateWeight(
-				set.weight
-					? set.weight
-					: set.maxrep != null && set.rpe != null
-						? rpePct(set.maxrep, set.rpe)
-						: undefined,
-				onerm,
-			),
+		tryGetWeight(set),
+		(weight) => evaluateWeight(weight, orm),
 		$.map((evaluatedWeight) =>
 			roundConvertTo(
 				evaluatedWeight,

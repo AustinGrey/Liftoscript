@@ -8,12 +8,10 @@ import { Option as $ } from "effect";
  * @param onerm In the context of this set, what the one rep max is. If you don't know it, you can't evaluate dynamic weights.
  */
 export function evaluateWeight(
-	weight: IWeight | IDynamicWeight | undefined,
+	weight: $.Option<IWeight | IDynamicWeight>,
 	onerm: IWeight,
 ): $.Option<IWeight> {
-	return weight === undefined
-		? $.none()
-		: is(TWeight, weight)
-			? $.some(weight)
-			: $.some(multiply(onerm, weight.value / 100));
+	return $.map(weight, (weight) =>
+		is(TWeight, weight) ? weight : multiply(onerm, weight.value / 100),
+	);
 }
