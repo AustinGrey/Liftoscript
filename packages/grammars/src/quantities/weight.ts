@@ -25,6 +25,7 @@ import { type TaggedTemplateHandler, taggedTemplateToString } from "@/utils/stri
 import { $ } from "@/utils/effects.ts";
 import { by, type SortingPredicate } from "@/utils/sorting.ts";
 import { closestBoundedSum } from "@/utils/knapsack.ts";
+import { pipe } from "effect";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -242,8 +243,8 @@ export function increment(
 		const unit = equipmentData.unit ?? weight.unit;
 		const roundWeight = round(weight, settings, unit, exerciseType);
 		if (equipmentData.isFixed) {
-			const items = equipmentData.fixed.filter((e) => e.unit === unit).toSorted(compare);
-			const item = items.find((i) => gt(i, roundWeight));
+			const items = equipmentData.fixed.filter(e => e.unit === unit).toSorted(compare);
+			const item = items.find(i => gt(i, roundWeight));
 			return item ?? items[items.length - 1] ?? roundWeight;
 		} else {
 			const smallestPlate = multiply(
@@ -277,8 +278,8 @@ export function decrement(
 		const unit = equipmentData.unit ?? weight.unit;
 		const roundWeight = round(weight, settings, unit, exerciseType);
 		if (equipmentData.isFixed) {
-			const items = equipmentData.fixed.filter((e) => e.unit === unit).toSorted(compareReverse);
-			const item = items.find((i) => lt(i, roundWeight));
+			const items = equipmentData.fixed.filter(e => e.unit === unit).toSorted(compareReverse);
+			const item = items.find(i => lt(i, roundWeight));
 			return item ?? items[items.length - 1] ?? roundWeight;
 		} else {
 			const smallestPlate = multiply(
@@ -365,9 +366,9 @@ function calculatePlates(
 	const inverted = allWeight.value < 0;
 	if (equipmentData.isFixed) {
 		const fixed = equipmentData.fixed
-			.filter((w) => w.unit === (equipmentData.unit ?? units))
+			.filter(w => w.unit === (equipmentData.unit ?? units))
 			.toSorted((a, b) => b.value - a.value);
-		const weight = fixed.find((w) => lte(w, absAllWeight)) || fixed.at(-1) || absAllWeight;
+		const weight = fixed.find(w => lte(w, absAllWeight)) || fixed.at(-1) || absAllWeight;
 		const roundedWeight = roundTo005(weight);
 		return {
 			totalWeight: inverted ? invert(roundedWeight) : roundedWeight,
@@ -380,19 +381,19 @@ function calculatePlates(
 	const isAssisting = equipmentData.isAssisting || false;
 	const multiplier = equipmentData.multiplier || 1;
 	const availablePlates = equipmentData.plates
-		.filter((p) => p.weight.unit === units)
-		.sort(by((o) => o.weight, compareReverse));
+		.filter(p => p.weight.unit === units)
+		.sort(by(o => o.weight, compareReverse));
 	const targetValue =
 		roundTo000005(subtract(absAllWeight, barWeight)).value * (isAssisting ? -1 : 1);
 	const plateTypes = availablePlates
-		.filter((p) => p.num >= multiplier)
-		.map((p) => ({
+		.filter(p => p.num >= multiplier)
+		.map(p => ({
 			weight: p.weight,
 			unitWeight: p.weight.value * multiplier,
 			maxUnits: Math.floor(p.num / multiplier),
 		}));
 	const counts = closestBoundedSum(
-		plateTypes.map((p) => ({ value: p.unitWeight, maxCount: p.maxUnits })),
+		plateTypes.map(p => ({ value: p.unitWeight, maxCount: p.maxUnits })),
 		targetValue,
 	);
 	const plates: IPlate[] = plateTypes.flatMap((plate, i) =>
@@ -430,7 +431,11 @@ export function roundConvertTo(
 }
 
 export function getTrainingMax(weight: IWeight, reps: number, settings: ISettings): IWeight {
-	return round(multiply(getOneRepMax(weight, reps), 0.9), settings, weight.unit);
+	return pipe(
+		getOneRepMax(weight, reps),
+		onerm => multiply(onerm, 0.9),
+		tMax => round(tMax, settings, weight.unit),
+	);
 }
 
 export function getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeight {

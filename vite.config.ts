@@ -3,6 +3,7 @@ import { defineConfig } from "vite-plus";
 export default defineConfig({
 	fmt: {
 		useTabs: true,
+		arrowParens: "avoid"
 	},
 	lint: {
 		options: { typeAware: true, typeCheck: true },
