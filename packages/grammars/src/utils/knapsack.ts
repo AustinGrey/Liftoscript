@@ -17,10 +17,7 @@ export type BoundedKnapsackItem = {
  *
  * @returns The count per item that should be selected
  */
-export function closestBoundedSum(
-	items: readonly BoundedKnapsackItem[],
-	target: number,
-): number[] {
+export function closestBoundedSum(items: readonly BoundedKnapsackItem[], target: number): number[] {
 	const maxIterations = 10_000;
 	const maxPrecision = 6;
 
@@ -60,11 +57,8 @@ export function closestBoundedSum(
 		if (remaining === 0 || index >= items.length) {
 			if (remaining < bestRemaining) {
 				bestRemaining = remaining;
-				for (let i = 0; i < index; i++) {
-					best[i] = current[i];
-				}
-				for (let i = index; i < items.length; i++) {
-					best[i] = 0;
+				for (let i = 0; i < items.length; i++) {
+					best[i] = i < index ? current[i] : 0;
 				}
 			}
 			return;
