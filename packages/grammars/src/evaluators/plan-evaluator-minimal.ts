@@ -115,7 +115,7 @@ import { pipe } from "effect";
 import { $, orUndefined } from "@/utils/effects.ts";
 import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
-import { by } from "@/utils/sorting.ts";
+import { asNumericDescending, by } from "@/utils/sorting.ts";
 
 //#region Program
 
@@ -583,7 +583,7 @@ export function ProgramExercise_weightChanges(
 			}
 		}
 	});
-	return CollectionUtils_sortBy(Object.values(results), "current", true);
+	return Object.values(results).sort(by(val => Number(val.current), asNumericDescending));
 }
 
 function ProgramExercise_applyVariables(

@@ -9,3 +9,6 @@ export type SortingPredicate<T> = (a: T, b: T) => number;
 export function by<T, P>(extract: (o: T) => P, sorter: SortingPredicate<P>): SortingPredicate<T> {
 	return (a: T, b: T) => sorter(extract(a), extract(b));
 }
+
+export const asNumericAscending: SortingPredicate<number> = (a, b) => a - b;
+export const asNumericDescending: SortingPredicate<number> = (a, b) => b - a;
