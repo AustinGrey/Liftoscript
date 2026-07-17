@@ -2358,18 +2358,16 @@ function topLineItems(
 ): IPlannerTopLineItem[][][] {
 	let dayIndex = 0;
 
-	const mapping = plannerProgram.weeks.map(week => {
-		return week.days.map(day => {
+	const mapping = plannerProgram.weeks.map(week =>
+		week.days.map(day => {
 			dayIndex += 1;
-
 			return topLineMap(
 				asPlanNodeOfTypeOrThrow("Program", parseBound(plannerExerciseParser, day.exerciseText)),
 				exercises,
 			);
-		});
-	});
-	for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
-		const week = mapping[weekIndex];
+		}),
+	);
+	for (const week of mapping) {
 		for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
 			const day = week[dayIndex].filter(item => item.type === "exercise");
 			for (const exercise of day) {
@@ -2449,7 +2447,7 @@ function topLineMap(
 				const sectionNodes = tryQueryPlanNodeChildren(exerciseExpression, {
 					ofType: PlannerNodeName.ExerciseSection,
 				}).toArray();
-				const item: IPlannerTopLineItem & { type: "exercise" } = {
+				const item: IPlannerTopLineItem = {
 					type: "exercise",
 					fullName,
 					order: getOrder(exerciseExpression),
@@ -2539,7 +2537,7 @@ function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[
 			}
 			return group.sort(
 				by(
-					group => group.find(l => l.type === "exercise"),
+					lines => lines.find(l => l.type === "exercise"),
 					(ex1, ex2) => {
 						return ex1 == null || ex2 == null
 							? 0
