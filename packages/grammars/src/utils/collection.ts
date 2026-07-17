@@ -1,5 +1,6 @@
 import type { ConditionalPick } from "type-fest";
 import { castAs0, type IndexFrom0 } from "@/utils/indexes.ts";
+import { by } from "@/utils/sorting.ts";
 
 /**
  * A common filter predicate, removed undefined values
@@ -19,7 +20,12 @@ export function CollectionUtils_sortBy<
 	T extends {},
 	K extends keyof ConditionalPick<T, number> & keyof T,
 >(arr: T[], key: K, isReverse?: boolean): T[] {
-	return arr.toSorted((a, b) => (Number(a[key]) - Number(b[key])) * (isReverse ? -1 : 1));
+	return arr.toSorted(
+		by(
+			obj => Number(obj[key]),
+			(a, b) => (a - b) * (isReverse ? -1 : 1),
+		),
+	);
 }
 
 /**

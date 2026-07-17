@@ -206,7 +206,7 @@ export function Program_nextHistoryRecordFromEvaluated(
 	stats: IStats,
 	dayIndex?: number,
 ): IHistoryRecord {
-	const day: IndexFrom1 = castAs1(
+	const day = castAs1(
 		Math.max(
 			1,
 			Math.min(getTotalDaysInProgram(program), Math.max(1, (dayIndex || program.nextDay) ?? 0)),
