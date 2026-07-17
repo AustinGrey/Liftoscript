@@ -13,6 +13,7 @@ import { TBodyPart, TMuscle } from "@/human-body";
 import type { OpenRecord } from "@/utils/types.ts";
 import { ObjectUtils_keys } from "@/utils/object.ts";
 import { sameCaseInsensitive } from "@/utils/string.ts";
+import type { IExerciseDataValue } from "@/common-types.ts";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
@@ -1677,14 +1678,17 @@ export const allExercisesList: Record<IExerciseId, IExercise> = {
 		startingWeightKg: { value: 47.5, unit: "kg" },
 	},
 };
+
 /**
  * @returns true if the exercise to be performed is done one side at a time.
  * @param exerciseType The exercise to be performed
- * @param settings The user's settings - a user can choose if an exercise should be done unilaterally in their settings.
- * @todo this layer shouldn't know about "settings", this should be split up
+ * @param exerciseData Information about the available exercises (which may have unilateral overrides)
  */
-export function isUnilateral(exerciseType: IExerciseType, settings: ISettings): boolean {
-	const unilateralOverride = settings.exerciseData[toKey(exerciseType)]?.isUnilateral;
+export function isUnilateral(
+	exerciseType: IExerciseType,
+	exerciseData: Record<IExerciseTypeKey, IExerciseDataValue>,
+): boolean {
+	const unilateralOverride = exerciseData[toKey(exerciseType)]?.isUnilateral;
 	if (unilateralOverride !== undefined) {
 		return unilateralOverride;
 	}
@@ -1793,6 +1797,7 @@ export function maybeGetExercise(
 		: allExercisesList[id];
 }
 
+// @todo this layer should not know about settings, either this function doesn't belong here, or callees will need to pull the specific value from the settings they need
 export function getOrmOrStartingWeight(type: IExerciseType, settings: ISettings): IWeight {
 	const rm = settings.exerciseData[toKey(type)]?.rm1;
 	if (rm) {
@@ -1816,7 +1821,7 @@ function Exercise_findIdByName(
 	const lowercaseName = name.toLowerCase();
 	return (
 		nameToIdMapping[lowercaseName] ||
-		Object.values(customExercises).find((ce) => {
+		Object.values(customExercises).find(ce => {
 			const thisLowercaseName = ce?.name?.toLowerCase() || "";
 			return (
 				thisLowercaseName === lowercaseName ||
@@ -1843,12 +1848,12 @@ export function Exercise_findByNameAndEquipment(
 	nameAndEquipment: string,
 	customExercises: IAllCustomExercises,
 ): IExercise | undefined {
-	const parts = nameAndEquipment.split(",").map((p) => p.trim());
+	const parts = nameAndEquipment.split(",").map(p => p.trim());
 	let name: string | undefined;
 	let equipment: IEquipmentType | undefined | null;
 	if (parts.length > 1) {
 		const foundEquipment = builtInEquipmentTypes
-			.filter((e) => sameCaseInsensitive(equipmentName(e), parts[parts.length - 1]))
+			.filter(e => sameCaseInsensitive(equipmentName(e), parts[parts.length - 1]))
 			.at(0);
 		if (foundEquipment != null) {
 			equipment = foundEquipment;

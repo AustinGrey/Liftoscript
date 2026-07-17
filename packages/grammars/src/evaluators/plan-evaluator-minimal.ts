@@ -160,7 +160,7 @@ function Program_nextHistoryEntry(
 						programExercise.exerciseType,
 						settings,
 					).pipe(orUndefined),
-					isUnilateral: isUnilateral(programExercise.exerciseType, settings),
+					isUnilateral: isUnilateral(programExercise.exerciseType, settings.exerciseData),
 					rpe: programSet.rpe,
 					timer: programSet.timer,
 					logRpe: programSet.logRpe,
@@ -1694,7 +1694,7 @@ function Progress_applyBindings(
 			entry.sets[i] ??= {
 				id: generateUid(6),
 				index: castAs0(i),
-				isUnilateral: isUnilateral(entry.exercise, settings),
+				isUnilateral: isUnilateral(entry.exercise, settings.exerciseData),
 				reps: 0,
 				weight: w`0lb`,
 				originalWeight: w`0lb`,

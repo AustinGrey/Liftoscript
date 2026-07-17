@@ -53,7 +53,7 @@ function warmup(
 						index,
 						id: generateUid(6),
 						reps: programExerciseWarmupSet.reps,
-						isUnilateral: exerciseType ? isUnilateral(exerciseType, settings) : false,
+						isUnilateral: exerciseType ? isUnilateral(exerciseType, settings.exerciseData) : false,
 						weight: roundedWeight,
 						originalWeight: warmupWeight,
 						isCompleted: false,
