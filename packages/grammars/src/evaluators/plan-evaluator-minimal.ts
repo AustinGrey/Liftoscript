@@ -2517,19 +2517,18 @@ function topLineMap(
 
 function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[][][][] {
 	const groupedTopLine: IPlannerTopLineItem[][][][] = [];
-	for (const [weekIndex, topLineWeek] of topLine.entries()) {
-		groupedTopLine.push([]);
-		for (let dayInWeekIndex = 0; dayInWeekIndex < topLineWeek.length; dayInWeekIndex += 1) {
-			const topLineDay = topLineWeek[dayInWeekIndex];
+	for (const topLineWeek of topLine) {
+		const weekGroup: IPlannerTopLineItem[][][] = [];
+		groupedTopLine.push(weekGroup);
+		for (const topLineDay of topLineWeek) {
 			const group: IPlannerTopLineItem[][] = [];
-			groupedTopLine[weekIndex].push(group);
+			weekGroup.push(group);
 			let reset = true;
-			for (let lineIndex = 0; lineIndex < topLineDay.length; lineIndex += 1) {
+			for (const line of topLineDay) {
 				if (reset) {
 					group.push([]);
 					reset = false;
 				}
-				const line = topLineDay[lineIndex];
 				group[group.length - 1] ??= [];
 				group[group.length - 1].push(line);
 				if (line.type === "exercise") {
