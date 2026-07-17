@@ -115,6 +115,7 @@ import { pipe } from "effect";
 import { $, orUndefined } from "@/utils/effects.ts";
 import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
+import { by } from "@/utils/sorting.ts";
 
 //#region Program
 
@@ -2516,8 +2517,7 @@ function topLineMap(
 
 function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[][][][] {
 	const groupedTopLine: IPlannerTopLineItem[][][][] = [];
-	for (let weekIndex = 0; weekIndex < topLine.length; weekIndex += 1) {
-		const topLineWeek = topLine[weekIndex];
+	for (const [weekIndex, topLineWeek] of topLine.entries()) {
 		groupedTopLine.push([]);
 		for (let dayInWeekIndex = 0; dayInWeekIndex < topLineWeek.length; dayInWeekIndex += 1) {
 			const topLineDay = topLineWeek[dayInWeekIndex];
@@ -2540,16 +2540,18 @@ function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[
 	}
 	for (const week of groupedTopLine) {
 		for (const day of week) {
-			day.sort((group1, group2) => {
-				const ex1 = group1.find(l => l.type === "exercise");
-				const ex2 = group2.find(l => l.type === "exercise");
-				if (ex1 == null || ex2 == null) {
-					return 0;
-				}
-				return ex1.exerciseIndex === ex2.exerciseIndex
-					? (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0)
-					: (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
-			});
+			day.sort(
+				by(
+					group => group.find(l => l.type === "exercise"),
+					(ex1, ex2) => {
+						return ex1 == null || ex2 == null
+							? 0
+							: ex1.exerciseIndex === ex2.exerciseIndex
+								? (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0)
+								: (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
+					},
+				),
+			);
 		}
 	}
 	return groupedTopLine;
@@ -2897,8 +2899,7 @@ function variationToString(
 ): string {
 	const result: string[] = [];
 	for (const [set, count] of groupVariationSets(variation.sets, exercise, index)) {
-		let setStr = "";
-		setStr += `${count}${set.isQuickAddSet ? "+" : ""}x`;
+		let setStr = `${count}${set.isQuickAddSet ? "+" : ""}x`;
 		setStr += set.minrep != null ? `${n(Math.max(0, set.minrep))}-` : "";
 		setStr += `${n(Math.max(0, set.maxrep ?? 0))}`;
 		setStr += set.isAmrap ? "+" : "";
