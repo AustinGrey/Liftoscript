@@ -2205,20 +2205,23 @@ function addExerciseDescriptions(
 	return undefined;
 }
 
+/**
+ * Strips out repeated informaton from the program which can be implied from previous exercises, days, etc.
+ * @param oldPlannerProgram
+ * @param plannerProgram
+ * @param settings
+ * @param additionalRepeatingExercises
+ */
 export function compactPlannerProgram(
 	oldPlannerProgram: IPlannerProgram,
 	plannerProgram: IPlannerProgram,
 	settings: ISettings,
 	additionalRepeatingExercises?: Set<string>,
 ): IPlannerProgram {
-	// Define augmented types that let us put a "used" flag on the exercises for this algorithm only.
-	type ICompactPlannerTopLineExercise = Extract<IPlannerTopLineItem, { type: "exercise" }> & {
+	// Define augmented types that let us put a "used" flag on the lines (really just for the exercises) for this algorithm only.
+	type ITrackableLine = IPlannerTopLineItem & {
 		used?: boolean;
 	};
-
-	type ICompactPlannerTopLineItem =
-		| ICompactPlannerTopLineExercise
-		| Extract<IPlannerTopLineItem, { type: "comment" | "description" | "empty" }>;
 	const repeatingExercises = new Set(additionalRepeatingExercises);
 	const { evaluatedWeeks } = PlannerProgram_evaluate(structuredClone(oldPlannerProgram), settings);
 	const { evaluatedWeeks: newEvaluatedWeeks } = PlannerProgram_evaluate(
@@ -2246,13 +2249,12 @@ export function compactPlannerProgram(
 		}
 	}
 
-	const mapping: ICompactPlannerTopLineItem[][][] = plannerProgram.weeks.map(week =>
-		week.days.map(
-			day =>
-				topLineMap(
-					asPlanNodeOfTypeOrThrow("Program", parseBound(plannerExerciseParser, day.exerciseText)),
-					settings.exercises,
-				) as ICompactPlannerTopLineItem[],
+	const mapping: ITrackableLine[][][] = plannerProgram.weeks.map(week =>
+		week.days.map((day): ITrackableLine[] =>
+			topLineMap(
+				asPlanNodeOfTypeOrThrow("Program", parseBound(plannerExerciseParser, day.exerciseText)),
+				settings.exercises,
+			),
 		),
 	);
 
@@ -2269,24 +2271,22 @@ export function compactPlannerProgram(
 					repeatWeekIndex += 1
 				) {
 					const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
-					const repeatedExercises = (repeatDay || []).filter(
-						(e): e is ICompactPlannerTopLineExercise => {
-							if (
-								e.type !== "exercise" ||
-								e.value !== line.value ||
-								e.sectionsToReuse !== line.sectionsToReuse ||
-								e.exerciseIndex !== line.exerciseIndex ||
-								!ObjectUtils_isEqual(e.descriptions || [], line.descriptions || [])
-							) {
-								return false;
-							}
-							const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
-							const oldExercise = oldDay.success
-								? oldDay.data.find(ex => ex.key === e.value)
-								: undefined;
-							return !!oldExercise?.repeating?.includes(weekIndex + 1);
-						},
-					);
+					const repeatedExercises = (repeatDay || []).filter(e => {
+						if (
+							e.type !== "exercise" ||
+							e.value !== line.value ||
+							e.sectionsToReuse !== line.sectionsToReuse ||
+							e.exerciseIndex !== line.exerciseIndex ||
+							!ObjectUtils_isEqual(e.descriptions || [], line.descriptions || [])
+						) {
+							return false;
+						}
+						const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
+						const oldExercise = oldDay.success
+							? oldDay.data.find(ex => ex.key === e.value)
+							: undefined;
+						return !!oldExercise?.repeating?.includes(weekIndex + 1);
+					});
 					for (const e of repeatedExercises) {
 						e.used = true;
 					}
