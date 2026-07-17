@@ -55,7 +55,7 @@ export function PlannerTestUtils_get(text: string): {
 	return { program, planner };
 }
 
-export function ProgramExercise_weightChanges(
+function ProgramExercise_weightChanges(
 	program: IEvaluatedProgram,
 	programExerciseKey: string,
 ): IWeightChange[] {
@@ -89,13 +89,13 @@ export function PlannerTestUtils_changeWeight(
 	const { program } = PlannerTestUtils_get(programText);
 	const settings = Settings_build();
 	const evaluatedProgram = Program_evaluate(program, settings);
-	const programExercise = evaluatedProgram.weeks[0].days[0].exercises[0];
+	const key = evaluatedProgram.weeks[0].days[0].exercises[0].key;
 	return asProgramScript(
 		convertToPlanner(
 			PlannerProgram_replaceWeight(
 				evaluatedProgram,
-				programExercise.key,
-				cb(ProgramExercise_weightChanges(evaluatedProgram, programExercise.key)),
+				key,
+				cb(ProgramExercise_weightChanges(evaluatedProgram, key)),
 			),
 			settings,
 		),
