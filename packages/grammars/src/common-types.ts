@@ -24,6 +24,13 @@ export interface IScriptFnContext {
 	exerciseType?: IExerciseType;
 }
 
+/**
+ * These are the functions which scripts can make use of
+ * @todo - these functions are defined in an ideal scenario -> where the user provides arguments that match all the expected types
+ *    but in reality the implementation is more complex as the user may provide arguments that do not match the expected types so there are guards everywhere.
+ *    what should happen is instead we should find a way to split this so it's more type safe, and it's clear when we are handling user error, vs actual defaults.
+ *    e.g. rpeMultiplier has a default of 10 for the rpe if the rpe passed isn't a number. but if the rpe passed isn't a number is that because the user passed an IWeight? That's weird and should be handled differently than if they just passed undefined and expect the defaults
+ */
 export interface IScriptFunctions {
 	roundWeight: (num: IWeight, context: IScriptFnContext) => IWeight;
 	roundConvertWeight: (num: IWeight, context: IScriptFnContext) => IWeight;

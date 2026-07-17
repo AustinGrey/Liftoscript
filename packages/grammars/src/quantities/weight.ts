@@ -26,6 +26,7 @@ import { $ } from "@/utils/effects.ts";
 import { by, type SortingPredicate } from "@/utils/sorting.ts";
 import { closestBoundedSum } from "@/utils/knapsack.ts";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
+import { pipe } from "effect";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -444,7 +445,12 @@ export function getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeig
 }
 
 export function rpePct(reps: number, rpe: number): IDynamicWeight {
-	return percentORM(MathUtils_roundTo005(rpeMultiplier(reps, rpe) * 100));
+	return pipe(
+		rpeMultiplier(reps, rpe),
+		m => m * 100, // Turn into a percent
+		m => MathUtils_roundTo005(m),
+		m => percentORM(m),
+	);
 }
 
 export function convertToWeight(onerm: IWeight, value: Quantity, unit: IUnit): IWeight {
