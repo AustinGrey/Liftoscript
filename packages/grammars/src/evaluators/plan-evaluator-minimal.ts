@@ -2515,6 +2515,12 @@ function topLineMap(
 	return result;
 }
 
+/**
+ * Groups lines of a program together by the logic exercise that they belong to
+ * @param topLine The week/day/line of day grouping
+ * @returns The week/day/exercise/line of exercise grouping, with the exercises sorted by exercise index and repeat
+ * @todo this seems rather obtuse. The non-exercise lines are just comments. Why not parse into an exercise structure that allows for comments on it? Sure you might lose white space, but that's not really important?!
+ */
 function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[][][][] {
 	return topLine.map(topLineWeek =>
 		topLineWeek.map(topLineDay => {
