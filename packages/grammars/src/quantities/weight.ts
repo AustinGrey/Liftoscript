@@ -22,7 +22,6 @@ import type { IPlate } from "@/common-types.ts";
 import type { IExerciseType } from "@/exercises";
 import type { ISettings } from "@/user-settings";
 import { type TaggedTemplateHandler, taggedTemplateToString } from "@/utils/string.ts";
-import { $ } from "@/utils/effects.ts";
 import { by, type SortingPredicate } from "@/utils/sorting.ts";
 import { closestBoundedSum } from "@/utils/knapsack.ts";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
@@ -103,13 +102,10 @@ const prebuiltWeights: Partial<Record<string, IWeight>> = {};
  * @param unit The unit to use for the weight
  */
 export function build(value: number, unit: IUnit): IWeight {
-	const key = `${value}_${unit}`;
-	return prebuiltWeights[key] != null
-		? prebuiltWeights[key]
-		: (prebuiltWeights[key] = {
-				value: typeof value === "string" ? parseFloat(value) : value,
-				unit,
-			});
+	return (prebuiltWeights[`${value}_${unit}`] ??= {
+		value: typeof value === "string" ? parseFloat(value) : value,
+		unit,
+	});
 }
 
 export function buildAny(value: number, unit: IUnit | "%"): IWeight | IDynamicWeight {
