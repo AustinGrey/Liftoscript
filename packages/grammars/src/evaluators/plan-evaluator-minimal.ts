@@ -2531,13 +2531,7 @@ function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[
 					reset = true;
 				}
 			}
-			return group;
-		}),
-	);
-
-	for (const week of groupedTopLine) {
-		for (const day of week) {
-			day.sort(
+			return group.sort(
 				by(
 					group => group.find(l => l.type === "exercise"),
 					(ex1, ex2) => {
@@ -2549,8 +2543,8 @@ function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[
 					},
 				),
 			);
-		}
-	}
+		}),
+	);
 	return groupedTopLine;
 }
 
