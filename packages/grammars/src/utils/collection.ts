@@ -1,6 +1,6 @@
 import type { ConditionalPick } from "type-fest";
 import { castAs0, type IndexFrom0 } from "@/utils/indexes.ts";
-import { by } from "@/utils/sorting.ts";
+import { asNumericAscending, asNumericDescending, by } from "@/utils/sorting.ts";
 
 /**
  * A common filter predicate, removed undefined values
@@ -21,10 +21,7 @@ export function CollectionUtils_sortBy<
 	K extends keyof ConditionalPick<T, number> & keyof T,
 >(arr: T[], key: K, isReverse?: boolean): T[] {
 	return arr.toSorted(
-		by(
-			obj => Number(obj[key]),
-			(a, b) => (a - b) * (isReverse ? -1 : 1),
-		),
+		by(obj => Number(obj[key]), isReverse ? asNumericDescending : asNumericAscending),
 	);
 }
 
