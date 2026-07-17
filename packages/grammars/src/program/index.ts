@@ -1,4 +1,4 @@
-import { gt, type IWeight, multiply, roundConvertTo, TWeight, w } from "@/quantities/weight.ts";
+import { convertTo, gt, type IWeight, multiply, round, TWeight, w } from "@/quantities/weight.ts";
 import { getExerciseOrDefault, type IExerciseType, isUnilateral, TExerciseType } from "@/exercises";
 import { getPreferredUnit, type ISettings } from "@/user-settings";
 import { type ISet, TProgramState } from "@/common-types.ts";
@@ -48,7 +48,7 @@ function warmup(
 				const unit = getPreferredUnit(settings, exerciseType);
 				if (!isNumber(value) || weight != null) {
 					const warmupWeight = isNumber(value) ? multiply(weight!, value) : value;
-					const roundedWeight = roundConvertTo(warmupWeight, settings, unit, exerciseType);
+					const roundedWeight = round(convertTo(warmupWeight, unit), settings, unit, exerciseType);
 					memo.push({
 						index,
 						id: generateUid(6),
@@ -232,12 +232,12 @@ export function Program_getProgramExerciseForKeyAndDay(
 	const programDay = getDayData(program, day).dayObj;
 	const dayExercises = programDay ? Program_getProgramDayUsedExercises(programDay) : [];
 
-	const exerciseFoundInDay = dayExercises.find((pe) => pe.key === key);
+	const exerciseFoundInDay = dayExercises.find(pe => pe.key === key);
 	if (exerciseFoundInDay) return exerciseFoundInDay;
 
 	const exerciseFoundInProgram = getExercisesInProgram(program)
 		.filter((e): e is IPlannerProgramExerciseWithType => e.exerciseType !== undefined)
-		.find((pe) => pe.key === key);
+		.find(pe => pe.key === key);
 	if (!exerciseFoundInProgram) return undefined;
 
 	return {
@@ -249,7 +249,7 @@ export function Program_getProgramExerciseForKeyAndDay(
 export function getExercisesInProgram(
 	evaluatedProgram: IEvaluatedProgram,
 ): IPlannerProgramExercise[] {
-	return evaluatedProgram.weeks.flatMap((w) => w.days.flatMap((d) => d.exercises));
+	return evaluatedProgram.weeks.flatMap(w => w.days.flatMap(d => d.exercises));
 }
 
 export function getTotalDaysInProgram(program: IEvaluatedProgram): number {
@@ -307,7 +307,7 @@ export function Program_getProgramExercise(
 	if (key == null || program == null) {
 		return undefined;
 	}
-	return getDayData(program, day).dayObj?.exercises.find((e) => e.key === key);
+	return getDayData(program, day).dayObj?.exercises.find(e => e.key === key);
 }
 
 /**

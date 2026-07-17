@@ -16,13 +16,14 @@ import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import {
 	applyOp,
 	build,
+	convertTo,
 	eq,
 	type IDynamicWeight,
 	type IWeight,
 	parse as parseWeight,
 	percentORM,
 	print,
-	roundConvertTo,
+	round,
 	roundTo005,
 	TDynamicWeight,
 	TWeight,
@@ -111,7 +112,7 @@ import {
 	zIndexFrom1,
 } from "@/utils/indexes.ts";
 import { pipe } from "effect";
-import { orUndefined, $ } from "@/utils/effects.ts";
+import { $, orUndefined } from "@/utils/effects.ts";
 import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
 
@@ -1481,8 +1482,8 @@ function ProgramSet_getEvaluatedWeight(
 		tryGetWeight(set),
 		weight => evaluateWeight(weight, orm),
 		$.map(evaluatedWeight =>
-			roundConvertTo(
-				evaluatedWeight,
+			round(
+				convertTo(evaluatedWeight, getPreferredUnit(settings, exerciseType)),
 				settings,
 				getPreferredUnit(settings, exerciseType),
 				exerciseType,

@@ -1,9 +1,11 @@
 import { isQuantity, type LogicResult, type Quantity } from "@/logic/types.ts";
 import * as Weight from "@/quantities/weight.ts";
 import {
+	convertTo,
 	type IDynamicWeight,
 	type IWeight,
 	percentORM,
+	round as roundWeight,
 	roundTo005,
 	TDynamicWeight,
 	TWeight,
@@ -57,7 +59,12 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 				num = Weight.build(num, settings.units);
 			}
 			const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
-			return Weight.roundConvertTo(num, settings, unit ?? settings.units, context?.exerciseType);
+			return roundWeight(
+				convertTo(num, unit ?? settings.units),
+				settings,
+				unit ?? settings.units,
+				context?.exerciseType,
+			);
 		},
 		calculateTrainingMax: (weight, reps) => {
 			if (!is(TWeight, weight)) {

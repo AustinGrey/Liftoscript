@@ -407,15 +407,6 @@ function invert(weight: IWeight): IWeight {
 	return build(-weight.value, weight.unit);
 }
 
-export function roundConvertTo(
-	weight: IWeight,
-	settings: ISettings,
-	unit: IUnit,
-	exerciseType?: IExerciseType,
-): IWeight {
-	return round(convertTo(weight, unit), settings, unit, exerciseType);
-}
-
 export function getTrainingMax(weight: IWeight, reps: number): IWeight {
 	return multiply(getOneRepMax(weight, reps), 0.9);
 }
