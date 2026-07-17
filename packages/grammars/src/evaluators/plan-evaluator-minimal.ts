@@ -2516,13 +2516,9 @@ function topLineMap(
 }
 
 function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[][][][] {
-	const groupedTopLine: IPlannerTopLineItem[][][][] = [];
-	for (const topLineWeek of topLine) {
-		const weekGroup: IPlannerTopLineItem[][][] = [];
-		groupedTopLine.push(weekGroup);
-		for (const topLineDay of topLineWeek) {
+	const groupedTopLine: IPlannerTopLineItem[][][][] = topLine.map(topLineWeek =>
+		topLineWeek.map(topLineDay => {
 			const group: IPlannerTopLineItem[][] = [];
-			weekGroup.push(group);
 			let reset = true;
 			for (const line of topLineDay) {
 				if (reset) {
@@ -2535,8 +2531,10 @@ function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[
 					reset = true;
 				}
 			}
-		}
-	}
+			return group;
+		}),
+	);
+
 	for (const week of groupedTopLine) {
 		for (const day of week) {
 			day.sort(
