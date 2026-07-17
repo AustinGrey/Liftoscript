@@ -298,33 +298,24 @@ export function decrement(
 	}
 }
 
-export function round(
-	weight: IWeight,
-	settings: ISettings,
-	unit: IUnit,
-	exerciseType?: IExerciseType,
-): IWeight {
-	if (exerciseType == null) {
-		return roundTo005(weight);
-	}
-	return calculatePlates(weight, settings, unit, exerciseType).totalWeight;
-}
-
 /**
  * Tries to round the value to match the available plates on the equipment
- * If you don't care about equipment, just use {@link roundTo005}.
+ * If you don't care about equipment, just use {@link roundTo005} directly.
  * @param weight The weight to round
  * @param settings The user's settings
  * @param unit The unit to round to
  * @param exerciseType The type of exercise
  */
-export function roundToPlates(
-	weight: $.Option<IWeight>,
+export function round(
+	weight: IWeight,
 	settings: ISettings,
 	unit: IUnit,
-	exerciseType: IExerciseType,
+	exerciseType: IExerciseType | undefined,
 ): IWeight {
-	return calculatePlates(weight, settings, unit, exerciseType).totalWeight;
+	// @todo why different rounding strategies?
+	return exerciseType
+		? roundTo000005(calculatePlates(weight, settings, unit, exerciseType).totalWeight)
+		: roundTo005(weight);
 }
 
 export function roundTo005(weight: IWeight): IWeight {
@@ -408,7 +399,7 @@ function calculatePlates(
 	);
 	const added = add(total, barWeight);
 	return {
-		totalWeight: roundTo000005(inverted ? invert(added) : added),
+		totalWeight: inverted ? invert(added) : added,
 	};
 }
 
