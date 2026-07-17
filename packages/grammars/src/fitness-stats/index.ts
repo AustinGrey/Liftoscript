@@ -1,7 +1,7 @@
 import { TLengthUnit } from "@/common-types.ts";
 import { add, build, divide, type IWeight, TDynamicWeight, TWeight } from "@/quantities/weight.ts";
-import { CollectionUtils_sortBy } from "@/utils/collection.ts";
 import { z, type ZodType } from "zod";
+import { asNumericDescending, by } from "@/utils/sorting.ts";
 
 const TLength = z.object({
 	value: z.number(),
@@ -93,10 +93,9 @@ export function getAverageBodyweight(
 	resultingUnits: "kg" | "lb",
 	movingAverageWindowSize: number | undefined,
 ): IWeight | undefined {
-	const samples = CollectionUtils_sortBy(stats.weight, "timestamp", true).slice(
-		0,
-		movingAverageWindowSize,
-	);
+	const samples = stats.weight
+		.toSorted(by(stat => stat.timestamp, asNumericDescending))
+		.slice(0, movingAverageWindowSize);
 	if (!movingAverageWindowSize || samples.length < movingAverageWindowSize) {
 		return samples.at(0)?.value;
 	}

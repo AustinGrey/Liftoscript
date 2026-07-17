@@ -1,7 +1,7 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import { CollectionUtils_sortBy, definedOnly, tryFindIndex } from "../utils/collection";
+import { definedOnly, tryFindIndex } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
@@ -115,7 +115,7 @@ import { pipe } from "effect";
 import { $, orUndefined } from "@/utils/effects.ts";
 import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
-import { asNumericDescending, by } from "@/utils/sorting.ts";
+import { asNumericAscending, asNumericDescending, by } from "@/utils/sorting.ts";
 
 //#region Program
 
@@ -231,9 +231,11 @@ export function Program_nextHistoryRecordFromEvaluated(
 		dayName: `${isMultiweek ? `${week.name} - ` : ""}${dayData.dayObj?.name}`,
 		startTime: now,
 		updatedAt: now,
-		entries: CollectionUtils_sortBy(dayExercises, "order").map((exercise, i) =>
-			Program_nextHistoryEntry(program, dayData, i, exercise, stats, settings),
-		),
+		entries: dayExercises
+			.toSorted(by(exercise => exercise.order, asNumericAscending))
+			.map((exercise, i) =>
+				Program_nextHistoryEntry(program, dayData, i, exercise, stats, settings),
+			),
 	};
 }
 
@@ -440,9 +442,8 @@ function Program_forceEvaluate(program: IProgram, settings: ISettings): IEvaluat
 						dayInWeek: as1(dayInWeekIndex),
 					};
 					dayNum = next(dayNum);
-					const evaluatedExercises = CollectionUtils_sortBy(
-						evaluatedDay.success ? evaluatedDay.data : [],
-						"order",
+					const evaluatedExercises = (evaluatedDay.success ? evaluatedDay.data : []).toSorted(
+						by(exercise => exercise.order, asNumericAscending),
 					);
 					if (!evaluatedDay.success) {
 						errors.push({ error: evaluatedDay.error, dayData });

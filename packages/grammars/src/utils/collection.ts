@@ -11,21 +11,6 @@ export function definedOnly<T>(value: T | undefined): value is T {
 }
 
 /**
- * Sorts an array of objects by the given numeric key.
- * @param arr The array to sort.
- * @param key The key to sort by.
- * @param isReverse Whether to sort in reverse order.
- */
-export function CollectionUtils_sortBy<
-	T extends {},
-	K extends keyof ConditionalPick<T, number> & keyof T,
->(arr: T[], key: K, isReverse?: boolean): T[] {
-	return arr.toSorted(
-		by(obj => Number(obj[key]), isReverse ? asNumericDescending : asNumericAscending),
-	);
-}
-
-/**
  * A typesafe version of findIndex
  * @param arr the collection to search
  * @param predicate the predicate to check
