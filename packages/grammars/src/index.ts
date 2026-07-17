@@ -73,7 +73,6 @@ export {
 	multiply,
 	parse as parseWeight,
 	print as printWeight,
-	roundConvertTo,
 	subtract,
 	type IDynamicWeight,
 	type IUnit,
