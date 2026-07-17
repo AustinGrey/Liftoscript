@@ -24,7 +24,7 @@ export const validate: ProgressionFormulaValidator = function* (_, valueNode, va
 	if (script) {
 		const { line, from } = liftoscriptNode.getPointer();
 		yield* validateLiftoscript(script).map(
-			(err) =>
+			err =>
 				new SourcedSyntaxError(
 					err.message,
 					line + err.line,

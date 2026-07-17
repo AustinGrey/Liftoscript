@@ -47,7 +47,7 @@ export function ObjectUtils_filter<T extends {}>(
 	obj: T,
 	cb: (key: keyof T, value: T[keyof T]) => boolean,
 ): Partial<T> {
-	const filteredKeys = ObjectUtils_keys(obj).filter((key) => {
+	const filteredKeys = ObjectUtils_keys(obj).filter(key => {
 		const value = obj[key];
 		return cb(key, value);
 	});

@@ -46,7 +46,7 @@ onMounted(() => {
 				history(),
 				keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
 				EditorView.lineWrapping,
-				EditorView.updateListener.of((update) => {
+				EditorView.updateListener.of(update => {
 					if (update.docChanged) {
 						emit("update:modelValue", update.state.doc.toString());
 					}
@@ -58,7 +58,7 @@ onMounted(() => {
 
 watch(
 	() => props.modelValue,
-	(value) => {
+	value => {
 		if (view && value !== view.state.doc.toString()) {
 			view.dispatch({
 				changes: { from: 0, to: view.state.doc.length, insert: value },

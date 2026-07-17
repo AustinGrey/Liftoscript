@@ -20,7 +20,7 @@ import type { IPlannerProgram } from "@/program";
  * @param text The text to format
  */
 function formatAsCommentLines(text?: string): string[] {
-	return text?.split("\n").map((l) => (l ? `// ${l}` : "//")) ?? [];
+	return text?.split("\n").map(l => (l ? `// ${l}` : "//")) ?? [];
 }
 
 /**
@@ -35,12 +35,12 @@ export function asProgramScript(
 ): string {
 	return (
 		program.weeks
-			.flatMap((week) => [
+			.flatMap(week => [
 				...formatAsCommentLines(week.description),
 				`# ${week.name}`,
 
-				...week.days.flatMap((day) => [
-					...formatAsCommentLines(day.description).map((line) =>
+				...week.days.flatMap(day => [
+					...formatAsCommentLines(day.description).map(line =>
 						compatibilityOptions.addExtraSpace && line === "//" ? "// " : line,
 					),
 					`## ${day.name}`,

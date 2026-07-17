@@ -130,7 +130,7 @@ type NormalizedLogicTest = {
 
 function normalizeLogicTest(test: LogicTestSpec): NormalizedLogicTest {
 	const { script, cases, ...defaults } = test;
-	const mergedCases = (cases?.length ? cases : [{}]).map((case_) => toMerged(defaults, case_));
+	const mergedCases = (cases?.length ? cases : [{}]).map(case_ => toMerged(defaults, case_));
 
 	for (const case_ of mergedCases) {
 		if (!("result" in case_) && case_.finalState === undefined) {
@@ -591,7 +591,7 @@ if (!(completedReps >= reps)) {
 describe.each<NormalizedLogicTest>(cases.map(normalizeLogicTest))(
 	"$script",
 	({ script, cases }) => {
-		describe.each(cases)("Result is $result for case %#: $description", (case_) => {
+		describe.each(cases)("Result is $result for case %#: $description", case_ => {
 			const { initialState, adjustEmptyGlobals, finalState } = case_;
 			test("new system", () => {
 				const { result: output, finalState: state } = run(

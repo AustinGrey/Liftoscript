@@ -90,7 +90,7 @@ function humanize(value: string): string {
 
 const filtered = computed(() => {
 	const q = search.value.trim().toLowerCase();
-	return programs.filter((p) => {
+	return programs.filter(p => {
 		if (filters.goal && p.goal !== filters.goal) return false;
 		if (filters.frequency && String(p.frequency) !== filters.frequency) return false;
 		if (filters.age && p.age !== filters.age) return false;

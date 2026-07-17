@@ -21,7 +21,7 @@ export function calculateIndexValues(
 	indexes: SourcedSyntaxNode[],
 	tools: EvaluateTools,
 ): (number | "*")[] {
-	return indexes.filter(definedOnly).map((ie) => {
+	return indexes.filter(definedOnly).map(ie => {
 		if (isLogicNodeOfType("Wildcard", ie)) {
 			return "*" as const;
 		} else {
@@ -69,7 +69,7 @@ export function changeBinding(
 	op: IAssignmentOp,
 	tools: EvaluateTools,
 ): number | IWeight | IDynamicWeight {
-	const indexes = indexExprs.map((ie) => queryChild(ie)).filter((x) => x !== undefined);
+	const indexes = indexExprs.map(ie => queryChild(ie)).filter(x => x !== undefined);
 	const maxTargetLength = 1;
 	if (indexes.length > maxTargetLength) {
 		throw nodeError(expression, `${key} can only have 1 value inside []`);
@@ -143,7 +143,7 @@ export function recordVariableUpdate(
 	op: IAssignmentOp,
 	tools: EvaluateTools,
 ): Quantity {
-	const indexes = indexExprs.map((ie) => queryChild(ie)).filter((i) => i != undefined);
+	const indexes = indexExprs.map(ie => queryChild(ie)).filter(i => i != undefined);
 	const maxTargetLength =
 		key === "setVariationIndex" || key === "descriptionIndex" ? 2 : key === "numberOfSets" ? 3 : 4;
 	if (key === "setVariationIndex") {
@@ -236,31 +236,31 @@ export function changeNumberOfSets(
 	}
 
 	// @TODO several of these elements are aliases for others, but we have to duplicate and maintain consistent copies of the data. This is not good design. We should only store data for the vars once, and re-route aliases to access the single copy
-	tools.updateGlobal("originalWeights", (x) =>
+	tools.updateGlobal("originalWeights", x =>
 		chopOrFill(
 			x,
 			// Copy the last entry to fill
 			buildAny(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
 		),
 	);
-	tools.updateGlobal("timers", (x) => chopOrFill(x, x[ns]));
-	tools.updateGlobal("amraps", (x) => chopOrFill(x, x[ns]));
-	tools.updateGlobal("logrpes", (x) => chopOrFill(x, x[ns]));
-	tools.updateGlobal("askweights", (x) => chopOrFill(x, x[ns]));
-	tools.updateGlobal("RPE", (x) => chopOrFill(x, x[ns]));
-	tools.updateGlobal("completedRepsLeft", (x) => chopOrFill(x, undefined));
-	tools.updateGlobal("completedRPE", (x) => chopOrFill(x, undefined));
-	tools.updateGlobal("isCompleted", (x) => chopOrFill(x, 0));
+	tools.updateGlobal("timers", x => chopOrFill(x, x[ns]));
+	tools.updateGlobal("amraps", x => chopOrFill(x, x[ns]));
+	tools.updateGlobal("logrpes", x => chopOrFill(x, x[ns]));
+	tools.updateGlobal("askweights", x => chopOrFill(x, x[ns]));
+	tools.updateGlobal("RPE", x => chopOrFill(x, x[ns]));
+	tools.updateGlobal("completedRepsLeft", x => chopOrFill(x, undefined));
+	tools.updateGlobal("completedRPE", x => chopOrFill(x, undefined));
+	tools.updateGlobal("isCompleted", x => chopOrFill(x, 0));
 
 	// @TODO duplicated
-	tools.updateGlobal("weights", (x) =>
+	tools.updateGlobal("weights", x =>
 		chopOrFill(
 			x,
 			// Copy the last entry to fill
 			Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
 		),
 	);
-	tools.updateGlobal("w", (x) =>
+	tools.updateGlobal("w", x =>
 		chopOrFill(
 			x, // Copy the last entry to fill
 			Weight.build(x[ns]?.value ?? 0, x[ns]?.unit || "lb"),
@@ -268,20 +268,20 @@ export function changeNumberOfSets(
 	);
 
 	// @TODO duplicated
-	tools.updateGlobal("reps", (x) => chopOrFill(x, x[ns] ?? 0));
-	tools.updateGlobal("r", (x) => chopOrFill(x, x[ns] ?? 0));
+	tools.updateGlobal("reps", x => chopOrFill(x, x[ns] ?? 0));
+	tools.updateGlobal("r", x => chopOrFill(x, x[ns] ?? 0));
 
 	// @TODO duplicated
-	tools.updateGlobal("minReps", (x) => chopOrFill(x, x[ns]));
-	tools.updateGlobal("mr", (x) => chopOrFill(x, x[ns]));
+	tools.updateGlobal("minReps", x => chopOrFill(x, x[ns]));
+	tools.updateGlobal("mr", x => chopOrFill(x, x[ns]));
 
 	// @TODO duplicated
-	tools.updateGlobal("completedReps", (x) => chopOrFill(x, undefined));
-	tools.updateGlobal("cr", (x) => chopOrFill(x, undefined));
+	tools.updateGlobal("completedReps", x => chopOrFill(x, undefined));
+	tools.updateGlobal("cr", x => chopOrFill(x, undefined));
 
 	// @TODO duplicated
-	tools.updateGlobal("completedWeights", (x) => chopOrFill(x, undefined));
-	tools.updateGlobal("cw", (x) => chopOrFill(x, undefined));
+	tools.updateGlobal("completedWeights", x => chopOrFill(x, undefined));
+	tools.updateGlobal("cw", x => chopOrFill(x, undefined));
 
 	// Then we can finally update the value
 	// @TODO duplicated

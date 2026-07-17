@@ -3,5 +3,5 @@
  * @param s The string to check
  */
 export function isVisibleString(s: unknown): s is string {
-  return typeof s === "string" && s.trim() !== "";
+	return typeof s === "string" && s.trim() !== "";
 }

@@ -1,7 +1,7 @@
 import type { LogicHandler } from "@/logic/evaluators/types.ts";
 import { getChild, queryChild } from "@/logic/parsing/guards.ts";
 
-export const handler: LogicHandler<"NumberExpression"> = (n) => {
+export const handler: LogicHandler<"NumberExpression"> = n => {
 	const numberNode = getChild(n, {
 		ofType: "Number",
 	});

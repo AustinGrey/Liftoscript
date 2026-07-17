@@ -97,7 +97,7 @@ const state = reactive(createDefaultState());
 const showEditor = ref(true);
 
 let debounce: ReturnType<typeof setTimeout> | undefined;
-watch(plannerText, (value) => {
+watch(plannerText, value => {
 	clearTimeout(debounce);
 	debounce = setTimeout(() => {
 		liveText.value = value;

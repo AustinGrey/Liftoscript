@@ -32,7 +32,7 @@ export function* queryChildren<TTypes extends string>(
 	node: SourcedSyntaxNode,
 	options?: QueryOptions<TTypes>,
 ): Generator<SourcedSyntaxNode> {
-	yield* tryQueryChildren(node, options).map((r) =>
+	yield* tryQueryChildren(node, options).map(r =>
 		r instanceof SourcedSyntaxError ? throwError(r) : r,
 	);
 }

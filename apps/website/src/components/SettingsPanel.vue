@@ -68,7 +68,7 @@ function setUnits(units: IUnit) {
 }
 
 function placeholderFor(key: string): string {
-	const exercise = props.exercises.find((e) => e.key === key);
+	const exercise = props.exercises.find(e => e.key === key);
 	if (!exercise) return "";
 	return String(Math.round(exercise.defaultOrm.value));
 }

@@ -29,7 +29,7 @@ import type { IEither } from "@/utils/types.ts";
  * @param n The node
  * @deprecated There shouldn't be any unhandled nodes
  */
-const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = (n) => {
+const NOT_IMPLEMENTED: LogicHandler<NodeNames_Logic> = n => {
 	throw nodeError(n, `Not implemented - type ${n.type.name}`);
 };
 
@@ -139,7 +139,7 @@ export function run(
 
 	const tools: EvaluateTools = {
 		mode,
-		recurse: (node) => handleLogic(node, tools),
+		recurse: node => handleLogic(node, tools),
 		getState: (key, relatedNode, index) => {
 			if (index === undefined) {
 				if (key in state) {
@@ -179,12 +179,12 @@ export function run(
 		upsertState: (key, value) => {
 			state[key] = value;
 		},
-		getGlobal: (key) => globalData[key],
+		getGlobal: key => globalData[key],
 		updateGlobal: (key, valueOrSetter) => {
 			globalData[key] =
 				typeof valueOrSetter === "function" ? valueOrSetter(globalData[key]) : valueOrSetter;
 		},
-		requestUpdate: (update) => {
+		requestUpdate: update => {
 			updates.push(update);
 		},
 		getVar(key) {

@@ -67,7 +67,7 @@ export function round<T extends LogicResult>(
 	rounder: <TQ extends Quantity>(q: TQ) => TQ,
 ): T {
 	if (Array.isArray(result)) {
-		return result.map((r) => round(r, rounder)) as T;
+		return result.map(r => round(r, rounder)) as T;
 	}
 	if (isQuantity(result)) {
 		return rounder(result);

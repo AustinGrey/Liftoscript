@@ -127,10 +127,10 @@ function toSimSession(
 		week: record.week,
 		dayInWeek: record.dayInWeek,
 		dayName: record.dayName,
-		entries: record.entries.map((entry) => ({
+		entries: record.entries.map(entry => ({
 			exerciseName: getExerciseOrDefault(entry.exercise, {}).name,
 			exerciseKey: toKey(entry.exercise),
-			sets: entry.sets.map((set) => ({
+			sets: entry.sets.map(set => ({
 				reps: set.reps,
 				minReps: set.minReps,
 				weight: set.weight ? printWeight(set.weight) : undefined,

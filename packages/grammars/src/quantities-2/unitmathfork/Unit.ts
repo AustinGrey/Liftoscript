@@ -845,20 +845,20 @@ let _config = function _config<T = number>(options: RequiredOptions<T>): UnitFac
 		let comp = unitList.length;
 
 		// Number of units in denominator and numerator
-		let unitsDen = unitList.filter((a) => a.power < 1e-14);
-		let unitsNum = unitList.filter((a) => a.power > 1e-14);
+		let unitsDen = unitList.filter(a => a.power < 1e-14);
+		let unitsNum = unitList.filter(a => a.power > 1e-14);
 
 		// If there are no units in the numerator, then any units in the denominator will need a ^-1
 
 		// Number of units in the numerator containing powers !== 1, i.e. kg^2, adds two symbols
-		comp += unitsNum.filter((a) => Math.abs(a.power - 1) > 1e-14).length * 2;
+		comp += unitsNum.filter(a => Math.abs(a.power - 1) > 1e-14).length * 2;
 
 		// If there is at least one unit in the numerator and denominator, we will invert the denominator units' powers
 		let denPowerInvert = unitsDen.length > 0 && unitsNum.length > 0 ? -1 : 1;
 
 		// Number of units in the denominator containing inverted powers !== 1
 		comp +=
-			unitsDen.filter((a) => a.power < 0 && Math.abs(a.power * denPowerInvert - 1) > 1e-14).length *
+			unitsDen.filter(a => a.power < 0 && Math.abs(a.power * denPowerInvert - 1) > 1e-14).length *
 			2;
 
 		// At least one unit in numerator and denominator, adds one symbol: '/'
@@ -897,7 +897,7 @@ let _config = function _config<T = number>(options: RequiredOptions<T>): UnitFac
 	 */
 	function _combineDuplicateUnits(unitList: AtomicUnit<T>[]): AtomicUnit<T>[] {
 		// Two-level deep copy of units
-		let combinedUnitList = unitList.map((u) => Object.assign({}, u));
+		let combinedUnitList = unitList.map(u => Object.assign({}, u));
 
 		if (combinedUnitList.length >= 2) {
 			// Combine duplicate units
@@ -1652,16 +1652,16 @@ let defaults: TypeArithmetics<number> = {
 	mul: (a, b) => a * b,
 	div: (a, b) => a / b,
 	pow: (a, b) => Math.pow(a, b),
-	abs: (a) => Math.abs(a),
+	abs: a => Math.abs(a),
 	eq: (a, b) => a === b || Math.abs(a - b) / Math.abs(a + b) < 1e-15,
 	lt: (a, b) => a < b,
 	gt: (a, b) => a > b,
 	le: (a, b) => a <= b,
 	ge: (a, b) => a >= b,
-	round: (a) => Math.round(a),
-	trunc: (a) => Math.trunc(a),
+	round: a => Math.round(a),
+	trunc: a => Math.trunc(a),
 	conv: (a: number | string) => (typeof a === "string" ? parseFloat(a) : a),
-	clone: (a) => a,
+	clone: a => a,
 };
 
 // These are mostly to help warn the user if they forgot to override one or more of the default functions

@@ -94,7 +94,7 @@ function formatGroup(group: SetGroup): string {
 }
 
 function entrySchemes(entry: SimEntry): { text: string; label?: string }[] {
-	return groupSets(entry.sets).map((g) => ({
+	return groupSets(entry.sets).map(g => ({
 		text: formatGroup(g),
 		label: g.label,
 	}));

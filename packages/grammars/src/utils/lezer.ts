@@ -11,7 +11,7 @@ import { LRParser } from "@lezer/lr";
  * @param node The node to get the line and offest for
  */
 function getLineAndOffset(script: string, node: SyntaxNode): [number, number] {
-	const linesLengths = script.split("\n").map((l) => l.length + 1);
+	const linesLengths = script.split("\n").map(l => l.length + 1);
 	let offset = 0;
 	for (let i = 0; i < linesLengths.length; i++) {
 		const lineLength = linesLengths[i];

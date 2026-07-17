@@ -93,10 +93,10 @@ const modules = import.meta.glob<string>("../programs/*.md", {
 
 export const programs: ProgramDoc[] = Object.entries(modules)
 	.map(([path, raw]) => buildDoc(path, raw))
-	.filter((doc) => doc.liftoscript.length > 0)
+	.filter(doc => doc.liftoscript.length > 0)
 	.sort((a, b) => a.name.localeCompare(b.name));
 
-const programsBySlug = new Map(programs.map((p) => [p.slug, p]));
+const programsBySlug = new Map(programs.map(p => [p.slug, p]));
 
 export function getProgram(slug: string): ProgramDoc | undefined {
 	return programsBySlug.get(slug);
@@ -104,5 +104,5 @@ export function getProgram(slug: string): ProgramDoc | undefined {
 
 /** The distinct values present for a given frontmatter facet, for building filters. */
 export function facetValues(key: "goal" | "age" | "duration" | "frequency"): string[] {
-	return Array.from(new Set<string>(programs.map((p) => p[key]).filter(isVisibleString))).sort();
+	return Array.from(new Set<string>(programs.map(p => p[key]).filter(isVisibleString))).sort();
 }

@@ -120,7 +120,7 @@ export function evaluate(
 		switch (section.type) {
 			case "sets":
 				allSets.push(...section.data);
-				if (section.data.some((set) => set.repRange != null)) {
+				if (section.data.some(set => set.repRange != null)) {
 					setVariations.push({
 						sets: section.data,
 						isCurrent: section.isCurrent,
@@ -184,67 +184,67 @@ export function evaluate(
 		progress,
 		update,
 		globals: {
-			rpe: allSets.find((set) => set.repRange == null && set.rpe != null)?.rpe,
-			logRpe: allSets.find((set) => set.repRange == null && set.logRpe != null)?.logRpe,
-			askWeight: allSets.find((set) => set.repRange == null && set.askWeight != null)?.askWeight,
-			timer: allSets.find((set) => set.repRange == null && set.timer != null)?.timer,
-			percentage: allSets.find((set) => set.repRange == null && set.percentage != null)?.percentage,
-			weight: allSets.find((set) => set.repRange == null && set.weight != null)?.weight,
+			rpe: allSets.find(set => set.repRange == null && set.rpe != null)?.rpe,
+			logRpe: allSets.find(set => set.repRange == null && set.logRpe != null)?.logRpe,
+			askWeight: allSets.find(set => set.repRange == null && set.askWeight != null)?.askWeight,
+			timer: allSets.find(set => set.repRange == null && set.timer != null)?.timer,
+			percentage: allSets.find(set => set.repRange == null && set.percentage != null)?.percentage,
+			weight: allSets.find(set => set.repRange == null && set.weight != null)?.weight,
 		},
 		points: {
 			fullName: nameNode.getPointer(),
 			supersetPoint: child
 				.getChildren(PlannerNodeName.ExerciseSection)
-				.map((n) => n.getChild(PlannerNodeName.Superset))
-				.filter((n) => n)[0]
+				.map(n => n.getChild(PlannerNodeName.Superset))
+				.filter(n => n)[0]
 				?.getPointer(),
 			reuseSetPoint: child
 				.getChildren(PlannerNodeName.ExerciseSection)
-				.map((n) => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
-				.filter((n) => n)[0]
+				.map(n => n.getChild(PlannerNodeName.ReuseSectionWithWeekDay))
+				.filter(n => n)[0]
 				?.getPointer(),
 			progressPoint: child
 				.getChildren(PlannerNodeName.ExerciseSection)
-				.map((n) => {
+				.map(n => {
 					const node = n
 						.getChild(PlannerNodeName.ExerciseProperty)
 						?.getChild(PlannerNodeName.ExercisePropertyName);
 					return node != null && node.source === "progress" ? node : undefined;
 				})
 				.flat(2)
-				.filter((n) => n)[0]
+				.filter(n => n)[0]
 				?.getPointer(),
 			idPoint: child
 				.getChildren(PlannerNodeName.ExerciseSection)
-				.map((n) => {
+				.map(n => {
 					const node = n
 						.getChild(PlannerNodeName.ExerciseProperty)
 						?.getChild(PlannerNodeName.ExercisePropertyName);
 					return node != null && node.source === "id" ? node : undefined;
 				})
 				.flat(2)
-				.filter((n) => n)[0]
+				.filter(n => n)[0]
 				?.getPointer(),
 			updatePoint: child
 				.getChildren(PlannerNodeName.ExerciseSection)
-				.map((n) => {
+				.map(n => {
 					const node = n
 						.getChild(PlannerNodeName.ExerciseProperty)
 						?.getChild(PlannerNodeName.ExercisePropertyName);
 					return node != null && node.source === "update" ? node : undefined;
 				})
 				.flat(2)
-				.filter((n) => n)[0]
+				.filter(n => n)[0]
 				?.getPointer(),
 			warmupPoint: child
 				.getChildren(PlannerNodeName.ExerciseSection)
-				.map((n) =>
+				.map(n =>
 					n
 						.getChild(PlannerNodeName.ExerciseProperty)
 						?.getChild(PlannerNodeName.WarmupExerciseSets),
 				)
 				.flat(2)
-				.filter((n) => n)[0]
+				.filter(n => n)[0]
 				?.getPointer(),
 		},
 	};
@@ -263,7 +263,7 @@ function PlannerProgramExercise_shortNameFromFullName(
 function evaluateSet(expr: PlanNodes.ExerciseSet): NodeResult<IPlannerProgramExerciseSet> {
 	const setPartNodes = expr.getChildren(PlannerNodeName.SetPart);
 	const setParts = setPartNodes
-		.map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
+		.map(setPartNode => getNodeSourceEscapedWhiteSpace(setPartNode))
 		.join("");
 	const repRange = getRepRange(setParts);
 	const rpeNode = expr.getChild(PlannerNodeName.Rpe);
@@ -296,7 +296,7 @@ function evaluateSet(expr: PlanNodes.ExerciseSet): NodeResult<IPlannerProgramExe
 	const weight = getWeight(weightNode);
 	const label = labelNode
 		? queryChildren(labelNode)
-				.map((n) => getNodeSourceEscapedWhiteSpace(n))
+				.map(n => getNodeSourceEscapedWhiteSpace(n))
 				.toArray()
 				.join(" ")
 		: undefined;
@@ -330,11 +330,11 @@ function evaluateId(expr: PlanNodes.ExerciseProperty): NodeResult<number[]> {
 	}
 	const fnArgs = valueNode
 		.getChildren(PlannerNodeName.FunctionArgument)
-		.map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
+		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode));
 	if (fnName === "tags" && fnArgs.length === 0) {
 		return nodeFailure(nodeError(fnNameNode, `You should provide the list of numbers in "tags"`));
 	}
-	return nodeResult(fnArgs.map((t) => parseInt(t, 10)).filter((t) => !isNaN(t)));
+	return nodeResult(fnArgs.map(t => parseInt(t, 10)).filter(t => !isNaN(t)));
 }
 
 function evaluateUpdate(expr: PlanNodes.ExerciseProperty): NodeResult<IProgramExerciseUpdate> {
@@ -349,7 +349,7 @@ function evaluateUpdate(expr: PlanNodes.ExerciseProperty): NodeResult<IProgramEx
 	const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
 	const fnArgs = valueNode
 		.getChildren(PlannerNodeName.FunctionArgument)
-		.map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
+		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode));
 	let script: string | undefined;
 	let body: string | undefined;
 	let meta: { stateKeys: Set<string> } | undefined;
@@ -375,16 +375,14 @@ function evaluateUpdate(expr: PlanNodes.ExerciseProperty): NodeResult<IProgramEx
 		?.getChild(PlannerNodeName.ExerciseName);
 	body = reuseLiftoscriptNode ? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode) : undefined;
 	if (script) {
-		const allKeys = queryTree(parseBound(script), (node) =>
-			isLogicNodeOfType("StateVariable", node),
-		)
+		const allKeys = queryTree(parseBound(script), node => isLogicNodeOfType("StateVariable", node))
 			.map(function (expr: TypedLogicNode<NodeNames_Logic>): string | undefined {
 				return queryChild(expr, { ofType: "StateVariableIndex" }) !== undefined
 					? // If there's an index, then there isn't going to be a named state key
 						undefined
 					: queryChild(expr, { ofType: "Keyword" })?.source;
 			})
-			.filter((key) => key !== undefined);
+			.filter(key => key !== undefined);
 
 		meta = { stateKeys: new Set(allKeys) };
 	}
@@ -427,7 +425,7 @@ function evaluateProgressImpl(
 	const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
 	const fnArgs = valueNode
 		.getChildren(PlannerNodeName.FunctionArgument)
-		.map((argNode) => getNodeSourceEscapedWhiteSpace(argNode));
+		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode));
 
 	const validatorMap: Record<IProgramExerciseProgressType, ProgressionFormulaValidator> = {
 		[IProgramExerciseProgressType.LP]: validateLp,
@@ -441,12 +439,12 @@ function evaluateProgressImpl(
 		: function* () {
 				yield nodeError(fnNameNode, `There's no such progression exists - '${fnName}'`);
 			};
-	const [firstError] = validator(fnArgs, valueNode, (script) =>
+	const [firstError] = validator(fnArgs, valueNode, script =>
 		validateScript(
 			script,
 			fnArgsToStateVars(
-				fnArgs.filter((a) => a !== undefined),
-				(message) => throwError(nodeError(valueNode, message)),
+				fnArgs.filter(a => a !== undefined),
+				message => throwError(nodeError(valueNode, message)),
 			).state,
 			// @todo the only use case for these very drilled closures is to perform validation. MAybe the whole validator should be the closure, not these creation methods.
 			createEmptyScriptBindings(),
@@ -582,8 +580,8 @@ function evaluateSection(
 		];
 		if (sets.length > 0) {
 			const [successes, failures] = splitBy(
-				sets.map((set) => evaluateSet(set)),
-				(r) => r.success,
+				sets.map(set => evaluateSet(set)),
+				r => r.success,
 			);
 
 			if (failures.length > 0) {
@@ -592,7 +590,7 @@ function evaluateSection(
 
 			return nodeResult({
 				type: "sets",
-				data: successes.map((r) => r.data),
+				data: successes.map(r => r.data),
 				isCurrent: setsNode.getChild(PlannerNodeName.CurrentVariation) != null,
 			});
 		}
@@ -615,7 +613,7 @@ function evaluateSection(
 function evaluateWarmupSet(expr: PlanNodes.WarmupExerciseSet): IPlannerProgramExerciseWarmupSet {
 	const setPartNodes = expr.getChildren(PlannerNodeName.WarmupSetPart);
 	const setParts = setPartNodes
-		.map((setPartNode) => getNodeSourceEscapedWhiteSpace(setPartNode))
+		.map(setPartNode => getNodeSourceEscapedWhiteSpace(setPartNode))
 		.join("");
 	const { numberOfSets, reps } = getWarmupReps(setParts);
 	const percentageNode = expr.getChild(PlannerNodeName.Percentage);
@@ -659,7 +657,7 @@ function evaluateWarmup(
 			}),
 		];
 		if (sets.length > 0) {
-			return nodeResult(sets.map((set) => evaluateWarmupSet(set)));
+			return nodeResult(sets.map(set => evaluateWarmupSet(set)));
 		}
 	}
 	return nodeResult([]);
@@ -686,7 +684,7 @@ function getReuseWeekDay(weekDayNode: SourcedSyntaxNode | null): {
 	let week: IndexFrom1 | undefined;
 	let day: IndexFrom1 | undefined;
 	if (weekDayNode != null) {
-		const result = weekDayNode.getChildren(PlannerNodeName.WeekOrDay).map((n) => {
+		const result = weekDayNode.getChildren(PlannerNodeName.WeekOrDay).map(n => {
 			const [child] = queryChildren(n);
 			if (child?.type.name === PlannerNodeName.Int) {
 				return castAs1(parseInt(getNodeSourceEscapedWhiteSpace(child), 10));
@@ -874,7 +872,7 @@ for (var.i in completedReps) {
 		case IProgramExerciseProgressType.CUSTOM: {
 			const script = opts.script;
 			let errorMessage: string | undefined;
-			const { state, stateMetadata } = fnArgsToStateVars(args, (message) => {
+			const { state, stateMetadata } = fnArgsToStateVars(args, message => {
 				errorMessage = message;
 			});
 			if (errorMessage) {

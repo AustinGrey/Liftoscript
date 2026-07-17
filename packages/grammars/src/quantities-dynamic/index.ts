@@ -11,7 +11,7 @@ export function evaluateWeight(
 	weight: $.Option<IWeight | IDynamicWeight>,
 	onerm: IWeight,
 ): $.Option<IWeight> {
-	return $.map(weight, (weight) =>
+	return $.map(weight, weight =>
 		is(TWeight, weight) ? weight : multiply(onerm, weight.value / 100),
 	);
 }

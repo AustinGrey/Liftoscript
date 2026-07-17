@@ -1983,7 +1983,7 @@ Squat / 1x5 100lb, 1x3 200lb / 60s / progress: lp(5lb)
 ## Day 1
 Squat / 1x5 100lb, 1x3 250lb / 60s / progress: lp(5lb)`;
 
-		const newText = newSystemChangeWeight(programText, (weightChanges) => {
+		const newText = newSystemChangeWeight(programText, weightChanges => {
 			weightChanges[1].weight = build(250, "lb");
 			return weightChanges;
 		});
@@ -2001,7 +2001,7 @@ Squat / 1x5 100lb, 1x3 200lb / 80lb / 60s / progress: lp(80lb)
 ## Day 1
 Squat / 1x5, 1x3 / 100lb 60s / progress: lp(80lb)`;
 
-		const newText = newSystemChangeWeight(programText, (weightChanges) => {
+		const newText = newSystemChangeWeight(programText, weightChanges => {
 			weightChanges[0].weight = build(100, "lb");
 			return weightChanges;
 		});
@@ -2019,7 +2019,7 @@ Squat / 1x5 50lb, 1x3 80lb / 60s / progress: lp(5lb)
 ## Day 1
 Squat / 1x5 100lb, 1x3 150lb / 60s / progress: lp(5lb)`;
 
-		const newText = newSystemChangeWeight(programText, (weightChanges) => {
+		const newText = newSystemChangeWeight(programText, weightChanges => {
 			weightChanges[0].weight = build(100, "lb");
 			weightChanges[1].weight = build(150, "lb");
 			return weightChanges;

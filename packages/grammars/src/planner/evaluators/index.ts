@@ -211,7 +211,7 @@ function fillSetReuses(
 				source: "overall",
 			};
 			const originalProgress = originalExercise.exercise.progress;
-			forEachSiblingInstance(exercise, metadata, (other) => {
+			forEachSiblingInstance(exercise, metadata, other => {
 				if (other.progress == null) {
 					other.progress = {
 						type: originalProgress.type,
@@ -228,7 +228,7 @@ function fillSetReuses(
 				source: "overall",
 			};
 			const originalUpdate = originalExercise.exercise.update;
-			forEachSiblingInstance(exercise, metadata, (other) => {
+			forEachSiblingInstance(exercise, metadata, other => {
 				if (other.update == null) {
 					other.update = {
 						type: originalUpdate.type,
@@ -278,7 +278,7 @@ function fillDescriptions(
 			if (!lastWeekDay.success) {
 				continue;
 			}
-			const lastWeekExercise = lastWeekDay.data.find((ex) => ex.key === exercise.key);
+			const lastWeekExercise = lastWeekDay.data.find(ex => ex.key === exercise.key);
 			if (lastWeekExercise) {
 				exercise.descriptions = structuredClone(lastWeekExercise.descriptions);
 				return;
@@ -556,7 +556,7 @@ function findReusedDescriptions(
 	const weekExercises = Object.values(
 		byExerciseWeekDay[key]?.[weekIndex ?? currentWeekIndex] || [],
 	);
-	const weekDescriptions = weekExercises.map((d) => d.descriptions);
+	const weekDescriptions = weekExercises.map(d => d.descriptions);
 	const index = dayIndex ?? 0;
 	if (weekDescriptions[index]) {
 		return {
@@ -688,8 +688,8 @@ export const PlannerEvaluator_forceEvaluate = (
 					const keysInDay = new Set<string>();
 					for (const exercise of exercises) {
 						if (exercise.progress?.type === IProgramExerciseProgressType.DP) {
-							const hasRange = exercise.setVariations.some((sv) =>
-								sv.sets.some((s) => s.repRange?.minrep != null),
+							const hasRange = exercise.setVariations.some(sv =>
+								sv.sets.some(s => s.repRange?.minrep != null),
 							);
 							if (hasRange) {
 								exercise.progress.script = `for (var.i in completedReps) {
@@ -736,7 +736,7 @@ if (completedReps >= reps && completedRPE <= RPE) {
 								canonical: metadata.properties.id,
 								dayData,
 								isEqual,
-								makeError: (prevDayData) =>
+								makeError: prevDayData =>
 									plannerError(
 										exercise.fullName,
 										`Same property 'id' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
@@ -760,11 +760,11 @@ if (completedReps >= reps && completedRPE <= RPE) {
 								canonical: metadata.properties.progress,
 								dayData,
 								isEqual: (a, b) =>
-									isEqualAfterTransform(a, b, (p) => ({
+									isEqualAfterTransform(a, b, p => ({
 										...pick(p, ["type", "state", "stateMetadata", "script"]),
 										reuse: p.reuse?.fullName,
 									})),
-								makeError: (prevDayData) =>
+								makeError: prevDayData =>
 									plannerError(
 										exercise.fullName,
 										`Same property 'progress' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
@@ -785,11 +785,11 @@ if (completedReps >= reps && completedRPE <= RPE) {
 								canonical: metadata.properties.update,
 								dayData,
 								isEqual: (a, b) =>
-									isEqualAfterTransform(a, b, (u) => ({
+									isEqualAfterTransform(a, b, u => ({
 										...pick(u, ["type", "script"]),
 										reuse: u.reuse?.fullName,
 									})),
-								makeError: (prevDayData) =>
+								makeError: prevDayData =>
 									plannerError(
 										exercise.fullName,
 										`Same property 'update' is specified with different arguments in multiple weeks/days for exercise '${exercise.name}': both in ` +
@@ -812,7 +812,7 @@ if (completedReps >= reps && completedRPE <= RPE) {
 								canonical: metadata.properties.warmup,
 								dayData,
 								isEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
-								makeError: (prevDayData) =>
+								makeError: prevDayData =>
 									plannerError(
 										exercise.fullName,
 										`Different warmup sets are specified in multiple weeks/days for exercise '${exercise.name}': both in ` +
@@ -892,18 +892,18 @@ export function PlannerProgram_replaceWeight(
 	programExerciseId: string,
 	weightChanges: IWeightChange[],
 ): IEvaluatedProgram {
-	if (weightChanges.every((wc) => isEqual(wc.originalWeight, wc.weight))) {
+	if (weightChanges.every(wc => isEqual(wc.originalWeight, wc.weight))) {
 		return program;
 	}
 	const newEvalutedProgram = structuredClone(program);
-	forExerciseInEvaluatedWeeks(newEvalutedProgram.weeks, (ex) => {
+	forExerciseInEvaluatedWeeks(newEvalutedProgram.weeks, ex => {
 		if (ex.key !== programExerciseId) {
 			return;
 		}
 		for (const { sets } of ex.evaluatedSetVariations) {
 			for (const set of sets) {
 				set.weight =
-					weightChanges.find((wc) => eq(wc.originalWeight, set.weight))?.weight ?? set.weight;
+					weightChanges.find(wc => eq(wc.originalWeight, set.weight))?.weight ?? set.weight;
 			}
 		}
 	});
@@ -922,11 +922,11 @@ export function PlannerProgram_evaluateText(fullProgramText: string): IPlannerPr
 		parseBound(plannerExerciseParser, fullProgramText),
 		IPlannerExerciseEvaluatorMode.FULLTEXT,
 	);
-	const weeks: IPlannerProgramWeek[] = data.map((week) => {
+	const weeks: IPlannerProgramWeek[] = data.map(week => {
 		return {
 			name: week.name,
 			description: week.description,
-			days: week.days.map((day) => {
+			days: week.days.map(day => {
 				return {
 					name: day.name,
 					description: day.description,
@@ -1073,12 +1073,12 @@ function getWeekDayDescriptionAndFillLastDayFullText(
 		const lastWeek = weeksFullText.at(-1);
 		const lastDay = lastWeek?.days.at(-1);
 		if (lastDay) {
-			lastDay.exercises.push(...linesToPreviousExercise.map((line) => line.line));
+			lastDay.exercises.push(...linesToPreviousExercise.map(line => line.line));
 		}
 	}
 	return nextLines.length > 0
 		? nextLines
-				.map((line) => line.line.replace(/^\s*\/\/\/?\s*/, "").trim())
+				.map(line => line.line.replace(/^\s*\/\/\/?\s*/, "").trim())
 				.join("\n")
 				.trim()
 		: undefined;

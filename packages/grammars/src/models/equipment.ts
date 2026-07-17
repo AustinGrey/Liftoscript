@@ -9,7 +9,7 @@ import type { IEquipmentData } from "@/equipment";
 export function Equipment_smallestPlate(equipmentData: IEquipmentData, unit: IUnit): IWeight {
 	return (
 		equipmentData.plates
-			.filter((p) => p.weight.unit === unit)
+			.filter(p => p.weight.unit === unit)
 			.toSorted((a, b) => Weight.compare(a.weight, b.weight))
 			.at(0)?.weight || Weight.build(1, unit)
 	);
@@ -42,7 +42,7 @@ export function Equipment_getEquipmentDataForExerciseType(
 }
 
 export function Equipment_getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
-	return settings.gyms.find((g) => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
+	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
 }
 
 export function Equipment_getEquipmentIdForExerciseType(

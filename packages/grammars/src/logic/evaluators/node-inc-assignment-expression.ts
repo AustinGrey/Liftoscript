@@ -65,7 +65,7 @@ export const handler: LogicHandler<"IncAssignmentExpression"> = (n, t) => {
 				const value = coerceToQuantity(t.recurse(expression));
 
 				const op = incAssignmentExpr.source;
-				t.updateGlobal("rm1", (rm1) =>
+				t.updateGlobal("rm1", rm1 =>
 					convertToWeight(
 						rm1,
 						op === "+="

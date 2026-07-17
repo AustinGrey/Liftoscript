@@ -100,7 +100,7 @@ function replaceExercise(
 	}
 
 	while (!noConflicts) {
-		const conflictingExercises = allExercises.filter((e) => {
+		const conflictingExercises = allExercises.filter(e => {
 			const newKey =
 				typeof toExerciseType === "string"
 					? PlannerKey_fromLabelNameAndEquipment(

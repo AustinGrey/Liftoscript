@@ -182,7 +182,7 @@ export function createUnitStore<T>(options: RequiredOptions<T>): UnitStore<T> {
 				if (unitDef.aliases) {
 					unitAndAliases.push(...unitDef.aliases);
 				}
-				unitAndAliases.forEach((newUnitName) => {
+				unitAndAliases.forEach(newUnitName => {
 					if (defs.units.hasOwnProperty(newUnitName)) {
 						throw new Error(`Alias '${newUnitName}' would override an existing unit`);
 					}

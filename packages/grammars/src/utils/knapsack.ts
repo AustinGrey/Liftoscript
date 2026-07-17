@@ -26,7 +26,7 @@ export function closestBoundedSum(items: readonly BoundedKnapsackItem[], target:
 	}
 
 	// Determine how much we need to multiply all the numbers to make them integers, then do so. Limited by maxPrecision
-	const allValues = [target, ...items.map((item) => item.value)];
+	const allValues = [target, ...items.map(item => item.value)];
 	let maxDecimals = 0;
 	for (const v of allValues) {
 		const s = v.toString();
@@ -37,8 +37,8 @@ export function closestBoundedSum(items: readonly BoundedKnapsackItem[], target:
 	}
 	const precision = Math.pow(10, Math.min(maxDecimals, maxPrecision));
 	const intTarget = Math.round(target * precision);
-	const intWeights = items.map((item) => Math.round(item.value * precision));
-	const maxCounts = items.map((item) => Math.max(0, Math.floor(item.maxCount)));
+	const intWeights = items.map(item => Math.round(item.value * precision));
+	const maxCounts = items.map(item => Math.max(0, Math.floor(item.maxCount)));
 
 	const maxFrom = Array.from<number>({ length: items.length + 1 }).fill(0);
 	for (let i = items.length - 1; i >= 0; i--) {
