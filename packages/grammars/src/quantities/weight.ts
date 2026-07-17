@@ -393,6 +393,9 @@ function calculatePlates(
 	const added = add(total, barWeight);
 	return {
 		totalWeight: inverted ? invert(added) : added,
+		// @todo these seem valuable to keep around, but don't currently have a use case
+		// platesWeight: inverted ? invert(total) : total,
+		// plates
 	};
 }
 
@@ -639,22 +642,29 @@ export function typeOf(
 	return "weight";
 }
 
+/**
+ * Converts a weight to the other kind of unit, but also rounds to something generally useful in that weight.
+ * @param weight The weight to convert
+ * @param toUnit The unit to convert to
+ */
 export function smartConvert(weight: IWeight, toUnit: IUnit): IWeight {
 	if (weight.unit === toUnit) {
 		return weight;
 	}
 	const value = weight.value;
+	let converted: number;
 	if (weight.unit === "kg") {
 		if (value < 15) {
-			return build(value * 2, toUnit);
+			converted = value * 2;
 		} else {
-			return build(MathUtils_round(value * 2.25, 5), toUnit);
+			converted = MathUtils_round(value * 2.25, 5);
 		}
 	} else {
 		if (value < 15) {
-			return build(MathUtils_round(value / 2, 0.25), toUnit);
+			converted = MathUtils_round(value / 2, 0.25);
 		} else {
-			return build(MathUtils_round(value / 2.25, 2.5), toUnit);
+			converted = MathUtils_round(value / 2.25, 2.5);
 		}
 	}
+	return build(converted, toUnit);
 }
