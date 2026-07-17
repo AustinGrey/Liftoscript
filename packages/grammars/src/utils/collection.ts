@@ -1,6 +1,4 @@
-import type { ConditionalPick } from "type-fest";
 import { castAs0, type IndexFrom0 } from "@/utils/indexes.ts";
-import { asNumericAscending, asNumericDescending, by } from "@/utils/sorting.ts";
 
 /**
  * A common filter predicate, removed undefined values
@@ -21,4 +19,12 @@ export function tryFindIndex<T>(
 ): IndexFrom0 | undefined {
 	const result = arr.findIndex(predicate);
 	return result === -1 ? undefined : castAs0(result);
+}
+
+/**
+ * Finds the index of the first item in the collection that is marked as current, or the first item if none are marked as current.
+ * @param collection The collection to search.
+ */
+export function findIndexOfCurrentOrFirst(collection: { isCurrent: boolean }[]): IndexFrom0 {
+	return tryFindIndex(collection, item => item.isCurrent) ?? castAs0(0);
 }

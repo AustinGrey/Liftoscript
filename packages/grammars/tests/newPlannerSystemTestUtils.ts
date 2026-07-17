@@ -2,6 +2,7 @@ import {
 	convertToPlanner,
 	forExerciseInEvaluatedWeeks,
 	getWeight,
+	type IEvaluatedProgram,
 	type IWeightChange,
 	makePlannerKey,
 	PlannerKey_fromFullName,
@@ -10,7 +11,6 @@ import {
 	Program_evaluate,
 	Program_nextHistoryRecordFromEvaluated,
 	Program_runAllFinishDayScripts,
-	ProgramExercise_weightChanges,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 import type { IStats } from "@/fitness-stats";
 import {
@@ -29,13 +29,14 @@ import { asProgramScript } from "@/planner/display.ts";
 import { type IExerciseType, toKey } from "@/exercises";
 import type { IEither } from "@/utils/types.ts";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
-import { definedOnly } from "@/utils/collection.ts";
+import { definedOnly, findIndexOfCurrentOrFirst } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { build, type IUnit, type IWeight, print, smartConvert } from "@/quantities/weight.ts";
 import { parseBound, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { parser } from "@/logic/parsing/logic.ts";
 import { parser as planParser } from "@/planner/parsing/workout-plan";
 import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
+import { asNumericDescending, by } from "@/utils/sorting.ts";
 
 export interface ICompletedEntries {
 	completedReps: number[][];
@@ -52,6 +53,33 @@ export function PlannerTestUtils_get(text: string): {
 	};
 	const program: IProgram = { ...Program_create("MyProgram"), planner };
 	return { program, planner };
+}
+
+export function ProgramExercise_weightChanges(
+	program: IEvaluatedProgram,
+	programExerciseKey: string,
+): IWeightChange[] {
+	const results: Record<string, IWeightChange> = {};
+	forExerciseInEvaluatedWeeks(program.weeks, exercise => {
+		if (exercise.key !== programExerciseKey) {
+			return;
+		}
+		const currentVariationIndex = findIndexOfCurrentOrFirst(exercise.evaluatedSetVariations);
+		for (const [variationIndex, variation] of exercise.evaluatedSetVariations.entries()) {
+			for (const set of variation.sets) {
+				if (!set.weight) {
+					continue;
+				}
+				const key = print(set.weight);
+				results[key] = {
+					originalWeight: set.weight,
+					weight: set.weight,
+					current: results[key]?.current || variationIndex + 1 === currentVariationIndex,
+				};
+			}
+		}
+	});
+	return Object.values(results).sort(by(val => Number(val.current), asNumericDescending));
 }
 
 export function PlannerTestUtils_changeWeight(

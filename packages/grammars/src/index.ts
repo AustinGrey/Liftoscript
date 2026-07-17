@@ -12,7 +12,6 @@ export {
 	Program_evaluate,
 	Program_nextHistoryRecordFromEvaluated,
 	Program_runAllFinishDayScripts,
-	ProgramExercise_weightChanges,
 	type IEvaluatedProgram,
 	type IHistoryRecord,
 	type IHistoryEntry,

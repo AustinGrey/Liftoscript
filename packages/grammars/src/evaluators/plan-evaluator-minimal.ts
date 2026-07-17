@@ -1,7 +1,7 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import { definedOnly, tryFindIndex } from "../utils/collection";
+import { definedOnly, findIndexOfCurrentOrFirst } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
@@ -103,7 +103,6 @@ import {
 	as1,
 	castAs0,
 	castAs1,
-	type IndexFrom0,
 	type IndexFrom1,
 	next,
 	safeFindLastIndex,
@@ -115,7 +114,7 @@ import { pipe } from "effect";
 import { $, orUndefined } from "@/utils/effects.ts";
 import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
-import { asNumericAscending, asNumericDescending, by } from "@/utils/sorting.ts";
+import { asNumericAscending, by } from "@/utils/sorting.ts";
 
 //#region Program
 
@@ -558,33 +557,6 @@ export interface IWeightChange {
 	originalWeight: IWeight | IDynamicWeight;
 	weight: IWeight | IDynamicWeight;
 	current: boolean;
-}
-
-export function ProgramExercise_weightChanges(
-	program: IEvaluatedProgram,
-	programExerciseKey: string,
-): IWeightChange[] {
-	const results: Record<string, IWeightChange> = {};
-	forExerciseInEvaluatedWeeks(program.weeks, exercise => {
-		if (exercise.key !== programExerciseKey) {
-			return;
-		}
-		const currentVariationIndex = findIndexOfCurrentOrFirst(exercise.evaluatedSetVariations);
-		for (const [variationIndex, variation] of exercise.evaluatedSetVariations.entries()) {
-			for (const set of variation.sets) {
-				if (!set.weight) {
-					continue;
-				}
-				const key = print(set.weight);
-				results[key] = {
-					originalWeight: set.weight,
-					weight: set.weight,
-					current: results[key]?.current || variationIndex + 1 === currentVariationIndex,
-				};
-			}
-		}
-	});
-	return Object.values(results).sort(by(val => Number(val.current), asNumericDescending));
 }
 
 function ProgramExercise_applyVariables(
@@ -1368,14 +1340,6 @@ function PlannerProgramExercise_sets(
 			: (set.askWeight ?? reusedGlobals.askWeight));
 		return set;
 	});
-}
-
-/**
- * Finds the index of the first item in the collection that is marked as current, or the first item if none are marked as current.
- * @param collection The collection to search.
- */
-function findIndexOfCurrentOrFirst(collection: { isCurrent: boolean }[]): IndexFrom0 {
-	return tryFindIndex(collection, item => item.isCurrent) ?? castAs0(0);
 }
 
 /**
