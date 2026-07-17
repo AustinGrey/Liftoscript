@@ -13,6 +13,7 @@ import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { Equipment_getUnitForExerciseType } from "@/models/equipment.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 import type { ISettings } from "@/user-settings";
+import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
 
 export function Progress_createScriptFunctions(settings: ISettings): IScriptFunctions {
 	function increment(vals: number, context: IScriptFnContext): number;
@@ -80,7 +81,7 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 							? rpeRawOrContext
 							: 10
 					: 10;
-			return Weight.rpeMultiplier(reps, rpe);
+			return rpeMultiplier(reps, rpe);
 		},
 		floor,
 		ceil,

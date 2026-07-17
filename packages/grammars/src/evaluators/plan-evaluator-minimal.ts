@@ -24,7 +24,6 @@ import {
 	print,
 	roundConvertTo,
 	roundTo005,
-	rpeMultiplier,
 	TDynamicWeight,
 	TWeight,
 	w,
@@ -114,6 +113,7 @@ import {
 import { pipe } from "effect";
 import { orUndefined, $ } from "@/utils/effects.ts";
 import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
+import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
 
 //#region Program
 
@@ -332,7 +332,7 @@ export function Program_runAllFinishDayScripts(
 	const dayData = getDayData(newEvaluatedProgram, progress.day);
 
 	for (const entry of progress.entries) {
-		if (entry == null || entry.isSuppressed || entry.sets.every((s) => !s.isCompleted)) {
+		if (entry == null || entry.isSuppressed || entry.sets.every(s => !s.isCompleted)) {
 			continue;
 		}
 		const programExercise = Program_getProgramExerciseForKeyAndDay(
@@ -362,7 +362,7 @@ export function Program_runAllFinishDayScripts(
 				rm1: roundTo005(bindings.rm1),
 			};
 		}
-		forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
+		forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, exercise => {
 			if (exercise.key === programExercise.key && exercise.progress) {
 				exercise.progress.state = {
 					...exercise.progress.state,
@@ -371,11 +371,11 @@ export function Program_runAllFinishDayScripts(
 				};
 			}
 		});
-		updates.forEach((update) =>
+		updates.forEach(update =>
 			ProgramExercise_applyVariables(programExercise.key, newEvaluatedProgram, update, settings),
 		);
 		for (const key of ObjectUtils_keys(otherStates || {})) {
-			forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, (exercise) => {
+			forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, exercise => {
 				if (exercise.tags?.includes(Number(key)) && exercise.progress) {
 					exercise.progress.state = {
 						...exercise.progress.state,
@@ -457,7 +457,7 @@ function Program_forceEvaluate(program: IProgram, settings: ISettings): IEvaluat
 		}),
 	);
 	const states: IByTag<IProgramState> = {};
-	forExerciseInEvaluatedResults(evaluatedWeeks, (exercise) => {
+	forExerciseInEvaluatedResults(evaluatedWeeks, exercise => {
 		for (const tag of exercise.tags) {
 			states[tag] = {
 				...states[tag],
@@ -562,7 +562,7 @@ export function ProgramExercise_weightChanges(
 	programExerciseKey: string,
 ): IWeightChange[] {
 	const results: Record<string, IWeightChange> = {};
-	forExerciseInEvaluatedWeeks(program.weeks, (exercise) => {
+	forExerciseInEvaluatedWeeks(program.weeks, exercise => {
 		if (exercise.key !== programExerciseKey) {
 			return;
 		}
@@ -963,7 +963,7 @@ export function fnArgsToStateVars(
 	const state: IProgramState = {};
 	const stateMetadata: IProgramStateMetadata = {};
 	for (const value of fnArgs) {
-		let [fnArgKey, fnArgValStr] = value.split(":").map((v) => v.trim());
+		let [fnArgKey, fnArgValStr] = value.split(":").map(v => v.trim());
 		if (onError && (!fnArgKey || !fnArgValStr)) {
 			onError(`Invalid argument ${value}`);
 		}
@@ -1054,7 +1054,7 @@ export function getRepeat(expr: PlanNodes.ExerciseExpression): IndexFrom1[] {
 	const result: Set<IndexFrom1> = new Set();
 	for (const childNode of queryChildren(repeatNode)) {
 		if (childNode.type.name === PlannerNodeName.RepRange) {
-			const [from, to] = queryChildren(childNode, { atLeast: 2 }).map((n) =>
+			const [from, to] = queryChildren(childNode, { atLeast: 2 }).map(n =>
 				castAs1(parseInt(getNodeSourceEscapedWhiteSpace(n), 10)),
 			);
 			for (let i = from; i <= to; i = next(i)) {
@@ -1203,16 +1203,16 @@ export function evaluate(
 						settings.exercises,
 						exerciseIndex,
 						() => {
-							const rawDescriptions: string[] = latestDescriptions.map((d) => d.join("\n"));
-							const currentDescriptionIndex = rawDescriptions.findIndex((d) => /^\s*!/.test(d));
+							const rawDescriptions: string[] = latestDescriptions.map(d => d.join("\n"));
+							const currentDescriptionIndex = rawDescriptions.findIndex(d => /^\s*!/.test(d));
 							let descriptions = rawDescriptions.map((d, i) => ({
 								value: d.replace(/^\s*!/, ""),
 								isCurrent: i === currentDescriptionIndex,
 							}));
 							if (descriptions.length > 1) {
-								descriptions = descriptions.filter((d) => d.value);
+								descriptions = descriptions.filter(d => d.value);
 							}
-							descriptions = descriptions.map((d) => ({
+							descriptions = descriptions.map(d => ({
 								...d,
 								value: StringUtils_unindent(d.value),
 							}));
@@ -1338,7 +1338,7 @@ function PlannerProgramExercise_sets(
 	variationIndex = variationIndex ?? findIndexOfCurrentOrFirst(exercise.setVariations);
 	const currentSets = exercise.setVariations[variationIndex]?.sets;
 	const currentGlobals = exercise.globals;
-	return (currentSets || reusedSets || []).map((aSet) => {
+	return (currentSets || reusedSets || []).map(aSet => {
 		const set: IPlannerProgramExerciseSet = structuredClone(aSet);
 		set.rpe = currentGlobals.rpe != null ? currentGlobals.rpe : (set.rpe ?? reusedGlobals.rpe);
 		set.timer =
@@ -1372,7 +1372,7 @@ function PlannerProgramExercise_sets(
  * @param collection The collection to search.
  */
 function findIndexOfCurrentOrFirst(collection: { isCurrent: boolean }[]): IndexFrom0 {
-	return tryFindIndex(collection, (item) => item.isCurrent) ?? castAs0(0);
+	return tryFindIndex(collection, item => item.isCurrent) ?? castAs0(0);
 }
 
 /**
@@ -1479,8 +1479,8 @@ function ProgramSet_getEvaluatedWeight(
 
 	return pipe(
 		tryGetWeight(set),
-		(weight) => evaluateWeight(weight, orm),
-		$.map((evaluatedWeight) =>
+		weight => evaluateWeight(weight, orm),
+		$.map(evaluatedWeight =>
 			roundConvertTo(
 				evaluatedWeight,
 				settings,
@@ -1604,7 +1604,7 @@ function Progress_createScriptBindings(
 		ns: entry.sets.length,
 		programNumberOfSets: programNumberOfSets,
 		numberOfSets: entry.sets.length,
-		completedNumberOfSets: entry.sets.filter((s) => s.isCompleted).length,
+		completedNumberOfSets: entry.sets.filter(s => s.isCompleted).length,
 		setIndex: setIndex ?? 1,
 		setVariationIndex: setVariationIndex ?? 1,
 		descriptionIndex: descriptionIndex ?? 1,
@@ -1675,7 +1675,7 @@ function Progress_applyBindings(
 	settings: ISettings,
 ): IHistoryEntry {
 	const entry = structuredClone(oldEntry);
-	const lastCompletedIndex = safeFindLastIndex(bindings.completedReps, (r) => r != null, ZERO);
+	const lastCompletedIndex = safeFindLastIndex(bindings.completedReps, r => r != null, ZERO);
 	entry.sets = entry.sets.slice(0, Math.max(lastCompletedIndex, bindings.numberOfSets, 0));
 	for (const key of [
 		"RPE",
@@ -1822,8 +1822,8 @@ export function forExerciseInEvaluatedWeeks(
 ): void {
 	forExerciseInGrid(
 		evaluatedWeeks,
-		(week) => week.days,
-		(day) => day.exercises,
+		week => week.days,
+		day => day.exercises,
 		cb,
 	);
 }
@@ -1842,8 +1842,8 @@ export function forExerciseInEvaluatedResults(
 ): void {
 	forExerciseInGrid(
 		evaluatedWeeks,
-		(week) => week,
-		(day) => (day.success ? day.data : undefined),
+		week => week,
+		day => (day.success ? day.data : undefined),
 		cb,
 	);
 }
@@ -2071,7 +2071,7 @@ function reorderGroupedTopLine(
 				i: number;
 			}>(
 				({ result, i }, group, index) => {
-					const exercise = group.find((item) => item.type === "exercise");
+					const exercise = group.find(item => item.type === "exercise");
 					if (exercise && !exercise.notused) {
 						result[i] = index;
 						i += 1;
@@ -2130,7 +2130,7 @@ function getCurrentDescriptionExercise(
 	weekIndex: number,
 	dayInWeekIndex: number,
 ): IPlannerProgramExercise | undefined {
-	return program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find((e) => e.key === key);
+	return program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find(e => e.key === key);
 }
 
 function getCurrentDescriptionIndex(
@@ -2141,7 +2141,7 @@ function getCurrentDescriptionIndex(
 ): number {
 	const exercise = getCurrentDescriptionExercise(program, key, weekIndex, dayInWeekIndex);
 	const descriptions = exercise?.descriptions.values || [];
-	const index = descriptions.findIndex((s) => s.isCurrent);
+	const index = descriptions.findIndex(s => s.isCurrent);
 	return index === -1 ? 0 : index;
 }
 
@@ -2186,8 +2186,8 @@ function addExerciseDescriptions(
 	if (exercise.descriptions.reuse?.exercise) {
 		const reusedExercise = exercise.descriptions.reuse.exercise;
 		const reusedDayData = reusedExercise.dayData;
-		const currentWeekReusedExercisesCount = program.weeks[weekIndex]?.days.filter((day) => {
-			return day.exercises.some((e) => e.key === reusedExercise.key);
+		const currentWeekReusedExercisesCount = program.weeks[weekIndex]?.days.filter(day => {
+			return day.exercises.some(e => e.key === reusedExercise.key);
 		}).length;
 		if (currentWeekReusedExercisesCount === 1 && reusedDayData.week === weekIndex + 1) {
 			return {
@@ -2224,7 +2224,7 @@ export function compactPlannerProgram(
 		settings,
 	);
 	for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
-		forExerciseInEvaluatedResults(ev, (exercise) => {
+		forExerciseInEvaluatedResults(ev, exercise => {
 			if ((exercise.repeat?.length ?? 0) > 0) {
 				repeatingExercises.add(exercise.key);
 			}
@@ -2244,9 +2244,9 @@ export function compactPlannerProgram(
 		}
 	}
 
-	const mapping: ICompactPlannerTopLineItem[][][] = plannerProgram.weeks.map((week) =>
+	const mapping: ICompactPlannerTopLineItem[][][] = plannerProgram.weeks.map(week =>
 		week.days.map(
-			(day) =>
+			day =>
 				topLineMap(
 					asPlanNodeOfTypeOrThrow("Program", parseBound(plannerExerciseParser, day.exerciseText)),
 					settings.exercises,
@@ -2280,7 +2280,7 @@ export function compactPlannerProgram(
 							}
 							const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
 							const oldExercise = oldDay.success
-								? oldDay.data.find((ex) => ex.key === e.value)
+								? oldDay.data.find(ex => ex.key === e.value)
 								: undefined;
 							return !!oldExercise?.repeating?.includes(weekIndex + 1);
 						},
@@ -2302,7 +2302,7 @@ export function compactPlannerProgram(
 				if (repeatRanges.length > 0 && repeatRanges[repeatRanges.length - 1][1] == null) {
 					repeatRanges[repeatRanges.length - 1][1] = mapping.length;
 				}
-				line.repeatRanges = repeatRanges.map((r) => `${r[0]}-${r[1]}`);
+				line.repeatRanges = repeatRanges.map(r => `${r[0]}-${r[1]}`);
 			}
 		}
 	}
@@ -2356,8 +2356,8 @@ function topLineItems(
 ): IPlannerTopLineItem[][][] {
 	let dayIndex = 0;
 
-	const mapping = plannerProgram.weeks.map((week) => {
-		return week.days.map((day) => {
+	const mapping = plannerProgram.weeks.map(week => {
+		return week.days.map(day => {
 			dayIndex += 1;
 
 			return topLineMap(
@@ -2369,13 +2369,13 @@ function topLineItems(
 	for (let weekIndex = 0; weekIndex < mapping.length; weekIndex += 1) {
 		const week = mapping[weekIndex];
 		for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-			const day = week[dayIndex].filter((item) => item.type === "exercise");
+			const day = week[dayIndex].filter(item => item.type === "exercise");
 			for (const exercise of day) {
 				for (const r of exercise.repeat || []) {
 					const reuseDay = mapping[r - 1]?.[dayIndex];
 					if (
 						reuseDay &&
-						!reuseDay.some((e) => e.type === "exercise" && e.value === exercise.value)
+						!reuseDay.some(e => e.type === "exercise" && e.value === exercise.value)
 					) {
 						if (exercise.descriptions) {
 							for (let di = 0; di < exercise.descriptions.length; di += 1) {
@@ -2430,7 +2430,7 @@ function topLineMap(
 	let ongoingDescriptions = false;
 	function consumeDescriptions(): string[] {
 		ongoingDescriptions = false;
-		const descriptions = lastDescriptions.map((d) => d.join("\n"));
+		const descriptions = lastDescriptions.map(d => d.join("\n"));
 		lastDescriptions = [];
 		return descriptions;
 	}
@@ -2457,9 +2457,9 @@ function topLineMap(
 					repeat,
 					repeatRanges: getRepeatRanges(repeat),
 					descriptions: consumeDescriptions(),
-					sections: sectionNodes.map((section) => section.source.trim()).join(" / "),
+					sections: sectionNodes.map(section => section.source.trim()).join(" / "),
 					sectionsToReuse: sectionNodes
-						.filter((section) => {
+						.filter(section => {
 							const properties = section.getChild(PlannerNodeName.ExerciseProperty);
 							if (properties == null) {
 								return true;
@@ -2474,7 +2474,7 @@ function topLineMap(
 							}
 							return false;
 						})
-						.map((section) => section.source.trim())
+						.map(section => section.source.trim())
 						.join(" / "),
 				};
 				result.push(item);
@@ -2540,8 +2540,8 @@ function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[
 	for (const week of groupedTopLine) {
 		for (const day of week) {
 			day.sort((group1, group2) => {
-				const ex1 = group1.find((l) => l.type === "exercise");
-				const ex2 = group2.find((l) => l.type === "exercise");
+				const ex1 = group1.find(l => l.type === "exercise");
+				const ex2 = group2.find(l => l.type === "exercise");
 				if (ex1 == null || ex2 == null) {
 					return 0;
 				}
@@ -2876,7 +2876,7 @@ export function convertToPlanner(
 		weeks: plannerWeeks,
 	};
 	const repeatingExercises = new Set<string>();
-	forExerciseInEvaluatedWeeks(program.weeks, (exercise) => {
+	forExerciseInEvaluatedWeeks(program.weeks, exercise => {
 		if (exercise.repeat != null && exercise.repeat.length > 0) {
 			const key = exercise.exerciseType
 				? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
@@ -2927,7 +2927,7 @@ function variationToString(
 	if (index > 0 && variation.isCurrent) {
 		resultStr += "! ";
 	}
-	return resultStr + result.map((r) => r.trim()).join(", ");
+	return resultStr + result.map(r => r.trim()).join(", ");
 }
 function groupVariationSets(
 	sets: IPlannerProgramExerciseEvaluatedSet[],
@@ -2989,22 +2989,20 @@ function getGlobals(exercise: IPlannerProgramExercise): IPlannerToProgram2Global
 	return {
 		weight:
 			firstWeight != null &&
-			variations.every((v) =>
-				v.sets.every((s) => eq(s.weight, firstWeight) && s.askWeight === firstAskWeight),
+			variations.every(v =>
+				v.sets.every(s => eq(s.weight, firstWeight) && s.askWeight === firstAskWeight),
 			)
 				? firstWeight
 				: undefined,
-		askWeight: variations.every((v) =>
-			v.sets.every((s) => eq(s.weight, firstWeight) && s.askWeight),
-		),
+		askWeight: variations.every(v => v.sets.every(s => eq(s.weight, firstWeight) && s.askWeight)),
 		rpe:
 			firstRpe != null &&
-			variations.every((v) => v.sets.every((s) => s.rpe === firstRpe && s.logRpe === firstLogRpe))
+			variations.every(v => v.sets.every(s => s.rpe === firstRpe && s.logRpe === firstLogRpe))
 				? firstRpe
 				: undefined,
-		logRpe: variations.every((v) => v.sets.every((s) => s.rpe === firstRpe && s.logRpe)),
+		logRpe: variations.every(v => v.sets.every(s => s.rpe === firstRpe && s.logRpe)),
 		timer:
-			firstTimer != null && variations.every((v) => v.sets.every((s) => s.timer === firstTimer))
+			firstTimer != null && variations.every(v => v.sets.every(s => s.timer === firstTimer))
 				? firstTimer
 				: undefined,
 	};
@@ -3029,8 +3027,8 @@ export function* validateScript(
 		knownBindings: Object.keys(bindings),
 		knownStateVariables: Object.keys(state),
 		mode,
-		trackVariable: (name) => trackedVarNames.add(name),
-		isKnownVariable: (name) => trackedVarNames.has(name),
+		trackVariable: name => trackedVarNames.add(name),
+		isKnownVariable: name => trackedVarNames.has(name),
 	});
 }
 //#endregion

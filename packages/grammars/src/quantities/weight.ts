@@ -25,7 +25,7 @@ import { type TaggedTemplateHandler, taggedTemplateToString } from "@/utils/stri
 import { $ } from "@/utils/effects.ts";
 import { by, type SortingPredicate } from "@/utils/sorting.ts";
 import { closestBoundedSum } from "@/utils/knapsack.ts";
-import { pipe } from "effect";
+import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
 
 export const TUnit = z.union([z.literal("kg"), z.literal("lb")]);
 export type IUnit = "kg" | "lb";
@@ -433,38 +433,13 @@ export function getTrainingMax(weight: IWeight, reps: number): IWeight {
 }
 
 export function getOneRepMax(weight: IWeight, reps: number, rpe?: number): IWeight {
-	if (reps === 0) {
-		return build(0, weight.unit);
-	} else if (reps === 1) {
-		return weight;
-	} else {
-		return divide(weight, rpeMultiplier(reps, rpe ?? 10));
-	}
-}
-
-export function rpeMultiplier(reps: number, rpe: number): number {
-	if (reps === 1 && rpe === 10) {
-		return 1;
-	}
-	reps = Math.max(Math.min(reps, 24), 1);
-	rpe = Math.max(Math.min(rpe, 10), 1);
-
-	const x = 10.0 - rpe + (reps - 1);
-	if (x >= 16) {
-		return 0.5;
-	}
-	// The formula is taken from
-	// https://gitlab.com/openpowerlifting/plsource/-/blob/ba5194be6daa08d082bb1b7959d6f47b82e7802c/static/rpe-calc/index.html#L224
-	const intersection = 2.92;
-	if (x <= intersection) {
-		const a = 0.347619;
-		const b = -4.60714;
-		const c = 99.9667;
-		return (a * x * x + b * x + c) / 100;
-	} else {
-		const m = -2.64249;
-		const b = 97.0955;
-		return (m * x + b) / 100;
+	switch (reps) {
+		case 0:
+			return build(0, weight.unit);
+		case 1:
+			return weight;
+		default:
+			return divide(weight, rpeMultiplier(reps, rpe));
 	}
 }
 
