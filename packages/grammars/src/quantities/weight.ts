@@ -102,10 +102,7 @@ const prebuiltWeights: Partial<Record<string, IWeight>> = {};
  * @param unit The unit to use for the weight
  */
 export function build(value: number, unit: IUnit): IWeight {
-	return (prebuiltWeights[`${value}_${unit}`] ??= {
-		value: typeof value === "string" ? parseFloat(value) : value,
-		unit,
-	});
+	return (prebuiltWeights[`${value}_${unit}`] ??= { value, unit });
 }
 
 export function buildAny(value: number, unit: IUnit | "%"): IWeight | IDynamicWeight {

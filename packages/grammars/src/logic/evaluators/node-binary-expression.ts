@@ -118,8 +118,8 @@ export const handler: LogicHandler<"BinaryExpression"> = (n, t) => {
   @todo Is compatibility really important here? I think the language needs an "every" or "some" operation to give script writers control over the language
    */
 
-	if (Array.isArray(maybeArrayResult) && maybeArrayResult.every((x) => typeof x === "boolean")) {
-		return maybeArrayResult.every((x) => x);
+	if (Array.isArray(maybeArrayResult) && maybeArrayResult.every(x => typeof x === "boolean")) {
+		return maybeArrayResult.every(x => x);
 	}
 
 	return maybeArrayResult;
@@ -148,10 +148,10 @@ function binaryOpMaybeArray(
 		if (Array.isArray(right)) {
 			return zip(left, right).map(([l, r]) => o(l, r));
 		}
-		return left.map((l) => o(l, right));
+		return left.map(l => o(l, right));
 	}
 	if (Array.isArray(right)) {
-		return right.map((r) => o(left, r));
+		return right.map(r => o(left, r));
 	}
 	return o(left, right);
 }
@@ -254,7 +254,6 @@ function coerceQuantities(
 				bCoerced: asUnit(toWeight(right, tools.getGlobal("rm1")), left.unit),
 			};
 		}
-		right satisfies number;
 		return { aCoerced: left, bCoerced: Weight.build(right, left.unit) };
 	}
 	if (is(TDynamicWeight, left)) {
@@ -265,17 +264,14 @@ function coerceQuantities(
 		if (is(TDynamicWeight, right)) {
 			return { aCoerced: left, bCoerced: right };
 		}
-		right satisfies number;
 		return { aCoerced: left, bCoerced: percentORM(right) };
 	}
-	left satisfies number;
 	if (is(TWeight, right)) {
 		return { aCoerced: Weight.build(left, right.unit), bCoerced: right };
 	}
 	if (is(TDynamicWeight, right)) {
 		return { aCoerced: percentORM(left), bCoerced: right };
 	}
-	right satisfies number;
 	return { aCoerced: left, bCoerced: right };
 }
 
