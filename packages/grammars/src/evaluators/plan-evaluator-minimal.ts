@@ -2546,7 +2546,7 @@ export function convertToPlanner(
 								const overriddenGlobals: string[] = [];
 								if (dereuseDecisions.includes("weight") && globals.weight != null) {
 									overriddenGlobals.push(
-										`${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+										`${globals.weight ? print(globals.weight) : ""}${globals.askWeight ? "+" : ""}`,
 									);
 								} else if (dereuseDecisions.includes("weight") && globals.askWeight) {
 									overriddenGlobals.push("?+");
@@ -2570,7 +2570,7 @@ export function convertToPlanner(
 								const globalsStr: string[] = [];
 								if (globals.weight != null) {
 									globalsStr.push(
-										`${weightExprToStr(globals.weight)}${globals.askWeight ? "+" : ""}`,
+										`${globals.weight ? print(globals.weight) : ""}${globals.askWeight ? "+" : ""}`,
 									);
 								} else if (globals.askWeight) {
 									globalsStr.push("?+");
@@ -2694,7 +2694,7 @@ function variationToString(
 		setStr += `${n(Math.max(0, set.maxrep ?? 0))}`;
 		setStr += set.isAmrap ? "+" : "";
 		if (globals.weight == null && !globals.askWeight) {
-			const weightValue = weightExprToStr(set.weight);
+			const weightValue = set.weight ? print(set.weight) : "";
 			if (weightValue) {
 				setStr += ` ${weightValue}${set.askWeight ? "+" : ""}`;
 			} else if (set.askWeight) {
@@ -2799,9 +2799,6 @@ function getGlobals(exercise: IPlannerProgramExercise): IPlannerToProgram2Global
 				: undefined,
 	};
 }
-
-const weightExprToStr = (weightExpr?: IWeight | IDynamicWeight): string =>
-	weightExpr ? print(weightExpr) : "";
 //#endregion
 
 //#region ScriptRunner
