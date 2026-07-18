@@ -438,7 +438,7 @@ export interface UnitStore<T> {
 	parser(input: string): ParsedUnit<T>;
 	originalDefinitions: Definitions;
 	defs: DefinitionsExtended<T>;
-	exists(name: string): boolean;
+	exists(this: void, name: string): boolean;
 	findUnit(unitString: string): { unit: UnitPropsExtended<T>; prefix: string } | null;
 }
 

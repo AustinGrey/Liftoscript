@@ -160,7 +160,7 @@ export function createUnitStore<T>(options: RequiredOptions<T>): UnitStore<T> {
 					}
 					if (parsed.value == null) {
 						throw new Error(
-							`Parsing value for '${unitDefKey}' resulted in invalid value: ${parsed.value}`,
+							`Parsing value for '${unitDefKey}' resulted in invalid value: ${String(parsed.value)}`,
 						);
 					}
 					unitValue = normalize(parsed.unitList, parsed.value, options.type);
@@ -275,7 +275,7 @@ export function createUnitStore<T>(options: RequiredOptions<T>): UnitStore<T> {
 	 */
 	function findUnit(unitString: string): { unit: UnitPropsExtended<T>; prefix: string } | null {
 		if (typeof unitString !== "string") {
-			throw new TypeError(`parameter must be a string (${unitString} given)`);
+			throw new TypeError(`parameter must be a string (${typeof unitString} given)`);
 		}
 		// First, match units names exactly. For example, a user could define 'mm' as 10^-4 m, which is silly, but then we would want 'mm' to match the user-defined unit.
 		if (defs.units.hasOwnProperty(unitString)) {

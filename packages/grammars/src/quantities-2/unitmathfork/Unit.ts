@@ -946,7 +946,9 @@ let _config = function _config<T = number>(options: RequiredOptions<T>): UnitFac
 
 	function _comparePrepare(unit1: Unit<T>, unit2: Unit<T>, requireMatchingDimensions: boolean) {
 		if (requireMatchingDimensions && !unit1.equalsQuantity(unit2)) {
-			throw new Error(`Cannot compare units ${unit1} and ${unit2}; dimensions do not match`);
+			throw new Error(
+				`Cannot compare units ${unit1.toString()} and ${unit2.toString()}; dimensions do not match`,
+			);
 		}
 		let value1, value2;
 		if (unit1.value === null && unit2.value === null) {
@@ -960,7 +962,7 @@ let _config = function _config<T = number>(options: RequiredOptions<T>): UnitFac
 		} else {
 			// One has a value and one does not. Not allowed.
 			throw new Error(
-				`Cannot compare units ${unit1} and ${unit2}; one has a value and the other does not`,
+				`Cannot compare units ${unit1.toString()} and ${unit2.toString()}; one has a value and the other does not`,
 			);
 		}
 		return { value1, value2 };
@@ -1234,7 +1236,7 @@ let _config = function _config<T = number>(options: RequiredOptions<T>): UnitFac
 		const value = unit.value === null ? options.type.conv(1) : unit.value;
 		if (!unit.equalsQuantity(valuelessUnit)) {
 			throw new TypeError(
-				`Cannot convert ${unit.toString()} to ${valuelessUnit}: dimensions do not match`,
+				`Cannot convert ${unit.toString()} to ${valuelessUnit.toString()}: dimensions do not match`,
 			);
 		}
 		if (valuelessUnit.value !== null) {
