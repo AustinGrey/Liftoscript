@@ -2,9 +2,19 @@ import { type IDynamicWeight, type IWeight, rpePct, TWeight } from "@/quantities
 import { $ } from "@/utils/effects.ts";
 import { z } from "zod";
 
+/**
+ * Represents a dynamic weight value which is a "percentage of first working set's weight"
+ * DO NOT confuse with TDynamicWeight, as that's a percentage but calculated against the 1RM.
+ */
+export const TWorkingWeightPercent = z.number().brand("% of first working weight");
+export type IWorkingWeightPercent = z.infer<typeof TWorkingWeightPercent>;
+
 export const TProgramExerciseWarmupSet = z.strictObject({
 	reps: z.number(),
-	value: z.union([TWeight, z.number()]),
+	/**
+	 * The weight to use for the warmup
+	 */
+	value: z.union([TWeight, TWorkingWeightPercent]),
 	threshold: TWeight,
 });
 export type IProgramExerciseWarmupSet = Readonly<z.infer<typeof TProgramExerciseWarmupSet>>;
@@ -13,7 +23,7 @@ export interface IPlannerProgramExerciseWarmupSet {
 	type: "warmup";
 	numberOfSets: number;
 	reps: number;
-	percentage?: number;
+	percentage?: IWorkingWeightPercent;
 	weight?: IWeight;
 }
 

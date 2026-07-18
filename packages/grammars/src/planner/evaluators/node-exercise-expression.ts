@@ -62,6 +62,7 @@ import type {
 	IPlannerProgramExerciseSet,
 	IPlannerProgramExerciseWarmupSet,
 	IRepRange,
+	IWorkingWeightPercent,
 } from "@/sets";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
@@ -623,7 +624,9 @@ function evaluateWarmupSet(expr: PlanNodes.WarmupExerciseSet): IPlannerProgramEx
 	const percentage =
 		percentageNode == null
 			? undefined
-			: parseFloat(getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""));
+			: (parseFloat(
+					getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
+				) as IWorkingWeightPercent);
 	const weight = getWeight(weightNode);
 	if (percentage) {
 		return {
@@ -637,6 +640,7 @@ function evaluateWarmupSet(expr: PlanNodes.WarmupExerciseSet): IPlannerProgramEx
 			type: "warmup",
 			reps,
 			numberOfSets,
+			// @todo this not null assertion prooves that the code base is assuming that a warmup is EITHER a percentage or a weight, we should just combine the two values into "weight" and make that a required property
 			weight: weight!,
 		};
 	}

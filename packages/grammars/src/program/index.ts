@@ -21,7 +21,11 @@ import {
 	ZERO,
 	zIndexFrom1,
 } from "@/utils/indexes.ts";
-import { type IProgramExerciseWarmupSet, TProgramExerciseWarmupSet } from "@/sets";
+import {
+	type IProgramExerciseWarmupSet,
+	type IWorkingWeightPercent,
+	TProgramExerciseWarmupSet,
+} from "@/sets";
 
 function warmup(
 	programExerciseWarmupSets: IProgramExerciseWarmupSet[],
@@ -82,9 +86,9 @@ export function getWarmupSets(
 		return [];
 	}
 	const reps = 5;
-	const first = { reps, value: 0.3 };
-	const second = { reps, value: 0.5 };
-	const third = { reps, value: 0.8 };
+	const first = { reps, value: 0.3 as IWorkingWeightPercent };
+	const second = { reps, value: 0.5 as IWorkingWeightPercent };
+	const third = { reps, value: 0.8 as IWorkingWeightPercent };
 	const isLb = settings.units === "lb";
 	return warmup(
 		def === 10

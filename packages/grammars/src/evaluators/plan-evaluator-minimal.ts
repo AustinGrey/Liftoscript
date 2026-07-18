@@ -111,6 +111,7 @@ import {
 	type IPlannerProgramExerciseSet,
 	type IPlannerProgramExerciseWarmupSet,
 	type IProgramExerciseWarmupSet,
+	type IWorkingWeightPercent,
 	tryGetWeight,
 } from "@/sets";
 import { rpeMultiplier, STANDARD_RPE } from "@/rate-of-perceived-exertion.ts";
@@ -188,17 +189,21 @@ function Program_nextHistoryEntry(
 				programExercise.exerciseType,
 				sets?.at(0)?.weight,
 				settings,
-				(
-					programExercise.warmupSets || programExercise.reuse?.exercise?.warmupSets
-				)?.flatMap<IProgramExerciseWarmupSet>(ws =>
-					generateRange(ws.numberOfSets, () => ({
-						reps: ws.reps,
-						// @todo what the heck does this value mean? The weight I get, the decimal values I dont
-						value: ws.percentage
-							? ws.percentage / 100
-							: (ws.weight ?? MathUtils_roundTo0005(rpeMultiplier(ws.reps, STANDARD_RPE.WARMUP))),
-						threshold: build(0, settings.units),
-					})).toArray(),
+				(programExercise.warmupSets || programExercise.reuse?.exercise?.warmupSets)?.flatMap(ws =>
+					generateRange(
+						ws.numberOfSets,
+						(): IProgramExerciseWarmupSet => ({
+							reps: ws.reps,
+							// @todo what the heck does this value mean? The weight I get, the decimal values I dont
+							value: ws.percentage
+								? ((ws.percentage / 100) as IWorkingWeightPercent)
+								: (ws.weight ??
+									(MathUtils_roundTo0005(
+										rpeMultiplier(ws.reps, STANDARD_RPE.WARMUP),
+									) as IWorkingWeightPercent)),
+							threshold: build(0, settings.units),
+						}),
+					).toArray(),
 				),
 			),
 		},
