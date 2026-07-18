@@ -2772,30 +2772,23 @@ function getGlobals(exercise: IPlannerProgramExercise): IPlannerToProgram2Global
 			askWeight: exercise.globals?.askWeight ?? exercise.reuse?.exercise?.globals?.askWeight,
 		};
 	}
-	const first = variations.at(0)?.sets.at(0);
-	const firstWeight = first?.weight;
-	const firstRpe = first?.rpe;
-	const firstLogRpe = !!first?.logRpe;
-	const firstAskWeight = !!first?.askWeight;
-	const firstTimer = first?.timer;
+	const { weight, rpe, logRpe, askWeight, timer } = variations.at(0)?.sets.at(0) ?? {};
 	return {
 		weight:
-			firstWeight != null &&
-			variations.every(v =>
-				v.sets.every(s => eq(s.weight, firstWeight) && s.askWeight === firstAskWeight),
-			)
-				? firstWeight
+			weight != null &&
+			variations.every(v => v.sets.every(s => eq(s.weight, weight) && s.askWeight === !!askWeight))
+				? weight
 				: undefined,
-		askWeight: variations.every(v => v.sets.every(s => eq(s.weight, firstWeight) && s.askWeight)),
+		askWeight: variations.every(v => v.sets.every(s => eq(s.weight, weight) && s.askWeight)),
 		rpe:
-			firstRpe != null &&
-			variations.every(v => v.sets.every(s => s.rpe === firstRpe && s.logRpe === firstLogRpe))
-				? firstRpe
+			rpe != null &&
+			variations.every(v => v.sets.every(s => s.rpe === rpe && s.logRpe === !!logRpe))
+				? rpe
 				: undefined,
-		logRpe: variations.every(v => v.sets.every(s => s.rpe === firstRpe && s.logRpe)),
+		logRpe: variations.every(v => v.sets.every(s => s.rpe === rpe && s.logRpe)),
 		timer:
-			firstTimer != null && variations.every(v => v.sets.every(s => s.timer === firstTimer))
-				? firstTimer
+			timer != null && variations.every(v => v.sets.every(s => s.timer === timer))
+				? timer
 				: undefined,
 	};
 }
