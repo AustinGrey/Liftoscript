@@ -1,9 +1,4 @@
-import {
-	findErrorNode,
-	nodeError,
-	SourcedSyntaxError,
-	type SourcedSyntaxNode,
-} from "@/utils/lezer.ts";
+import { findErrorNode, nodeError, SourcedSyntaxError } from "@/utils/lezer.ts";
 import type { ISettings } from "@/user-settings";
 import type { IDayData } from "@/program";
 import { nodeFailure, type NodeResult } from "@/common-types.ts";
@@ -28,10 +23,10 @@ import {
  * @param dayData The information about the day in the program this exercise is
  */
 export function evaluate(
-	programNode: SourcedSyntaxNode,
+	programNode: PlanNodes.Program,
 	settings: ISettings,
 	mode: IPlannerExerciseEvaluatorMode,
-	dayData: IDayData = {
+	dayData: Readonly<IDayData> = {
 		day: as1(0),
 		week: as1(0),
 		dayInWeek: as1(0),
@@ -41,11 +36,6 @@ export function evaluate(
 		const firstError = findErrorNode(programNode);
 		if (firstError) {
 			return nodeFailure(nodeError(firstError));
-		}
-		if (programNode.type.name !== PlannerNodeName.Program) {
-			return nodeFailure(
-				nodeError(programNode, `Unexpected node type ${programNode.node.type.name}`),
-			);
 		}
 
 		let weeks: IPlannerExerciseEvaluatorWeek[] = [];

@@ -1,12 +1,10 @@
 import {
 	findErrorNode,
 	nodeError,
-	parseBound,
 	SourcedSyntaxError,
 	type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
 import { isEqualAfterTransform, ObjectUtils_keys, ObjectUtils_values } from "@/utils/object.ts";
-import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { IProgramMode } from "@/logic/evaluators/types.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import type { IDayData, IPlannerProgram, IPlannerProgramDay, IPlannerProgramWeek } from "@/program";
@@ -39,12 +37,17 @@ import {
 import { memoize } from "micro-memoize";
 import { eq, typeOf } from "@/quantities/weight.ts";
 import { definedOnly } from "@/utils/collection.ts";
-import { plannerError, PlannerNodeName } from "@/planner/parsing/guards.ts";
+import {
+	isPlanNodeOfType,
+	parseBound,
+	plannerError,
+	PlannerNodeName,
+} from "@/planner/parsing/guards.ts";
 import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
 import { toKey } from "@/exercises";
-import { nodeResult } from "@/common-types.ts";
+import { nodeFailure, nodeResult } from "@/common-types.ts";
 import {
 	as0,
 	as1,
@@ -671,8 +674,14 @@ export const PlannerEvaluator_forceEvaluate = (
 						day: as1(dayIndex),
 					};
 					dayIndexByWeekDay[weekIndex][dayInWeekIndex] = dayIndex;
+					const parsed = parseBound(day.exerciseText);
+
+					if (!isPlanNodeOfType("Program", parsed)) {
+						return nodeFailure(nodeError(parsed, `Unexpected node type ${parsed.node.type.name}`));
+					}
+
 					const dayParseResult = evaluate(
-						parseBound(plannerExerciseParser, day.exerciseText),
+						parsed,
 						settings,
 						IPlannerExerciseEvaluatorMode.PERDAY,
 						dayData,
@@ -919,7 +928,7 @@ export function PlannerProgram_evaluate(
 
 export function PlannerProgram_evaluateText(fullProgramText: string): IPlannerProgramWeek[] {
 	const data = evaluatePreservingSource(
-		parseBound(plannerExerciseParser, fullProgramText),
+		parseBound(fullProgramText),
 		IPlannerExerciseEvaluatorMode.FULLTEXT,
 	);
 	const weeks: IPlannerProgramWeek[] = data.map(week => {
