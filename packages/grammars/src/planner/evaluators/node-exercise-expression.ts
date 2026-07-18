@@ -755,8 +755,8 @@ function getRepRange(setParts: string): IRepRange | undefined {
 		numberOfSets: parseInt(numberOfSetsStr, 10),
 		minrep: minrepStr !== undefined ? parseInt(minrepStr, 10) : undefined,
 		maxrep: parseInt(maxrepStr, 10),
-		isAmrap: isAmrap,
-		isQuickAddSet: numberOfSetsStr.endsWith("+"),
+		asManyRepsAsPossible: isAmrap,
+		asManySetsAsPossible: numberOfSetsStr.endsWith("+"),
 	};
 }
 

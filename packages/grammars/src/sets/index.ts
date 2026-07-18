@@ -44,10 +44,13 @@ export interface IRepRange {
 	 */
 	minrep?: number;
 	/**
-	 * If true, there is no maximum, instead the movement should be done until failure
+	 * If true, there is no maximum number of repetitions in a set, instead the movement should be done until failure
 	 */
-	isAmrap: boolean;
-	isQuickAddSet: boolean;
+	asManyRepsAsPossible: boolean;
+	/**
+	 * If true, there is no maximum number of sets, the user should be prompted to keep adding more sets
+	 */
+	asManySetsAsPossible: boolean;
 }
 
 export interface IPlannerProgramExerciseSet {

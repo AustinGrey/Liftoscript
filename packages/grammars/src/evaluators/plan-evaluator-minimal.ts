@@ -1095,8 +1095,8 @@ export function PlannerProgramExercise_evaluateSetVariations(
 					rpe: aSet.rpe,
 					logRpe: !!aSet.logRpe,
 					label: aSet.label,
-					isAmrap: aSet.repRange.isAmrap,
-					isQuickAddSet: aSet.repRange.isQuickAddSet,
+					isAmrap: aSet.repRange.asManyRepsAsPossible,
+					isQuickAddSet: aSet.repRange.asManySetsAsPossible,
 					askWeight: !!aSet.askWeight,
 				});
 			}
@@ -2725,8 +2725,8 @@ function groupVariationSets(
 					minrep: originalSets?.repRange?.minrep,
 					weight: originalSets?.weight || w`0lb`,
 					logRpe: originalSets?.logRpe || false,
-					isAmrap: originalSets?.repRange?.isAmrap || false,
-					isQuickAddSet: originalSets?.repRange?.isQuickAddSet || false,
+					isAmrap: originalSets?.repRange?.asManyRepsAsPossible || false,
+					isQuickAddSet: originalSets?.repRange?.asManySetsAsPossible || false,
 					askWeight: originalSets?.askWeight || false,
 					rpe: originalSets?.rpe,
 					timer: originalSets?.timer,
