@@ -32,7 +32,6 @@ import {
 import {
 	type IExerciseDataValue,
 	type IProgramState,
-	type IRepRange,
 	type IScriptFnContext,
 	type IScriptFunctions,
 	type ISet,
@@ -108,7 +107,12 @@ import {
 } from "@/utils/indexes.ts";
 import { pipe } from "effect";
 import { $, orUndefined } from "@/utils/effects.ts";
-import { type IPlannerProgramExerciseEvaluatedSet, tryGetWeight } from "@/sets";
+import {
+	type IPlannerProgramExerciseEvaluatedSet,
+	type IPlannerProgramExerciseSet,
+	type IPlannerProgramExerciseWarmupSet,
+	tryGetWeight,
+} from "@/sets";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
 import { asNumericAscending, by } from "@/utils/sorting.ts";
 
@@ -806,25 +810,6 @@ export interface IPlannerProgramExerciseSetVariation {
 interface IPlannerProgramExerciseEvaluatedSetVariation {
 	sets: IPlannerProgramExerciseEvaluatedSet[];
 	isCurrent: boolean;
-}
-
-export interface IPlannerProgramExerciseSet {
-	repRange?: IRepRange;
-	timer?: number;
-	rpe?: number;
-	logRpe?: boolean;
-	percentage?: number;
-	weight?: IWeight;
-	label?: string;
-	askWeight?: boolean;
-}
-
-export interface IPlannerProgramExerciseWarmupSet {
-	type: "warmup";
-	numberOfSets: number;
-	reps: number;
-	percentage?: number;
-	weight?: IWeight;
 }
 
 export interface IPlannerProgramExerciseSuperset {

@@ -1,6 +1,49 @@
 import { type IDynamicWeight, type IWeight, rpePct } from "@/quantities/weight.ts";
 import { $ } from "@/utils/effects.ts";
 
+export interface IPlannerProgramExerciseWarmupSet {
+	type: "warmup";
+	numberOfSets: number;
+	reps: number;
+	percentage?: number;
+	weight?: IWeight;
+}
+
+/**
+ * Information about a potentially flexible number of repetitions
+ * @todo rename to "IMovement"? This is more than a range of reps, it's number of sets!
+ */
+export interface IRepRange {
+	/**
+	 * The many times this rep range should be done
+	 */
+	numberOfSets: number;
+	/**
+	 * The highest number of repetitions that should be done
+	 */
+	maxrep?: number;
+	/**
+	 * The lowest number of repetitions that should be done
+	 */
+	minrep?: number;
+	/**
+	 * If true, there is no maximum, instead the movement should be done until failure
+	 */
+	isAmrap: boolean;
+	isQuickAddSet: boolean;
+}
+
+export interface IPlannerProgramExerciseSet {
+	repRange?: IRepRange;
+	timer?: number;
+	rpe?: number;
+	logRpe?: boolean;
+	percentage?: number;
+	weight?: IWeight;
+	label?: string;
+	askWeight?: boolean;
+}
+
 export interface IPlannerProgramExerciseEvaluatedSet {
 	maxrep?: number;
 	weight?: IWeight | IDynamicWeight;

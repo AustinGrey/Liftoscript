@@ -174,29 +174,6 @@ export const TProgramState = z.record(
  * @see TProgramState
  */
 export type IProgramState = z.infer<typeof TProgramState>;
-/**
- * Information about a potentially flexible number of repetitions
- * @todo rename to "IMovement"? This is more than a range of reps, it's number of sets!
- */
-export interface IRepRange {
-	/**
-	 * The many times this rep range should be done
-	 */
-	numberOfSets: number;
-	/**
-	 * The highest number of repetitions that should be done
-	 */
-	maxrep?: number;
-	/**
-	 * The lowest number of repetitions that should be done
-	 */
-	minrep?: number;
-	/**
-	 * If true, there is no maximum, instead the movement should be done until failure
-	 */
-	isAmrap: boolean;
-	isQuickAddSet: boolean;
-}
 
 /**
  * When a function is dealing with a node, it should return this kind of result instead of throwing due to syntax errors.

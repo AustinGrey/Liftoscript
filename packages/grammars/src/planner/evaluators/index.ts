@@ -17,7 +17,6 @@ import {
 	type IPlannerEvalResult,
 	IPlannerExerciseEvaluatorMode,
 	type IPlannerProgramExercise,
-	type IPlannerProgramExerciseWarmupSet,
 	type IPlannerProgramReuse,
 	type IProgramExerciseDescriptions,
 	type IProgramExerciseProgress,
@@ -58,6 +57,7 @@ import {
 	ZERO,
 } from "@/utils/indexes.ts";
 import { evaluate } from "@/planner/evaluators/exercise.ts";
+import type { IPlannerProgramExerciseWarmupSet } from "@/sets";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;

@@ -21,7 +21,6 @@ import { queryChildren } from "@/utils/grammars.ts";
 import { parsePct, w } from "@/quantities/weight.ts";
 import {
 	type IProgramState,
-	type IRepRange,
 	type IScriptFunctions,
 	nodeFailure,
 	nodeResult,
@@ -37,10 +36,8 @@ import {
 	getRepeat,
 	getWeight,
 	type IPlannerProgramExercise,
-	type IPlannerProgramExerciseSet,
 	type IPlannerProgramExerciseSetVariation,
 	type IPlannerProgramExerciseSuperset,
-	type IPlannerProgramExerciseWarmupSet,
 	type IPlannerProgramReuse,
 	type IProgramExerciseProgress,
 	IProgramExerciseProgressType,
@@ -61,6 +58,11 @@ import {
 	parseBound,
 } from "@/logic/parsing/guards.ts";
 import { castAs1, type IndexFrom1 } from "@/utils/indexes.ts";
+import type {
+	IPlannerProgramExerciseSet,
+	IPlannerProgramExerciseWarmupSet,
+	IRepRange,
+} from "@/sets";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
 	return nodeFailure(
