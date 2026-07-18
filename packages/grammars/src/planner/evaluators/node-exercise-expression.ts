@@ -621,29 +621,18 @@ function evaluateWarmupSet(expr: PlanNodes.WarmupExerciseSet): IPlannerProgramEx
 	const { numberOfSets, reps } = getWarmupReps(setParts);
 	const percentageNode = expr.getChild(PlannerNodeName.Percentage);
 	const weightNode = expr.getChild(PlannerNodeName.Weight);
-	const percentage =
-		percentageNode == null
-			? undefined
-			: (parseFloat(
+	const weight =
+		percentageNode != null
+			? (parseFloat(
 					getNodeSourceEscapedWhiteSpace(percentageNode).replace("%", ""),
-				) as IWorkingWeightPercent);
-	const weight = getWeight(weightNode);
-	if (percentage) {
-		return {
-			type: "warmup",
-			reps,
-			numberOfSets,
-			percentage,
-		};
-	} else {
-		return {
-			type: "warmup",
-			reps,
-			numberOfSets,
-			// @todo this not null assertion prooves that the code base is assuming that a warmup is EITHER a percentage or a weight, we should just combine the two values into "weight" and make that a required property
-			weight: weight!,
-		};
-	}
+				) as IWorkingWeightPercent)
+			: getWeight(weightNode);
+	return {
+		type: "warmup",
+		reps,
+		numberOfSets,
+		weight,
+	};
 }
 
 function evaluateWarmup(

@@ -194,9 +194,8 @@ function Program_nextHistoryEntry(
 						ws.numberOfSets,
 						(): IProgramExerciseWarmupSet => ({
 							reps: ws.reps,
-							// @todo what the heck does this value mean? The weight I get, the decimal values I dont
-							value: ws.percentage
-								? ((ws.percentage / 100) as IWorkingWeightPercent)
+							value: isNumber(ws.weight)
+								? ((ws.weight / 100) as IWorkingWeightPercent)
 								: (ws.weight ??
 									(MathUtils_roundTo0005(
 										rpeMultiplier(ws.reps, STANDARD_RPE.WARMUP),
@@ -1903,7 +1902,7 @@ function groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [
 	let lastKey: string | undefined;
 	const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
 	for (const set of sets) {
-		const key = `${set.reps}-${print(set.weight || set.percentage || 0)}`;
+		const key = `${set.reps}-${print(set.weight ?? 0)}`;
 		if (lastKey == null || lastKey !== key) {
 			groups.push([set, 0]);
 		}
@@ -2580,9 +2579,9 @@ export function convertToPlanner(
 							function getWarmupSets(): string | undefined {
 								const result = groupWarmupsSets(evalExercise.warmupSets ?? [])
 									.map(([first, length]) => {
-										const weight =
-											first.weight ??
-											(first.percentage != null ? percentORM(first.percentage) : w`0lb`);
+										const weight = isNumber(first.weight)
+											? percentORM(first.weight)
+											: (first.weight ?? w`0lb`);
 										return `${length}x${first.reps} ${print(weight)}`;
 									})
 									.join(", ");

@@ -23,8 +23,7 @@ export interface IPlannerProgramExerciseWarmupSet {
 	type: "warmup";
 	numberOfSets: number;
 	reps: number;
-	percentage?: IWorkingWeightPercent;
-	weight?: IWeight;
+	weight?: IWeight | IWorkingWeightPercent;
 }
 
 /**
