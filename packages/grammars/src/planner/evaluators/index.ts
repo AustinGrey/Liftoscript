@@ -46,7 +46,7 @@ import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
 import { toKey } from "@/exercises";
-import { nodeFailure, nodeResult } from "@/common-types.ts";
+import { nodeFailure, nodeSuccess } from "@/common-types.ts";
 import {
 	as0,
 	as1,
@@ -688,7 +688,7 @@ export const PlannerEvaluator_forceEvaluate = (
 					);
 					const result: IPlannerEvalResult = !dayParseResult.success
 						? dayParseResult
-						: nodeResult(dayParseResult.data.at(0)?.days.at(0)?.exercises || []);
+						: nodeSuccess(dayParseResult.data.at(0)?.days.at(0)?.exercises || []);
 					dayIndex = next(dayIndex);
 					if (!result.success) {
 						return result;

@@ -23,7 +23,7 @@ import {
 	type IProgramState,
 	type IScriptFunctions,
 	nodeFailure,
-	nodeResult,
+	nodeSuccess,
 	type NodeResult,
 } from "@/common-types.ts";
 //#region Forbidden imports - these imports come from higher layers or dead imports, so they should be extracted somewhere else more common to avoid circular dependencies
@@ -305,7 +305,7 @@ function evaluateSet(expr: PlanNodes.ExerciseSet): NodeResult<IPlannerProgramExe
 	if (labelNode && label && label.length > 8) {
 		return nodeFailure(nodeError(labelNode, "Label length should be 8 chars max"));
 	}
-	return nodeResult({
+	return nodeSuccess({
 		repRange,
 		timer,
 		logRpe,
@@ -336,7 +336,7 @@ function evaluateId(expr: PlanNodes.ExerciseProperty): NodeResult<number[]> {
 	if (fnName === "tags" && fnArgs.length === 0) {
 		return nodeFailure(nodeError(fnNameNode, `You should provide the list of numbers in "tags"`));
 	}
-	return nodeResult(fnArgs.map(t => parseInt(t, 10)).filter(t => !isNaN(t)));
+	return nodeSuccess(fnArgs.map(t => parseInt(t, 10)).filter(t => !isNaN(t)));
 }
 
 function evaluateUpdate(expr: PlanNodes.ExerciseProperty): NodeResult<IProgramExerciseUpdate> {
@@ -396,7 +396,7 @@ function evaluateUpdate(expr: PlanNodes.ExerciseProperty): NodeResult<IProgramEx
 			),
 		);
 	}
-	return nodeResult({
+	return nodeSuccess({
 		type: IProgramExerciseUpdateType.CUSTOM,
 		script,
 		liftoscriptNode,
@@ -512,7 +512,7 @@ function evaluateProperty(
 			const result = evaluateProgress(expr, createEmptyScriptBindings, createScriptFunctions);
 			return !result.success
 				? nodeFailure(result.error)
-				: nodeResult({
+				: nodeSuccess({
 						type: "progress",
 						data: result.data,
 					});
@@ -521,7 +521,7 @@ function evaluateProperty(
 			const result = evaluateUpdate(expr);
 			return !result.success
 				? nodeFailure(result.error)
-				: nodeResult({
+				: nodeSuccess({
 						type: "update",
 						data: result.data,
 					});
@@ -530,7 +530,7 @@ function evaluateProperty(
 			const result = evaluateWarmup(expr);
 			return !result.success
 				? nodeFailure(result.error)
-				: nodeResult({
+				: nodeSuccess({
 						type: "warmup",
 						data: result.data,
 					});
@@ -539,13 +539,13 @@ function evaluateProperty(
 			const result = evaluateId(expr);
 			return !result.success
 				? nodeFailure(result.error)
-				: nodeResult({
+				: nodeSuccess({
 						type: "id",
 						data: result.data,
 					});
 		}
 		case "used":
-			return nodeResult({ type: "used", data: "" });
+			return nodeSuccess({ type: "used", data: "" });
 		default:
 			return nodeFailure(nodeError(nameNode, `There's no such property exists - '${name}'`));
 	}
@@ -590,7 +590,7 @@ function evaluateSection(
 				return failures[0];
 			}
 
-			return nodeResult({
+			return nodeSuccess({
 				type: "sets",
 				data: successes.map(r => r.data),
 				isCurrent: setsNode.getChild(PlannerNodeName.CurrentVariation) != null,
@@ -647,7 +647,7 @@ function evaluateWarmup(
 ): NodeResult<IPlannerProgramExerciseWarmupSet[]> {
 	const none = expr.getChild(PlannerNodeName.None);
 	if (none != null) {
-		return nodeResult([]);
+		return nodeSuccess([]);
 	}
 	const setsNode = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.WarmupExerciseSets,
@@ -659,10 +659,10 @@ function evaluateWarmup(
 			}),
 		];
 		if (sets.length > 0) {
-			return nodeResult(sets.map(set => evaluateWarmupSet(set)));
+			return nodeSuccess(sets.map(set => evaluateWarmupSet(set)));
 		}
 	}
-	return nodeResult([]);
+	return nodeSuccess([]);
 }
 
 function evaluateSuperset(expr: PlanNodes.Superset): NodeResult<{
@@ -671,7 +671,7 @@ function evaluateSuperset(expr: PlanNodes.Superset): NodeResult<{
 }> {
 	const exerciseNameNode = expr.getChild(PlannerNodeName.ExerciseName);
 	if (exerciseNameNode != null) {
-		return nodeResult({
+		return nodeSuccess({
 			type: "superset",
 			data: { name: getNodeSourceEscapedWhiteSpace(exerciseNameNode) },
 		});
@@ -716,7 +716,7 @@ function evaluateReuseNode(expr: PlanNodes.ReuseSectionWithWeekDay): NodeResult<
 	}
 	const name = getNodeSourceEscapedWhiteSpace(nameNode);
 	const { week, day } = getReuseWeekDay(expr.getChild(PlannerNodeName.WeekDay));
-	return nodeResult({
+	return nodeSuccess({
 		type: "reuse",
 		data: { fullName: name, week, day, source: "overall" },
 	});

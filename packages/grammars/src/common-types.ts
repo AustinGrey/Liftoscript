@@ -179,7 +179,7 @@ export type IProgramState = z.infer<typeof TProgramState>;
  * When a function is dealing with a node, it should return this kind of result instead of throwing due to syntax errors.
  */
 export type NodeResult<T> = IEither<T, SourcedSyntaxError>;
-export function nodeResult<T>(data: T): NodeResult<T> {
+export function nodeSuccess<T>(data: T): NodeResult<T> {
 	return { success: true, data };
 }
 export function nodeFailure(error: SourcedSyntaxError): {
