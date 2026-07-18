@@ -14,7 +14,6 @@ import type { IDayData, IPlannerProgram, IPlannerProgramDay, IPlannerProgramWeek
 //@todo These imports are coming from higher or dead layers, which should not be imported from
 import type { ISettings } from "@/user-settings";
 import {
-	evaluate,
 	forExerciseInEvaluatedWeeks,
 	type IEvaluatedProgram,
 	type IPlannerEvalResult,
@@ -55,6 +54,7 @@ import {
 	withIndex,
 	ZERO,
 } from "@/utils/indexes.ts";
+import { evaluate } from "@/planner/evaluators/exercise.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;

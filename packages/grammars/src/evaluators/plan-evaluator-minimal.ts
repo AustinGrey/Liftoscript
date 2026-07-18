@@ -36,8 +36,6 @@ import {
 	type IScriptFnContext,
 	type IScriptFunctions,
 	type ISet,
-	nodeFailure,
-	type NodeResult,
 	TProgramState,
 	TSet,
 } from "@/common-types.ts";
@@ -82,7 +80,6 @@ import {
 	Program_nextDay,
 } from "@/program";
 import {
-	findErrorNode,
 	type ISyntaxPointer,
 	nodeError,
 	parseBound,
@@ -97,8 +94,7 @@ import { IProgramMode } from "@/logic/evaluators/types.ts";
 import { PlannerEvaluator_forceEvaluate, PlannerProgram_evaluate } from "@/planner/evaluators";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 import { asProgramScript } from "@/planner/display.ts";
-import { evaluate as evaluateExerciseExpression } from "@/planner/evaluators/node-exercise-expression.ts";
-import { hasNonWhitespace, isNonEmpty, StringUtils_unindent } from "@/utils/string.ts";
+import { hasNonWhitespace, isNonEmpty } from "@/utils/string.ts";
 import {
 	as1,
 	castAs0,
@@ -911,7 +907,7 @@ export type IPlannerTopLineItem =
 
 export type IPlannerEvalResult = IEither<IPlannerProgramExercise[], SourcedSyntaxError>;
 
-interface IPlannerExerciseEvaluatorWeek {
+export interface IPlannerExerciseEvaluatorWeek {
 	name: string;
 	line: number;
 	days: { name: string; line: number; exercises: IPlannerProgramExercise[] }[];
@@ -1055,171 +1051,6 @@ export function getIsNotUsed(expr: PlanNodes.ExerciseExpression): boolean {
 		}
 	}
 	return false;
-}
-
-export function evaluate(
-	programNode: SourcedSyntaxNode,
-	settings: ISettings,
-	mode: IPlannerExerciseEvaluatorMode,
-	dayDataRaw: IDayData | undefined,
-): NodeResult<IPlannerExerciseEvaluatorWeek[]> {
-	let dayData: IDayData = dayDataRaw ?? {
-		day: as1(0),
-		week: as1(0),
-		dayInWeek: as1(0),
-	};
-	try {
-		const firstError = findErrorNode(programNode);
-		if (firstError) {
-			return nodeFailure(nodeError(firstError));
-		}
-		if (programNode.type.name !== PlannerNodeName.Program) {
-			return nodeFailure(
-				nodeError(programNode, `Unexpected node type ${programNode.node.type.name}`),
-			);
-		}
-
-		let weeks: IPlannerExerciseEvaluatorWeek[] = [];
-		let exerciseIndex = 0;
-		let latestDescriptions: string[][] = [];
-		for (const child of queryChildren(programNode).filter(definedOnly)) {
-			switch (child.type.name) {
-				case PlannerNodeName.EmptyExpression:
-				case PlannerNodeName.TripleLineComment:
-					if (latestDescriptions.length > 0) {
-						latestDescriptions.push([]);
-					}
-					break;
-				case PlannerNodeName.Week:
-					if (mode === "perday") {
-						return {
-							success: false,
-							error: nodeError(
-								child,
-								`You cannot specify weeks in the per-day exercise lists. Switch to the full program mode for that.`,
-							),
-						};
-					}
-					const weekName = child.source.replace(/^#+/, "").trim();
-					weeks.push({
-						name: weekName,
-						line: child.getPointer().line,
-						days: [],
-					});
-					dayData = {
-						day: dayData.day,
-						week: as1(castAs0(weeks.length)),
-						dayInWeek: castAs1(0),
-					};
-					break;
-				case PlannerNodeName.Day:
-					if (mode === "perday") {
-						return {
-							success: false,
-							error: nodeError(
-								child,
-								`You cannot specify days in the per-day exercise lists. Switch to the full program mode for that.`,
-							),
-						};
-					}
-					if (weeks.length === 0) {
-						return {
-							success: false,
-							error: nodeError(child, `You need to specify a week before a day`),
-						};
-					}
-					const dayName = child.source.replace(/^#+/, "").trim();
-					weeks[weeks.length - 1].days.push({
-						name: dayName,
-						line: child.getPointer().line,
-						exercises: [],
-					});
-					dayData = {
-						day: next(dayData.day),
-						week: dayData.week,
-						dayInWeek: dayData.dayInWeek,
-					};
-					exerciseIndex = 0;
-					break;
-				case PlannerNodeName.LineComment:
-					const value = child.source.trim();
-					if (latestDescriptions.length === 0) {
-						latestDescriptions.push([]);
-					}
-					latestDescriptions[latestDescriptions.length - 1].push(value.replace(/^\/\//, ""));
-					break;
-				case PlannerNodeName.ExerciseExpression: {
-					// Freezes the type narrowing to definitely defined.
-					const frozenDayData = dayData;
-					if (
-						mode === IPlannerExerciseEvaluatorMode.FULL &&
-						(weeks.at(-1)?.days ?? []).length === 0
-					) {
-						return {
-							success: false,
-							error: nodeError(
-								child,
-								`You should first define a week and a day before listing exercises.`,
-							),
-						};
-					}
-					if (weeks.length === 0) {
-						weeks.push({
-							name: "Week 1",
-							line: 1,
-							days: [{ name: "Day 1", line: 1, exercises: [] }],
-						});
-					}
-					const result = evaluateExerciseExpression(
-						child as PlanNodes.ExerciseExpression,
-						frozenDayData,
-						() => Progress_createEmptyScriptBindings(frozenDayData, settings),
-						() => Progress_createScriptFunctions(settings),
-						settings.exercises,
-						exerciseIndex,
-						() => {
-							const rawDescriptions: string[] = latestDescriptions.map(d => d.join("\n"));
-							const currentDescriptionIndex = rawDescriptions.findIndex(d => /^\s*!/.test(d));
-							let descriptions = rawDescriptions.map((d, i) => ({
-								value: d.replace(/^\s*!/, ""),
-								isCurrent: i === currentDescriptionIndex,
-							}));
-							if (descriptions.length > 1) {
-								descriptions = descriptions.filter(d => d.value);
-							}
-							descriptions = descriptions.map(d => ({
-								...d,
-								value: StringUtils_unindent(d.value),
-							}));
-							latestDescriptions = [];
-							return descriptions;
-						},
-					);
-					if (!result.success) {
-						return result;
-					}
-					const plannerExercise = result.data;
-					weeks.at(-1)?.days.at(-1)?.exercises.push(plannerExercise);
-					if (!plannerExercise.notused) {
-						exerciseIndex += 1;
-					}
-					break;
-				}
-				default:
-					return {
-						success: false,
-						error: nodeError(child, `Unexpected node type ${child.node.type.name}`),
-					};
-			}
-		}
-		return { data: weeks, success: true };
-	} catch (e) {
-		if (e instanceof SourcedSyntaxError) {
-			return { error: e, success: false };
-		} else {
-			throw e;
-		}
-	}
 }
 
 //#endregion
