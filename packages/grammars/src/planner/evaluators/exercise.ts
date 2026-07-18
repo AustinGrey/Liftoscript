@@ -3,9 +3,11 @@ import type { ISettings } from "@/user-settings";
 import type { IDayData } from "@/program";
 import { nodeFailure, type NodeResult } from "@/common-types.ts";
 import { as1, castAs0, castAs1, next } from "@/utils/indexes.ts";
-import { PlannerNodeName, type PlanNodes } from "@/planner/parsing/guards.ts";
-import { queryChildren } from "@/utils/grammars.ts";
-import { definedOnly } from "@/utils/collection.ts";
+import {
+	PlannerNodeName,
+	type PlanNodes,
+	tryQueryPlanNodeChildren,
+} from "@/planner/parsing/guards.ts";
 import { evaluate as evaluateExerciseExpression } from "@/planner/evaluators/node-exercise-expression.ts";
 import { Progress_createScriptFunctions } from "@/public-functions.ts";
 import { StringUtils_unindent } from "@/utils/string.ts";
@@ -41,7 +43,7 @@ export function evaluate(
 		let weeks: IPlannerExerciseEvaluatorWeek[] = [];
 		let exerciseIndex = 0;
 		let latestDescriptions: string[][] = [];
-		for (const child of queryChildren(programNode).filter(definedOnly)) {
+		for (const child of tryQueryPlanNodeChildren(programNode)) {
 			switch (child.type.name) {
 				case PlannerNodeName.EmptyExpression:
 				case PlannerNodeName.TripleLineComment:
