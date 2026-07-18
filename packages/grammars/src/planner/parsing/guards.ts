@@ -1,6 +1,8 @@
 import * as planTerms from "./workout-plan.terms.ts";
 import { type ISyntaxPointer, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { type QueryOptions, type TQueryResult, tryQueryChildren } from "@/utils/grammars.ts";
+import { parseBound as originalParseBound } from "@/utils/lezer.ts";
+import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 
 type IdMap_Plan = typeof planTerms;
 
@@ -195,4 +197,13 @@ export function queryPlanNodeChild<TTypes extends NodeNames_Plan>(
 		(r): r is TypedPlanNode<TTypes> => !(r instanceof SourcedSyntaxError),
 	);
 	return result;
+}
+
+/**
+ * Parses the given script, using the exercise parser, and binds the script to the returned nodes so that it can be accessed later when needed.
+ * Lezer parsers normally require you to store the original script and use it to get the original text a node covers, but this simplifies all that storage.
+ * @param script The script to parse
+ */
+export function parseBound(script: string): TypedPlanNode<NodeNames_Plan> {
+	return originalParseBound(plannerExerciseParser, script) as TypedPlanNode<NodeNames_Plan>;
 }
