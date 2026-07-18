@@ -1,5 +1,13 @@
-import { type IDynamicWeight, type IWeight, rpePct } from "@/quantities/weight.ts";
+import { type IDynamicWeight, type IWeight, rpePct, TWeight } from "@/quantities/weight.ts";
 import { $ } from "@/utils/effects.ts";
+import { z } from "zod";
+
+export const TProgramExerciseWarmupSet = z.strictObject({
+	reps: z.number(),
+	value: z.union([TWeight, z.number()]),
+	threshold: TWeight,
+});
+export type IProgramExerciseWarmupSet = Readonly<z.infer<typeof TProgramExerciseWarmupSet>>;
 
 export interface IPlannerProgramExerciseWarmupSet {
 	type: "warmup";

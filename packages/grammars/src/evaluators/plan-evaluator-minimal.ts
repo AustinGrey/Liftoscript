@@ -71,7 +71,6 @@ import {
 	type IPlannerProgramDay,
 	type IPlannerProgramWeek,
 	type IProgram,
-	type IProgramExerciseWarmupSet,
 	type IProgramStateMetadata,
 	Program_getProgramDayUsedExercises,
 	Program_getProgramExercise,
@@ -111,6 +110,7 @@ import {
 	type IPlannerProgramExerciseEvaluatedSet,
 	type IPlannerProgramExerciseSet,
 	type IPlannerProgramExerciseWarmupSet,
+	type IProgramExerciseWarmupSet,
 	tryGetWeight,
 } from "@/sets";
 import { rpeMultiplier, STANDARD_RPE } from "@/rate-of-perceived-exertion.ts";
@@ -1880,9 +1880,21 @@ function getRenamedValue(
 		return line.value;
 	}
 }
-function groupWarmupsSets(
-	sets: IPlannerProgramExerciseWarmupSet[],
-): [IPlannerProgramExerciseWarmupSet, number][] {
+
+/**
+ * Combines neighboring sets that are the same together e.g.
+ * - A, A, B, A
+ * becomes
+ * - [A, 2], [B, 1], [A, 1]
+ *
+ * @param sets The sets to group
+ */
+function groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [
+	/** The set that was repeated */
+	IPlannerProgramExerciseWarmupSet,
+	/** The number of times it was repeated */
+	number,
+][] {
 	let lastKey: string | undefined;
 	const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
 	for (const set of sets) {

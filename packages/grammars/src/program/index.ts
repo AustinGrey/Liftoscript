@@ -1,4 +1,11 @@
-import { convertTo, gt, type IWeight, multiply, round, TWeight, w } from "@/quantities/weight.ts";
+//#region Forbidden imports - these imports are being pulled from later in the layers and should not be
+import type {
+	IEvaluatedProgram,
+	IPlannerProgramExercise,
+	IPlannerProgramExerciseWithType,
+} from "@/evaluators/plan-evaluator-minimal.ts";
+//#endregion
+import { convertTo, gt, type IWeight, multiply, round, w } from "@/quantities/weight.ts";
 import { getExerciseOrDefault, type IExerciseType, isUnilateral, TExerciseType } from "@/exercises";
 import { getPreferredUnit, type ISettings } from "@/user-settings";
 import { type ISet, TProgramState } from "@/common-types.ts";
@@ -14,20 +21,7 @@ import {
 	ZERO,
 	zIndexFrom1,
 } from "@/utils/indexes.ts";
-//#region Forbidden imports - these imports are being pulled from later in the layers and should not be
-import type {
-	IEvaluatedProgram,
-	IPlannerProgramExercise,
-	IPlannerProgramExerciseWithType,
-} from "@/evaluators/plan-evaluator-minimal.ts";
-//#endregion
-
-export const TProgramExerciseWarmupSet = z.strictObject({
-	reps: z.number(),
-	value: z.union([TWeight, z.number()]),
-	threshold: TWeight,
-});
-export type IProgramExerciseWarmupSet = Readonly<z.infer<typeof TProgramExerciseWarmupSet>>;
+import { type IProgramExerciseWarmupSet, TProgramExerciseWarmupSet } from "@/sets";
 
 function warmup(
 	programExerciseWarmupSets: IProgramExerciseWarmupSet[],
