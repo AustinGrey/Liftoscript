@@ -113,8 +113,9 @@ import {
 	type IPlannerProgramExerciseWarmupSet,
 	tryGetWeight,
 } from "@/sets";
-import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
+import { rpeMultiplier, STANDARD_RPE } from "@/rate-of-perceived-exertion.ts";
 import { asNumericAscending, by } from "@/utils/sorting.ts";
+import { generateRange } from "@/utils/iterables.ts";
 
 //#region Program
 
@@ -1059,22 +1060,15 @@ function PlannerProgramExercise_programWarmups(
 	settings: ISettings,
 ): IProgramExerciseWarmupSet[] | undefined {
 	const exerciseWarmups = exercise.warmupSets || exercise.reuse?.exercise?.warmupSets;
-	if (exerciseWarmups == null) {
-		return undefined;
-	}
-	const sets: IProgramExerciseWarmupSet[] = [];
-	for (const ws of exerciseWarmups) {
-		for (let i = 0; i < ws.numberOfSets; i += 1) {
-			let value: IWeight | number | undefined = ws.percentage ? ws.percentage / 100 : undefined;
-			value ??= ws.weight ?? MathUtils_roundTo0005(rpeMultiplier(ws.reps, 4));
-			sets.push({
-				reps: ws.reps,
-				value,
-				threshold: build(0, settings.units),
-			});
-		}
-	}
-	return sets;
+	return exerciseWarmups?.flatMap(ws =>
+		generateRange(ws.numberOfSets, () => ({
+			reps: ws.reps,
+			value: ws.percentage
+				? ws.percentage / 100
+				: (ws.weight ?? MathUtils_roundTo0005(rpeMultiplier(ws.reps, STANDARD_RPE.WARMUP))),
+			threshold: build(0, settings.units),
+		})).toArray(),
+	);
 }
 
 export function PlannerProgramExercise_evaluateSetVariations(

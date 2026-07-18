@@ -1,3 +1,13 @@
+export enum STANDARD_RPE {
+	MAX_10 = 10,
+	EXTREME_9 = MAX_10 - 1,
+	HEAVY_8 = MAX_10 - 2,
+	MODERATE = MAX_10 - 3,
+	COMFORTABLE = MAX_10 - 4,
+	LIGHT = MAX_10 - 5,
+	WARMUP = MAX_10 - 6,
+}
+
 /**
 Rate of Perceived Exertion (RPE) is a scale that helps regulate the intensity of exercise. It ranges from 1 to 10, with each number representing a different level of effort. Here's a breakdown of what each RPE level means:
 
@@ -9,9 +19,9 @@ Rate of Perceived Exertion (RPE) is a scale that helps regulate the intensity of
 - 5 and below: Warm-up weights or technique-focused sets.
 
 This module provides functions for working with RPE values
- @todo make a branded type so people can't pass anything <5 or >10
+ @todo make a branded type so people can't pass anything <0 or >10 ?
  */
-export type RPE = number;
+export type RPE = STANDARD_RPE | number;
 
 /**
  * Calculates the Rate of Perceived Exertion (RPE) multiplier.
