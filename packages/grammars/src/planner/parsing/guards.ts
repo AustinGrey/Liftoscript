@@ -214,3 +214,7 @@ export function parseBound(script: string): TypedPlanNode<NodeNames_Plan> {
  * This series of characters is the standard separator between those sections.
  */
 export const SECTION_SEPARATOR = " / ";
+/**
+ * You can attach "descriptions" to an exercise definition, but they must start with this prefix on every line
+ */
+export const DESCRIPTION_PREFIX = "// ";

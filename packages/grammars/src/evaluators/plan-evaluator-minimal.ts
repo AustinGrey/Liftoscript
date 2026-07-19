@@ -1,7 +1,7 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import { definedOnly, findIndexOfCurrentOrFirst } from "../utils/collection";
+import { definedOnly, findIndexOfCurrentOrFirst, tryFindIndex } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
@@ -54,6 +54,7 @@ import {
 import { getCurrentEquipment, getPreferredUnit, type ISettings } from "@/user-settings";
 import {
 	asPlanNodeOfTypeOrThrow,
+	DESCRIPTION_PREFIX,
 	PlannerNodeName,
 	type PlanNodes,
 	SECTION_SEPARATOR,
@@ -98,6 +99,7 @@ import {
 	as1,
 	castAs0,
 	castAs1,
+	type IndexFrom0,
 	type IndexFrom1,
 	next,
 	safeFindLastIndex,
@@ -1913,25 +1915,26 @@ function groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [
 	return groups;
 }
 
-function getCurrentDescriptionExercise(
+function getCurrentDescriptionMeta(
 	program: IEvaluatedProgram,
 	key: string,
 	weekIndex: number,
 	dayInWeekIndex: number,
-): IPlannerProgramExercise | undefined {
-	return program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find(e => e.key === key);
-}
-
-function getCurrentDescriptionIndex(
-	program: IEvaluatedProgram,
-	key: string,
-	weekIndex: number,
-	dayInWeekIndex: number,
-): number {
-	const exercise = getCurrentDescriptionExercise(program, key, weekIndex, dayInWeekIndex);
-	const descriptions = exercise?.descriptions.values || [];
-	const index = descriptions.findIndex(s => s.isCurrent);
-	return index === -1 ? 0 : index;
+): {
+	/**
+	 * The exercise being described
+	 */
+	exercise: IPlannerProgramExercise | undefined;
+	/**
+	 * The index of the description marked as "isCurrent"
+	 */
+	index: IndexFrom0 | undefined;
+} {
+	const exercise = program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find(
+		e => e.key === key,
+	);
+	const index = tryFindIndex(exercise?.descriptions.values, s => s.isCurrent);
+	return { exercise, index };
 }
 
 function addExerciseDescriptions(
@@ -1951,22 +1954,18 @@ function addExerciseDescriptions(
 		)
 	) {
 		const lines: string[] = [];
-		const currentIndex = getCurrentDescriptionIndex(
-			program,
-			exercise.key,
-			weekIndex,
-			dayInWeekIndex,
-		);
+		const currentIndex =
+			getCurrentDescriptionMeta(program, exercise.key, weekIndex, dayInWeekIndex).index ?? 0;
 		for (const [i, description] of exercise.descriptions.values.entries()) {
 			if (i > 0) {
 				lines.push("");
 			}
 			for (const part of description.value.split("\n")) {
 				if (currentIndex !== 0 && currentIndex === i && !addedCurrentDescription) {
-					lines.push(`// ! ${part}`);
+					lines.push(DESCRIPTION_PREFIX + `! ${part}`);
 					addedCurrentDescription = true;
 				} else {
-					lines.push(`// ${part}`);
+					lines.push(DESCRIPTION_PREFIX + part);
 				}
 			}
 		}
@@ -1980,12 +1979,15 @@ function addExerciseDescriptions(
 		}).length;
 		if (currentWeekReusedExercisesCount === 1 && reusedDayData.week === weekIndex + 1) {
 			return {
-				lines: [`// ...${reusedExercise.fullName}`],
+				lines: [DESCRIPTION_PREFIX + `...${reusedExercise.fullName}`],
 				addedCurrentDescription,
 			};
 		}
 		return {
-			lines: [`// ...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`],
+			lines: [
+				DESCRIPTION_PREFIX +
+					`...${reusedExercise.fullName}[${reusedDayData.week}:${reusedDayData.dayInWeek}]`,
+			],
 			addedCurrentDescription,
 		};
 	}
@@ -2396,12 +2398,12 @@ export function convertToPlanner(
 								break;
 							}
 							if (key != null) {
-								const exercise = getCurrentDescriptionExercise(
+								const exercise = getCurrentDescriptionMeta(
 									program,
 									key,
 									weekIndex,
 									dayInWeekIndex,
-								);
+								).exercise;
 								const result = addExerciseDescriptions(
 									program,
 									exercise,
@@ -2414,12 +2416,8 @@ export function convertToPlanner(
 									addedCurrentDescription = result.addedCurrentDescription;
 									finishedToAddDescription = true;
 								} else {
-									const currentIndex = getCurrentDescriptionIndex(
-										program,
-										key,
-										weekIndex,
-										dayInWeekIndex,
-									);
+									const currentIndex =
+										getCurrentDescriptionMeta(program, key, weekIndex, dayInWeekIndex).index ?? 0;
 									if (
 										currentIndex !== 0 &&
 										currentIndex === descriptionIndex &&

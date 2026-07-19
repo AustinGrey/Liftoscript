@@ -14,10 +14,10 @@ export function definedOnly<T>(value: T | undefined): value is T {
  * @param predicate the predicate to check
  */
 export function tryFindIndex<T>(
-	arr: T[],
+	arr: T[] | undefined,
 	predicate: (value: T) => boolean,
 ): IndexFrom0 | undefined {
-	const result = arr.findIndex(predicate);
+	const result = arr?.findIndex(predicate);
 	return result === -1 ? undefined : castAs0(result);
 }
 
