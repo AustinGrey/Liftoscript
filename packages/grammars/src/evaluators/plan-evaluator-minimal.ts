@@ -96,6 +96,7 @@ import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.
 import { asProgramScript } from "@/planner/display.ts";
 import { hasNonWhitespace, isNonEmpty } from "@/utils/string.ts";
 import {
+	as0,
 	as1,
 	castAs0,
 	castAs1,
@@ -1842,32 +1843,34 @@ function getDereuseDecisions(programExercise: IPlannerProgramExercise): IDereuse
 function reorderGroupedTopLine(
 	groupedTopLine: IPlannerTopLineItem[][][][],
 	reorders: Exclude<IPlannerToProgramConvertOpts["reorder"], undefined>,
-): IPlannerTopLineItem[][][][] {
+): void {
 	for (const reorder of reorders) {
-		const groupedDay = groupedTopLine[reorder.dayData.week - 1]?.[reorder.dayData.dayInWeek - 1];
-		if (groupedDay) {
-			const indexMap = groupedDay.reduce<{
-				result: Record<number, number>;
-				i: number;
-			}>(
-				({ result, i }, group, index) => {
-					const exercise = group.find(item => item.type === "exercise");
-					if (exercise && !exercise.notused) {
-						result[i] = index;
-						i += 1;
-					}
-					return { result, i };
-				},
-				{ result: {}, i: 0 },
-			).result;
-			const from = groupedDay[indexMap[reorder.fromIndex]];
-			if (from) {
-				groupedDay.splice(indexMap[reorder.fromIndex], 1);
-				groupedDay.splice(indexMap[reorder.toIndex], 0, from);
-			}
+		const groupedDay = groupedTopLine
+			.at(as0(reorder.dayData.week))
+			?.at(as0(reorder.dayData.dayInWeek));
+		if (!groupedDay) {
+			continue;
+		}
+		const indexMap = groupedDay.reduce<{
+			result: Record<number, number>;
+			i: number;
+		}>(
+			({ result, i }, group, index) => {
+				const exercise = group.find(item => item.type === "exercise");
+				if (exercise && !exercise.notused) {
+					result[i] = index;
+					i += 1;
+				}
+				return { result, i };
+			},
+			{ result: {}, i: 0 },
+		).result;
+		const from = groupedDay[indexMap[reorder.fromIndex]];
+		if (from) {
+			groupedDay.splice(indexMap[reorder.fromIndex], 1);
+			groupedDay.splice(indexMap[reorder.toIndex], 0, from);
 		}
 	}
-	return groupedTopLine;
 }
 
 function getRenamedValue(
