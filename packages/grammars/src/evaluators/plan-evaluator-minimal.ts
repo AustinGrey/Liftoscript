@@ -2386,13 +2386,11 @@ export function convertToPlanner(
 							break;
 						}
 						case "description": {
-							let key: string | undefined;
-							for (let i = lineIndex; i < group.length; i += 1) {
-								if (group[i].type === "exercise") {
-									key = getRenamedValue(opts, group[i], weekIndex, dayInWeekIndex);
-									break;
-								}
-							}
+							const exercise = group.slice(lineIndex).find(item => item.type === "exercise");
+							const key = exercise
+								? getRenamedValue(opts, exercise, weekIndex, dayInWeekIndex)
+								: undefined;
+
 							descriptionIndex ??= 0;
 							if (finishedToAddDescription) {
 								break;
