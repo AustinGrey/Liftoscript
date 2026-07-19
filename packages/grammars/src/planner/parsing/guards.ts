@@ -207,3 +207,10 @@ export function queryPlanNodeChild<TTypes extends NodeNames_Plan>(
 export function parseBound(script: string): TypedPlanNode<NodeNames_Plan> {
 	return originalParseBound(plannerExerciseParser, script) as TypedPlanNode<NodeNames_Plan>;
 }
+
+/**
+ * Exercises are a collection of data about how the movement is done, progression is followed, etc.
+ * These are divided by section so the grammar can parse them.
+ * This series of characters is the standard separator between those sections.
+ */
+export const SECTION_SEPARATOR = " / ";

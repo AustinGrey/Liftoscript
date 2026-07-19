@@ -56,6 +56,7 @@ import {
 	asPlanNodeOfTypeOrThrow,
 	PlannerNodeName,
 	type PlanNodes,
+	SECTION_SEPARATOR,
 	tryQueryPlanNodeChildren,
 	type TypedPlanNode,
 } from "@/planner/parsing/guards.ts";
@@ -2490,9 +2491,9 @@ export function convertToPlanner(
 							} else {
 								plannerExercise = evalExercise.fullName;
 							}
-							plannerExercise += " / ";
+							plannerExercise += SECTION_SEPARATOR;
 							if (evalExercise.notused) {
-								plannerExercise += "used: none / ";
+								plannerExercise += "used: none" + SECTION_SEPARATOR;
 							}
 							const variations = evalExercise.evaluatedSetVariations;
 							const globals = getGlobals(evalExercise);
