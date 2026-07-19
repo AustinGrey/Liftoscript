@@ -10,8 +10,14 @@ export const zIndexFrom0 = z.number().brand<"0-indexed">();
 export const zIndexFrom1 = z.number().brand<"1-indexed">();
 export type IndexFrom0 = z.infer<typeof zIndexFrom0>;
 export type IndexFrom1 = z.infer<typeof zIndexFrom1>;
-export type ArrayFrom0<TElement> = Record<IndexFrom0, TElement>;
-export type ArrayFrom1<TElement> = Record<IndexFrom1, TElement>;
+
+/**
+ * With type safety, gets the entries of an array.
+ * @param arr The array to get the entries of
+ */
+export function entriesOf<T>(arr: T[] | undefined): [IndexFrom0, T][] {
+	return (arr?.entries() ?? []) as [IndexFrom0, T][];
+}
 
 /**
  * For convenience, a pre-defined zero index, so you don't need to cast all the time

@@ -99,6 +99,7 @@ import {
 	as1,
 	castAs0,
 	castAs1,
+	entriesOf,
 	type IndexFrom0,
 	type IndexFrom1,
 	next,
@@ -1872,20 +1873,16 @@ function reorderGroupedTopLine(
 function getRenamedValue(
 	opts: IPlannerToProgramConvertOpts,
 	line: IPlannerTopLineItem,
-	weekIndex: number,
-	dayInWeekIndex: number,
+	weekIndex: IndexFrom0,
+	dayInWeekIndex: IndexFrom0,
 ): string {
 	const renamedValue = opts.renameMapping?.[line.value];
-	if (
-		renamedValue &&
+	return renamedValue &&
 		(!renamedValue.dayData ||
-			(renamedValue.dayData.week === weekIndex + 1 &&
-				renamedValue.dayData.dayInWeek === dayInWeekIndex + 1))
-	) {
-		return renamedValue.to;
-	} else {
-		return line.value;
-	}
+			(renamedValue.dayData.week === as1(weekIndex) &&
+				renamedValue.dayData.dayInWeek === as1(dayInWeekIndex)))
+		? renamedValue.to
+		: line.value;
 }
 
 /**
@@ -1916,7 +1913,7 @@ function groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [
 }
 
 function getCurrentDescriptionMeta(
-	program: IEvaluatedProgram,
+	program: Readonly<IEvaluatedProgram>,
 	key: string,
 	weekIndex: number,
 	dayInWeekIndex: number,
@@ -1958,6 +1955,8 @@ function addExerciseDescriptions(
 			getCurrentDescriptionMeta(program, exercise.key, weekIndex, dayInWeekIndex).index ?? 0;
 		for (const [i, description] of exercise.descriptions.values.entries()) {
 			if (i > 0) {
+				// @todo I suppose this is the way to get padding placed between the previous exercise, and the start of
+				//    a description for the next exercise. This is a really obtuse way to accomplish that if that is.
 				lines.push("");
 			}
 			for (const part of description.value.split("\n")) {
@@ -2363,13 +2362,13 @@ export function convertToPlanner(
 	const addedWarmupsMap: Record<string, boolean> = {};
 	const addedIdMap: Record<string, boolean> = {};
 
-	for (const [weekIndex, week] of program.weeks.entries()) {
+	for (const [weekIndex, week] of entriesOf(program.weeks)) {
 		const plannerWeek: IPlannerProgramWeek = {
 			name: week.name,
 			days: [],
 			description: week.description,
 		};
-		for (const [dayInWeekIndex, programDay] of week.days.entries()) {
+		for (const [dayInWeekIndex, programDay] of entriesOf(week.days)) {
 			const plannerDay: IPlannerProgramDay = {
 				name: programDay.name,
 				exerciseText: "",
@@ -2388,50 +2387,50 @@ export function convertToPlanner(
 							break;
 						}
 						case "description": {
-							const exercise = group.slice(lineIndex).find(item => item.type === "exercise");
-							const key = exercise
-								? getRenamedValue(opts, exercise, weekIndex, dayInWeekIndex)
+							const exerciseLine = group.slice(lineIndex).find(item => item.type === "exercise");
+							const key = exerciseLine
+								? getRenamedValue(opts, exerciseLine, weekIndex, dayInWeekIndex)
 								: undefined;
 
 							descriptionIndex ??= 0;
 							if (finishedToAddDescription) {
 								break;
 							}
-							if (key != null) {
-								const exercise = getCurrentDescriptionMeta(
-									program,
-									key,
-									weekIndex,
-									dayInWeekIndex,
-								).exercise;
-								const result = addExerciseDescriptions(
-									program,
-									exercise,
-									weekIndex,
-									dayInWeekIndex,
-									addedCurrentDescription,
-								);
-								if (result) {
-									exerciseTextArr.push(...result.lines);
-									addedCurrentDescription = result.addedCurrentDescription;
-									finishedToAddDescription = true;
-								} else {
-									const currentIndex =
-										getCurrentDescriptionMeta(program, key, weekIndex, dayInWeekIndex).index ?? 0;
-									if (
-										currentIndex !== 0 &&
-										currentIndex === descriptionIndex &&
-										!addedCurrentDescription
-									) {
-										exerciseTextArr.push(line.value.replace(/^\/\/\s*!?\s*/, "// ! "));
-										addedCurrentDescription = true;
-									} else {
-										exerciseTextArr.push(line.value.replace(/^(\/\/\s*)!\s*/, "$1"));
-									}
-								}
-							} else {
+							if (key == null) {
 								exerciseTextArr.push(line.value.replace(/^(\/\/\s*)!\s*/, "$1"));
+								break;
 							}
+							const exercise = getCurrentDescriptionMeta(
+								program,
+								key,
+								weekIndex,
+								dayInWeekIndex,
+							).exercise;
+							const result = addExerciseDescriptions(
+								program,
+								exercise,
+								weekIndex,
+								dayInWeekIndex,
+								addedCurrentDescription,
+							);
+							if (result) {
+								exerciseTextArr.push(...result.lines);
+								addedCurrentDescription = result.addedCurrentDescription;
+								finishedToAddDescription = true;
+								break;
+							}
+							const currentIndex =
+								getCurrentDescriptionMeta(program, key, weekIndex, dayInWeekIndex).index ?? 0;
+							if (
+								currentIndex !== 0 &&
+								currentIndex === descriptionIndex &&
+								!addedCurrentDescription
+							) {
+								exerciseTextArr.push(line.value.replace(/^\/\/\s*!?\s*/, "// ! "));
+								addedCurrentDescription = true;
+								break;
+							}
+							exerciseTextArr.push(line.value.replace(/^(\/\/\s*)!\s*/, "$1"));
 							break;
 						}
 						case "empty": {
