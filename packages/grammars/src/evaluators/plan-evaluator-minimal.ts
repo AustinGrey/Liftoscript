@@ -2361,15 +2361,13 @@ export function convertToPlanner(
 	const addedWarmupsMap: Record<string, boolean> = {};
 	const addedIdMap: Record<string, boolean> = {};
 
-	for (let weekIndex = 0; weekIndex < program.weeks.length; weekIndex += 1) {
-		const week = program.weeks[weekIndex];
+	for (const [weekIndex, week] of program.weeks.entries()) {
 		const plannerWeek: IPlannerProgramWeek = {
 			name: week.name,
 			days: [],
 			description: week.description,
 		};
-		for (let dayInWeekIndex = 0; dayInWeekIndex < week.days.length; dayInWeekIndex += 1) {
-			const programDay = week.days[dayInWeekIndex];
+		for (const [dayInWeekIndex, programDay] of week.days.entries()) {
 			const plannerDay: IPlannerProgramDay = {
 				name: programDay.name,
 				exerciseText: "",
@@ -2379,11 +2377,9 @@ export function convertToPlanner(
 			let finishedToAddDescription = false;
 			const groupedTopLines = groupedTopLineMap[weekIndex][dayInWeekIndex];
 			let groupTextArr: string[] = [];
-			groupLoop: for (let groupIndex = 0; groupIndex < groupedTopLines.length; groupIndex += 1) {
+			groupLoop: for (const group of groupedTopLines) {
 				const exerciseTextArr: string[] = [];
-				const group = groupedTopLines[groupIndex];
-				for (let lineIndex = 0; lineIndex < group.length; lineIndex += 1) {
-					const line = group[lineIndex];
+				for (const [lineIndex, line] of group.entries()) {
 					switch (line.type) {
 						case "comment": {
 							exerciseTextArr.push(line.value);
