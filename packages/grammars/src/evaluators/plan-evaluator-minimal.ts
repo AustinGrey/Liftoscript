@@ -2116,7 +2116,9 @@ export function compactPlannerProgram(
 						const repeatParts = [...(line.order !== 0 ? [line.order] : []), ...line.repeatRanges];
 						const repeatStr = repeatParts.length ? `[${repeatParts.join(",")}]` : "";
 						exerciseTextParts.push(
-							[`${line.fullName}${repeatStr}`, line.sections].filter(isNonEmpty).join(" / "),
+							[`${line.fullName}${repeatStr}`, line.sections]
+								.filter(isNonEmpty)
+								.join(SECTION_SEPARATOR),
 						);
 						break;
 					case "description":
@@ -2526,12 +2528,12 @@ export function convertToPlanner(
 
 								if (dereuseDecisions.includes("sets")) {
 									plannerExercise +=
-										` / ` +
+										SECTION_SEPARATOR +
 										variations
 											.map((v, i) => {
 												return variationToString(v, globals, i, evalExercise);
 											})
-											.join(" / ");
+											.join(SECTION_SEPARATOR);
 								}
 
 								const overriddenGlobals: string[] = [];
@@ -2549,13 +2551,13 @@ export function convertToPlanner(
 									overriddenGlobals.push(`${n(globals.timer)}s`);
 								}
 								if (overriddenGlobals.length > 0) {
-									plannerExercise += ` / ${overriddenGlobals.join(" ")}`;
+									plannerExercise += SECTION_SEPARATOR + overriddenGlobals.join(" ");
 								}
 							} else {
 								if (evalExercise.setVariations.length > 0) {
 									plannerExercise += variations
 										.map((v, i) => variationToString(v, globals, i, evalExercise))
-										.join(" / ");
+										.join(SECTION_SEPARATOR);
 								}
 
 								const globalsStr: string[] = [];
@@ -2573,7 +2575,7 @@ export function convertToPlanner(
 									globalsStr.push(`${globals.timer}s`);
 								}
 								if (globalsStr.length > 0) {
-									plannerExercise += ` / ${globalsStr.join(" ")}`;
+									plannerExercise += SECTION_SEPARATOR + globalsStr.join(" ");
 								}
 							}
 
@@ -2592,26 +2594,27 @@ export function convertToPlanner(
 							if (!addedWarmupsMap[key] && evalExercise?.warmupSets) {
 								const warmupSets = getWarmupSets();
 								if (warmupSets != null) {
-									plannerExercise += ` / warmup: ${warmupSets}`;
+									plannerExercise += SECTION_SEPARATOR + `warmup: ${warmupSets}`;
 									addedWarmupsMap[key] = true;
 								}
 							}
 
 							if (!addedIdMap[key] && (evalExercise.tags || []).length > 0) {
-								plannerExercise += ` / id: tags(${(evalExercise.tags || []).join(", ")})`;
+								plannerExercise +=
+									SECTION_SEPARATOR + `id: tags(${(evalExercise.tags || []).join(", ")})`;
 								addedIdMap[key] = true;
 							}
 
 							const superset = evalExercise.superset?.name;
 							if (superset) {
-								plannerExercise += ` / superset: ${superset}`;
+								plannerExercise += SECTION_SEPARATOR + `superset: ${superset}`;
 							}
 
 							const update = evalExercise.update;
 							if (!addedUpdateMap[key] && update && (update.reuse || update.script)) {
 								if (!evalExercise.reuse || dereuseDecisions.includes("update")) {
 									if (evalExercise.update) {
-										plannerExercise += " / " + getUpdate(evalExercise.update, settings);
+										plannerExercise += SECTION_SEPARATOR + getUpdate(evalExercise.update, settings);
 									}
 									addedUpdateMap[key] = true;
 								} else if (update.reuse?.fullName === evalExercise.reuse.fullName) {
@@ -2621,7 +2624,7 @@ export function convertToPlanner(
 
 							const progress = evalExercise.progress;
 							if (progress && progress.type === "none") {
-								plannerExercise += ` / progress: none`;
+								plannerExercise += SECTION_SEPARATOR + `progress: none`;
 							} else if (
 								!addedProgressMap[key] &&
 								progress &&
@@ -2630,7 +2633,7 @@ export function convertToPlanner(
 								if (!evalExercise.reuse || dereuseDecisions.includes("progress")) {
 									const progressStr = getProgress(evalExercise, settings, false);
 									if (progressStr) {
-										plannerExercise += ` / ${progressStr}`;
+										plannerExercise += SECTION_SEPARATOR + progressStr;
 									}
 									addedProgressMap[key] = true;
 								} else if (progress.reuse?.fullName === evalExercise.reuse.fullName) {
