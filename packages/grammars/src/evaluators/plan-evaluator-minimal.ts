@@ -1257,17 +1257,13 @@ function ProgramSet_getEvaluatedWeight(
 		getExerciseOrDefault(exerciseType, settings.exercises),
 		settings,
 	);
+	const preferredUnit = getPreferredUnit(settings, exerciseType);
 
 	return pipe(
 		tryGetWeight(set),
 		weight => evaluateWeight(weight, orm),
 		$.map(evaluatedWeight =>
-			round(
-				convertTo(evaluatedWeight, getPreferredUnit(settings, exerciseType)),
-				settings,
-				getPreferredUnit(settings, exerciseType),
-				exerciseType,
-			),
+			round(convertTo(evaluatedWeight, preferredUnit), settings, preferredUnit, exerciseType),
 		),
 	);
 }
