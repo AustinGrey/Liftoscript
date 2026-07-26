@@ -22,17 +22,15 @@ export const TExerciseKind = z.enum(exerciseKinds);
 export type IExerciseKind = z.infer<typeof TExerciseKind>;
 export const TExerciseType = z.strictObject({
 	id: TExerciseId,
-	equipment: TEquipmentType.optional(),
-});
-export type IExerciseType = z.infer<typeof TExerciseType>;
-export type IExercise = {
-	id: IExerciseId;
-	name: string;
-	defaultWarmup?: number;
 	/**
 	 * The equipment that is used for the exercise.
 	 */
-	equipment?: IEquipmentType;
+	equipment: TEquipmentType.optional(),
+});
+export type IExerciseType = z.infer<typeof TExerciseType>;
+export type IExercise = IExerciseType & {
+	name: string;
+	defaultWarmup?: number;
 	/**
 	 * The equipment that is used by default when no equipment is specified.
 	 */

@@ -1253,11 +1253,7 @@ function ProgramSet_getEvaluatedWeight(
 	exerciseType: IExerciseType,
 	settings: ISettings,
 ): $.Option<IWeight> {
-	const orm = getOrmOrStartingWeight(
-		getExerciseOrDefault(exerciseType, settings.exercises),
-		settings,
-		settings.units,
-	);
+	const orm = getOrmOrStartingWeight(exerciseType, settings, settings.units);
 	const preferredUnit = getPreferredUnit(settings, exerciseType);
 
 	return pipe(
