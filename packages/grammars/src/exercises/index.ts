@@ -14,6 +14,7 @@ import type { OpenRecord } from "@/utils/types.ts";
 import { ObjectUtils_keys } from "@/utils/object.ts";
 import { sameCaseInsensitive } from "@/utils/string.ts";
 import type { IExerciseDataValue } from "@/common-types.ts";
+import type { IExerciseData } from "@/evaluators/plan-evaluator-minimal.ts";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
@@ -1795,23 +1796,21 @@ export function maybeGetExercise(
 		: allExercisesList[id];
 }
 
-// @todo this layer should not know about settings, either this function doesn't belong here, or callees will need to pull the specific value from the settings they need
 /**
  *
- * @param type
- * @param settings
+ * @param exercise The exercise to get the ORM of
+ * @param exData Available information about the exercises
  * @param asUnit What unit should the weight be in when it returns
  */
 export function getOrmOrStartingWeight(
-	type: IExerciseType,
-	settings: ISettings,
+	exercise: IExercise,
+	exData: IExerciseData,
 	asUnit: IUnit,
 ): IWeight {
-	const rm = settings.exerciseData[toKey(type)]?.rm1;
+	const rm = exData[toKey(exercise)]?.rm1;
 	if (rm) {
 		return convertTo(rm, asUnit);
 	}
-	const exercise = getExerciseOrDefault(type, settings.exercises);
 	return asUnit === "kg" ? exercise.startingWeightKg : exercise.startingWeightLb;
 }
 const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<OpenRecord<IExerciseId>>(
