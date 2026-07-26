@@ -381,7 +381,7 @@ export function Program_runAllFinishDayScripts(
 		}
 		const { state, updates, bindings, otherStates } = newStateResult.data;
 		const exerciseKey = toKey(entry.exercise);
-		if (!eq(bindings.rm1, getOrmOrStartingWeight(entry.exercise, settings))) {
+		if (!eq(bindings.rm1, getOrmOrStartingWeight(entry.exercise, settings, settings.units))) {
 			exerciseData[exerciseKey] = {
 				rm1: roundTo005(bindings.rm1),
 			};
@@ -700,7 +700,7 @@ function operation(
 	op: IAssignmentOp,
 ): void {
 	const valueToAssign = applyOp(
-		getOrmOrStartingWeight(programExercise.exerciseType, settings),
+		getOrmOrStartingWeight(programExercise.exerciseType, settings, settings.units),
 		set[key] ??
 			ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings).pipe(orUndefined),
 		value,
@@ -1256,6 +1256,7 @@ function ProgramSet_getEvaluatedWeight(
 	const orm = getOrmOrStartingWeight(
 		getExerciseOrDefault(exerciseType, settings.exercises),
 		settings,
+		settings.units,
 	);
 	const preferredUnit = getPreferredUnit(settings, exerciseType);
 
@@ -1341,7 +1342,7 @@ export function Progress_createEmptyScriptBindings(
 		descriptionIndex: 1,
 		bodyweight: build(0, settings.units),
 		setIndex: 1,
-		rm1: exercise ? getOrmOrStartingWeight(exercise, settings) : w`0lb`,
+		rm1: exercise ? getOrmOrStartingWeight(exercise, settings, settings.units) : w`0lb`,
 	};
 }
 

@@ -1,5 +1,5 @@
 //#region Exercise
-import { convertTo, type IWeight, w } from "@/quantities/weight.ts";
+import { convertTo, type IUnit, type IWeight, w } from "@/quantities/weight.ts";
 import { z } from "zod";
 import {
 	builtInEquipmentTypes,
@@ -1798,13 +1798,23 @@ export function maybeGetExercise(
 }
 
 // @todo this layer should not know about settings, either this function doesn't belong here, or callees will need to pull the specific value from the settings they need
-export function getOrmOrStartingWeight(type: IExerciseType, settings: ISettings): IWeight {
+/**
+ *
+ * @param type
+ * @param settings
+ * @param asUnit What unit should the weight be in when it returns
+ */
+export function getOrmOrStartingWeight(
+	type: IExerciseType,
+	settings: ISettings,
+	asUnit: IUnit,
+): IWeight {
 	const rm = settings.exerciseData[toKey(type)]?.rm1;
 	if (rm) {
-		return convertTo(rm, settings.units);
+		return convertTo(rm, asUnit);
 	}
 	const exercise = getExerciseOrDefault(type, settings.exercises);
-	return settings.units === "kg" ? exercise.startingWeightKg : exercise.startingWeightLb;
+	return asUnit === "kg" ? exercise.startingWeightKg : exercise.startingWeightLb;
 }
 const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<OpenRecord<IExerciseId>>(
 	(acc, key) => {
