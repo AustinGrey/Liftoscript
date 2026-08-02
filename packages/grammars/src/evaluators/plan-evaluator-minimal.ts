@@ -1840,39 +1840,6 @@ function getDereuseDecisions(programExercise: IPlannerProgramExercise): IDereuse
 	return Array.from(dereuseDecisions);
 }
 
-function reorderGroupedTopLine(
-	groupedTopLine: IPlannerTopLineItem[][][][],
-	reorders: Exclude<IPlannerToProgramConvertOpts["reorder"], undefined>,
-): void {
-	for (const reorder of reorders) {
-		const groupedDay = groupedTopLine
-			.at(as0(reorder.dayData.week))
-			?.at(as0(reorder.dayData.dayInWeek));
-		if (!groupedDay) {
-			continue;
-		}
-		const indexMap = groupedDay.reduce<{
-			result: Record<number, number>;
-			i: number;
-		}>(
-			({ result, i }, group, index) => {
-				const exercise = group.find(item => item.type === "exercise");
-				if (exercise && !exercise.notused) {
-					result[i] = index;
-					i += 1;
-				}
-				return { result, i };
-			},
-			{ result: {}, i: 0 },
-		).result;
-		const from = groupedDay[indexMap[reorder.fromIndex]];
-		if (from) {
-			groupedDay.splice(indexMap[reorder.fromIndex], 1);
-			groupedDay.splice(indexMap[reorder.toIndex], 0, from);
-		}
-	}
-}
-
 function getRenamedValue(
 	opts: IPlannerToProgramConvertOpts,
 	line: IPlannerTopLineItem,
@@ -2309,11 +2276,15 @@ function topLineMap(
 /**
  * Groups lines of a program together by the logic exercise that they belong to
  * @param topLine The week/day/line of day grouping
+ * @param reorders How the groups ordering should be altered, if needed.
  * @returns The week/day/exercise/line of exercise grouping, with the exercises sorted by exercise index and repeat
  * @todo this seems rather obtuse. The non-exercise lines are just comments. Why not parse into an exercise structure that allows for comments on it? Sure you might lose white space, but that's not really important?!
  */
-function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[][][][] {
-	return topLine.map(topLineWeek =>
+function groupTopLines(
+	topLine: IPlannerTopLineItem[][][],
+	reorders: IPlannerToProgramConvertOpts["reorder"],
+): IPlannerTopLineItem[][][][] {
+	const groups = topLine.map(topLineWeek =>
 		topLineWeek.map(topLineDay => {
 			const group: IPlannerTopLineItem[][] = [];
 			let reset = true;
@@ -2342,6 +2313,34 @@ function groupTopLines(topLine: IPlannerTopLineItem[][][]): IPlannerTopLineItem[
 			);
 		}),
 	);
+
+	for (const reorder of reorders ?? []) {
+		const groupedDay = groups.at(as0(reorder.dayData.week))?.at(as0(reorder.dayData.dayInWeek));
+		if (!groupedDay) {
+			continue;
+		}
+		const indexMap = groupedDay.reduce<{
+			result: Record<number, number>;
+			i: number;
+		}>(
+			({ result, i }, group, index) => {
+				const exercise = group.find(item => item.type === "exercise");
+				if (exercise && !exercise.notused) {
+					result[i] = index;
+					i += 1;
+				}
+				return { result, i };
+			},
+			{ result: {}, i: 0 },
+		).result;
+		const from = groupedDay[indexMap[reorder.fromIndex]];
+		if (from) {
+			groupedDay.splice(indexMap[reorder.fromIndex], 1);
+			groupedDay.splice(indexMap[reorder.toIndex], 0, from);
+		}
+	}
+
+	return groups;
 }
 
 export function convertToPlanner(
@@ -2357,8 +2356,7 @@ export function convertToPlanner(
 		throw error.error;
 	}
 	const topLineMap = topLineItems(program.planner, settings.exercises);
-	let groupedTopLineMap = groupTopLines(topLineMap);
-	if (opts.reorder) reorderGroupedTopLine(groupedTopLineMap, opts.reorder);
+	const groupedTopLineMap = groupTopLines(topLineMap, opts.reorder);
 	let dayIndex = ZERO;
 	const addedProgressMap: Record<string, boolean> = {};
 	const addedUpdateMap: Record<string, boolean> = {};
