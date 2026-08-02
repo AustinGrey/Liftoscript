@@ -920,7 +920,13 @@ export type IPlannerTopLineItem =
 			repeat?: number[];
 	  }
 	| {
-			type: "comment" | "description" | "empty";
+			type:
+				// Comments are not connected to any structure in the program, so they are preserved
+				| "comment"
+				// It's valid to have a trailing description, which won't be connected to an exercise.
+				| "description"
+				// Empty/whitespace only lines give space, which some people prefer, so we preserve them this way
+				| "empty";
 			value: string;
 	  };
 
@@ -2128,10 +2134,18 @@ export function compactPlannerProgram(
 	return plannerProgram;
 }
 
+/**
+ *
+ * @param plannerProgram
+ * @param exercises
+ * @param reorders How the groups ordering should be altered, if needed.
+ * @returns the lines of the program, grouped according to the weeks/days
+ */
 function topLineItems(
 	plannerProgram: IPlannerProgram,
 	exercises: IAllCustomExercises,
-): IPlannerTopLineItem[][][] {
+	reorders: IPlannerToProgramConvertOpts["reorder"],
+): IPlannerTopLineItem[][][][] {
 	let dayIndex = 0;
 
 	const mapping = plannerProgram.weeks.map(week =>
@@ -2170,7 +2184,7 @@ function topLineItems(
 			}
 		}
 	}
-	return mapping;
+	return groupTopLines(mapping, reorders);
 }
 
 function getRepeatRanges(numbers: number[]): string[] {
@@ -2371,8 +2385,7 @@ export function convertToPlanner(
 
 		throw error.error;
 	}
-	const topLineMap = topLineItems(program.planner, settings.exercises);
-	const groupedTopLineMap = groupTopLines(topLineMap, opts.reorder);
+	const topLineMap = topLineItems(program.planner, settings.exercises, opts.reorder);
 	let dayIndex = ZERO;
 	const addedProgressMap: Record<string, boolean> = {};
 	const addedUpdateMap: Record<string, boolean> = {};
@@ -2393,7 +2406,7 @@ export function convertToPlanner(
 			let descriptionIndex: number | undefined = undefined;
 			let addedCurrentDescription = false;
 			let finishedToAddDescription = false;
-			const groupedTopLines = groupedTopLineMap[weekIndex][dayInWeekIndex];
+			const groupedTopLines = topLineMap[weekIndex][dayInWeekIndex];
 			let groupTextArr: string[] = [];
 			groupLoop: for (const group of groupedTopLines) {
 				const exerciseTextArr: string[] = [];
