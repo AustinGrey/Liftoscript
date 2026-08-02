@@ -762,17 +762,28 @@ export const PlannerKey_fromFullName = (
 	fullName: string,
 	exercises: IAllCustomExercises,
 ): PlannerKey => {
-	const { label, name, equipment } = extractNameParts(fullName, exercises);
-	return PlannerKey_fromLabelNameAndEquipment(label, name, equipment, exercises);
+	return getPlannerKey(fullName, exercises);
 };
 
-export const PlannerKey_fromLabelNameAndEquipment = memoize(
+/**
+ * Creates a unique identifier for this exercise
+ * You can either directly pass in the unique elements of the exercise, the label, name and equipment
+ * Or just pass in the full name and those elements will be automatically inferred with a best guess
+ */
+export const getPlannerKey = memoize(
 	(
-		label: string | undefined,
-		name: string,
-		equipment: string | undefined,
+		elements:
+			// Passing the full name
+			| string
+			| {
+					label: string | undefined;
+					name: string;
+					equipment: string | undefined;
+			  },
 		exercises: IAllCustomExercises,
 	): PlannerKey => {
+		const { label, name, equipment } =
+			typeof elements === "string" ? extractNameParts(elements, exercises) : elements;
 		const exercise = Exercise_findByNameEquipment(exercises, name, equipment);
 		return makePlannerKey(label, exercise ? toKey(exercise) : name);
 	},
@@ -2167,7 +2178,7 @@ export function compactPlannerProgram(
  * @param plannerProgram
  * @param exercises
  * @param reorders How the groups ordering should be altered, if needed.
- * @returns the lines of the program, grouped according to the weeks/days/exercises. See {@link topLineMap} for a similar situation
+ * @returns the lines of the program, grouped according to the weeks/days/exercises.
  * @todo this seems rather obtuse. The non-exercise lines are just comments. Why not parse into an exercise structure that allows for comments on it? Sure you might lose white space, but that's not really important?!
  */
 function topLineMapGrouped(

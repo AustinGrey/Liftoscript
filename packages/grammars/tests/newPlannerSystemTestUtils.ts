@@ -6,7 +6,7 @@ import {
 	type IWeightChange,
 	makePlannerKey,
 	PlannerKey_fromFullName,
-	PlannerKey_fromLabelNameAndEquipment,
+	getPlannerKey,
 	Program_create,
 	Program_evaluate,
 	Program_nextHistoryRecordFromEvaluated,
@@ -131,12 +131,7 @@ function replaceExercise(
 		const conflictingExercises = allExercises.filter(e => {
 			const newKey =
 				typeof toExerciseType === "string"
-					? PlannerKey_fromLabelNameAndEquipment(
-							getLabel(e.label),
-							toExerciseType,
-							undefined,
-							settings.exercises,
-						)
+					? getPlannerKey(getLabel(e.label), toExerciseType, undefined, settings.exercises)
 					: makePlannerKey(getLabel(e.label), toKey(toExerciseType));
 			return (
 				e.key === newKey &&
@@ -167,12 +162,7 @@ function replaceExercise(
 				}
 				const newKey =
 					typeof toExerciseType === "string"
-						? PlannerKey_fromLabelNameAndEquipment(
-								newLabel2,
-								toExerciseType,
-								undefined,
-								settings.exercises,
-							)
+						? getPlannerKey(newLabel2, toExerciseType, undefined, settings.exercises)
 						: makePlannerKey(newLabel2, toKey(toExerciseType));
 				renameMapping[exercise.key] = { to: newKey, dayData };
 				exercise.key = newKey;
