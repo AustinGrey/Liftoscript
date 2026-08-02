@@ -1,12 +1,11 @@
 import {
 	convertToPlanner,
 	forExerciseInEvaluatedWeeks,
+	getPlannerKey,
 	getWeight,
 	type IEvaluatedProgram,
 	type IWeightChange,
 	makePlannerKey,
-	PlannerKey_fromFullName,
-	getPlannerKey,
 	Program_create,
 	Program_evaluate,
 	Program_nextHistoryRecordFromEvaluated,
@@ -213,7 +212,7 @@ export function PlannerTestUtils_changeExercise(
 ): string {
 	const { program } = PlannerTestUtils_get(programText);
 	const settings = Settings_build();
-	const key = PlannerKey_fromFullName(oldExercise, settings.exercises);
+	const key = getPlannerKey(oldExercise, settings.exercises);
 	const result = PlannerProgram_replaceAndValidateExercise(program, key, newExercise, settings);
 	if (result.success) {
 		return result.data.planner ? asProgramScript(result.data.planner) : "";

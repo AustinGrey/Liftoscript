@@ -758,13 +758,6 @@ export function makePlannerKey(label: string | undefined, key: string): PlannerK
 	return `${label ? `${label}-` : ""}${key}`.toLowerCase() as PlannerKey;
 }
 
-export const PlannerKey_fromFullName = (
-	fullName: string,
-	exercises: IAllCustomExercises,
-): PlannerKey => {
-	return getPlannerKey(fullName, exercises);
-};
-
 /**
  * Creates a unique identifier for this exercise
  * You can either directly pass in the unique elements of the exercise, the label, name and equipment
@@ -2333,7 +2326,7 @@ function topLineMap(
 					fullName,
 					order: getOrder(exerciseExpression),
 					notused: getIsNotUsed(exerciseExpression),
-					value: PlannerKey_fromFullName(fullName, exercises),
+					value: getPlannerKey(fullName, exercises),
 					exerciseIndex,
 					repeat,
 					repeatRanges: getRepeatRanges(repeat),
@@ -2709,7 +2702,7 @@ export function convertToPlanner(
 		if (exercise.repeat != null && exercise.repeat.length > 0) {
 			const key = exercise.exerciseType
 				? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
-				: PlannerKey_fromFullName(exercise.fullName, settings.exercises);
+				: getPlannerKey(exercise.fullName, settings.exercises);
 			repeatingExercises.add(key);
 		}
 	});

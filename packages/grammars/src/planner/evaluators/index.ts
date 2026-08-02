@@ -13,6 +13,7 @@ import type { IDayData, IPlannerProgram, IPlannerProgramDay, IPlannerProgramWeek
 import type { ISettings } from "@/user-settings";
 import {
 	forExerciseInEvaluatedWeeks,
+	getPlannerKey,
 	type IEvaluatedProgram,
 	type IPlannerEvalResult,
 	IPlannerExerciseEvaluatorMode,
@@ -25,7 +26,6 @@ import {
 	IProgramExerciseUpdateType,
 	type IWeightChange,
 	makePlannerKey,
-	PlannerKey_fromFullName,
 	PlannerProgramExercise_evaluateSetVariations,
 	PlannerProgramExercise_getState,
 	PlannerProgramExercise_setVariations,
@@ -349,7 +349,7 @@ function fillProgressReuses(
 	if (progress?.type === "custom") {
 		const fullName = progress.reuse?.fullName;
 		if (progress.reuse && fullName) {
-			const key = PlannerKey_fromFullName(fullName, settings.exercises);
+			const key = getPlannerKey(fullName, settings.exercises);
 			const point = exercise.points.progressPoint || exercise.points.fullName;
 			if (metadata.byExerciseWeekDay[key] == null) {
 				throw plannerError(exercise.fullName, `No such exercise ${fullName}`, point);
@@ -458,7 +458,7 @@ function fillUpdateReuses(
 	if (!(exercise.update.reuse && fullName)) {
 		return;
 	}
-	const key = PlannerKey_fromFullName(fullName, settings.exercises);
+	const key = getPlannerKey(fullName, settings.exercises);
 	const point = exercise.points.updatePoint || exercise.points.fullName;
 	if (metadata.byExerciseWeekDay[key] == null) {
 		throw plannerError(exercise.fullName, `No such exercise ${fullName}`, point);
@@ -555,7 +555,7 @@ function findReusedDescriptions(
 		}
 	}
 	reusingName = reusingName.replace(/\[([^]+)\]/, "").trim();
-	const key = PlannerKey_fromFullName(reusingName, settings.exercises);
+	const key = getPlannerKey(reusingName, settings.exercises);
 	const weekExercises = Object.values(
 		byExerciseWeekDay[key]?.[weekIndex ?? currentWeekIndex] || [],
 	);
@@ -592,8 +592,8 @@ function findOriginalExercisesAtWeekDay(
 			for (const exercise of day.data) {
 				const reusingKey = exercise.exerciseType
 					? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
-					: PlannerKey_fromFullName(exercise.fullName, settings.exercises);
-				const originalKey = PlannerKey_fromFullName(fullName, settings.exercises);
+					: getPlannerKey(exercise.fullName, settings.exercises);
+				const originalKey = getPlannerKey(fullName, settings.exercises);
 				if (reusingKey !== originalKey) {
 					continue;
 				}

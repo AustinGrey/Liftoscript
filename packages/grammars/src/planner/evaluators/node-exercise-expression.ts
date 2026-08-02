@@ -23,8 +23,8 @@ import {
 	type IProgramState,
 	type IScriptFunctions,
 	nodeFailure,
-	nodeSuccess,
 	type NodeResult,
+	nodeSuccess,
 } from "@/common-types.ts";
 //#region Forbidden imports - these imports come from higher layers or dead imports, so they should be extracted somewhere else more common to avoid circular dependencies
 import {
@@ -33,6 +33,7 @@ import {
 	getIsNotUsed,
 	getNodeSourceEscapedWhiteSpace,
 	getOrder,
+	getPlannerKey,
 	getRepeat,
 	getWeight,
 	type IPlannerProgramExercise,
@@ -43,7 +44,6 @@ import {
 	IProgramExerciseProgressType,
 	type IProgramExerciseUpdate,
 	IProgramExerciseUpdateType,
-	PlannerKey_fromFullName,
 	validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 //#endregion
@@ -52,10 +52,10 @@ import type { IDayData } from "@/program";
 import {
 	isLogicNodeOfType,
 	type NodeNames_Logic,
+	parseBound,
 	queryChild,
 	queryTree,
 	type TypedLogicNode,
-	parseBound,
 } from "@/logic/parsing/guards.ts";
 import { castAs1, type IndexFrom1 } from "@/utils/indexes.ts";
 import type {
@@ -160,7 +160,7 @@ export function evaluate(
 
 	const plannerExercise: IPlannerProgramExercise = {
 		id: generateUid(8),
-		key: PlannerKey_fromFullName(fullName, exercises),
+		key: getPlannerKey(fullName, exercises),
 		fullName,
 		shortName,
 		exerciseType: Exercise_findByNameAndEquipment(shortName, exercises),
