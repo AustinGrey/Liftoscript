@@ -2159,25 +2159,21 @@ function topLineMapGrouped(
 	for (const week of mapping) {
 		for (const [dayIndex, day] of week.entries()) {
 			for (const exercise of day.filter(item => item.type === "exercise")) {
-				for (const r of exercise.repeat || []) {
+				for (const r of exercise.repeat ?? []) {
 					const reuseDay = mapping[r - 1]?.[dayIndex];
 					if (
-						reuseDay &&
-						!reuseDay.some(e => e.type === "exercise" && e.value === exercise.value)
+						!reuseDay ||
+						reuseDay.some(e => e.type === "exercise" && e.value === exercise.value)
 					) {
-						if (exercise.descriptions) {
-							for (let di = 0; di < exercise.descriptions.length; di += 1) {
-								if (di !== 0) {
-									reuseDay.push({ type: "empty", value: "" });
-								}
-								reuseDay.push({
-									type: "description",
-									value: exercise.descriptions[di],
-								});
-							}
-						}
-						reuseDay.push({ ...exercise, repeat: undefined });
+						continue;
 					}
+					for (const [di, description] of exercise.descriptions.entries()) {
+						reuseDay.push({
+							type: di === 0 ? "description" : "empty",
+							value: di === 0 ? description : "",
+						});
+					}
+					reuseDay.push({ ...exercise, repeat: undefined });
 				}
 			}
 		}
