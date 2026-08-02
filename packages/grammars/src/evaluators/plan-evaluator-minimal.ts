@@ -340,7 +340,7 @@ function Program_runFinishDayScript(
 	};
 }
 
-type IExerciseData = OpenRecord<IExerciseDataValue>;
+export type IExerciseData = OpenRecord<IExerciseDataValue>;
 export function Program_runAllFinishDayScripts(
 	program: IProgram,
 	progress: IHistoryRecord,
@@ -381,7 +381,16 @@ export function Program_runAllFinishDayScripts(
 		}
 		const { state, updates, bindings, otherStates } = newStateResult.data;
 		const exerciseKey = toKey(entry.exercise);
-		if (!eq(bindings.rm1, getOrmOrStartingWeight(entry.exercise, settings))) {
+		if (
+			!eq(
+				bindings.rm1,
+				getOrmOrStartingWeight(
+					getExerciseOrDefault(entry.exercise, settings.exercises),
+					settings.exerciseData,
+					settings.units,
+				),
+			)
+		) {
 			exerciseData[exerciseKey] = {
 				rm1: roundTo005(bindings.rm1),
 			};
@@ -700,7 +709,11 @@ function operation(
 	op: IAssignmentOp,
 ): void {
 	const valueToAssign = applyOp(
-		getOrmOrStartingWeight(programExercise.exerciseType, settings),
+		getOrmOrStartingWeight(
+			getExerciseOrDefault(programExercise.exerciseType, settings.exercises),
+			settings.exerciseData,
+			settings.units,
+		),
 		set[key] ??
 			ProgramSet_getEvaluatedWeight(set, programExercise.exerciseType, settings).pipe(orUndefined),
 		value,
@@ -1255,19 +1268,16 @@ function ProgramSet_getEvaluatedWeight(
 ): $.Option<IWeight> {
 	const orm = getOrmOrStartingWeight(
 		getExerciseOrDefault(exerciseType, settings.exercises),
-		settings,
+		settings.exerciseData,
+		settings.units,
 	);
+	const preferredUnit = getPreferredUnit(settings, exerciseType);
 
 	return pipe(
 		tryGetWeight(set),
 		weight => evaluateWeight(weight, orm),
 		$.map(evaluatedWeight =>
-			round(
-				convertTo(evaluatedWeight, getPreferredUnit(settings, exerciseType)),
-				settings,
-				getPreferredUnit(settings, exerciseType),
-				exerciseType,
-			),
+			round(convertTo(evaluatedWeight, preferredUnit), settings, preferredUnit, exerciseType),
 		),
 	);
 }
@@ -1345,7 +1355,13 @@ export function Progress_createEmptyScriptBindings(
 		descriptionIndex: 1,
 		bodyweight: build(0, settings.units),
 		setIndex: 1,
-		rm1: exercise ? getOrmOrStartingWeight(exercise, settings) : w`0lb`,
+		rm1: exercise
+			? getOrmOrStartingWeight(
+					getExerciseOrDefault(exercise, settings.exercises),
+					settings.exerciseData,
+					settings.units,
+				)
+			: w`0lb`,
 	};
 }
 

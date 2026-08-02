@@ -1,5 +1,5 @@
 //#region Exercise
-import { convertTo, type IWeight, w } from "@/quantities/weight.ts";
+import { convertTo, type IUnit, type IWeight, w } from "@/quantities/weight.ts";
 import { z } from "zod";
 import {
 	builtInEquipmentTypes,
@@ -14,6 +14,7 @@ import type { OpenRecord } from "@/utils/types.ts";
 import { ObjectUtils_keys } from "@/utils/object.ts";
 import { sameCaseInsensitive } from "@/utils/string.ts";
 import type { IExerciseDataValue } from "@/common-types.ts";
+import type { IExerciseData } from "@/evaluators/plan-evaluator-minimal.ts";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
@@ -22,17 +23,15 @@ export const TExerciseKind = z.enum(exerciseKinds);
 export type IExerciseKind = z.infer<typeof TExerciseKind>;
 export const TExerciseType = z.strictObject({
 	id: TExerciseId,
-	equipment: TEquipmentType.optional(),
-});
-export type IExerciseType = z.infer<typeof TExerciseType>;
-export type IExercise = {
-	id: IExerciseId;
-	name: string;
-	defaultWarmup?: number;
 	/**
 	 * The equipment that is used for the exercise.
 	 */
-	equipment?: IEquipmentType;
+	equipment: TEquipmentType.optional(),
+});
+export type IExerciseType = z.infer<typeof TExerciseType>;
+export type IExercise = IExerciseType & {
+	name: string;
+	defaultWarmup?: number;
 	/**
 	 * The equipment that is used by default when no equipment is specified.
 	 */
@@ -1797,14 +1796,22 @@ export function maybeGetExercise(
 		: allExercisesList[id];
 }
 
-// @todo this layer should not know about settings, either this function doesn't belong here, or callees will need to pull the specific value from the settings they need
-export function getOrmOrStartingWeight(type: IExerciseType, settings: ISettings): IWeight {
-	const rm = settings.exerciseData[toKey(type)]?.rm1;
+/**
+ *
+ * @param exercise The exercise to get the ORM of
+ * @param exData Available information about the exercises
+ * @param asUnit What unit should the weight be in when it returns
+ */
+export function getOrmOrStartingWeight(
+	exercise: IExercise,
+	exData: IExerciseData,
+	asUnit: IUnit,
+): IWeight {
+	const rm = exData[toKey(exercise)]?.rm1;
 	if (rm) {
-		return convertTo(rm, settings.units);
+		return convertTo(rm, asUnit);
 	}
-	const exercise = getExerciseOrDefault(type, settings.exercises);
-	return settings.units === "kg" ? exercise.startingWeightKg : exercise.startingWeightLb;
+	return asUnit === "kg" ? exercise.startingWeightKg : exercise.startingWeightLb;
 }
 const nameToIdMapping = ObjectUtils_keys(allExercisesList).reduce<OpenRecord<IExerciseId>>(
 	(acc, key) => {
