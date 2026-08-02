@@ -1665,11 +1665,40 @@ interface IPlannerToProgram2Globals {
 type IDereuseDecision = "sets" | "weight" | "rpe" | "timer" | "progress" | "update";
 
 interface IPlannerToProgramConvertOpts {
-	renameMapping?: Record<string, { to: string; dayData?: IDayData }>;
+	/**
+	 * Replacements you would like to have done
+	 */
+	renameMapping?: Record<
+		/**
+		 * The contents of the planner line which must match exactly for the rename to trigger
+		 */
+		string,
+		{
+			/**
+			 * The replacement value
+			 */
+			to: string;
+			/**
+			 * If provided, the day must match as well for the replacement to trigger. Otherwise it is ignored.
+			 */
+			dayData?: IDayData;
+		}
+	>;
+	/**
+	 * Days you'd like re-sorted
+	 */
 	reorder?: {
+		/**
+		 * The day to get sorted
+		 */
 		dayData: IDayData;
-		fromIndex: number;
-		toIndex: number;
+		/**
+		 * The portion of the day you want sorted
+		 */
+		range: {
+			from: IndexFrom0;
+			to: IndexFrom0;
+		};
 	}[];
 }
 
@@ -1863,12 +1892,12 @@ function getDereuseDecisions(programExercise: IPlannerProgramExercise): IDereuse
 }
 
 function getRenamedValue(
-	opts: IPlannerToProgramConvertOpts,
+	renameMapping: IPlannerToProgramConvertOpts["renameMapping"],
 	line: IPlannerTopLineItem,
 	weekIndex: IndexFrom0,
 	dayInWeekIndex: IndexFrom0,
 ): string {
-	const renamedValue = opts.renameMapping?.[line.value];
+	const renamedValue = renameMapping?.[line.value];
 	return renamedValue &&
 		(!renamedValue.dayData ||
 			(renamedValue.dayData.week === as1(weekIndex) &&
@@ -2215,23 +2244,23 @@ function topLineMapGrouped(
 			continue;
 		}
 		const indexMap = groupedDay.reduce<{
-			result: Record<number, number>;
-			i: number;
+			result: Record<IndexFrom0, IndexFrom0>;
+			i: IndexFrom0;
 		}>(
 			({ result, i }, group, index) => {
 				const exercise = group.find(item => item.type === "exercise");
 				if (exercise && !exercise.notused) {
-					result[i] = index;
-					i += 1;
+					result[i] = castAs0(index);
+					i = next(i);
 				}
 				return { result, i };
 			},
-			{ result: {}, i: 0 },
+			{ result: {}, i: ZERO },
 		).result;
-		const from = groupedDay[indexMap[reorder.fromIndex]];
+		const from = groupedDay[indexMap[reorder.range.from]];
 		if (from) {
-			groupedDay.splice(indexMap[reorder.fromIndex], 1);
-			groupedDay.splice(indexMap[reorder.toIndex], 0, from);
+			groupedDay.splice(indexMap[reorder.range.from], 1);
+			groupedDay.splice(indexMap[reorder.range.to], 0, from);
 		}
 	}
 
@@ -2400,7 +2429,7 @@ export function convertToPlanner(
 						case "description": {
 							const exerciseLine = group.slice(lineIndex).find(item => item.type === "exercise");
 							const key = exerciseLine
-								? getRenamedValue(opts, exerciseLine, weekIndex, dayInWeekIndex)
+								? getRenamedValue(opts.renameMapping, exerciseLine, weekIndex, dayInWeekIndex)
 								: undefined;
 
 							descriptionIndex ??= 0;
@@ -2455,7 +2484,7 @@ export function convertToPlanner(
 						}
 						case "exercise": {
 							descriptionIndex = undefined;
-							const value = getRenamedValue(opts, line, weekIndex, dayInWeekIndex);
+							const value = getRenamedValue(opts.renameMapping, line, weekIndex, dayInWeekIndex);
 							const evalExercise = Program_getProgramExercise(as1(dayIndex), program, value)!;
 
 							if (evalExercise == null) {
