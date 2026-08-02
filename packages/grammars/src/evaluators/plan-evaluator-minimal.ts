@@ -2135,13 +2135,12 @@ export function compactPlannerProgram(
 }
 
 /**
- *
  * @param plannerProgram
  * @param exercises
  * @param reorders How the groups ordering should be altered, if needed.
- * @returns the lines of the program, grouped according to the weeks/days
+ * @returns the lines of the program, grouped according to the weeks/days. See {@link topLineMap} for a similar situation
  */
-function topLineItems(
+function topLineMapGrouped(
 	plannerProgram: IPlannerProgram,
 	exercises: IAllCustomExercises,
 	reorders: IPlannerToProgramConvertOpts["reorder"],
@@ -2158,9 +2157,8 @@ function topLineItems(
 		}),
 	);
 	for (const week of mapping) {
-		for (dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-			const day = week[dayIndex].filter(item => item.type === "exercise");
-			for (const exercise of day) {
+		for (const [dayIndex, day] of week.entries()) {
+			for (const exercise of day.filter(item => item.type === "exercise")) {
 				for (const r of exercise.repeat || []) {
 					const reuseDay = mapping[r - 1]?.[dayIndex];
 					if (
@@ -2187,7 +2185,7 @@ function topLineItems(
 	return groupTopLines(mapping, reorders);
 }
 
-function getRepeatRanges(numbers: number[]): string[] {
+function getRepeatRanges(numbers: IndexFrom1[]): string[] {
 	if (numbers.length === 0) {
 		return [];
 	}
@@ -2385,7 +2383,7 @@ export function convertToPlanner(
 
 		throw error.error;
 	}
-	const topLineMap = topLineItems(program.planner, settings.exercises, opts.reorder);
+	const topLineMap = topLineMapGrouped(program.planner, settings.exercises, opts.reorder);
 	let dayIndex = ZERO;
 	const addedProgressMap: Record<string, boolean> = {};
 	const addedUpdateMap: Record<string, boolean> = {};
