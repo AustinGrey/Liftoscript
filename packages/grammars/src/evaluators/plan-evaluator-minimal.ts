@@ -2138,7 +2138,8 @@ export function compactPlannerProgram(
  * @param plannerProgram
  * @param exercises
  * @param reorders How the groups ordering should be altered, if needed.
- * @returns the lines of the program, grouped according to the weeks/days. See {@link topLineMap} for a similar situation
+ * @returns the lines of the program, grouped according to the weeks/days/exercises. See {@link topLineMap} for a similar situation
+ * @todo this seems rather obtuse. The non-exercise lines are just comments. Why not parse into an exercise structure that allows for comments on it? Sure you might lose white space, but that's not really important?!
  */
 function topLineMapGrouped(
 	plannerProgram: IPlannerProgram,
@@ -2178,7 +2179,63 @@ function topLineMapGrouped(
 			}
 		}
 	}
-	return groupTopLines(mapping, reorders);
+	const groups = mapping.map(topLineWeek =>
+		topLineWeek.map(topLineDay => {
+			const group: IPlannerTopLineItem[][] = [];
+			let reset = true;
+			for (const line of topLineDay) {
+				if (reset) {
+					group.push([]);
+					reset = false;
+				}
+				group[group.length - 1] ??= [];
+				group[group.length - 1].push(line);
+				if (line.type === "exercise") {
+					reset = true;
+				}
+			}
+			return group.sort(
+				by(
+					lines => lines.find(l => l.type === "exercise"),
+					(ex1, ex2) => {
+						return ex1 == null || ex2 == null
+							? 0
+							: ex1.exerciseIndex === ex2.exerciseIndex
+								? (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0)
+								: (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
+					},
+				),
+			);
+		}),
+	);
+
+	for (const reorder of reorders ?? []) {
+		const groupedDay = groups.at(as0(reorder.dayData.week))?.at(as0(reorder.dayData.dayInWeek));
+		if (!groupedDay) {
+			continue;
+		}
+		const indexMap = groupedDay.reduce<{
+			result: Record<number, number>;
+			i: number;
+		}>(
+			({ result, i }, group, index) => {
+				const exercise = group.find(item => item.type === "exercise");
+				if (exercise && !exercise.notused) {
+					result[i] = index;
+					i += 1;
+				}
+				return { result, i };
+			},
+			{ result: {}, i: 0 },
+		).result;
+		const from = groupedDay[indexMap[reorder.fromIndex]];
+		if (from) {
+			groupedDay.splice(indexMap[reorder.fromIndex], 1);
+			groupedDay.splice(indexMap[reorder.toIndex], 0, from);
+		}
+	}
+
+	return groups;
 }
 
 function getRepeatRanges(numbers: IndexFrom1[]): string[] {
@@ -2295,76 +2352,6 @@ function topLineMap(
 		}
 	}
 	return result;
-}
-
-/**
- * Groups lines of a program together by the logic exercise that they belong to
- * @param topLine The week/day/line of day grouping
- * @param reorders How the groups ordering should be altered, if needed.
- * @returns The week/day/exercise/line of exercise grouping, with the exercises sorted by exercise index and repeat
- * @todo this seems rather obtuse. The non-exercise lines are just comments. Why not parse into an exercise structure that allows for comments on it? Sure you might lose white space, but that's not really important?!
- */
-function groupTopLines(
-	topLine: IPlannerTopLineItem[][][],
-	reorders: IPlannerToProgramConvertOpts["reorder"],
-): IPlannerTopLineItem[][][][] {
-	const groups = topLine.map(topLineWeek =>
-		topLineWeek.map(topLineDay => {
-			const group: IPlannerTopLineItem[][] = [];
-			let reset = true;
-			for (const line of topLineDay) {
-				if (reset) {
-					group.push([]);
-					reset = false;
-				}
-				group[group.length - 1] ??= [];
-				group[group.length - 1].push(line);
-				if (line.type === "exercise") {
-					reset = true;
-				}
-			}
-			return group.sort(
-				by(
-					lines => lines.find(l => l.type === "exercise"),
-					(ex1, ex2) => {
-						return ex1 == null || ex2 == null
-							? 0
-							: ex1.exerciseIndex === ex2.exerciseIndex
-								? (ex1.repeat?.[0] ?? 0) - (ex2.repeat?.[0] ?? 0)
-								: (ex1.exerciseIndex ?? 0) - (ex2.exerciseIndex ?? 0);
-					},
-				),
-			);
-		}),
-	);
-
-	for (const reorder of reorders ?? []) {
-		const groupedDay = groups.at(as0(reorder.dayData.week))?.at(as0(reorder.dayData.dayInWeek));
-		if (!groupedDay) {
-			continue;
-		}
-		const indexMap = groupedDay.reduce<{
-			result: Record<number, number>;
-			i: number;
-		}>(
-			({ result, i }, group, index) => {
-				const exercise = group.find(item => item.type === "exercise");
-				if (exercise && !exercise.notused) {
-					result[i] = index;
-					i += 1;
-				}
-				return { result, i };
-			},
-			{ result: {}, i: 0 },
-		).result;
-		const from = groupedDay[indexMap[reorder.fromIndex]];
-		if (from) {
-			groupedDay.splice(indexMap[reorder.fromIndex], 1);
-			groupedDay.splice(indexMap[reorder.toIndex], 0, from);
-		}
-	}
-
-	return groups;
 }
 
 export function convertToPlanner(
