@@ -8,13 +8,13 @@ import {
 	type IEquipmentType,
 	TEquipmentType,
 } from "@/equipment";
-import type { ISettings } from "@/user-settings";
 import { TBodyPart, TMuscle } from "@/human-body";
 import type { OpenRecord } from "@/utils/types.ts";
 import { ObjectUtils_keys } from "@/utils/object.ts";
 import { sameCaseInsensitive } from "@/utils/string.ts";
 import type { IExerciseDataValue } from "@/common-types.ts";
 import type { IExerciseData } from "@/evaluators/plan-evaluator-minimal.ts";
+import { definedOnly } from "@/utils/collection.ts";
 
 export const TExerciseId = z.string();
 export type IExerciseId = z.infer<typeof TExerciseId>;
@@ -1740,10 +1740,10 @@ export type IExerciseTypeKey = z.infer<typeof TExerciseTypeKey>;
  * @param type The type to make a key from
  */
 export function toKey(type: IExerciseType): IExerciseTypeKey {
-	const parts = [type.id];
 	// @TODO why would the unique key of an _exercise_ rely on the equipment of that exercise?
-	if (type.equipment) parts.push(type.equipment);
-	return TExerciseTypeKey.parse(parts.join("_"));
+	//   hypothesis, it's because a bench press with a barbell is not the same as with a dumbbell
+	//   but then.... why not other aspects of the movement, like rest timers?
+	return [type.id, type.equipment].filter(definedOnly).join("_") as IExerciseTypeKey;
 }
 
 export const TMetaExercises = z.strictObject({

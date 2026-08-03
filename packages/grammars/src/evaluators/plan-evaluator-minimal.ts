@@ -766,7 +766,7 @@ export function makePlannerKey(label: string | undefined, key: string): PlannerK
 export const getPlannerKey = memoize(
 	(
 		elements:
-			// Passing the full name
+			// Passing the full name of the exercise
 			| string
 			| {
 					label: string | undefined;
