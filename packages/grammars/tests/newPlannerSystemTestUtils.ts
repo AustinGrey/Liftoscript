@@ -130,8 +130,13 @@ function replaceExercise(
 		const conflictingExercises = allExercises.filter(e => {
 			const newKey =
 				typeof toExerciseType === "string"
-					? getPlannerKey(getLabel(e.label), toExerciseType, undefined, settings.exercises)
+					? getPlannerKey(
+							{ label: getLabel(e.label), name: toExerciseType, equipment: undefined },
+							settings.exercises,
+						)
 					: makePlannerKey(getLabel(e.label), toKey(toExerciseType));
+			//: getPlannerKey({label: getLabel(e.label), name: toExerciseType.id, equipment: toExerciseType.equipment}, settings.exercises);
+
 			return (
 				e.key === newKey &&
 				(!dayData || (dayData.week !== e.dayData.week && dayData.dayInWeek !== e.dayData.dayInWeek))
@@ -161,7 +166,10 @@ function replaceExercise(
 				}
 				const newKey =
 					typeof toExerciseType === "string"
-						? getPlannerKey(newLabel2, toExerciseType, undefined, settings.exercises)
+						? getPlannerKey(
+								{ label: newLabel2, name: toExerciseType, equipment: undefined },
+								settings.exercises,
+							)
 						: makePlannerKey(newLabel2, toKey(toExerciseType));
 				renameMapping[exercise.key] = { to: newKey, dayData };
 				exercise.key = newKey;
