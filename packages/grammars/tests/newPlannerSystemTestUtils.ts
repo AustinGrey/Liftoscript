@@ -134,8 +134,10 @@ function replaceExercise(
 							{ label: getLabel(e.label), name: toExerciseType, equipment: undefined },
 							settings.exercises,
 						)
-					: makePlannerKey(getLabel(e.label), toKey(toExerciseType));
-			//: getPlannerKey({label: getLabel(e.label), name: toExerciseType.id, equipment: toExerciseType.equipment}, settings.exercises);
+					: getPlannerKey(
+							{ label: getLabel(e.label), exerciseType: toExerciseType },
+							settings.exercises,
+						);
 
 			return (
 				e.key === newKey &&
@@ -170,7 +172,7 @@ function replaceExercise(
 								{ label: newLabel2, name: toExerciseType, equipment: undefined },
 								settings.exercises,
 							)
-						: makePlannerKey(newLabel2, toKey(toExerciseType));
+						: getPlannerKey({ label: newLabel2, exerciseType: toExerciseType }, settings.exercises);
 				renameMapping[exercise.key] = { to: newKey, dayData };
 				exercise.key = newKey;
 			}

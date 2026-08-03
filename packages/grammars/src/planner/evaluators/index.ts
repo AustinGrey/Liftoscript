@@ -590,9 +590,12 @@ function findOriginalExercisesAtWeekDay(
 				return;
 			}
 			for (const exercise of day.data) {
-				const reusingKey = exercise.exerciseType
-					? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
-					: getPlannerKey(exercise.fullName, settings.exercises);
+				const reusingKey = getPlannerKey(
+					exercise.exerciseType
+						? { label: exercise.label, exerciseType: exercise.exerciseType }
+						: exercise.fullName,
+					settings.exercises,
+				);
 				const originalKey = getPlannerKey(fullName, settings.exercises);
 				if (reusingKey !== originalKey) {
 					continue;

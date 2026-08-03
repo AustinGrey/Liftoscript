@@ -768,17 +768,26 @@ export const getPlannerKey = memoize(
 		elements:
 			// Passing the full name of the exercise
 			| string
+			// Looking up the exercise that best matches that name/equipment
 			| {
 					label: string | undefined;
 					name: string;
 					equipment: string | undefined;
+			  }
+			// Passing the exercise directly
+			| {
+					label: string | undefined;
+					exerciseType: IExerciseType;
 			  },
 		exercises: IAllCustomExercises,
 	): PlannerKey => {
-		const { label, name, equipment } =
-			typeof elements === "string" ? extractNameParts(elements, exercises) : elements;
-		const exercise = Exercise_findByNameEquipment(exercises, name, equipment);
-		return makePlannerKey(label, exercise ? toKey(exercise) : name);
+		if (typeof elements === "string" || "name" in elements) {
+			const { label, name, equipment } =
+				typeof elements === "string" ? extractNameParts(elements, exercises) : elements;
+			const exercise = Exercise_findByNameEquipment(exercises, name, equipment);
+			return makePlannerKey(label, exercise ? toKey(exercise) : name);
+		}
+		return makePlannerKey(elements.label, toKey(elements.exerciseType));
 	},
 	{
 		maxSize: 1000,
@@ -2699,12 +2708,15 @@ export function convertToPlanner(
 	};
 	const repeatingExercises = new Set<string>();
 	forExerciseInEvaluatedWeeks(program.weeks, exercise => {
-		if (exercise.repeat != null && exercise.repeat.length > 0) {
-			const key = exercise.exerciseType
-				? makePlannerKey(exercise.label, toKey(exercise.exerciseType))
-				: getPlannerKey(exercise.fullName, settings.exercises);
-			repeatingExercises.add(key);
+		if (exercise.repeat == null || exercise.repeat.length === 0) {
+			return;
 		}
+		pipe(
+			exercise.exerciseType,
+			t => (t ? { label: exercise.label, exerciseType: t } : exercise.fullName),
+			query => getPlannerKey(query, settings.exercises),
+			key => repeatingExercises.add(key),
+		);
 	});
 
 	return compactPlannerProgram(program.planner, result, settings, repeatingExercises);
