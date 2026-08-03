@@ -1600,24 +1600,17 @@ function forExerciseInGrid<TWeek, TDay>(
 	cb: IExerciseIterationCallback,
 ): void {
 	let dayIndexInProgram = 0;
-	for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
-		const days = getDays(weeks[weekIndex]);
-		for (let dayIndexInWeek = 0; dayIndexInWeek < days.length; dayIndexInWeek++) {
-			const exercises = getExercises(days[dayIndexInWeek]);
-			if (exercises) {
-				for (let exerciseIndex = 0; exerciseIndex < exercises.length; exerciseIndex++) {
-					if (
-						cb(
-							exercises[exerciseIndex],
-							weekIndex,
-							dayIndexInWeek,
-							dayIndexInProgram,
-							exerciseIndex,
-						)
-					) {
-						return;
-					}
-				}
+	for (const [weekIndex, week] of weeks.entries()) {
+		for (const [dayIndexInWeek, day] of getDays(week).entries()) {
+			for (const [exerciseIndex, exercise] of getExercises(day)?.entries() ?? []) {
+				const shouldBreak = cb(
+					exercise,
+					weekIndex,
+					dayIndexInWeek,
+					dayIndexInProgram,
+					exerciseIndex,
+				);
+				if (shouldBreak) return;
 			}
 			dayIndexInProgram += 1;
 		}
