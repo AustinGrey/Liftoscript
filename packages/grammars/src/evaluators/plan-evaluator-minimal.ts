@@ -1587,8 +1587,6 @@ type IExerciseIterationCallback = (
  *
  * @param evaluatedWeeks The evaluated program weeks to walk.
  * @param cb Called for each exercise in week → day → exercise order.
- * @see forExerciseInEvaluatedResults
- * @see forExerciseInGrid
  */
 export function forExerciseInEvaluatedWeeks(
 	evaluatedWeeks: IEvaluatedProgram["weeks"],
@@ -1597,7 +1595,7 @@ export function forExerciseInEvaluatedWeeks(
 	for (const {
 		item: exercise,
 		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
-		globalIndex: dayIndexInProgram,
+		globalParentIndex: dayIndexInProgram,
 	} of nestedFor(evaluatedWeeks, [week => week.days, day => day.exercises])) {
 		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) return;
 	}
@@ -1608,8 +1606,6 @@ export function forExerciseInEvaluatedWeeks(
  *
  * @param evaluatedWeeks Raw per-week evaluation results to walk.
  * @param cb Called for each exercise in successful days only.
- * @see forExerciseInEvaluatedWeeks
- * @see forExerciseInGrid
  */
 export function forExerciseInEvaluatedResults(
 	evaluatedWeeks: IPlannerEvalResult[][],
@@ -1618,11 +1614,9 @@ export function forExerciseInEvaluatedResults(
 	for (const {
 		item: exercise,
 		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
-		globalIndex: dayIndexInProgram,
+		globalParentIndex: dayIndexInProgram,
 	} of nestedFor(evaluatedWeeks, [week => week, day => (day.success ? day.data : undefined)])) {
-		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) {
-			return;
-		}
+		cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex);
 	}
 }
 

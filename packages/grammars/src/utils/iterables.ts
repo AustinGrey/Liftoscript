@@ -31,11 +31,12 @@ type NestedForReturn<TItem, TContext> = Generator<{
 	item: TItem;
 	context: TContext;
 	/**
-	 * Flat 0-based index of the leaf's immediate parent across the whole traversal.
+	 * Index of the leaf's immediate parent across the whole traversal.
 	 * Advances once per parent, including parents whose unwrapped children are empty.
-	 * e.g. for weeks → days → exercises, this is the program-wide day index.
+	 * e.g. If traversing [[[1,2,3,4],[],[14]],[]] the globalParentIndex of 14 is 2, because it's parent is the 3rd array. While for 4 it's 0, since it's in the first array
+	 *
 	 */
-	globalIndex: IndexFrom0;
+	globalParentIndex: IndexFrom0;
 }>;
 /**
  * An unwrapping method. Returning `undefined` is treated as an empty array.
