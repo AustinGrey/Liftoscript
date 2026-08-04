@@ -1,5 +1,5 @@
 import { partition } from "es-toolkit";
-import { type IndexFrom0, next, ZERO } from "@/utils/indexes.ts";
+import { type IndexFrom0, entriesOf, next, ZERO } from "@/utils/indexes.ts";
 
 /**
  * Like {@link partition}, but handles generators too
@@ -37,6 +37,40 @@ export function* generateRange<T>(
  */
 export function nestedFor<A, B>(
 	outer: A[],
-	unwrappers: [(a: A) => B],
-): Generator<{ item: B; context: [A, IndexFrom0] }>;
-export function* nestedFor(outer: any[], unwrappers: ((u: any) => any)[]): Generator<any> {}
+	unwrappers: [(a: A) => B[]],
+): Generator<{ item: B; context: [A, IndexFrom0, B, IndexFrom0] }>;
+export function nestedFor<A, B, C>(
+	outer: A[],
+	unwrappers: [(a: A) => B[], (b: B) => C[]],
+): Generator<{ item: C; context: [A, IndexFrom0, B, IndexFrom0, C, IndexFrom0] }>;
+export function nestedFor<A, B, C, D>(
+	outer: A[],
+	unwrappers: [(a: A) => B[], (b: B) => C[], (c: C) => D[]],
+): Generator<{ item: D; context: [A, IndexFrom0, B, IndexFrom0, C, IndexFrom0, D, IndexFrom0] }>;
+export function nestedFor<A, B, C, D, E>(
+	outer: A[],
+	unwrappers: [(a: A) => B[], (b: B) => C[], (c: C) => D[], (d: D) => E[]],
+): Generator<{
+	item: E;
+	context: [A, IndexFrom0, B, IndexFrom0, C, IndexFrom0, D, IndexFrom0, E, IndexFrom0];
+}>;
+export function* nestedFor(outer: any[], unwrappers: ((u: any) => any[])[]): Generator<any> {
+	const lastDepth = unwrappers.length - 1;
+
+	function* walk(items: any[], depth: number, context: any[]): Generator<any> {
+		for (const [index, node] of entriesOf(items)) {
+			const children = unwrappers[depth](node);
+			const contextWithNode = [...context, node, index];
+
+			if (depth === lastDepth) {
+				for (const [childIndex, item] of entriesOf(children)) {
+					yield { item, context: [...contextWithNode, item, childIndex] };
+				}
+			} else {
+				yield* walk(children, depth + 1, contextWithNode);
+			}
+		}
+	}
+
+	yield* walk(outer, 0, []);
+}
