@@ -15,7 +15,7 @@ export type IndexFrom1 = z.infer<typeof zIndexFrom1>;
  * With type safety, gets the entries of an array.
  * @param arr The array to get the entries of
  */
-export function entriesOf<T>(arr: T[] | undefined): [IndexFrom0, T][] {
+export function entriesOf<T>(arr: readonly T[] | undefined): [IndexFrom0, T][] {
 	return (arr?.entries() ?? []) as [IndexFrom0, T][];
 }
 
