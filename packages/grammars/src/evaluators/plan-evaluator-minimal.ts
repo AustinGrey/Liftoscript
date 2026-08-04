@@ -1583,34 +1583,6 @@ type IExerciseIterationCallback = (
 ) => true | void;
 
 /**
- * Generic walker for different kinds of week/day/exercise structures.
- *
- * @param weeks The top-level weeks collection to iterate.
- * @param getDays Defines how to access days from an element of the weeks collection. You should always return ALL days,
- *   even if you don't want to visit the exercises in them.
- * @param getExercises Defines how to access exercises from an element of the days collection.
- *   You may return undefined, indicating you do not want to run the callback for the exercises of that day,
- *   but the day is still counted as visited.
- * @param cb Called for each exercise in week → day → exercise order.
- */
-function forExerciseInGrid<TWeek, TDay>(
-	weeks: readonly TWeek[],
-	getDays: (week: TWeek) => readonly TDay[],
-	getExercises: (day: TDay) => readonly IPlannerProgramExercise[] | undefined,
-	cb: IExerciseIterationCallback,
-): void {
-	for (const {
-		item: exercise,
-		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
-		globalIndex: dayIndexInProgram,
-	} of nestedFor(weeks, [getDays, getExercises])) {
-		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) {
-			return;
-		}
-	}
-}
-
-/**
  * Visits every exercise in an {@link IEvaluatedProgram}
  *
  * @param evaluatedWeeks The evaluated program weeks to walk.
@@ -1622,12 +1594,13 @@ export function forExerciseInEvaluatedWeeks(
 	evaluatedWeeks: IEvaluatedProgram["weeks"],
 	cb: IExerciseIterationCallback,
 ): void {
-	forExerciseInGrid(
-		evaluatedWeeks,
-		week => week.days,
-		day => day.exercises,
-		cb,
-	);
+	for (const {
+		item: exercise,
+		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
+		globalIndex: dayIndexInProgram,
+	} of nestedFor(evaluatedWeeks, [week => week.days, day => day.exercises])) {
+		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) return;
+	}
 }
 
 /**
@@ -1642,12 +1615,15 @@ export function forExerciseInEvaluatedResults(
 	evaluatedWeeks: IPlannerEvalResult[][],
 	cb: IExerciseIterationCallback,
 ): void {
-	forExerciseInGrid(
-		evaluatedWeeks,
-		week => week,
-		day => (day.success ? day.data : undefined),
-		cb,
-	);
+	for (const {
+		item: exercise,
+		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
+		globalIndex: dayIndexInProgram,
+	} of nestedFor(evaluatedWeeks, [week => week, day => (day.success ? day.data : undefined)])) {
+		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) {
+			return;
+		}
+	}
 }
 
 //#endregion
