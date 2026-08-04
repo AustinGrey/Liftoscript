@@ -121,7 +121,7 @@ import {
 } from "@/sets";
 import { rpeMultiplier, STANDARD_RPE } from "@/rate-of-perceived-exertion.ts";
 import { asNumericAscending, by } from "@/utils/sorting.ts";
-import { generateRange } from "@/utils/iterables.ts";
+import { generateRange, nestedFor } from "@/utils/iterables.ts";
 
 //#region Program
 
@@ -1599,20 +1599,13 @@ function forExerciseInGrid<TWeek, TDay>(
 	getExercises: (day: TDay) => readonly IPlannerProgramExercise[] | undefined,
 	cb: IExerciseIterationCallback,
 ): void {
-	let dayIndexInProgram = 0;
-	for (const [weekIndex, week] of weeks.entries()) {
-		for (const [dayIndexInWeek, day] of getDays(week).entries()) {
-			for (const [exerciseIndex, exercise] of getExercises(day)?.entries() ?? []) {
-				const shouldBreak = cb(
-					exercise,
-					weekIndex,
-					dayIndexInWeek,
-					dayIndexInProgram,
-					exerciseIndex,
-				);
-				if (shouldBreak) return;
-			}
-			dayIndexInProgram += 1;
+	for (const {
+		item: exercise,
+		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
+		globalIndex: dayIndexInProgram,
+	} of nestedFor(weeks, [getDays, getExercises])) {
+		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) {
+			return;
 		}
 	}
 }

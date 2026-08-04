@@ -38,15 +38,16 @@ type NestedForReturn<TItem, TContext> = Generator<{
 	globalIndex: IndexFrom0;
 }>;
 /**
- * An unwrapping method
+ * An unwrapping method. Returning `undefined` is treated as an empty array.
  */
-type UW<A, B> = (a: A) => readonly B[];
+type UW<A, B> = (a: A) => readonly B[] | undefined;
 
 /**
  * When traversing deeply nested elements, this simplifies the many for loop boiler plates into a single
  * less nested call. Generating the end result elements, with the ancestor loop information.
  * @param outer The top level iterable
- * @param unwrappers The series of unwrappers to get from the top level to the leaf elements
+ * @param unwrappers The series of unwrappers to get from the top level to the leaf elements.
+ *    May return `undefined`, which is treated as an empty array.
  * @returns the leaf element, the context it's in, and `globalIndex` (flat index of the leaf's parent).
  *    You'll generally want to destructure the context to get just the items you need
  *    e.g. const [week,, day,, exercise, exerciseIndex] = context;
@@ -69,12 +70,12 @@ export function nestedFor<A, B, C, D, E>(
 ): NestedForReturn<E, [A, IndexFrom0, B, IndexFrom0, C, IndexFrom0, D, IndexFrom0, E, IndexFrom0]>;
 export function* nestedFor(
 	outer: readonly any[],
-	unwrappers: ((u: any) => readonly any[])[],
+	unwrappers: ((u: any) => readonly any[] | undefined)[],
 ): Generator<any> {
 	const lastDepth = unwrappers.length - 1;
 	let globalIndex = ZERO;
 
-	function* walk(items: readonly any[], depth: number, context: any[]): Generator<any> {
+	function* walk(items: readonly any[] | undefined, depth: number, context: any[]): Generator<any> {
 		for (const [index, node] of entriesOf(items)) {
 			const children = unwrappers[depth](node);
 			const contextWithNode = [...context, node, index];
