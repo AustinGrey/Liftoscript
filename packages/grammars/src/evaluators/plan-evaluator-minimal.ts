@@ -400,13 +400,7 @@ export function Program_runAllFinishDayScripts(
 			week => week.days,
 			day => day.exercises.filter(e => e.key === programExercise.key),
 		])) {
-			if (!exercise.progress) continue;
-
-			exercise.progress.state = {
-				...exercise.progress.state,
-				...entry.state,
-				...state,
-			};
+			if (exercise.progress) Object.assign(exercise.progress.state, entry.state, state);
 		}
 		updates.forEach(update =>
 			ProgramExercise_applyVariables(programExercise.key, newEvaluatedProgram, update, settings),
@@ -416,12 +410,8 @@ export function Program_runAllFinishDayScripts(
 			day => day.exercises,
 		])) {
 			for (const key of ObjectUtils_keys(otherStates)) {
-				if (!exercise.tags?.includes(Number(key)) || !exercise.progress) continue;
-
-				exercise.progress.state = {
-					...exercise.progress.state,
-					...otherStates[key],
-				};
+				if (exercise.tags?.includes(Number(key)) && exercise.progress)
+					Object.assign(exercise.progress.state, otherStates[key]);
 			}
 		}
 	}
