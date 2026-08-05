@@ -905,9 +905,6 @@ export function PlannerProgram_replaceWeight(
 	programExerciseId: string,
 	weightChanges: IWeightChange[],
 ): IEvaluatedProgram {
-	if (weightChanges.every(wc => isEqual(wc.originalWeight, wc.weight))) {
-		return program;
-	}
 	const newEvalutedProgram = structuredClone(program);
 	for (const { item: set } of nestedFor(newEvalutedProgram.weeks, [
 		week => week.days,
