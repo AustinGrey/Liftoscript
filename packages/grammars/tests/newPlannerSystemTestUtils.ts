@@ -37,6 +37,7 @@ import { parser as planParser } from "@/planner/parsing/workout-plan";
 import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 import { asNumericDescending, by } from "@/utils/sorting.ts";
 import { nestedFor } from "@/utils/iterables.ts";
+import { as1 } from "@/utils/indexes.ts";
 
 export interface ICompletedEntries {
 	completedReps: number[][];
@@ -159,31 +160,34 @@ function replaceExercise(
 	}
 
 	const renameMapping: Record<string, { to: string; dayData?: IDayData }> = {};
-	forExerciseInEvaluatedWeeks(evaluatedProgram.weeks, (exercise, weekIndex, dayInWeekIndex) => {
-		if (exercise.key === key) {
-			if (
-				!dayData ||
-				(dayData.week === weekIndex + 1 && dayData.dayInWeek === dayInWeekIndex + 1)
-			) {
-				exercise.exerciseType = typeof toExerciseType === "string" ? undefined : toExerciseType;
-				const newLabel2 = getLabel(exercise.label);
-				exercise.label = newLabel2;
-				if (typeof toExerciseType === "string") {
-					exercise.notused = true;
-					exercise.fullName = `${newLabel2 ? `${newLabel2}: ` : ""}${toExerciseType}`;
-				}
-				const newKey =
-					typeof toExerciseType === "string"
-						? getPlannerKey(
-								{ label: newLabel2, name: toExerciseType, equipment: undefined },
-								settings.exercises,
-							)
-						: getPlannerKey({ label: newLabel2, exerciseType: toExerciseType }, settings.exercises);
-				renameMapping[exercise.key] = { to: newKey, dayData };
-				exercise.key = newKey;
-			}
+	for (const {
+		item: exercise,
+		context: [[, weekIndex], [, dayInWeekIndex]],
+	} of nestedFor(evaluatedProgram.weeks, [
+		week => week.days,
+		day => day.exercises.filter(ex => ex.key === key),
+	])) {
+		if (
+			dayData &&
+			!(dayData.week === as1(weekIndex) && dayData.dayInWeek === as1(dayInWeekIndex))
+		) {
+			continue;
 		}
-	});
+		exercise.exerciseType = typeof toExerciseType === "string" ? undefined : toExerciseType;
+		exercise.label = getLabel(exercise.label);
+		if (typeof toExerciseType === "string") {
+			exercise.notused = true;
+			exercise.fullName = `${exercise.label ? `${exercise.label}: ` : ""}${toExerciseType}`;
+		}
+		const newKey = getPlannerKey(
+			typeof toExerciseType === "string"
+				? { label: exercise.label, name: toExerciseType, equipment: undefined }
+				: { label: exercise.label, exerciseType: toExerciseType },
+			settings.exercises,
+		);
+		renameMapping[exercise.key] = { to: newKey, dayData };
+		exercise.key = newKey;
+	}
 	return convertToPlanner(evaluatedProgram, settings, {
 		renameMapping,
 	});
