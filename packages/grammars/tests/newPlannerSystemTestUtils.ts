@@ -64,6 +64,7 @@ function ProgramExercise_weightChanges(
 		week => week.days,
 		day => day.exercises.filter(ex => ex.key === programExerciseKey),
 	])) {
+		// @todo if nestedFor supported computing some value for the context, then the next two nested fors could also be condensed into nestedFor. I should look into that.
 		const currentVariationIndex = findIndexOfCurrentOrFirst(exercise.evaluatedSetVariations);
 		for (const [variationIndex, variation] of exercise.evaluatedSetVariations.entries()) {
 			for (const set of variation.sets) {
