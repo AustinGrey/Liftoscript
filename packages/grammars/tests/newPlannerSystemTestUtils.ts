@@ -36,6 +36,7 @@ import { parser } from "@/logic/parsing/logic.ts";
 import { parser as planParser } from "@/planner/parsing/workout-plan";
 import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 import { asNumericDescending, by } from "@/utils/sorting.ts";
+import { nestedFor } from "@/utils/iterables.ts";
 
 export interface ICompletedEntries {
 	completedReps: number[][];
@@ -59,10 +60,10 @@ function ProgramExercise_weightChanges(
 	programExerciseKey: string,
 ): IWeightChange[] {
 	const results: Record<string, IWeightChange> = {};
-	forExerciseInEvaluatedWeeks(program.weeks, exercise => {
-		if (exercise.key !== programExerciseKey) {
-			return;
-		}
+	for (const { item: exercise } of nestedFor(program.weeks, [
+		week => week.days,
+		day => day.exercises.filter(ex => ex.key === programExerciseKey),
+	])) {
 		const currentVariationIndex = findIndexOfCurrentOrFirst(exercise.evaluatedSetVariations);
 		for (const [variationIndex, variation] of exercise.evaluatedSetVariations.entries()) {
 			for (const set of variation.sets) {
@@ -77,7 +78,7 @@ function ProgramExercise_weightChanges(
 				};
 			}
 		}
-	});
+	}
 	return Object.values(results).sort(by(val => Number(val.current), asNumericDescending));
 }
 
