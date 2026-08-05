@@ -2012,12 +2012,11 @@ export function compactPlannerProgram(
 		structuredClone(plannerProgram),
 		settings,
 	);
-	for (const ev of [evaluatedWeeks, newEvaluatedWeeks]) {
-		forExerciseInEvaluatedResults(ev, exercise => {
-			if ((exercise.repeat?.length ?? 0) > 0) {
-				repeatingExercises.add(exercise.key);
-			}
-		});
+	for (const { item: exercise } of nestedFor(
+		[...evaluatedWeeks, ...newEvaluatedWeeks],
+		[week => week, day => (day.success ? day.data : undefined)],
+	)) {
+		if (exercise.repeat.length) repeatingExercises.add(exercise.key);
 	}
 
 	// This snippet cuts out repeated descriptions for days in the program, keeping only the first instance of a description.
