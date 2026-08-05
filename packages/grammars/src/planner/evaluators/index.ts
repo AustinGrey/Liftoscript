@@ -58,6 +58,7 @@ import {
 } from "@/utils/indexes.ts";
 import { evaluate } from "@/planner/evaluators/exercise.ts";
 import type { IPlannerProgramExerciseWarmupSet } from "@/sets";
+import { nestedFor } from "@/utils/iterables.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
@@ -908,17 +909,14 @@ export function PlannerProgram_replaceWeight(
 		return program;
 	}
 	const newEvalutedProgram = structuredClone(program);
-	forExerciseInEvaluatedWeeks(newEvalutedProgram.weeks, ex => {
-		if (ex.key !== programExerciseId) {
-			return;
-		}
-		for (const { sets } of ex.evaluatedSetVariations) {
-			for (const set of sets) {
-				set.weight =
-					weightChanges.find(wc => eq(wc.originalWeight, set.weight))?.weight ?? set.weight;
-			}
-		}
-	});
+	for (const { item: set } of nestedFor(newEvalutedProgram.weeks, [
+		week => week.days,
+		day => day.exercises.filter(ex => ex.key === programExerciseId),
+		ex => ex.evaluatedSetVariations,
+		setVariation => setVariation.sets,
+	])) {
+		set.weight = weightChanges.find(wc => eq(wc.originalWeight, set.weight))?.weight ?? set.weight;
+	}
 	return newEvalutedProgram;
 }
 
