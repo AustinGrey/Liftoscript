@@ -1607,25 +1607,6 @@ export function forExerciseInEvaluatedWeeks(
 	}
 }
 
-/**
- * Visits every exercise in successful days only of the {@link IPlannerEvalResult}
- *
- * @param evaluatedWeeks Raw per-week evaluation results to walk.
- * @param cb Called for each exercise in successful days only.
- */
-export function forExerciseInEvaluatedResults(
-	evaluatedWeeks: IPlannerEvalResult[][],
-	cb: IExerciseIterationCallback,
-): void {
-	for (const {
-		item: exercise,
-		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
-		globalParentIndex: dayIndexInProgram,
-	} of nestedFor(evaluatedWeeks, [week => week, day => (day.success ? day.data : undefined)])) {
-		cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex);
-	}
-}
-
 //#endregion
 
 //#region Program to Planner
