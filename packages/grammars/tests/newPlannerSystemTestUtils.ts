@@ -60,25 +60,29 @@ function ProgramExercise_weightChanges(
 	programExerciseKey: string,
 ): IWeightChange[] {
 	const results: Record<string, IWeightChange> = {};
-	for (const { item: exercise } of nestedFor(program.weeks, [
+	for (const {
+		item: set,
+		context: [, , [, , { currentVariationIndex }], [, variationIndex]],
+	} of nestedFor(program.weeks, [
 		week => week.days,
-		day => day.exercises.filter(ex => ex.key === programExerciseKey),
+		{
+			unwrap: day => day.exercises.filter(ex => ex.key === programExerciseKey),
+			extract: exercise => ({
+				currentVariationIndex: findIndexOfCurrentOrFirst(exercise.evaluatedSetVariations),
+			}),
+		},
+		exercise => exercise.evaluatedSetVariations,
+		variation => variation.sets,
 	])) {
-		// @todo if nestedFor supported computing some value for the context, then the next two nested fors could also be condensed into nestedFor. I should look into that.
-		const currentVariationIndex = findIndexOfCurrentOrFirst(exercise.evaluatedSetVariations);
-		for (const [variationIndex, variation] of exercise.evaluatedSetVariations.entries()) {
-			for (const set of variation.sets) {
-				if (!set.weight) {
-					continue;
-				}
-				const key = print(set.weight);
-				results[key] = {
-					originalWeight: set.weight,
-					weight: set.weight,
-					current: results[key]?.current || variationIndex + 1 === currentVariationIndex,
-				};
-			}
+		if (!set.weight) {
+			continue;
 		}
+		const key = print(set.weight);
+		results[key] = {
+			originalWeight: set.weight,
+			weight: set.weight,
+			current: results[key]?.current || variationIndex + 1 === currentVariationIndex,
+		};
 	}
 	return Object.values(results).sort(by(val => Number(val.current), asNumericDescending));
 }
