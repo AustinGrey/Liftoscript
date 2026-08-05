@@ -489,14 +489,20 @@ function Program_forceEvaluate(program: IProgram, settings: ISettings): IEvaluat
 		}),
 	);
 	const states: IByTag<IProgramState> = {};
-	forExerciseInEvaluatedResults(evaluatedWeeks, exercise => {
-		for (const tag of exercise.tags) {
-			states[tag] = {
-				...states[tag],
-				...PlannerProgramExercise_getState(exercise),
-			};
-		}
-	});
+
+	for (const {
+		item: tag,
+		context: [, , , , exercise],
+	} of nestedFor(evaluatedWeeks, [
+		week => week,
+		day => (day.success ? day.data : undefined),
+		exercise => exercise.tags,
+	])) {
+		states[tag] = {
+			...states[tag],
+			...PlannerProgramExercise_getState(exercise),
+		};
+	}
 
 	return {
 		id: program.id,
