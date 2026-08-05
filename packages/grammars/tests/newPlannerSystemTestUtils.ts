@@ -1,11 +1,9 @@
 import {
 	convertToPlanner,
-	forExerciseInEvaluatedWeeks,
 	getPlannerKey,
 	getWeight,
 	type IEvaluatedProgram,
 	type IWeightChange,
-	makePlannerKey,
 	Program_create,
 	Program_evaluate,
 	Program_nextHistoryRecordFromEvaluated,
@@ -25,7 +23,7 @@ import {
 	PlannerProgram_replaceWeight,
 } from "@/planner/evaluators";
 import { asProgramScript } from "@/planner/display.ts";
-import { type IExerciseType, toKey } from "@/exercises";
+import { type IExerciseType } from "@/exercises";
 import type { IEither } from "@/utils/types.ts";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { definedOnly, findIndexOfCurrentOrFirst } from "@/utils/collection.ts";
@@ -135,16 +133,12 @@ function replaceExercise(
 
 	while (!noConflicts) {
 		const conflictingExercises = allExercises.filter(e => {
-			const newKey =
+			const newKey = getPlannerKey(
 				typeof toExerciseType === "string"
-					? getPlannerKey(
-							{ label: getLabel(e.label), name: toExerciseType, equipment: undefined },
-							settings.exercises,
-						)
-					: getPlannerKey(
-							{ label: getLabel(e.label), exerciseType: toExerciseType },
-							settings.exercises,
-						);
+					? { label: getLabel(e.label), name: toExerciseType, equipment: undefined }
+					: { label: getLabel(e.label), exerciseType: toExerciseType },
+				settings.exercises,
+			);
 
 			return (
 				e.key === newKey &&
