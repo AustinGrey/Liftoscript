@@ -1564,48 +1564,6 @@ function Progress_applyBindings(
 
 //#endregion
 
-//#region PP
-/**
- * Callback invoked for each exercise while walking a program's week/day grid.
- *
- * @returns `true` to stop iteration immediately, otherwise iteration continues.
- *
- * @param exercise The evaluated planner exercise at the current position.
- * @param weekIndex 0-based index of the week within the program.
- * @param dayInWeekIndex 0-based index of the day within its week.
- * @param dayIndex 0-based absolute day index across the whole program. This
- *   increments once per day slot in program order, including days where exercises are skipped.
- * @param exerciseIndex 0-based index of the exercise within its day.
- */
-type IExerciseIterationCallback = (
-	exercise: IPlannerProgramExercise,
-	weekIndex: number,
-	dayIndexInWeek: number,
-	dayIndexInProgram: number,
-	exerciseIndex: number,
-) => true | void;
-
-/**
- * Visits every exercise in an {@link IEvaluatedProgram}
- *
- * @param evaluatedWeeks The evaluated program weeks to walk.
- * @param cb Called for each exercise in week → day → exercise order.
- */
-export function forExerciseInEvaluatedWeeks(
-	evaluatedWeeks: IEvaluatedProgram["weeks"],
-	cb: IExerciseIterationCallback,
-): void {
-	for (const {
-		item: exercise,
-		context: [[, weekIndex], [, dayIndexInWeek], [, exerciseIndex]],
-		globalParentIndex: dayIndexInProgram,
-	} of nestedFor(evaluatedWeeks, [week => week.days, day => day.exercises])) {
-		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) return;
-	}
-}
-
-//#endregion
-
 //#region Program to Planner
 interface IPlannerToProgram2Globals {
 	weight?: IWeight | IDynamicWeight;
