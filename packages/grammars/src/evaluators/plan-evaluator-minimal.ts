@@ -395,27 +395,34 @@ export function Program_runAllFinishDayScripts(
 				rm1: roundTo005(bindings.rm1),
 			};
 		}
-		forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, exercise => {
-			if (exercise.key === programExercise.key && exercise.progress) {
-				exercise.progress.state = {
-					...exercise.progress.state,
-					...entry.state,
-					...state,
-				};
-			}
-		});
+
+		for (const { item: exercise } of nestedFor(newEvaluatedProgram.weeks, [
+			week => week.days,
+			day => day.exercises.filter(e => e.key === programExercise.key),
+		])) {
+			if (!exercise.progress) continue;
+
+			exercise.progress.state = {
+				...exercise.progress.state,
+				...entry.state,
+				...state,
+			};
+		}
 		updates.forEach(update =>
 			ProgramExercise_applyVariables(programExercise.key, newEvaluatedProgram, update, settings),
 		);
 		for (const key of ObjectUtils_keys(otherStates || {})) {
-			forExerciseInEvaluatedWeeks(newEvaluatedProgram.weeks, exercise => {
-				if (exercise.tags?.includes(Number(key)) && exercise.progress) {
-					exercise.progress.state = {
-						...exercise.progress.state,
-						...otherStates[key],
-					};
-				}
-			});
+			for (const { item: exercise } of nestedFor(newEvaluatedProgram.weeks, [
+				week => week.days,
+				day => day.exercises.filter(e => e.tags?.includes(Number(key))),
+			])) {
+				if (!exercise.progress) continue;
+
+				exercise.progress.state = {
+					...exercise.progress.state,
+					...otherStates[key],
+				};
+			}
 		}
 	}
 
