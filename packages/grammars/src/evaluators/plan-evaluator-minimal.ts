@@ -492,7 +492,7 @@ function Program_forceEvaluate(program: IProgram, settings: ISettings): IEvaluat
 
 	for (const {
 		item: tag,
-		context: [, , , , exercise],
+		context: [, , [exercise]],
 	} of nestedFor(evaluatedWeeks, [
 		week => week,
 		day => (day.success ? day.data : undefined),
@@ -1600,7 +1600,7 @@ export function forExerciseInEvaluatedWeeks(
 ): void {
 	for (const {
 		item: exercise,
-		context: [, weekIndex, , dayIndexInWeek, , exerciseIndex],
+		context: [[, weekIndex], [, dayIndexInWeek], [, exerciseIndex]],
 		globalParentIndex: dayIndexInProgram,
 	} of nestedFor(evaluatedWeeks, [week => week.days, day => day.exercises])) {
 		if (cb(exercise, weekIndex, dayIndexInWeek, dayIndexInProgram, exerciseIndex)) return;

@@ -49,46 +49,49 @@ type UW<A, B> = (a: A) => readonly B[] | undefined;
  * @param outer The top level iterable
  * @param unwrappers The series of unwrappers to get from the top level to the leaf elements.
  *    May return `undefined`, which is treated as an empty array.
- * @returns the leaf element, the context it's in, and `globalIndex` (flat index of the leaf's parent).
- *    You'll generally want to destructure the context to get just the items you need
- *    e.g. const [week,, day,, exercise, exerciseIndex] = context;
+ * @returns the leaf element, the context it's in, and `globalParentIndex` (flat index of the leaf's parent).
+ *    Context is an array of `[item, index]` tuples, one per nesting level.
+ *    e.g. const [[week], [day], [exercise, exerciseIndex]] = context;
  */
 export function nestedFor<A, B>(
 	outer: readonly A[],
 	unwrappers: [UW<A, B>],
-): NestedForReturn<B, [A, IndexFrom0, B, IndexFrom0]>;
+): NestedForReturn<B, [[A, IndexFrom0], [B, IndexFrom0]]>;
 export function nestedFor<A, B, C>(
 	outer: readonly A[],
 	unwrappers: [UW<A, B>, UW<B, C>],
-): NestedForReturn<C, [A, IndexFrom0, B, IndexFrom0, C, IndexFrom0]>;
+): NestedForReturn<C, [[A, IndexFrom0], [B, IndexFrom0], [C, IndexFrom0]]>;
 export function nestedFor<A, B, C, D>(
 	outer: readonly A[],
 	unwrappers: [UW<A, B>, UW<B, C>, UW<C, D>],
-): NestedForReturn<D, [A, IndexFrom0, B, IndexFrom0, C, IndexFrom0, D, IndexFrom0]>;
+): NestedForReturn<D, [[A, IndexFrom0], [B, IndexFrom0], [C, IndexFrom0], [D, IndexFrom0]]>;
 export function nestedFor<A, B, C, D, E>(
 	outer: readonly A[],
 	unwrappers: [UW<A, B>, UW<B, C>, UW<C, D>, UW<D, E>],
-): NestedForReturn<E, [A, IndexFrom0, B, IndexFrom0, C, IndexFrom0, D, IndexFrom0, E, IndexFrom0]>;
+): NestedForReturn<
+	E,
+	[[A, IndexFrom0], [B, IndexFrom0], [C, IndexFrom0], [D, IndexFrom0], [E, IndexFrom0]]
+>;
 export function* nestedFor(
 	outer: readonly any[],
 	unwrappers: ((u: any) => readonly any[] | undefined)[],
 ): Generator<any> {
 	const lastDepth = unwrappers.length - 1;
-	let globalIndex = ZERO;
+	let globalParentIndex = ZERO;
 
 	function* walk(items: readonly any[] | undefined, depth: number, context: any[]): Generator<any> {
 		for (const [index, node] of entriesOf(items)) {
 			const children = unwrappers[depth](node);
-			const contextWithNode = [...context, node, index];
+			const contextWithNode = [...context, [node, index]];
 
 			if (depth === lastDepth) {
-				const parentGlobalIndex = globalIndex;
-				globalIndex = next(globalIndex);
+				const parentGlobalIndex = globalParentIndex;
+				globalParentIndex = next(globalParentIndex);
 				for (const [childIndex, item] of entriesOf(children)) {
 					yield {
 						item,
-						context: [...contextWithNode, item, childIndex],
-						globalIndex: parentGlobalIndex,
+						context: [...contextWithNode, [item, childIndex]],
+						globalParentIndex: parentGlobalIndex,
 					};
 				}
 			} else {
