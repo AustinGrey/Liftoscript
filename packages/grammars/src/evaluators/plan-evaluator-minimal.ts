@@ -411,12 +411,12 @@ export function Program_runAllFinishDayScripts(
 		updates.forEach(update =>
 			ProgramExercise_applyVariables(programExercise.key, newEvaluatedProgram, update, settings),
 		);
-		for (const key of ObjectUtils_keys(otherStates || {})) {
-			for (const { item: exercise } of nestedFor(newEvaluatedProgram.weeks, [
-				week => week.days,
-				day => day.exercises.filter(e => e.tags?.includes(Number(key))),
-			])) {
-				if (!exercise.progress) continue;
+		for (const { item: exercise } of nestedFor(newEvaluatedProgram.weeks, [
+			week => week.days,
+			day => day.exercises,
+		])) {
+			for (const key of ObjectUtils_keys(otherStates)) {
+				if (!exercise.tags?.includes(Number(key)) || !exercise.progress) continue;
 
 				exercise.progress.state = {
 					...exercise.progress.state,
