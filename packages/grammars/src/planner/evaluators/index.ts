@@ -12,7 +12,6 @@ import type { IDayData, IPlannerProgram, IPlannerProgramDay, IPlannerProgramWeek
 //@todo These imports are coming from higher or dead layers, which should not be imported from
 import type { ISettings } from "@/user-settings";
 import {
-	forExerciseInEvaluatedWeeks,
 	getPlannerKey,
 	type IEvaluatedProgram,
 	type IPlannerEvalResult,
@@ -25,7 +24,6 @@ import {
 	type IProgramExerciseUpdate,
 	IProgramExerciseUpdateType,
 	type IWeightChange,
-	makePlannerKey,
 	PlannerProgramExercise_evaluateSetVariations,
 	PlannerProgramExercise_getState,
 	PlannerProgramExercise_setVariations,
@@ -45,7 +43,6 @@ import {
 import { queryChildren } from "@/utils/grammars.ts";
 import { asProgramScript } from "@/planner/display.ts";
 import { isEqual, pick } from "es-toolkit";
-import { toKey } from "@/exercises";
 import { nodeFailure, nodeSuccess } from "@/common-types.ts";
 import {
 	as0,

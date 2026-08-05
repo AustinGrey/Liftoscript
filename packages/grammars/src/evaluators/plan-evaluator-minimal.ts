@@ -2646,17 +2646,17 @@ export function convertToPlanner(
 		weeks: plannerWeeks,
 	};
 	const repeatingExercises = new Set<string>();
-	forExerciseInEvaluatedWeeks(program.weeks, exercise => {
-		if (exercise.repeat == null || exercise.repeat.length === 0) {
-			return;
-		}
+	for (const { item: exercise } of nestedFor(program.weeks, [
+		week => week.days,
+		day => day.exercises.filter(e => e.repeat?.length > 0),
+	])) {
 		pipe(
 			exercise.exerciseType,
 			t => (t ? { label: exercise.label, exerciseType: t } : exercise.fullName),
 			query => getPlannerKey(query, settings.exercises),
 			key => repeatingExercises.add(key),
 		);
-	});
+	}
 
 	return compactPlannerProgram(program.planner, result, settings, repeatingExercises);
 }
