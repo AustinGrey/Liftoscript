@@ -804,7 +804,7 @@ export type IPlannerProgramExercise = {
 	label?: string;
 	exerciseIndex: number;
 	repeat: IndexFrom1[];
-	repeating: number[];
+	repeating: IndexFrom1[];
 	order: number;
 	isRepeat?: boolean;
 	text: string;
@@ -1988,21 +1988,26 @@ export function compactPlannerProgram(
 			repeatWeekIndex < mapping.length;
 			repeatWeekIndex += 1
 		) {
-			const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
-			const repeatedExercises = (repeatDay || []).filter(e => {
-				if (
-					e.type !== "exercise" ||
-					e.value !== line.value ||
-					e.sectionsToReuse !== line.sectionsToReuse ||
-					e.exerciseIndex !== line.exerciseIndex ||
-					!isEqual(e.descriptions || [], line.descriptions || [])
-				) {
-					return false;
-				}
-				const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
-				const oldExercise = oldDay.success ? oldDay.data.find(ex => ex.key === e.value) : undefined;
-				return !!oldExercise?.repeating?.includes(weekIndex + 1);
-			});
+			const repeatedExercises =
+				mapping
+					.at(repeatWeekIndex)
+					?.at(dayIndex)
+					?.filter(e => {
+						if (
+							e.type !== "exercise" ||
+							e.value !== line.value ||
+							e.sectionsToReuse !== line.sectionsToReuse ||
+							e.exerciseIndex !== line.exerciseIndex ||
+							!isEqual(e.descriptions || [], line.descriptions || [])
+						) {
+							return false;
+						}
+						const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
+						const oldExercise = oldDay.success
+							? oldDay.data.find(ex => ex.key === e.value)
+							: undefined;
+						return !!oldExercise?.repeating?.includes(as1(weekIndex));
+					}) ?? [];
 			for (const e of repeatedExercises) {
 				e.used = true;
 			}
