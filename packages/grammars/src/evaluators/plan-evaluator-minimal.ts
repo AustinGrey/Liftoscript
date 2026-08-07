@@ -5,12 +5,7 @@ import { definedOnly, findIndexOfCurrentOrFirst, tryFindIndex } from "../utils/c
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
-import {
-	ObjectUtils_entries,
-	ObjectUtils_filter,
-	ObjectUtils_isEqual,
-	ObjectUtils_keys,
-} from "@/utils/object";
+import { ObjectUtils_entries, ObjectUtils_filter, ObjectUtils_keys } from "@/utils/object";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate, Quantity } from "@/logic/types";
 import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import {
@@ -2000,7 +1995,7 @@ export function compactPlannerProgram(
 					e.value !== line.value ||
 					e.sectionsToReuse !== line.sectionsToReuse ||
 					e.exerciseIndex !== line.exerciseIndex ||
-					!ObjectUtils_isEqual(e.descriptions || [], line.descriptions || [])
+					!isEqual(e.descriptions || [], line.descriptions || [])
 				) {
 					return false;
 				}
