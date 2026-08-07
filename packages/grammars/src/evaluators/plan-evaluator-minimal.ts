@@ -1573,8 +1573,6 @@ interface IPlannerToProgram2Globals {
 	askWeight?: boolean;
 }
 
-type IDereuseDecision = "sets" | "weight" | "rpe" | "timer" | "progress" | "update";
-
 interface IPlannerToProgramConvertOpts {
 	/**
 	 * Replacements you would like to have done
@@ -1708,6 +1706,7 @@ function getProgress(
 	return progressStr;
 }
 
+type IDereuseDecision = "sets" | "weight" | "rpe" | "timer" | "progress" | "update";
 function getDereuseDecisions(programExercise: IPlannerProgramExercise): IDereuseDecision[] {
 	const dereuseDecisions: Set<IDereuseDecision> = new Set();
 	const reuseExercise = programExercise.reuse?.exercise;
@@ -1977,55 +1976,56 @@ export function compactPlannerProgram(
 		),
 	);
 
-	for (const [weekIndex, week] of mapping.entries()) {
-		for (const [dayIndex, day] of week.entries()) {
-			for (const line of day) {
-				if (line.type !== "exercise" || line.used || !repeatingExercises.has(line.value)) {
-					continue;
-				}
-				const repeatRanges: [number, number | undefined][] = [];
-				for (
-					let repeatWeekIndex = weekIndex + 1;
-					repeatWeekIndex < mapping.length;
-					repeatWeekIndex += 1
+	for (const {
+		item: line,
+		context: [[, weekIndex], [, dayIndex]],
+	} of nestedFor(mapping, [
+		week => week,
+		day =>
+			day.filter(
+				(line): line is ITrackableLine & { type: "exercise" } =>
+					line.type === "exercise" && !line.used && repeatingExercises.has(line.value),
+			),
+	])) {
+		const repeatRanges: [number, number | undefined][] = [];
+		for (
+			let repeatWeekIndex = weekIndex + 1;
+			repeatWeekIndex < mapping.length;
+			repeatWeekIndex += 1
+		) {
+			const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
+			const repeatedExercises = (repeatDay || []).filter(e => {
+				if (
+					e.type !== "exercise" ||
+					e.value !== line.value ||
+					e.sectionsToReuse !== line.sectionsToReuse ||
+					e.exerciseIndex !== line.exerciseIndex ||
+					!ObjectUtils_isEqual(e.descriptions || [], line.descriptions || [])
 				) {
-					const repeatDay = mapping[repeatWeekIndex]?.[dayIndex];
-					const repeatedExercises = (repeatDay || []).filter(e => {
-						if (
-							e.type !== "exercise" ||
-							e.value !== line.value ||
-							e.sectionsToReuse !== line.sectionsToReuse ||
-							e.exerciseIndex !== line.exerciseIndex ||
-							!ObjectUtils_isEqual(e.descriptions || [], line.descriptions || [])
-						) {
-							return false;
-						}
-						const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
-						const oldExercise = oldDay.success
-							? oldDay.data.find(ex => ex.key === e.value)
-							: undefined;
-						return !!oldExercise?.repeating?.includes(weekIndex + 1);
-					});
-					for (const e of repeatedExercises) {
-						e.used = true;
-					}
-					if (repeatedExercises.length > 0) {
-						if (repeatRanges.length === 0 || repeatRanges[repeatRanges.length - 1][1] != null) {
-							repeatRanges.push([repeatWeekIndex, undefined]);
-						}
-					} else {
-						if (repeatRanges.length > 0) {
-							repeatRanges[repeatRanges.length - 1][1] = repeatWeekIndex;
-						}
-						break;
-					}
+					return false;
 				}
-				if (repeatRanges.length > 0 && repeatRanges[repeatRanges.length - 1][1] == null) {
-					repeatRanges[repeatRanges.length - 1][1] = mapping.length;
+				const oldDay = evaluatedWeeks[repeatWeekIndex][dayIndex];
+				const oldExercise = oldDay.success ? oldDay.data.find(ex => ex.key === e.value) : undefined;
+				return !!oldExercise?.repeating?.includes(weekIndex + 1);
+			});
+			for (const e of repeatedExercises) {
+				e.used = true;
+			}
+			if (repeatedExercises.length > 0) {
+				if (repeatRanges.length === 0 || repeatRanges[repeatRanges.length - 1][1] != null) {
+					repeatRanges.push([repeatWeekIndex, undefined]);
 				}
-				line.repeatRanges = repeatRanges.map(r => `${r[0]}-${r[1]}`);
+			} else {
+				if (repeatRanges.length > 0) {
+					repeatRanges[repeatRanges.length - 1][1] = repeatWeekIndex;
+				}
+				break;
 			}
 		}
+		if (repeatRanges.length > 0 && repeatRanges[repeatRanges.length - 1][1] == null) {
+			repeatRanges[repeatRanges.length - 1][1] = mapping.length;
+		}
+		line.repeatRanges = repeatRanges.map(r => `${r[0]}-${r[1]}`);
 	}
 
 	for (const [weekIndex, week] of mapping.entries()) {
@@ -2599,10 +2599,7 @@ export function convertToPlanner(
 		}
 		plannerWeeks.push(plannerWeek);
 	}
-	const result: IPlannerProgram = {
-		name: program.name,
-		weeks: plannerWeeks,
-	};
+
 	const repeatingExercises = new Set<string>();
 	for (const { item: exercise } of nestedFor(program.weeks, [
 		week => week.days,
@@ -2616,7 +2613,15 @@ export function convertToPlanner(
 		);
 	}
 
-	return compactPlannerProgram(program.planner, result, settings, repeatingExercises);
+	return compactPlannerProgram(
+		program.planner,
+		{
+			name: program.name,
+			weeks: plannerWeeks,
+		},
+		settings,
+		repeatingExercises,
+	);
 }
 
 function variationToString(
