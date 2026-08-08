@@ -15,7 +15,7 @@ export function Equipment_smallestPlate(equipmentData: IEquipmentData, unit: IUn
 	);
 }
 
-export function Equipment_getUnitForExerciseType(
+export function getUnitForExerciseType(
 	settings: ISettings,
 	exerciseType?: IExerciseType,
 ): IUnit | undefined {
@@ -24,20 +24,14 @@ export function Equipment_getUnitForExerciseType(
 		settings.exerciseData,
 		exerciseType,
 	);
-	const equipmentUnit = equipment?.unit;
-	return equipmentUnit == null || equipmentUnit === settings.units ? undefined : equipmentUnit;
+	return equipment?.unit == null || equipment.unit === settings.units ? undefined : equipment.unit;
 }
 
 export function Equipment_getUnitOrDefaultForExerciseType(
 	settings: ISettings,
 	exerciseType?: IExerciseType,
 ): IUnit {
-	const equipment = Equipment_getEquipmentDataForExerciseType(
-		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
-		settings.exerciseData,
-		exerciseType,
-	);
-	return equipment?.unit ?? settings.units;
+	return getUnitForExerciseType(settings, exerciseType) ?? settings.units;
 }
 
 export function Equipment_getEquipmentDataForExerciseType(

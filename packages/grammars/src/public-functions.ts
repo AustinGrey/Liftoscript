@@ -12,7 +12,7 @@ import {
 } from "@/quantities/weight.ts";
 import { is, isNumber } from "@/utils/types.ts";
 import type { EvaluateTools } from "@/logic/evaluators/types.ts";
-import { Equipment_getUnitForExerciseType } from "@/models/equipment.ts";
+import { getUnitForExerciseType } from "@/models/equipment.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 import type { ISettings } from "@/user-settings";
 import { rpeMultiplier } from "@/rate-of-perceived-exertion.ts";
@@ -51,14 +51,14 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 			if (!is(TWeight, num)) {
 				num = Weight.build(num, settings.units);
 			}
-			const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
+			const unit = getUnitForExerciseType(settings, context?.exerciseType);
 			return Weight.round(num, settings, unit ?? settings.units, context?.exerciseType);
 		},
 		roundConvertWeight: (num, context) => {
 			if (!is(TWeight, num)) {
 				num = Weight.build(num, settings.units);
 			}
-			const unit = Equipment_getUnitForExerciseType(settings, context?.exerciseType);
+			const unit = getUnitForExerciseType(settings, context?.exerciseType);
 			return roundWeight(
 				convertTo(num, unit ?? settings.units),
 				settings,
