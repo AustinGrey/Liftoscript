@@ -20,7 +20,7 @@ export function Equipment_getUnitForExerciseType(
 	exerciseType?: IExerciseType,
 ): IUnit | undefined {
 	const equipment = Equipment_getEquipmentDataForExerciseType(
-		getGymByIdOrCurrent(settings),
+		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 		settings.exerciseData,
 		exerciseType,
 	);
@@ -33,7 +33,7 @@ export function Equipment_getUnitOrDefaultForExerciseType(
 	exerciseType?: IExerciseType,
 ): IUnit {
 	const equipment = Equipment_getEquipmentDataForExerciseType(
-		getGymByIdOrCurrent(settings),
+		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 		settings.exerciseData,
 		exerciseType,
 	);
@@ -57,8 +57,4 @@ export function Equipment_getEquipmentDataForExerciseType(
 			? fallbackEquipment?.[gym.id]
 			: undefined;
 	return equipmentId ? gym?.equipment[equipmentId] : undefined;
-}
-
-function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
-	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
 }
