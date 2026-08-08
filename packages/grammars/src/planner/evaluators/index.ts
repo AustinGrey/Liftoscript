@@ -411,29 +411,28 @@ function checkUpdateScript(
 	if (exercise.update?.type !== IProgramExerciseUpdateType.CUSTOM) {
 		return;
 	}
-	const { script, liftoscriptNode } = exercise.update;
-	if (script && liftoscriptNode) {
-		const [firstError] = validateScript(
-			script,
-			PlannerProgramExercise_getState(exercise),
-			Progress_createEmptyScriptBindings(dayData, settings),
-			Progress_createScriptFunctions(settings),
-			IProgramMode.UPDATE,
-		);
-		if (firstError) {
-			if (!liftoscriptNode) {
-				throw firstError;
-			}
-			const { line, from } = liftoscriptNode.getPointer();
-			throw new SourcedSyntaxError(
-				firstError.message,
-				line + firstError.line,
-				firstError.offset,
-				from + firstError.from,
-				from + firstError.to,
-			);
-		}
+	const liftoscriptNode = exercise.update?.liftoscriptNode;
+	if (!liftoscriptNode) {
+		return;
 	}
+	const [firstError] = validateScript(
+		liftoscriptNode.source,
+		PlannerProgramExercise_getState(exercise),
+		Progress_createEmptyScriptBindings(dayData, settings),
+		Progress_createScriptFunctions(settings),
+		IProgramMode.UPDATE,
+	).take(1);
+	if (!firstError) {
+		return;
+	}
+	const { line, from } = liftoscriptNode.getPointer();
+	throw new SourcedSyntaxError(
+		firstError.message,
+		line + firstError.line,
+		firstError.offset,
+		from + firstError.from,
+		from + firstError.to,
+	);
 }
 
 /**

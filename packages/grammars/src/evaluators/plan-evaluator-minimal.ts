@@ -904,7 +904,6 @@ export enum IProgramExerciseUpdateType {
 }
 export interface IProgramExerciseUpdate {
 	type: IProgramExerciseUpdateType;
-	script?: string;
 	reuse?: IPlannerProgramReuse;
 	liftoscriptNode?: SourcedSyntaxNode;
 	meta?: {
@@ -1261,11 +1260,11 @@ function PlannerProgramExercise_getUpdateScript(
 	exercise: IPlannerProgramExercise,
 ): string | undefined {
 	return (
-		exercise.update?.script ??
-		exercise.update?.reuse?.exercise?.update?.script ??
-		exercise.update?.reuse?.exercise?.update?.reuse?.exercise?.update?.script ??
-		exercise.reuse?.exercise?.update?.script ??
-		exercise.reuse?.exercise?.update?.reuse?.exercise?.update?.script
+		exercise.update?.liftoscriptNode?.source ??
+		exercise.update?.reuse?.exercise?.update?.liftoscriptNode?.source ??
+		exercise.update?.reuse?.exercise?.update?.reuse?.exercise?.update?.liftoscriptNode?.source ??
+		exercise.reuse?.exercise?.update?.liftoscriptNode?.source ??
+		exercise.reuse?.exercise?.update?.reuse?.exercise?.update?.liftoscriptNode?.source
 	);
 }
 
@@ -1608,7 +1607,7 @@ interface IPlannerToProgramConvertOpts {
 
 function getUpdate(update: IProgramExerciseUpdate, settings: ISettings): string {
 	if (!update.reuse) {
-		return `update: custom() ${update.script}`;
+		return `update: custom() ${update.liftoscriptNode?.source}`;
 	}
 	if (!update.reuse.exercise?.exerciseType) {
 		// @todo this branch seems to double pre-fix the "/". Is that a mistake?
@@ -1738,7 +1737,8 @@ function getDereuseDecisions(programExercise: IPlannerProgramExercise): IDereuse
 			programExercise.update == null ||
 			(programExercise.update.reuse
 				? programExercise.update.reuse?.fullName !== reuseExercise.fullName
-				: programExercise.update.script !== reuseExercise.update?.script)
+				: programExercise.update.liftoscriptNode?.source !==
+					reuseExercise.update?.liftoscriptNode?.source)
 		) {
 			dereuseDecisions.add("update");
 		}
@@ -2552,7 +2552,11 @@ export function convertToPlanner(
 							}
 
 							const update = evalExercise.update;
-							if (!addedUpdateMap[key] && update && (update.reuse || update.script)) {
+							if (
+								!addedUpdateMap[key] &&
+								update &&
+								(update.reuse || update.liftoscriptNode?.source)
+							) {
 								if (!evalExercise.reuse || dereuseDecisions.includes("update")) {
 									if (evalExercise.update) {
 										plannerExercise += SECTION_SEPARATOR + getUpdate(evalExercise.update, settings);
