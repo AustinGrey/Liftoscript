@@ -37,8 +37,12 @@ export function Equipment_getEquipmentDataForExerciseType(
 	exerciseType?: IExerciseType,
 ): IEquipmentData | undefined {
 	const equipment = Equipment_getEquipmentIdForExerciseType(settings, exerciseType);
-	const currentGym = settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0];
+	const currentGym = Equipment_getGymByIdOrCurrent(settings);
 	return equipment ? currentGym.equipment[equipment] : undefined;
+}
+
+export function Equipment_getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
+	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
 }
 
 export function Equipment_getEquipmentIdForExerciseType(
@@ -65,7 +69,6 @@ export function Equipment_getEquipmentIdForExerciseType(
 		return undefined;
 	}
 
-	const currentGym =
-		settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
+	const currentGym = Equipment_getGymByIdOrCurrent(settings, gymId);
 	return exerciseEquipment[currentGym.id];
 }
