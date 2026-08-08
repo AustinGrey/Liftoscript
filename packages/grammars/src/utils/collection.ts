@@ -41,8 +41,8 @@ export function findIndexOfCurrentOrFirst(collection: { isCurrent: boolean }[]):
  * 	['A', ['a']],
  * ]
  * ```
- * @param items
- * @param keyOf
+ * @param items The items to group
+ * @param keyOf Produces the comparison key for a given item. Keys are compared by likeness, so object and array keys are useful. Consider using 'pick' if you want to consider only part of an object for equality
  */
 export function groupConsecutiveBy<T, K>(
 	items: readonly T[],

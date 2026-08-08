@@ -84,7 +84,7 @@ import {
 	SourcedSyntaxError,
 	type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { isEqual, omitBy, sumBy } from "es-toolkit";
+import { isEqual, omitBy, pick, sumBy } from "es-toolkit";
 import type { SetRequired, Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
@@ -2601,7 +2601,38 @@ function variationToString(
 	exercise: IPlannerProgramExercise,
 ): string {
 	const result: string[] = [];
-	for (const [set, count] of groupVariationSets(variation.sets, exercise, index)) {
+	const groups = groupConsecutiveBy(variation.sets, set =>
+		pick(set, [
+			"maxrep",
+			"minrep",
+			"weight",
+			"isAmrap",
+			"rpe",
+			"logRpe",
+			"timer",
+			"label",
+			"askWeight",
+		]),
+	).map(({ groupedElements }) => [groupedElements[0], groupedElements.length] as const);
+	if (groups.length === 0) {
+		// @todo why do we need this fallback? Can't we just.... deal with an empty list instead of producing an entry with... 0 reps?
+		const originalSets = PlannerProgramExercise_sets(exercise, index).at(0);
+		const fallbackSet: IPlannerProgramExerciseEvaluatedSet = {
+			maxrep: originalSets?.repRange?.maxrep || 1,
+			minrep: originalSets?.repRange?.minrep,
+			weight: originalSets?.weight || w`0lb`,
+			logRpe: originalSets?.logRpe || false,
+			isAmrap: originalSets?.repRange?.asManyRepsAsPossible || false,
+			isQuickAddSet: originalSets?.repRange?.asManySetsAsPossible || false,
+			askWeight: originalSets?.askWeight || false,
+			rpe: originalSets?.rpe,
+			timer: originalSets?.timer,
+			label: originalSets?.label,
+		};
+		groups.push([fallbackSet, 0]);
+	}
+
+	for (const [set, count] of groups) {
 		let setStr = `${count}${set.isQuickAddSet ? "+" : ""}x`;
 		setStr += set.minrep != null ? `${n(Math.max(0, set.minrep))}-` : "";
 		setStr += `${n(Math.max(0, set.maxrep ?? 0))}`;
@@ -2630,35 +2661,6 @@ function variationToString(
 	}
 	const resultStr = index > 0 && variation.isCurrent ? "! " : "";
 	return resultStr + result.map(r => r.trim()).join(", ");
-}
-function groupVariationSets(
-	sets: IPlannerProgramExerciseEvaluatedSet[],
-	exercise: IPlannerProgramExercise,
-	index: number,
-): [IPlannerProgramExerciseEvaluatedSet, number][] {
-	if (sets.length === 0) {
-		const originalSets = PlannerProgramExercise_sets(exercise, index).at(0);
-		const fallbackSet: IPlannerProgramExerciseEvaluatedSet = {
-			maxrep: originalSets?.repRange?.maxrep || 1,
-			minrep: originalSets?.repRange?.minrep,
-			weight: originalSets?.weight || w`0lb`,
-			logRpe: originalSets?.logRpe || false,
-			isAmrap: originalSets?.repRange?.asManyRepsAsPossible || false,
-			isQuickAddSet: originalSets?.repRange?.asManySetsAsPossible || false,
-			askWeight: originalSets?.askWeight || false,
-			rpe: originalSets?.rpe,
-			timer: originalSets?.timer,
-			label: originalSets?.label,
-		};
-		return [[fallbackSet, 0]];
-	}
-	return groupConsecutiveBy(
-		sets,
-		set =>
-			`${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
-				set.timer
-			}-${set.label}-${set.askWeight}`,
-	).map(({ groupedElements }) => [groupedElements[0], groupedElements.length]);
 }
 
 function getGlobals(exercise: IPlannerProgramExercise): IPlannerToProgram2Globals {
