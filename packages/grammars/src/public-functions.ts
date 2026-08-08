@@ -53,6 +53,7 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 			}
 			const unit = getUnitForExerciseType(
 				settings,
+				settings.exerciseData,
 				settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 				context?.exerciseType,
 			);
@@ -64,6 +65,7 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 			}
 			const unit = getUnitForExerciseType(
 				settings,
+				settings.exerciseData,
 				settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 				context?.exerciseType,
 			);

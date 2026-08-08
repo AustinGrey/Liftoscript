@@ -6,6 +6,7 @@ export function Exercise_defaultRounding(type: IExerciseType, settings: ISetting
 	const units =
 		getUnitForExerciseType(
 			settings,
+			settings.exerciseData,
 			settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 			type,
 		) ?? settings.units;

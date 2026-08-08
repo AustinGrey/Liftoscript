@@ -17,14 +17,11 @@ export function Equipment_smallestPlate(equipmentData: IEquipmentData, unit: IUn
 
 export function getUnitForExerciseType(
 	settings: ISettings,
+	exerciseData: IExerciseData,
 	gym: IGym | undefined,
 	exerciseType?: IExerciseType,
 ): IUnit | undefined {
-	const equipment = Equipment_getEquipmentDataForExerciseType(
-		gym,
-		settings.exerciseData,
-		exerciseType,
-	);
+	const equipment = Equipment_getEquipmentDataForExerciseType(gym, exerciseData, exerciseType);
 	return equipment?.unit == null || equipment.unit === settings.units ? undefined : equipment.unit;
 }
 
@@ -39,7 +36,7 @@ export function Equipment_getEquipmentDataForExerciseType(
 
 	const { equipment: fallbackEquipment, rounding } =
 		exerciseData[Exercise_toKey(exerciseType)] ?? {};
-	const equipmentId = !rounding
+	const equipmentId = !rounding // @todo why does the existance of a rounding field decide which equipment to use?
 		? exerciseType.equipment
 		: gym
 			? fallbackEquipment?.[gym.id]
