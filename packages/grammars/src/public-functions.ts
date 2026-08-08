@@ -51,14 +51,22 @@ export function Progress_createScriptFunctions(settings: ISettings): IScriptFunc
 			if (!is(TWeight, num)) {
 				num = Weight.build(num, settings.units);
 			}
-			const unit = getUnitForExerciseType(settings, context?.exerciseType);
+			const unit = getUnitForExerciseType(
+				settings,
+				settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
+				context?.exerciseType,
+			);
 			return Weight.round(num, settings, unit ?? settings.units, context?.exerciseType);
 		},
 		roundConvertWeight: (num, context) => {
 			if (!is(TWeight, num)) {
 				num = Weight.build(num, settings.units);
 			}
-			const unit = getUnitForExerciseType(settings, context?.exerciseType);
+			const unit = getUnitForExerciseType(
+				settings,
+				settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
+				context?.exerciseType,
+			);
 			return roundWeight(
 				convertTo(num, unit ?? settings.units),
 				settings,

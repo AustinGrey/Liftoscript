@@ -17,10 +17,11 @@ export function Equipment_smallestPlate(equipmentData: IEquipmentData, unit: IUn
 
 export function getUnitForExerciseType(
 	settings: ISettings,
+	gym: IGym | undefined,
 	exerciseType?: IExerciseType,
 ): IUnit | undefined {
 	const equipment = Equipment_getEquipmentDataForExerciseType(
-		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
+		gym,
 		settings.exerciseData,
 		exerciseType,
 	);

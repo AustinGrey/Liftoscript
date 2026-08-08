@@ -3,7 +3,12 @@ import type { IExerciseType, IExerciseTypeKey } from "@/exercises";
 import type { ISettings } from "@/user-settings";
 
 export function Exercise_defaultRounding(type: IExerciseType, settings: ISettings): number {
-	const units = getUnitForExerciseType(settings, type) ?? settings.units;
+	const units =
+		getUnitForExerciseType(
+			settings,
+			settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
+			type,
+		) ?? settings.units;
 	return Math.max(
 		0.1,
 		settings.exerciseData[Exercise_toKey(type)]?.rounding ?? (units === "kg" ? 2.5 : 5),
