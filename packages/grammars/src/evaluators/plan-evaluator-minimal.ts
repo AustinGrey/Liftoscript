@@ -507,9 +507,9 @@ function Program_forceEvaluate(program: IProgram, settings: ISettings): IEvaluat
 	};
 }
 
-export function Program_create(name: string, id?: string): IProgram {
+export function Program_create(name: string): IProgram {
 	return {
-		id: id || generateUid(8),
+		id: generateUid(8),
 		name,
 		url: "",
 		author: "",
