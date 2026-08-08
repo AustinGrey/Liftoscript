@@ -796,7 +796,8 @@ if (completedReps >= reps && completedRPE <= RPE) {
 								dayData,
 								isEqual: (a, b) =>
 									isEqualAfterTransform(a, b, u => ({
-										...pick(u, ["type", "script"]),
+										type: u.type,
+										script: u.liftoscriptNode?.source,
 										reuse: u.reuse?.fullName,
 									})),
 								makeError: prevDayData =>
