@@ -14,10 +14,7 @@ import {
 	n,
 } from "@/utils/math.ts";
 import { Exercise_defaultRounding } from "@/models/exercise.ts";
-import {
-	Equipment_getEquipmentDataForExerciseType,
-	Equipment_smallestPlate,
-} from "@/models/equipment.ts";
+import { getEquipmentDataForExerciseType, Equipment_smallestPlate } from "@/models/equipment.ts";
 import type { IPlate } from "@/common-types.ts";
 import type { IExerciseType } from "@/exercises";
 import type { ISettings } from "@/user-settings";
@@ -232,7 +229,7 @@ export function increment(
 	settings: ISettings,
 	exerciseType?: IExerciseType,
 ): IWeight {
-	const equipmentData = Equipment_getEquipmentDataForExerciseType(
+	const equipmentData = getEquipmentDataForExerciseType(
 		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 		settings.exerciseData,
 		exerciseType,
@@ -270,7 +267,7 @@ export function decrement(
 	exerciseType?: IExerciseType,
 ): IWeight {
 	const equipmentData = exerciseType
-		? Equipment_getEquipmentDataForExerciseType(
+		? getEquipmentDataForExerciseType(
 				settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 				settings.exerciseData,
 				exerciseType,
@@ -343,7 +340,7 @@ function calculatePlates(
 	units: IUnit,
 	exerciseType: IExerciseType,
 ): { totalWeight: IWeight } {
-	const equipmentData = Equipment_getEquipmentDataForExerciseType(
+	const equipmentData = getEquipmentDataForExerciseType(
 		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 		settings.exerciseData,
 		exerciseType,

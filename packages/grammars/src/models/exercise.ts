@@ -5,7 +5,7 @@ import type { ISettings } from "@/user-settings";
 export function Exercise_defaultRounding(type: IExerciseType, settings: ISettings): number {
 	const units =
 		getUnitForExerciseType(
-			settings,
+			settings.units,
 			settings.exerciseData,
 			settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 			type,
