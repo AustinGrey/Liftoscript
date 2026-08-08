@@ -20,7 +20,7 @@ export function Equipment_getUnitForExerciseType(
 	exerciseType?: IExerciseType,
 ): IUnit | undefined {
 	const equipment = Equipment_getEquipmentDataForExerciseType(
-		settings,
+		getGymByIdOrCurrent(settings),
 		settings.exerciseData,
 		exerciseType,
 	);
@@ -33,7 +33,7 @@ export function Equipment_getUnitOrDefaultForExerciseType(
 	exerciseType?: IExerciseType,
 ): IUnit {
 	const equipment = Equipment_getEquipmentDataForExerciseType(
-		settings,
+		getGymByIdOrCurrent(settings),
 		settings.exerciseData,
 		exerciseType,
 	);
@@ -41,7 +41,7 @@ export function Equipment_getUnitOrDefaultForExerciseType(
 }
 
 export function Equipment_getEquipmentDataForExerciseType(
-	settings: ISettings,
+	gym: IGym | undefined,
 	exerciseData: IExerciseData,
 	exerciseType?: IExerciseType,
 ): IEquipmentData | undefined {
@@ -49,12 +49,14 @@ export function Equipment_getEquipmentDataForExerciseType(
 		return undefined;
 	}
 
-	const currentGym = getGymByIdOrCurrent(settings);
-
 	const { equipment: fallbackEquipment, rounding } =
 		exerciseData[Exercise_toKey(exerciseType)] ?? {};
-	const equipmentId = !rounding ? exerciseType.equipment : fallbackEquipment?.[currentGym.id];
-	return equipmentId ? currentGym.equipment[equipmentId] : undefined;
+	const equipmentId = !rounding
+		? exerciseType.equipment
+		: gym
+			? fallbackEquipment?.[gym.id]
+			: undefined;
+	return equipmentId ? gym?.equipment[equipmentId] : undefined;
 }
 
 function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {

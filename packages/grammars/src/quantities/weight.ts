@@ -233,7 +233,7 @@ export function increment(
 	exerciseType?: IExerciseType,
 ): IWeight {
 	const equipmentData = Equipment_getEquipmentDataForExerciseType(
-		settings,
+		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 		settings.exerciseData,
 		exerciseType,
 	);
@@ -270,7 +270,11 @@ export function decrement(
 	exerciseType?: IExerciseType,
 ): IWeight {
 	const equipmentData = exerciseType
-		? Equipment_getEquipmentDataForExerciseType(settings, settings.exerciseData, exerciseType)
+		? Equipment_getEquipmentDataForExerciseType(
+				settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
+				settings.exerciseData,
+				exerciseType,
+			)
 		: undefined;
 	if (equipmentData) {
 		const unit = equipmentData.unit ?? weight.unit;
@@ -340,7 +344,7 @@ function calculatePlates(
 	exerciseType: IExerciseType,
 ): { totalWeight: IWeight } {
 	const equipmentData = Equipment_getEquipmentDataForExerciseType(
-		settings,
+		settings.gyms.find(g => g.id === settings.currentGymId) ?? settings.gyms[0], // @todo use getGymByIdOrCurrent - can't right now because of circular dependencies
 		settings.exerciseData,
 		exerciseType,
 	);
