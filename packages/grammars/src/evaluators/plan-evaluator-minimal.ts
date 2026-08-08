@@ -507,25 +507,6 @@ function Program_forceEvaluate(program: IProgram, settings: ISettings): IEvaluat
 	};
 }
 
-export function Program_create(name: string): IProgram {
-	return {
-		id: generateUid(8),
-		name,
-		url: "",
-		author: "",
-		shortDescription: "",
-		description: "",
-		nextDay: as1(0),
-		weeks: [],
-		days: [{ id: generateUid(8), name: "Day 1", exercises: [] }],
-		exercises: [],
-		deletedDays: [],
-		deletedWeeks: [],
-		deletedExercises: [],
-		clonedAt: Date.now(),
-	};
-}
-
 export const Program_evaluate = memoize(Program_forceEvaluate, { maxSize: 10 });
 
 //#endregion
@@ -751,10 +732,8 @@ function operation(
 
 //#region Planner Key
 
+// @todo you don't define something based on how its used, but by what it is. Rename to "ExerciseKey"?
 type PlannerKey = Tagged<string, "plannerKey">;
-export function makePlannerKey(label: string | undefined, key: string): PlannerKey {
-	return `${label ? `${label}-` : ""}${key}`.toLowerCase() as PlannerKey;
-}
 
 /**
  * Creates a unique identifier for this exercise
@@ -779,6 +758,9 @@ export const getPlannerKey = memoize(
 			  },
 		exercises: IAllCustomExercises,
 	): PlannerKey => {
+		function makePlannerKey(label: string | undefined, key: string): PlannerKey {
+			return `${label ? `${label}-` : ""}${key}`.toLowerCase() as PlannerKey;
+		}
 		if (typeof elements === "string" || "name" in elements) {
 			const { label, name, equipment } =
 				typeof elements === "string" ? extractNameParts(elements, exercises) : elements;

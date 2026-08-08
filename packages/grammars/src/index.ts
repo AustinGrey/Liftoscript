@@ -8,7 +8,6 @@ export { Progress_createScriptFunctions } from "@/public-functions.ts";
 
 //#region Program building & evaluation
 export {
-	Program_create,
 	Program_evaluate,
 	Program_nextHistoryRecordFromEvaluated,
 	Program_runAllFinishDayScripts,
@@ -84,3 +83,4 @@ export { type ISet, type IProgramState } from "@/common-types.ts";
 //#endregion
 
 export { ObjectUtils_entries } from "./utils/object";
+export { Program_create } from "@/program";

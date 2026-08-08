@@ -339,3 +339,22 @@ export interface IEvaluatedProgramDay {
 	description?: string;
 	exercises: IPlannerProgramExercise[];
 }
+
+export function Program_create(name: string): IProgram {
+	return {
+		id: generateUid(8),
+		name,
+		url: "",
+		author: "",
+		shortDescription: "",
+		description: "",
+		nextDay: as1(0),
+		weeks: [],
+		days: [{ id: generateUid(8), name: "Day 1", exercises: [] }],
+		exercises: [],
+		deletedDays: [],
+		deletedWeeks: [],
+		deletedExercises: [],
+		clonedAt: Date.now(),
+	};
+}

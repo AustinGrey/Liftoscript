@@ -4,7 +4,6 @@ import {
 	getWeight,
 	type IEvaluatedProgram,
 	type IWeightChange,
-	Program_create,
 	Program_evaluate,
 	Program_nextHistoryRecordFromEvaluated,
 	Program_runAllFinishDayScripts,
@@ -15,6 +14,7 @@ import {
 	type IDayData,
 	type IPlannerProgram,
 	type IProgram,
+	Program_create,
 } from "@/program";
 import { type ISettings, Settings_build } from "@/user-settings";
 import {
