@@ -84,7 +84,7 @@ import {
 	SourcedSyntaxError,
 	type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { groupBy, isEqual, omitBy, sumBy } from "es-toolkit";
+import { isEqual, omitBy, sumBy } from "es-toolkit";
 import type { SetRequired, Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
@@ -2628,10 +2628,7 @@ function variationToString(
 		}
 		result.push(setStr);
 	}
-	let resultStr = "";
-	if (index > 0 && variation.isCurrent) {
-		resultStr += "! ";
-	}
+	const resultStr = index > 0 && variation.isCurrent ? "! " : "";
 	return resultStr + result.map(r => r.trim()).join(", ");
 }
 function groupVariationSets(
@@ -2659,18 +2656,13 @@ function groupVariationSets(
 			],
 		];
 	}
-	let lastKey: string | undefined;
-	const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = [];
-	for (const set of sets) {
-		const key = `${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
-			set.timer
-		}-${set.label}-${set.askWeight}`;
-		if (lastKey === undefined || lastKey !== key) {
-			groups.push([set, 0]);
-		}
-		groups[groups.length - 1][1] += 1;
-		lastKey = key;
-	}
+	const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = groupConsecutiveBy(
+		sets,
+		set =>
+			`${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
+				set.timer
+			}-${set.label}-${set.askWeight}`,
+	).map(({ groupedElements }) => [groupedElements[0], groupedElements.length]);
 	return groups;
 }
 
