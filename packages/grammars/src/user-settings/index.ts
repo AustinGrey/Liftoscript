@@ -97,8 +97,7 @@ export type ISettings = z.infer<typeof TSettings>;
  * @param gymId The id of the gym to find, if desired.
  */
 export function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym | undefined {
-	const targetId = gymId ?? settings.currentGymId;
-	return settings.gyms.find(g => g.id === targetId) ?? settings.gyms.at(0);
+	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms.at(0);
 }
 
 export const getCurrentEquipment = (settings: ISettings): IAllEquipment | undefined =>

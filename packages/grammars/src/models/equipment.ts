@@ -37,11 +37,11 @@ export function Equipment_getEquipmentDataForExerciseType(
 	exerciseType?: IExerciseType,
 ): IEquipmentData | undefined {
 	const equipment = Equipment_getEquipmentIdForExerciseType(settings, exerciseType);
-	const currentGym = Equipment_getGymByIdOrCurrent(settings);
+	const currentGym = getGymByIdOrCurrent(settings);
 	return equipment ? currentGym.equipment[equipment] : undefined;
 }
 
-export function Equipment_getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
+function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
 	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
 }
 
@@ -55,20 +55,7 @@ export function Equipment_getEquipmentIdForExerciseType(
 	}
 
 	const key = Exercise_toKey(exerciseType);
-	if (
-		!(
-			settings.exerciseData[key] &&
-			("equipment" in settings.exerciseData[key] || "rounding" in settings.exerciseData[key])
-		)
-	) {
-		return exerciseType.equipment;
-	}
-	const exerciseData = settings.exerciseData[key];
-	const exerciseEquipment = exerciseData?.equipment;
-	if (exerciseEquipment == null) {
-		return undefined;
-	}
+	const { equipment, rounding } = settings.exerciseData[key] ?? {};
 
-	const currentGym = Equipment_getGymByIdOrCurrent(settings, gymId);
-	return exerciseEquipment[currentGym.id];
+	return !rounding ? exerciseType.equipment : equipment?.[getGymByIdOrCurrent(settings, gymId).id];
 }
