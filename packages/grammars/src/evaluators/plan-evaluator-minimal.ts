@@ -10,7 +10,7 @@ import {
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
-import { ObjectUtils_entries, ObjectUtils_filter, ObjectUtils_keys } from "@/utils/object";
+import { ObjectUtils_filter, ObjectUtils_keys } from "@/utils/object";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate, Quantity } from "@/logic/types";
 import {
 	applyOp,
@@ -120,6 +120,8 @@ import {
 import { rpeMultiplier, STANDARD_RPE } from "@/rate-of-perceived-exertion.ts";
 import { asNumericAscending, by } from "@/utils/sorting.ts";
 import { generateRange, nestedFor } from "@/utils/iterables.ts";
+import { IProgramExerciseProgressType } from "@/progressions/types.ts";
+import { getProgress } from "@/progressions";
 
 //#region Program
 
@@ -862,16 +864,6 @@ export interface IProgramExerciseDescriptions {
 	reuse?: IPlannerProgramReuse;
 }
 
-/**
- * @todo what relationship does this have to {@link IProgramExerciseUpdateType}, if any? Can they be combined?
- */
-export enum IProgramExerciseProgressType {
-	CUSTOM = "custom",
-	LP = "lp",
-	DP = "dp",
-	SUM = "sum",
-	NONE = "none",
-}
 export interface IProgramExerciseProgress {
 	type: IProgramExerciseProgressType;
 	state: IProgramState;
@@ -1201,7 +1193,7 @@ export function PlannerProgramExercise_getState(exercise: IPlannerProgramExercis
 	}
 }
 
-function PlannerProgramExercise_getOnlyChangedState(
+export function PlannerProgramExercise_getOnlyChangedState(
 	exercise: IPlannerProgramExercise,
 ): IProgramState {
 	const originalState = exercise.progress?.reuse?.exercise
@@ -1225,7 +1217,7 @@ function PlannerProgramExercise_getOnlyChangedState(
 	) as IProgramState;
 }
 
-function PlannerProgramExercise_getStateMetadata(
+export function PlannerProgramExercise_getStateMetadata(
 	exercise: IPlannerProgramExercise,
 ): IProgramStateMetadata {
 	if (exercise.progress?.stateMetadata && !exercise.progress.reuse) {
@@ -1604,85 +1596,6 @@ function getUpdate(update: IProgramExerciseUpdate, settings: ISettings): string 
 		update.reuse.exercise.label,
 	);
 	return `update: custom() { ...${fullName} }`;
-}
-
-function getProgress(
-	programExercise: IPlannerProgramExercise,
-	settings: ISettings,
-	hideScript?: boolean,
-): string {
-	const progress = programExercise.progress;
-	if (!progress) {
-		return "";
-	}
-	let progressStr = `progress: ${progress.type}`;
-	const state = PlannerProgramExercise_getState(programExercise);
-	const stateMetadata = PlannerProgramExercise_getStateMetadata(programExercise);
-	if (progress.type === "custom") {
-		const onlyChangedState = PlannerProgramExercise_getOnlyChangedState(programExercise);
-		progressStr += `(${ObjectUtils_entries(onlyChangedState)
-			.map(([k, v]) => {
-				return `${k}${stateMetadata[k]?.userPrompted ? "+" : ""}: ${print(v)}`;
-			})
-			.join(", ")})`;
-	} else if (progress.type === "lp") {
-		const increment = state.increment as IWeight | IDynamicWeight;
-		const successes = state.successes as number;
-		const successCounter = state.successCounter as number;
-		const decrement = state.decrement as IWeight | IDynamicWeight;
-		const failures = state.failures as number;
-		const failureCounter = state.failureCounter as number;
-		const args: string[] = [];
-		args.push(print(increment));
-		if (successes > 1 || decrement.value > 0) {
-			args.push(`${successes}`);
-		}
-		if (successes > 1 || decrement.value > 0) {
-			args.push(`${successCounter}`);
-		}
-		if (decrement.value > 0) {
-			args.push(print(decrement));
-		}
-		if (failures > 1) {
-			args.push(`${failures}`);
-		}
-		if (failures > 1) {
-			args.push(`${failureCounter}`);
-		}
-		progressStr += `(${args.join(", ")})`;
-	} else if (progress.type === "dp") {
-		const increment = state.increment as IWeight | IDynamicWeight;
-		const minReps = state.minReps as number;
-		const maxReps = state.maxReps as number;
-		const args = [print(increment), `${minReps}`, `${maxReps}`];
-		progressStr += `(${args.join(", ")})`;
-	} else if (progress.type === "sum") {
-		const reps = state.reps as number;
-		const increment = state.increment as IWeight | IDynamicWeight;
-		const args = [`${reps}`, print(increment)];
-		progressStr += `(${args.join(", ")})`;
-	}
-	if (progress.type === "custom") {
-		if (progress.reuse) {
-			if (progress.reuse.exercise?.exerciseType) {
-				const exercise = getExerciseOrDefault(
-					progress.reuse.exercise.exerciseType,
-					settings.exercises,
-				);
-				const fullName = Exercise_fullName(
-					exercise,
-					getCurrentEquipment(settings),
-					progress.reuse.exercise.label,
-				);
-				progressStr += ` { ...${fullName} }`;
-			} else {
-				progressStr += ` { ...${progress.reuse.exercise?.fullName || progress.reuse.fullName} }`;
-			}
-		} else {
-			progressStr += hideScript ? ` {~ ... ~}` : ` ${progress.script}`;
-		}
-	}
-	return progressStr;
 }
 
 type IDereuseDecision = "sets" | "weight" | "rpe" | "timer" | "progress" | "update";

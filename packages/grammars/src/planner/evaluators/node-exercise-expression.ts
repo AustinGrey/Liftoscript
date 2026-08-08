@@ -41,7 +41,6 @@ import {
 	type IPlannerProgramExerciseSuperset,
 	type IPlannerProgramReuse,
 	type IProgramExerciseProgress,
-	IProgramExerciseProgressType,
 	type IProgramExerciseUpdate,
 	IProgramExerciseUpdateType,
 } from "@/evaluators/plan-evaluator-minimal.ts";
@@ -65,6 +64,7 @@ import type {
 } from "@/sets";
 
 import { validateScript } from "@/logic/evaluators";
+import { IProgramExerciseProgressType } from "@/progressions/types.ts";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
 	return nodeFailure(
