@@ -2638,32 +2638,27 @@ function groupVariationSets(
 ): [IPlannerProgramExerciseEvaluatedSet, number][] {
 	if (sets.length === 0) {
 		const originalSets = PlannerProgramExercise_sets(exercise, index).at(0);
-		return [
-			[
-				{
-					maxrep: originalSets?.repRange?.maxrep || 1,
-					minrep: originalSets?.repRange?.minrep,
-					weight: originalSets?.weight || w`0lb`,
-					logRpe: originalSets?.logRpe || false,
-					isAmrap: originalSets?.repRange?.asManyRepsAsPossible || false,
-					isQuickAddSet: originalSets?.repRange?.asManySetsAsPossible || false,
-					askWeight: originalSets?.askWeight || false,
-					rpe: originalSets?.rpe,
-					timer: originalSets?.timer,
-					label: originalSets?.label,
-				},
-				0,
-			],
-		];
+		const fallbackSet: IPlannerProgramExerciseEvaluatedSet = {
+			maxrep: originalSets?.repRange?.maxrep || 1,
+			minrep: originalSets?.repRange?.minrep,
+			weight: originalSets?.weight || w`0lb`,
+			logRpe: originalSets?.logRpe || false,
+			isAmrap: originalSets?.repRange?.asManyRepsAsPossible || false,
+			isQuickAddSet: originalSets?.repRange?.asManySetsAsPossible || false,
+			askWeight: originalSets?.askWeight || false,
+			rpe: originalSets?.rpe,
+			timer: originalSets?.timer,
+			label: originalSets?.label,
+		};
+		return [[fallbackSet, 0]];
 	}
-	const groups: [IPlannerProgramExerciseEvaluatedSet, number][] = groupConsecutiveBy(
+	return groupConsecutiveBy(
 		sets,
 		set =>
 			`${set.maxrep}-${set.minrep}-${print(set.weight)}-${set.isAmrap}-${set.rpe}-${set.logRpe}-${
 				set.timer
 			}-${set.label}-${set.askWeight}`,
 	).map(({ groupedElements }) => [groupedElements[0], groupedElements.length]);
-	return groups;
 }
 
 function getGlobals(exercise: IPlannerProgramExercise): IPlannerToProgram2Globals {
