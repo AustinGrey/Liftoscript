@@ -2,7 +2,7 @@ import type { IUnit, IWeight } from "@/quantities/weight.ts";
 import * as Weight from "@/quantities/weight.ts";
 import { Exercise_toKey } from "@/models/exercise.ts";
 import type { IExerciseType } from "@/exercises";
-import { getGymByIdOrCurrent, type ISettings } from "@/user-settings";
+import type { ISettings } from "@/user-settings";
 import type { IGym } from "@/gyms";
 import type { IEquipmentData } from "@/equipment";
 
@@ -37,8 +37,12 @@ export function Equipment_getEquipmentDataForExerciseType(
 	exerciseType?: IExerciseType,
 ): IEquipmentData | undefined {
 	const equipment = Equipment_getEquipmentIdForExerciseType(settings, exerciseType);
-	const currentGym = getGymByIdOrCurrent(settings);
-	return equipment ? currentGym?.equipment[equipment] : undefined;
+	const currentGym = Equipment_getGymByIdOrCurrent(settings);
+	return equipment ? currentGym.equipment[equipment] : undefined;
+}
+
+export function Equipment_getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
+	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
 }
 
 export function Equipment_getEquipmentIdForExerciseType(
@@ -65,6 +69,6 @@ export function Equipment_getEquipmentIdForExerciseType(
 		return undefined;
 	}
 
-	const currentGym = getGymByIdOrCurrent(settings, gymId);
-	return currentGym ? exerciseEquipment[currentGym.id] : undefined;
+	const currentGym = Equipment_getGymByIdOrCurrent(settings, gymId);
+	return exerciseEquipment[currentGym.id];
 }
