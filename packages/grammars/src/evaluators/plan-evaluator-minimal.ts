@@ -1,7 +1,12 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
 import type { SyntaxNode } from "@lezer/common";
-import { definedOnly, findIndexOfCurrentOrFirst, tryFindIndex } from "../utils/collection";
+import {
+	definedOnly,
+	findIndexOfCurrentOrFirst,
+	groupConsecutiveBy,
+	tryFindIndex,
+} from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
@@ -79,7 +84,7 @@ import {
 	SourcedSyntaxError,
 	type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { groupBy, isEqual, omitBy } from "es-toolkit";
+import { groupBy, isEqual, omitBy, sumBy } from "es-toolkit";
 import type { SetRequired, Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
@@ -2249,31 +2254,6 @@ function topLineMap(
 	return result;
 }
 
-/**
- * Combines neighboring sets that are the same together e.g.
- * - A, A, B, A
- * becomes
- * - [A, 2], [B, 1], [A, 1]
- *
- * @param sets The sets to group
- */
-function groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [
-	/** The set that was repeated */
-	IPlannerProgramExerciseWarmupSet,
-	/** The number of times it was repeated */
-	number,
-][] {
-	let lastKey: string | undefined;
-	const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
-	for (const set of sets) {
-		const key = `${set.reps}-${print(set.weight ?? 0)}`;
-		if (lastKey == null || lastKey !== key) groups.push([set, 0]);
-		groups[groups.length - 1][1] += set.numberOfSets;
-		lastKey = key;
-	}
-	return groups;
-}
-
 export function convertToPlanner(
 	program: IEvaluatedProgram,
 	settings: ISettings,
@@ -2502,12 +2482,17 @@ export function convertToPlanner(
 							}
 
 							function getWarmupSets(): string | undefined {
-								const result = groupWarmupsSets(evalExercise.warmupSets ?? [])
-									.map(([first, length]) => {
+								const result = groupConsecutiveBy(
+									evalExercise.warmupSets ?? [],
+									set => `${set.reps}-${print(set.weight ?? 0)}`,
+								)
+									.map(({ groupedElements }) => {
+										const first = groupedElements[0];
 										const weight = isNumber(first.weight)
 											? percentORM(first.weight)
 											: (first.weight ?? w`0lb`);
-										return `${length}x${first.reps} ${print(weight)}`;
+										const totalSets = sumBy(groupedElements, e => e.numberOfSets);
+										return `${totalSets}x${first.reps} ${print(weight)}`;
 									})
 									.join(", ");
 								return result.length === 0 ? "none" : result;

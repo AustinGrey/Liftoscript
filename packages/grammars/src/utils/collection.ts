@@ -1,4 +1,5 @@
 import { castAs0, type IndexFrom0 } from "@/utils/indexes.ts";
+import { isEqual, sum } from "es-toolkit";
 
 /**
  * A common filter predicate, removed undefined values
@@ -27,4 +28,32 @@ export function tryFindIndex<T>(
  */
 export function findIndexOfCurrentOrFirst(collection: { isCurrent: boolean }[]): IndexFrom0 {
 	return tryFindIndex(collection, item => item.isCurrent) ?? castAs0(0);
+}
+
+/**
+ * Groups consecutive objects by a returned key. If you don't care about consecutiveness, use 'groupBy' from estoolkit
+ *
+ * E.g. `['a', 'a', 'b', 'a']` with a key function `i=>i.toUpperCase()`, will group as
+ * ```
+ * [
+ * 	['A', ['a', 'a']],
+ * 	['B', ['b']],
+ * 	['A', ['a']],
+ * ]
+ * ```
+ * @param items
+ * @param keyOf
+ */
+export function groupConsecutiveBy<T, K>(
+	items: readonly T[],
+	keyOf: (item: T) => K,
+): { key: K; groupedElements: [T, ...T[]] }[] {
+	const groups: { key: K; groupedElements: [T, ...T[]] }[] = [];
+	for (const item of items) {
+		const key = keyOf(item);
+		const last = groups[groups.length - 1];
+		if (last && isEqual(last.key, key)) last.groupedElements.push(item);
+		else groups.push({ key, groupedElements: [item] });
+	}
+	return groups;
 }
