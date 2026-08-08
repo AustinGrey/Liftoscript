@@ -88,23 +88,6 @@ function handleLogic(node: SourcedSyntaxNode, tools: EvaluateTools): LogicResult
 	return result;
 }
 
-export function* validate(
-	node: SourcedSyntaxNode,
-	tools: ValidationTools,
-): Generator<SourcedSyntaxError> {
-	for (const n of queryTree(node)) {
-		if (n.type.isError) {
-			yield nodeError(n);
-			return;
-		}
-
-		const validator: Validator<NodeNames_Logic> | undefined = isLogicNodeName(n.name)
-			? (parsers[n.name].validator as Validator<NodeNames_Logic>)
-			: undefined;
-		yield* validator?.(n as TypedLogicNode<NodeNames_Logic>, tools) ?? [];
-	}
-}
-
 /**
  * @returns any errors detected in the syntax or structure of a logic script
  * @param script The script to validate
