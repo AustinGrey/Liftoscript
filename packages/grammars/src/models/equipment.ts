@@ -27,13 +27,6 @@ export function getUnitForExerciseType(
 	return equipment?.unit == null || equipment.unit === settings.units ? undefined : equipment.unit;
 }
 
-export function Equipment_getUnitOrDefaultForExerciseType(
-	settings: ISettings,
-	exerciseType?: IExerciseType,
-): IUnit {
-	return getUnitForExerciseType(settings, exerciseType) ?? settings.units;
-}
-
 export function Equipment_getEquipmentDataForExerciseType(
 	gym: IGym | undefined,
 	exerciseData: IExerciseData,
