@@ -44,7 +44,6 @@ import {
 	IProgramExerciseProgressType,
 	type IProgramExerciseUpdate,
 	IProgramExerciseUpdateType,
-	validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 //#endregion
 import { splitBy } from "@/utils/iterables.ts";
@@ -64,6 +63,8 @@ import type {
 	IRepRange,
 	IWorkingWeightPercent,
 } from "@/sets";
+
+import { validateScript } from "@/logic/evaluators";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
 	return nodeFailure(

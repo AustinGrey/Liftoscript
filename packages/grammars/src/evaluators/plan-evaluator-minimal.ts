@@ -7,7 +7,6 @@ import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } fro
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
 import { ObjectUtils_entries, ObjectUtils_filter, ObjectUtils_keys } from "@/utils/object";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate, Quantity } from "@/logic/types";
-import { parser as LiftoscriptParser } from "@/logic/parsing/logic.ts";
 import {
 	applyOp,
 	build,
@@ -28,7 +27,6 @@ import {
 	type IExerciseDataValue,
 	type IProgramState,
 	type IScriptFnContext,
-	type IScriptFunctions,
 	type ISet,
 	TProgramState,
 	TSet,
@@ -83,7 +81,7 @@ import {
 } from "@/utils/lezer.ts";
 import { isEqual, omitBy } from "es-toolkit";
 import type { SetRequired, Tagged } from "type-fest";
-import { run, validate } from "@/logic/evaluators";
+import { run } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
 import { IProgramMode } from "@/logic/evaluators/types.ts";
 import { PlannerEvaluator_forceEvaluate, PlannerProgram_evaluate } from "@/planner/evaluators";
@@ -1283,7 +1281,7 @@ function ProgramSet_getEvaluatedWeight(
 
 //#region Progress
 
-interface IScriptBindings {
+export interface IScriptBindings {
 	day: number;
 	week: number;
 	dayInWeek: number;
@@ -2719,26 +2717,5 @@ function getGlobals(exercise: IPlannerProgramExercise): IPlannerToProgram2Global
 		logRpe: everySetInEveryVariation(s => s.rpe === rpe && s.logRpe),
 		timer: timer != null && everySetInEveryVariation(s => s.timer === timer) ? timer : undefined,
 	};
-}
-//#endregion
-
-//#region ScriptRunner
-
-export function* validateScript(
-	script: string,
-	state: IProgramState,
-	bindings: IScriptBindings,
-	fns: IScriptFunctions,
-	mode: IProgramMode,
-): Generator<SourcedSyntaxError> {
-	const trackedVarNames = new Set<string>();
-	yield* validate(parseBound(LiftoscriptParser, script), {
-		knownFunctions: Object.keys(fns),
-		knownBindings: Object.keys(bindings),
-		knownStateVariables: Object.keys(state),
-		mode,
-		trackVariable: name => trackedVarNames.add(name),
-		isKnownVariable: name => trackedVarNames.has(name),
-	});
 }
 //#endregion

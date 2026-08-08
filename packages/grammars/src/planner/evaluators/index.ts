@@ -28,7 +28,6 @@ import {
 	PlannerProgramExercise_getState,
 	PlannerProgramExercise_setVariations,
 	Progress_createEmptyScriptBindings,
-	validateScript,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 //#endregion
 import { memoize } from "micro-memoize";
@@ -56,6 +55,8 @@ import {
 import { evaluate } from "@/planner/evaluators/exercise.ts";
 import type { IPlannerProgramExerciseWarmupSet } from "@/sets";
 import { nestedFor } from "@/utils/iterables.ts";
+
+import { validateScript } from "@/logic/evaluators";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;

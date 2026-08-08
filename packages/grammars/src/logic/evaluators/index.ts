@@ -12,7 +12,7 @@ import {
 	type ValidationTools,
 	type Validator,
 } from "@/logic/evaluators/types.ts";
-import { parser } from "@/logic/parsing/logic.ts";
+import { parser as LiftoscriptParser, parser } from "@/logic/parsing/logic.ts";
 import { type ILiftoscriptEvaluatorUpdate, type LogicResult } from "@/logic/types.ts";
 import type { IScriptFnContext, IScriptFunctions } from "@/common-types.ts";
 import {
@@ -93,6 +93,43 @@ export function* validate(
 	tools: ValidationTools,
 ): Generator<SourcedSyntaxError> {
 	for (const n of queryTree(node)) {
+		if (n.type.isError) {
+			yield nodeError(n);
+			return;
+		}
+
+		const validator: Validator<NodeNames_Logic> | undefined = isLogicNodeName(n.name)
+			? (parsers[n.name].validator as Validator<NodeNames_Logic>)
+			: undefined;
+		yield* validator?.(n as TypedLogicNode<NodeNames_Logic>, tools) ?? [];
+	}
+}
+
+/**
+ * @returns any errors detected in the syntax or structure of a logic script
+ * @param script The script to validate
+ * @param state The current program state
+ * @param bindings The current program bindings
+ * @param fns The current functions made available to this script
+ * @param mode The mode to validate in
+ */
+export function* validateScript(
+	script: string,
+	state: IProgramState,
+	bindings: IScriptBindings,
+	fns: IScriptFunctions,
+	mode: IProgramMode,
+): Generator<SourcedSyntaxError> {
+	const trackedVarNames = new Set<string>();
+	const tools: ValidationTools = {
+		knownFunctions: Object.keys(fns),
+		knownBindings: Object.keys(bindings),
+		knownStateVariables: Object.keys(state),
+		mode,
+		trackVariable: name => trackedVarNames.add(name),
+		isKnownVariable: name => trackedVarNames.has(name),
+	};
+	for (const n of queryTree(parseBound(LiftoscriptParser, script))) {
 		if (n.type.isError) {
 			yield nodeError(n);
 			return;
