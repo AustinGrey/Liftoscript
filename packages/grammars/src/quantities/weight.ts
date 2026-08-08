@@ -232,7 +232,11 @@ export function increment(
 	settings: ISettings,
 	exerciseType?: IExerciseType,
 ): IWeight {
-	const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+	const equipmentData = Equipment_getEquipmentDataForExerciseType(
+		settings,
+		settings.exerciseData,
+		exerciseType,
+	);
 	if (equipmentData) {
 		const unit = equipmentData.unit ?? weight.unit;
 		const roundWeight = round(weight, settings, unit, exerciseType);
@@ -266,7 +270,7 @@ export function decrement(
 	exerciseType?: IExerciseType,
 ): IWeight {
 	const equipmentData = exerciseType
-		? Equipment_getEquipmentDataForExerciseType(settings, exerciseType)
+		? Equipment_getEquipmentDataForExerciseType(settings, settings.exerciseData, exerciseType)
 		: undefined;
 	if (equipmentData) {
 		const unit = equipmentData.unit ?? weight.unit;
@@ -335,7 +339,11 @@ function calculatePlates(
 	units: IUnit,
 	exerciseType: IExerciseType,
 ): { totalWeight: IWeight } {
-	const equipmentData = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+	const equipmentData = Equipment_getEquipmentDataForExerciseType(
+		settings,
+		settings.exerciseData,
+		exerciseType,
+	);
 	if (equipmentData == null) {
 		return {
 			totalWeight: build(

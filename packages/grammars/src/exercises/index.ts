@@ -12,8 +12,7 @@ import { TBodyPart, TMuscle } from "@/human-body";
 import type { OpenRecord } from "@/utils/types.ts";
 import { ObjectUtils_keys } from "@/utils/object.ts";
 import { sameCaseInsensitive } from "@/utils/string.ts";
-import type { IExerciseDataValue } from "@/common-types.ts";
-import type { IExerciseData } from "@/evaluators/plan-evaluator-minimal.ts";
+import { type IExerciseDataValue, TExerciseDataValue } from "@/common-types.ts";
 import { definedOnly } from "@/utils/collection.ts";
 
 export const TExerciseId = z.string();
@@ -41,6 +40,10 @@ export type IExercise = IExerciseType & {
 	startingWeightLb: IWeight;
 	startingWeightKg: IWeight;
 };
+export const TExerciseTypeKey = z.string().brand<"ExerciseTypeKey">();
+export type IExerciseTypeKey = z.infer<typeof TExerciseTypeKey>;
+export const TExerciseData = z.record(TExerciseTypeKey, TExerciseDataValue);
+export type IExerciseData = z.infer<typeof TExerciseData>;
 export const allExercisesList: Record<IExerciseId, IExercise> = {
 	abWheel: {
 		id: "abWheel",
@@ -1733,8 +1736,6 @@ export function isUnilateral(
 	}
 }
 
-export const TExerciseTypeKey = z.string().brand<"ExerciseTypeKey">();
-export type IExerciseTypeKey = z.infer<typeof TExerciseTypeKey>;
 /**
  * @returns a unique, stable key that can be used to refer to an exercise type
  * @param type The type to make a key from

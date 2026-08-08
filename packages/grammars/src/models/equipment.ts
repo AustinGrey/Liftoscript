@@ -1,7 +1,7 @@
 import type { IUnit, IWeight } from "@/quantities/weight.ts";
 import * as Weight from "@/quantities/weight.ts";
 import { Exercise_toKey } from "@/models/exercise.ts";
-import type { IExerciseType } from "@/exercises";
+import type { IExerciseData, IExerciseType } from "@/exercises";
 import type { ISettings } from "@/user-settings";
 import type { IGym } from "@/gyms";
 import type { IEquipmentData } from "@/equipment";
@@ -19,7 +19,11 @@ export function Equipment_getUnitForExerciseType(
 	settings: ISettings,
 	exerciseType?: IExerciseType,
 ): IUnit | undefined {
-	const equipment = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+	const equipment = Equipment_getEquipmentDataForExerciseType(
+		settings,
+		settings.exerciseData,
+		exerciseType,
+	);
 	const equipmentUnit = equipment?.unit;
 	return equipmentUnit == null || equipmentUnit === settings.units ? undefined : equipmentUnit;
 }
@@ -28,12 +32,17 @@ export function Equipment_getUnitOrDefaultForExerciseType(
 	settings: ISettings,
 	exerciseType?: IExerciseType,
 ): IUnit {
-	const equipment = Equipment_getEquipmentDataForExerciseType(settings, exerciseType);
+	const equipment = Equipment_getEquipmentDataForExerciseType(
+		settings,
+		settings.exerciseData,
+		exerciseType,
+	);
 	return equipment?.unit ?? settings.units;
 }
 
 export function Equipment_getEquipmentDataForExerciseType(
 	settings: ISettings,
+	exerciseData: IExerciseData,
 	exerciseType?: IExerciseType,
 ): IEquipmentData | undefined {
 	if (exerciseType == null) {
@@ -43,7 +52,7 @@ export function Equipment_getEquipmentDataForExerciseType(
 	const currentGym = getGymByIdOrCurrent(settings);
 
 	const { equipment: fallbackEquipment, rounding } =
-		settings.exerciseData[Exercise_toKey(exerciseType)] ?? {};
+		exerciseData[Exercise_toKey(exerciseType)] ?? {};
 	const equipmentId = !rounding ? exerciseType.equipment : fallbackEquipment?.[currentGym.id];
 	return equipmentId ? currentGym.equipment[equipmentId] : undefined;
 }

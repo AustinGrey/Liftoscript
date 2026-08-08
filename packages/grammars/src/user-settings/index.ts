@@ -2,12 +2,11 @@ import { type IUnit, TUnit, TWeight, w } from "@/quantities/weight.ts";
 import {
 	type IExerciseType,
 	TCustomExercise,
+	TExerciseData,
 	TExerciseId,
-	TExerciseTypeKey,
 	toKey,
 } from "@/exercises";
 import {
-	TExerciseDataValue,
 	TExercisePickerSort,
 	TLengthUnit,
 	TMuscleGroupsSettings,
@@ -53,7 +52,7 @@ export const TSettings = z
 		units: TUnit,
 		lengthUnits: TLengthUnit,
 		volume: z.number(),
-		exerciseData: z.record(TExerciseTypeKey, TExerciseDataValue),
+		exerciseData: TExerciseData,
 		planner: TPlannerSettings,
 		workoutSettings: {
 			targetType: TTargetType,
