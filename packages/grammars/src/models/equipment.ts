@@ -36,26 +36,18 @@ export function Equipment_getEquipmentDataForExerciseType(
 	settings: ISettings,
 	exerciseType?: IExerciseType,
 ): IEquipmentData | undefined {
-	const equipment = Equipment_getEquipmentIdForExerciseType(settings, exerciseType);
-	const currentGym = getGymByIdOrCurrent(settings);
-	return equipment ? currentGym.equipment[equipment] : undefined;
-}
-
-function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
-	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
-}
-
-export function Equipment_getEquipmentIdForExerciseType(
-	settings: ISettings,
-	exerciseType?: IExerciseType,
-	gymId?: string,
-): string | undefined {
 	if (exerciseType == null) {
 		return undefined;
 	}
 
-	const key = Exercise_toKey(exerciseType);
-	const { equipment, rounding } = settings.exerciseData[key] ?? {};
+	const currentGym = getGymByIdOrCurrent(settings);
 
-	return !rounding ? exerciseType.equipment : equipment?.[getGymByIdOrCurrent(settings, gymId).id];
+	const { equipment: fallbackEquipment, rounding } =
+		settings.exerciseData[Exercise_toKey(exerciseType)] ?? {};
+	const equipmentId = !rounding ? exerciseType.equipment : fallbackEquipment?.[currentGym.id];
+	return equipmentId ? currentGym.equipment[equipmentId] : undefined;
+}
+
+function getGymByIdOrCurrent(settings: ISettings, gymId?: string): IGym {
+	return settings.gyms.find(g => g.id === (gymId ?? settings.currentGymId)) ?? settings.gyms[0];
 }
