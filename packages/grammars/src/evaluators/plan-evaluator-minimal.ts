@@ -79,7 +79,7 @@ import {
 	SourcedSyntaxError,
 	type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { isEqual, omitBy } from "es-toolkit";
+import { groupBy, isEqual, omitBy } from "es-toolkit";
 import type { SetRequired, Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
@@ -1791,33 +1791,6 @@ function getRenamedValue(
 		: line.value;
 }
 
-/**
- * Combines neighboring sets that are the same together e.g.
- * - A, A, B, A
- * becomes
- * - [A, 2], [B, 1], [A, 1]
- *
- * @param sets The sets to group
- */
-function groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [
-	/** The set that was repeated */
-	IPlannerProgramExerciseWarmupSet,
-	/** The number of times it was repeated */
-	number,
-][] {
-	let lastKey: string | undefined;
-	const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
-	for (const set of sets) {
-		const key = `${set.reps}-${print(set.weight ?? 0)}`;
-		if (lastKey == null || lastKey !== key) {
-			groups.push([set, 0]);
-		}
-		groups[groups.length - 1][1] += set.numberOfSets;
-		lastKey = key;
-	}
-	return groups;
-}
-
 function getCurrentDescriptionMeta(
 	program: Readonly<IEvaluatedProgram>,
 	key: string,
@@ -1833,11 +1806,14 @@ function getCurrentDescriptionMeta(
 	 */
 	index: IndexFrom0 | undefined;
 } {
-	const exercise = program.weeks[weekIndex]?.days[dayInWeekIndex]?.exercises?.find(
-		e => e.key === key,
-	);
-	const index = tryFindIndex(exercise?.descriptions.values, s => s.isCurrent);
-	return { exercise, index };
+	const exercise = program.weeks
+		.at(weekIndex)
+		?.days.at(dayInWeekIndex)
+		?.exercises?.find(e => e.key === key);
+	return {
+		exercise,
+		index: tryFindIndex(exercise?.descriptions.values, s => s.isCurrent),
+	};
 }
 
 function addExerciseDescriptions(
@@ -2271,6 +2247,31 @@ function topLineMap(
 		}
 	}
 	return result;
+}
+
+/**
+ * Combines neighboring sets that are the same together e.g.
+ * - A, A, B, A
+ * becomes
+ * - [A, 2], [B, 1], [A, 1]
+ *
+ * @param sets The sets to group
+ */
+function groupWarmupsSets(sets: IPlannerProgramExerciseWarmupSet[]): [
+	/** The set that was repeated */
+	IPlannerProgramExerciseWarmupSet,
+	/** The number of times it was repeated */
+	number,
+][] {
+	let lastKey: string | undefined;
+	const groups: [IPlannerProgramExerciseWarmupSet, number][] = [];
+	for (const set of sets) {
+		const key = `${set.reps}-${print(set.weight ?? 0)}`;
+		if (lastKey == null || lastKey !== key) groups.push([set, 0]);
+		groups[groups.length - 1][1] += set.numberOfSets;
+		lastKey = key;
+	}
+	return groups;
 }
 
 export function convertToPlanner(
