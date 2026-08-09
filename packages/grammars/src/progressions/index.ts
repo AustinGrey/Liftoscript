@@ -8,6 +8,9 @@ import {
 	PlannerProgramExercise_getState,
 	PlannerProgramExercise_getStateMetadata,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+import { isWeightlike } from "@/logic/types.ts";
+import { isNumber } from "@/utils/types.ts";
+import { definedOnly } from "@/utils/collection.ts";
 
 export function getProgress(programExercise: IPlannerProgramExercise, settings: ISettings): string {
 	const progress = programExercise.progress;
@@ -25,36 +28,27 @@ export function getProgress(programExercise: IPlannerProgramExercise, settings: 
 			})
 			.join(", ")})`;
 	} else if (progress.type === "lp") {
-		const increment = state.increment as IWeight | IDynamicWeight;
-		const successes = state.successes as number;
-		const successCounter = state.successCounter as number;
-		const decrement = state.decrement as IWeight | IDynamicWeight;
-		const failures = state.failures as number;
-		const failureCounter = state.failureCounter as number;
-		const args: string[] = [];
-		args.push(print(increment));
-		if (successes > 1 || decrement.value > 0) {
-			args.push(`${successes}`);
+		const successes = isNumber(state.successes) ? state.successes : undefined;
+		const decrement = isWeightlike(state.decrement) ? state.decrement : undefined;
+		const failures = isNumber(state.failures) ? state.failures : undefined;
+		const args: (string | undefined)[] = [print(state.increment)];
+		if ((successes && successes > 1) || (decrement && decrement.value > 0)) {
+			args.push(successes?.toString(), state.successCounter?.toString());
 		}
-		if (successes > 1 || decrement.value > 0) {
-			args.push(`${successCounter}`);
-		}
-		if (decrement.value > 0) {
+		if (decrement && decrement.value > 0) {
 			args.push(print(decrement));
 		}
-		if (failures > 1) {
-			args.push(`${failures}`);
+		if (failures && failures > 1) {
+			args.push(failures?.toString(), state.failureCounter?.toString());
 		}
-		if (failures > 1) {
-			args.push(`${failureCounter}`);
-		}
-		progressStr += `(${args.join(", ")})`;
+		progressStr += `(${args.filter(definedOnly).join(", ")})`;
 	} else if (progress.type === "dp") {
-		const increment = state.increment as IWeight | IDynamicWeight;
-		const minReps = state.minReps as number;
-		const maxReps = state.maxReps as number;
-		const args = [print(increment), `${minReps}`, `${maxReps}`];
-		progressStr += `(${args.join(", ")})`;
+		const args = [
+			print(state.increment),
+			state.minReps?.toString(),
+			state.maxReps?.toString(),
+		].join(", ");
+		progressStr += `(${args})`;
 	} else if (progress.type === "sum") {
 		const reps = state.reps as number;
 		const increment = state.increment as IWeight | IDynamicWeight;

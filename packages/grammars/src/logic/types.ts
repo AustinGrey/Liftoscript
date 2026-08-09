@@ -4,7 +4,11 @@ import { is, isNumber } from "@/utils/types.ts";
 export type Quantity = number | IWeight | IDynamicWeight;
 
 export function isQuantity(value: unknown): value is Quantity {
-	return isNumber(value) || is(TWeight, value) || is(TDynamicWeight, value);
+	return isNumber(value) || isWeightlike(value);
+}
+
+export function isWeightlike(value: unknown): value is IWeight | IDynamicWeight {
+	return is(TWeight, value) || is(TDynamicWeight, value);
 }
 
 export type LogicResultSingular = Quantity | boolean | undefined;
