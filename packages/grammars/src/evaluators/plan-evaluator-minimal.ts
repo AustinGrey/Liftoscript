@@ -1172,15 +1172,14 @@ function PlannerProgramExercise_getProgressScript(
 export function PlannerProgramExercise_getState(exercise: IPlannerProgramExercise): IProgramState {
 	if (exercise.progress?.state && !exercise.progress.reuse) {
 		return exercise.progress.state;
-	} else {
-		const originalState = exercise.progress?.reuse?.exercise
-			? PlannerProgramExercise_getState(exercise.progress.reuse.exercise)
-			: exercise.reuse?.exercise
-				? PlannerProgramExercise_getState(exercise.reuse.exercise)
-				: {};
-
-		return { ...originalState, ...exercise.progress?.state };
 	}
+	const originalState = exercise.progress?.reuse?.exercise
+		? PlannerProgramExercise_getState(exercise.progress.reuse.exercise)
+		: exercise.reuse?.exercise
+			? PlannerProgramExercise_getState(exercise.reuse.exercise)
+			: {};
+
+	return { ...originalState, ...exercise.progress?.state };
 }
 
 export function PlannerProgramExercise_getOnlyChangedState(
@@ -1206,15 +1205,14 @@ export function PlannerProgramExercise_getStateMetadata(
 ): IProgramStateMetadata {
 	if (exercise.progress?.stateMetadata && !exercise.progress.reuse) {
 		return exercise.progress.stateMetadata;
-	} else {
-		const originalState = exercise.progress?.reuse?.exercise
-			? PlannerProgramExercise_getStateMetadata(exercise.progress.reuse.exercise)
-			: exercise.reuse?.exercise
-				? PlannerProgramExercise_getStateMetadata(exercise.reuse.exercise)
-				: {};
-
-		return { ...originalState, ...exercise.progress?.stateMetadata };
 	}
+	const originalState = exercise.progress?.reuse?.exercise
+		? PlannerProgramExercise_getStateMetadata(exercise.progress.reuse.exercise)
+		: exercise.reuse?.exercise
+			? PlannerProgramExercise_getStateMetadata(exercise.reuse.exercise)
+			: {};
+
+	return { ...originalState, ...exercise.progress?.stateMetadata };
 }
 
 function PlannerProgramExercise_getUpdateScript(
