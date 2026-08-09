@@ -432,51 +432,201 @@ function evaluateProgressImpl(
 		.getChildren(PlannerNodeName.FunctionArgument)
 		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode));
 
-	const validatorMap: Record<IProgramExerciseProgressType, ProgressionFormulaValidator> = {
-		[IProgramExerciseProgressType.LP]: validateLp,
-		[IProgramExerciseProgressType.DP]: validateDp,
-		[IProgramExerciseProgressType.SUM]: validateSum,
-		[IProgramExerciseProgressType.CUSTOM]: validateCustom,
-		[IProgramExerciseProgressType.NONE]: validateNone,
-	};
-	const validator = isEnumValue(IProgramExerciseProgressType, fnName)
-		? validatorMap[fnName]
-		: function* () {
-				yield nodeError(fnNameNode, `There's no such progression exists - '${fnName}'`);
+
+	function throwFirstIfExists(source: Iterable<unknown>): void{
+		const [first] = source;
+		if(first) throw first;
+	}
+
+	const liftoscriptValidator = (script: string) =>
+			validateScript(
+				script,
+				fnArgsToStateVars(
+					fnArgs.filter(a => a !== undefined),
+					message => throwError(nodeError(valueNode, message)),
+				).state,
+				// @todo the only use case for these very drilled closures is to perform validation. MAybe the whole validator should be the closure, not these creation methods.
+				createEmptyScriptBindings(),
+				createScriptFunctions(),
+				IProgramMode.PLANNER,
+			);
+
+
+
+
+
+
+
+
+
+
+
+
+
+	const type = fnName;
+	const args = fnArgs;
+	switch (type) {
+		case IProgramExerciseProgressType.LP: {
+			throwFirstIfExists(validateLp(args, valueNode, liftoscriptValidator))
+			const decrement = args[3] ? parsePct(args[3]) : w`0lb`;
+			return {
+				success: true,
+				data: {
+					type,
+					state: {
+						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
+						successes: args[1] ? parseInt(args[1], 10) : 1,
+						successCounter: args[2] ? parseInt(args[2], 10) : 0,
+						decrement: decrement ?? w`0lb`,
+						failures: args[4] ? parseInt(args[4], 10) : (decrement?.value ?? 0) > 0 ? 1 : 0,
+						failureCounter: args[5] ? parseInt(args[5], 10) : 0,
+					},
+					stateMetadata: {},
+					script: `for (var.i in completedReps) {
+  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+    weights[var.i] = completedWeights[var.i]
+  }
+}
+if (completedReps >= reps && completedRPE <= RPE) {
+  state.successCounter += 1
+  if (state.successCounter >= state.successes) {
+    for (var.i in completedReps) {
+      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
+      if (var.isInitial) {
+        weights[var.i] = completedWeights[var.i] + state.increment
+      } else {
+        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
+      }
+    }
+    state.successCounter = 0
+    state.failureCounter = 0
+  }
+}
+if (state.decrement > 0 && state.failures > 0) {
+  if (!(completedReps >= minReps && completedRPE <= RPE)) {
+    state.failureCounter += 1
+    if (state.failureCounter >= state.failures) {
+      weights -= state.decrement
+      state.failureCounter = 0
+      state.successCounter = 0
+    }
+  }
+}`,
+				},
 			};
-	const [firstError] = validator(fnArgs, valueNode, script =>
-		validateScript(
-			script,
-			fnArgsToStateVars(
-				fnArgs.filter(a => a !== undefined),
-				message => throwError(nodeError(valueNode, message)),
-			).state,
-			// @todo the only use case for these very drilled closures is to perform validation. MAybe the whole validator should be the closure, not these creation methods.
-			createEmptyScriptBindings(),
-			createScriptFunctions(),
-			IProgramMode.PLANNER,
-		),
-	);
-
-	if (firstError) {
-		throw firstError;
-	}
-
-	let options: Parameters<typeof PlannerProgramExercise_buildProgress>[2] | undefined = undefined;
-
-	if (fnName === IProgramExerciseProgressType.CUSTOM) {
-		const reuseLiftoscriptNode = valueNode
-			.getChild(PlannerNodeName.ReuseLiftoscript)
-			?.getChild(PlannerNodeName.ReuseSection)
-			?.getChild(PlannerNodeName.ExerciseName);
-		options = {
-			script: valueNode.getChild(PlannerNodeName.Liftoscript)?.source,
-			reuseFullname: reuseLiftoscriptNode
+		}
+		case IProgramExerciseProgressType.DP: {
+			throwFirstIfExists(validateDp(args, valueNode, liftoscriptValidator))
+			return {
+				success: true,
+				data: {
+					type,
+					state: {
+						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
+						minReps: args[1] ? parseInt(args[1], 10) : 0,
+						maxReps: args[2] ? parseInt(args[2], 10) : 0,
+					},
+					stateMetadata: {},
+					script: `for (var.i in completedReps) {
+  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+    weights[var.i] = completedWeights[var.i]
+  }
+}
+if (completedReps >= reps && completedRPE <= RPE) {
+  if (completedReps >= state.maxReps) {
+    reps = state.minReps
+    for (var.i in completedReps) {
+      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
+      if (var.isInitial) {
+        weights[var.i] = completedWeights[var.i] + state.increment
+      } else {
+        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
+      }
+    }
+  } else {
+    for (var.i in completedReps) {
+      reps[var.i] = completedReps[var.i] + 1 > state.maxReps ?
+        state.maxReps :
+        completedReps[var.i] + 1
+    }
+  }
+}`,
+				},
+			};
+		}
+		case IProgramExerciseProgressType.SUM: {
+			throwFirstIfExists(validateSum(args, valueNode, liftoscriptValidator))
+			return {
+				success: true,
+				data: {
+					type,
+					state: {
+						reps: args[0] ? parseInt(args[0], 10) : 0,
+						increment: (args[1] ? parsePct(args[1]) : w`0lb`) ?? w`0lb`,
+					},
+					stateMetadata: {},
+					script: `for (var.i in completedReps) {
+if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+  weights[var.i] = completedWeights[var.i]
+}
+}
+if (sum(completedReps) >= state.reps) {
+for (var.i in completedReps) {
+  weights[var.i] = completedWeights[var.i] + state.increment
+}
+}`,
+				},
+			};
+		}
+		case IProgramExerciseProgressType.CUSTOM: {
+			throwFirstIfExists(validateCustom(args, valueNode, liftoscriptValidator))
+			const reuseLiftoscriptNode = valueNode
+				.getChild(PlannerNodeName.ReuseLiftoscript)
+				?.getChild(PlannerNodeName.ReuseSection)
+				?.getChild(PlannerNodeName.ExerciseName);
+			let errorMessage: string | undefined;
+			const { state, stateMetadata } = fnArgsToStateVars(args, message => {
+				errorMessage = message;
+			});
+			if (errorMessage) {
+				return {
+					success: false,
+					error: errorMessage,
+				};
+			}
+			const reuseFullname = reuseLiftoscriptNode
 				? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
-				: undefined,
-		};
+				: undefined
+			return {
+				success: true,
+				data: {
+					type,
+					state,
+					stateMetadata,
+					script: valueNode.getChild(PlannerNodeName.Liftoscript)?.source,
+					reuse: reuseFullname
+						? { fullName: reuseFullname, source: "specific" }
+						: undefined,
+				},
+			};
+		}
+		case IProgramExerciseProgressType.NONE:
+		{
+			throwFirstIfExists(validateNone(args, valueNode, liftoscriptValidator))
+			return {
+				success: true,
+				data: {
+					type: IProgramExerciseProgressType.NONE,
+					state: {},
+					stateMetadata: {},
+				},
+			};
+
+		}
+		default: {
+			throw nodeError(fnNameNode, `There's no such progression exists - '${fnName}'`)
+		}
 	}
-	return PlannerProgramExercise_buildProgress(fnName, fnArgs, options);
 }
 
 function evaluateProgress(
