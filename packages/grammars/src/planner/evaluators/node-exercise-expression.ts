@@ -20,7 +20,6 @@ import { validate as validateNone } from "@/planner/progression-formulas/none.ts
 import { queryChildren } from "@/utils/grammars.ts";
 import { parsePct, w } from "@/quantities/weight.ts";
 import {
-	type IProgramState,
 	type IScriptFunctions,
 	nodeFailure,
 	type NodeResult,
@@ -773,17 +772,21 @@ function PlannerProgramExercise_buildProgress(
 ): IEither<IProgramExerciseProgress, string> {
 	switch (type) {
 		case IProgramExerciseProgressType.LP: {
-			const increment = args[0] ? parsePct(args[0]) : w`0lb`;
 			const decrement = args[3] ? parsePct(args[3]) : w`0lb`;
-			const state: IProgramState = {
-				increment: increment ?? w`0lb`,
-				successes: args[1] ? parseInt(args[1], 10) : 1,
-				successCounter: args[2] ? parseInt(args[2], 10) : 0,
-				decrement: decrement ?? w`0lb`,
-				failures: args[4] ? parseInt(args[4], 10) : (decrement?.value ?? 0) > 0 ? 1 : 0,
-				failureCounter: args[5] ? parseInt(args[5], 10) : 0,
-			};
-			const script = `for (var.i in completedReps) {
+			return {
+				success: true,
+				data: {
+					type,
+					state: {
+						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
+						successes: args[1] ? parseInt(args[1], 10) : 1,
+						successCounter: args[2] ? parseInt(args[2], 10) : 0,
+						decrement: decrement ?? w`0lb`,
+						failures: args[4] ? parseInt(args[4], 10) : (decrement?.value ?? 0) > 0 ? 1 : 0,
+						failureCounter: args[5] ? parseInt(args[5], 10) : 0,
+					},
+					stateMetadata: {},
+					script: `for (var.i in completedReps) {
   if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
     weights[var.i] = completedWeights[var.i]
   }
@@ -812,102 +815,22 @@ if (state.decrement > 0 && state.failures > 0) {
       state.successCounter = 0
     }
   }
-}`;
-			return {
-				success: true,
-				data: {
-					type,
-					state,
-					stateMetadata: {},
-					script,
+}`,
 				},
 			};
 		}
 		case IProgramExerciseProgressType.DP: {
-			const increment = args[0] ? parsePct(args[0]) : w`0lb`;
-			const state: IProgramState = {
-				increment: increment ?? w`0lb`,
-				minReps: args[1] ? parseInt(args[1], 10) : 0,
-				maxReps: args[2] ? parseInt(args[2], 10) : 0,
-			};
-			const script = buildDpScript();
 			return {
 				success: true,
 				data: {
 					type,
-					state,
+					state: {
+						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
+						minReps: args[1] ? parseInt(args[1], 10) : 0,
+						maxReps: args[2] ? parseInt(args[2], 10) : 0,
+					},
 					stateMetadata: {},
-					script,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.SUM: {
-			const increment = args[1] ? parsePct(args[1]) : w`0lb`;
-			const state: IProgramState = {
-				reps: args[0] ? parseInt(args[0], 10) : 0,
-				increment: increment ?? w`0lb`,
-			};
-			const script = `for (var.i in completedReps) {
-if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-  weights[var.i] = completedWeights[var.i]
-}
-}
-if (sum(completedReps) >= state.reps) {
-for (var.i in completedReps) {
-  weights[var.i] = completedWeights[var.i] + state.increment
-}
-}`;
-			return {
-				success: true,
-				data: {
-					type,
-					state,
-					stateMetadata: {},
-					script,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.CUSTOM: {
-			const script = opts.script;
-			let errorMessage: string | undefined;
-			const { state, stateMetadata } = fnArgsToStateVars(args, message => {
-				errorMessage = message;
-			});
-			if (errorMessage) {
-				return {
-					success: false,
-					error: errorMessage,
-				};
-			}
-			return {
-				success: true,
-				data: {
-					type,
-					state,
-					stateMetadata,
-					script,
-					reuse: opts.reuseFullname
-						? { fullName: opts.reuseFullname, source: "specific" }
-						: undefined,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.NONE:
-		default: {
-			return {
-				success: true,
-				data: {
-					type: IProgramExerciseProgressType.NONE,
-					state: {},
-					stateMetadata: {},
-				},
-			};
-		}
-	}
-}
-
-function buildDpScript(): string {
-	return `for (var.i in completedReps) {
+					script: `for (var.i in completedReps) {
   if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
     weights[var.i] = completedWeights[var.i]
   }
@@ -930,5 +853,67 @@ if (completedReps >= reps && completedRPE <= RPE) {
         completedReps[var.i] + 1
     }
   }
-}`;
+}`,
+				},
+			};
+		}
+		case IProgramExerciseProgressType.SUM: {
+			return {
+				success: true,
+				data: {
+					type,
+					state: {
+						reps: args[0] ? parseInt(args[0], 10) : 0,
+						increment: (args[1] ? parsePct(args[1]) : w`0lb`) ?? w`0lb`,
+					},
+					stateMetadata: {},
+					script: `for (var.i in completedReps) {
+if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
+  weights[var.i] = completedWeights[var.i]
+}
+}
+if (sum(completedReps) >= state.reps) {
+for (var.i in completedReps) {
+  weights[var.i] = completedWeights[var.i] + state.increment
+}
+}`,
+				},
+			};
+		}
+		case IProgramExerciseProgressType.CUSTOM: {
+			let errorMessage: string | undefined;
+			const { state, stateMetadata } = fnArgsToStateVars(args, message => {
+				errorMessage = message;
+			});
+			if (errorMessage) {
+				return {
+					success: false,
+					error: errorMessage,
+				};
+			}
+			return {
+				success: true,
+				data: {
+					type,
+					state,
+					stateMetadata,
+					script: opts.script,
+					reuse: opts.reuseFullname
+						? { fullName: opts.reuseFullname, source: "specific" }
+						: undefined,
+				},
+			};
+		}
+		case IProgramExerciseProgressType.NONE:
+		default: {
+			return {
+				success: true,
+				data: {
+					type: IProgramExerciseProgressType.NONE,
+					state: {},
+					stateMetadata: {},
+				},
+			};
+		}
+	}
 }
