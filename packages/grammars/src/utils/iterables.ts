@@ -91,10 +91,7 @@ export function nestedFor<A, B, C, D, E, BE = never, CE = never, DE = never, EE 
 	E,
 	[[A, IndexFrom0], CtxEntry<B, BE>, CtxEntry<C, CE>, CtxEntry<D, DE>, CtxEntry<E, EE>]
 >;
-export function* nestedFor(
-	outer: readonly any[],
-	unwrappers: UW<any, any, any>[],
-): Generator<any> {
+export function* nestedFor(outer: readonly any[], unwrappers: UW<any, any, any>[]): Generator<any> {
 	const lastDepth = unwrappers.length - 1;
 	let globalParentIndex = ZERO;
 	const resolved = unwrappers.map(resolveUW);
