@@ -9,7 +9,7 @@ import {
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
 import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
-import { ObjectUtils_filter, ObjectUtils_keys } from "@/utils/object";
+import { ObjectUtils_keys } from "@/utils/object";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate, Quantity } from "@/logic/types";
 import {
 	applyOp,
@@ -83,7 +83,7 @@ import {
 	SourcedSyntaxError,
 	type SourcedSyntaxNode,
 } from "@/utils/lezer.ts";
-import { isEqual, omitBy, pick, sumBy } from "es-toolkit";
+import { isEqual, omitBy, pick, pickBy, sumBy } from "es-toolkit";
 import type { SetRequired, Tagged } from "type-fest";
 import { run } from "@/logic/evaluators";
 import { queryChildren } from "@/utils/grammars.ts";
@@ -1198,9 +1198,9 @@ export function PlannerProgramExercise_getOnlyChangedState(
 			: {};
 	const state = exercise.progress?.state || {};
 	const stateMetadata = exercise.progress?.stateMetadata || {};
-	return ObjectUtils_filter(
+	return pickBy(
 		state,
-		(key, value) =>
+		(value, key) =>
 			originalState[key] == null ||
 			!eq(originalState[key], value) ||
 			originalStateMetadata[key]?.userPrompted !== stateMetadata[key]?.userPrompted,
