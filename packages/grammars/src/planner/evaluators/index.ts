@@ -58,7 +58,7 @@ import { validateScript } from "@/logic/evaluators";
 import {
 	type IProgramExerciseProgress,
 	IProgramExerciseProgressType,
-} from "@/progressions/types.ts";
+} from "@/planner/progression-formulas/types.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;

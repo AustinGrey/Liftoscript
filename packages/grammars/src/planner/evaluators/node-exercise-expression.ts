@@ -8,17 +8,26 @@ import { Exercise_findByNameAndEquipment, type IAllCustomExercises } from "@/exe
 import { nodeError, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { equipmentName } from "@/equipment";
-import { type IEither, isEnumValue } from "@/utils/types.ts";
-import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
+import { type IEither } from "@/utils/types.ts";
 import { throwError } from "@/utils/errors";
 import { IProgramMode, type IScriptBindings } from "@/logic/evaluators/types.ts";
-import { validate as validateLp } from "@/planner/progression-formulas/lp.ts";
-import { validate as validateDp } from "@/planner/progression-formulas/dp.ts";
-import { validate as validateSum } from "@/planner/progression-formulas/sum.ts";
-import { validate as validateCustom } from "@/planner/progression-formulas/custom.ts";
-import { validate as validateNone } from "@/planner/progression-formulas/none.ts";
-import { queryChildren } from "@/utils/grammars.ts";
-import { parsePct, w } from "@/quantities/weight.ts";
+import {
+	validate as validateLp,
+	evaluate as evaluateLp,
+} from "@/planner/progression-formulas/lp.ts";
+import {
+	validate as validateDp,
+	evaluate as evaluateDp,
+} from "@/planner/progression-formulas/dp.ts";
+import {
+	validate as validateSum,
+	evaluate as evaluateSum,
+} from "@/planner/progression-formulas/sum.ts";
+import {
+	validate as validateCustom,
+	evaluate as evaluateCustom,
+} from "@/planner/progression-formulas/custom.ts";
+import { getChild, queryChildren, queryChild } from "@/utils/grammars.ts";
 import {
 	type IScriptFunctions,
 	nodeFailure,
@@ -49,7 +58,6 @@ import {
 	isLogicNodeOfType,
 	type NodeNames_Logic,
 	parseBound,
-	queryChild,
 	queryTree,
 	type TypedLogicNode,
 } from "@/logic/parsing/guards.ts";
@@ -65,7 +73,8 @@ import { validateScript } from "@/logic/evaluators";
 import {
 	type IProgramExerciseProgress,
 	IProgramExerciseProgressType,
-} from "@/progressions/types.ts";
+} from "@/planner/progression-formulas/types.ts";
+import { throwFirstIfExists } from "@/utils/collection.ts";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
 	return nodeFailure(
@@ -417,214 +426,63 @@ function evaluateProgressImpl(
 	// @todo why string or SyntaxError? See if you can drop the string failure type!
 	string | SourcedSyntaxError
 > {
-	const valueNode = expr.getChild(PlannerNodeName.FunctionExpression);
-	if (valueNode == null) {
-		return expr.getChild(PlannerNodeName.None)
-			? PlannerProgramExercise_buildProgress("none", [])
-			: nodeFailure(nodeError(expr, `Missing value for the property 'progress'`));
-	}
-	const fnNameNode = valueNode.getChild(PlannerNodeName.FunctionName);
-	if (fnNameNode == null) {
-		return assert(PlannerNodeName.FunctionName);
-	}
-	const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
-	const fnArgs = valueNode
-		.getChildren(PlannerNodeName.FunctionArgument)
-		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode));
+	const literalNoneNode = queryPlanNodeChild(expr, { ofType: PlannerNodeName.None });
+	if (literalNoneNode)
+		return {
+			success: true,
+			data: {
+				type: IProgramExerciseProgressType.NONE,
+				state: {},
+				stateMetadata: {},
+			},
+		};
 
-
-	function throwFirstIfExists(source: Iterable<unknown>): void{
-		const [first] = source;
-		if(first) throw first;
+	const functionExpressionNode = queryPlanNodeChild(expr, {
+		ofType: PlannerNodeName.FunctionExpression,
+	});
+	if (!functionExpressionNode) {
+		return nodeFailure(nodeError(expr, `Missing value for the property 'progress'`));
 	}
+	const fnNameNode = getChild(functionExpressionNode, { ofType: PlannerNodeName.FunctionName });
+	const type = getNodeSourceEscapedWhiteSpace(fnNameNode);
+	const args = queryChildren(functionExpressionNode, {
+		ofType: PlannerNodeName.FunctionArgument,
+	})
+		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode))
+		.toArray();
 
 	const liftoscriptValidator = (script: string) =>
-			validateScript(
-				script,
-				fnArgsToStateVars(
-					fnArgs.filter(a => a !== undefined),
-					message => throwError(nodeError(valueNode, message)),
-				).state,
-				// @todo the only use case for these very drilled closures is to perform validation. MAybe the whole validator should be the closure, not these creation methods.
-				createEmptyScriptBindings(),
-				createScriptFunctions(),
-				IProgramMode.PLANNER,
-			);
+		validateScript(
+			script,
+			fnArgsToStateVars(
+				args.filter(a => a !== undefined),
+				message => throwError(nodeError(expr, message)),
+			).state,
+			// @todo the only use case for these very drilled closures is to perform validation. Maybe the whole validator should be the closure, not these creation methods.
+			createEmptyScriptBindings(),
+			createScriptFunctions(),
+			IProgramMode.PLANNER,
+		);
 
-
-
-
-
-
-
-
-
-
-
-
-
-	const type = fnName;
-	const args = fnArgs;
 	switch (type) {
 		case IProgramExerciseProgressType.LP: {
-			throwFirstIfExists(validateLp(args, valueNode, liftoscriptValidator))
-			const decrement = args[3] ? parsePct(args[3]) : w`0lb`;
-			return {
-				success: true,
-				data: {
-					type,
-					state: {
-						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
-						successes: args[1] ? parseInt(args[1], 10) : 1,
-						successCounter: args[2] ? parseInt(args[2], 10) : 0,
-						decrement: decrement ?? w`0lb`,
-						failures: args[4] ? parseInt(args[4], 10) : (decrement?.value ?? 0) > 0 ? 1 : 0,
-						failureCounter: args[5] ? parseInt(args[5], 10) : 0,
-					},
-					stateMetadata: {},
-					script: `for (var.i in completedReps) {
-  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-    weights[var.i] = completedWeights[var.i]
-  }
-}
-if (completedReps >= reps && completedRPE <= RPE) {
-  state.successCounter += 1
-  if (state.successCounter >= state.successes) {
-    for (var.i in completedReps) {
-      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
-      if (var.isInitial) {
-        weights[var.i] = completedWeights[var.i] + state.increment
-      } else {
-        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
-      }
-    }
-    state.successCounter = 0
-    state.failureCounter = 0
-  }
-}
-if (state.decrement > 0 && state.failures > 0) {
-  if (!(completedReps >= minReps && completedRPE <= RPE)) {
-    state.failureCounter += 1
-    if (state.failureCounter >= state.failures) {
-      weights -= state.decrement
-      state.failureCounter = 0
-      state.successCounter = 0
-    }
-  }
-}`,
-				},
-			};
+			throwFirstIfExists(validateLp(args, functionExpressionNode, liftoscriptValidator));
+			return evaluateLp(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.DP: {
-			throwFirstIfExists(validateDp(args, valueNode, liftoscriptValidator))
-			return {
-				success: true,
-				data: {
-					type,
-					state: {
-						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
-						minReps: args[1] ? parseInt(args[1], 10) : 0,
-						maxReps: args[2] ? parseInt(args[2], 10) : 0,
-					},
-					stateMetadata: {},
-					script: `for (var.i in completedReps) {
-  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-    weights[var.i] = completedWeights[var.i]
-  }
-}
-if (completedReps >= reps && completedRPE <= RPE) {
-  if (completedReps >= state.maxReps) {
-    reps = state.minReps
-    for (var.i in completedReps) {
-      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
-      if (var.isInitial) {
-        weights[var.i] = completedWeights[var.i] + state.increment
-      } else {
-        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
-      }
-    }
-  } else {
-    for (var.i in completedReps) {
-      reps[var.i] = completedReps[var.i] + 1 > state.maxReps ?
-        state.maxReps :
-        completedReps[var.i] + 1
-    }
-  }
-}`,
-				},
-			};
+			throwFirstIfExists(validateDp(args, functionExpressionNode, liftoscriptValidator));
+			return evaluateDp(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.SUM: {
-			throwFirstIfExists(validateSum(args, valueNode, liftoscriptValidator))
-			return {
-				success: true,
-				data: {
-					type,
-					state: {
-						reps: args[0] ? parseInt(args[0], 10) : 0,
-						increment: (args[1] ? parsePct(args[1]) : w`0lb`) ?? w`0lb`,
-					},
-					stateMetadata: {},
-					script: `for (var.i in completedReps) {
-if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-  weights[var.i] = completedWeights[var.i]
-}
-}
-if (sum(completedReps) >= state.reps) {
-for (var.i in completedReps) {
-  weights[var.i] = completedWeights[var.i] + state.increment
-}
-}`,
-				},
-			};
+			throwFirstIfExists(validateSum(args, functionExpressionNode, liftoscriptValidator));
+			return evaluateSum(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.CUSTOM: {
-			throwFirstIfExists(validateCustom(args, valueNode, liftoscriptValidator))
-			const reuseLiftoscriptNode = valueNode
-				.getChild(PlannerNodeName.ReuseLiftoscript)
-				?.getChild(PlannerNodeName.ReuseSection)
-				?.getChild(PlannerNodeName.ExerciseName);
-			let errorMessage: string | undefined;
-			const { state, stateMetadata } = fnArgsToStateVars(args, message => {
-				errorMessage = message;
-			});
-			if (errorMessage) {
-				return {
-					success: false,
-					error: errorMessage,
-				};
-			}
-			const reuseFullname = reuseLiftoscriptNode
-				? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
-				: undefined
-			return {
-				success: true,
-				data: {
-					type,
-					state,
-					stateMetadata,
-					script: valueNode.getChild(PlannerNodeName.Liftoscript)?.source,
-					reuse: reuseFullname
-						? { fullName: reuseFullname, source: "specific" }
-						: undefined,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.NONE:
-		{
-			throwFirstIfExists(validateNone(args, valueNode, liftoscriptValidator))
-			return {
-				success: true,
-				data: {
-					type: IProgramExerciseProgressType.NONE,
-					state: {},
-					stateMetadata: {},
-				},
-			};
-
+			throwFirstIfExists(validateCustom(args, functionExpressionNode, liftoscriptValidator));
+			return evaluateCustom(functionExpressionNode, args);
 		}
 		default: {
-			throw nodeError(fnNameNode, `There's no such progression exists - '${fnName}'`)
+			throw nodeError(fnNameNode, `There's no such progression exists - '${type}'`);
 		}
 	}
 }
@@ -910,160 +768,4 @@ function getRepRange(setParts: string): IRepRange | undefined {
 		asManyRepsAsPossible: isAmrap,
 		asManySetsAsPossible: numberOfSetsStr.endsWith("+"),
 	};
-}
-
-function PlannerProgramExercise_buildProgress(
-	type: IProgramExerciseProgressType | string,
-	args: string[],
-	opts: {
-		reuseFullname?: string;
-		script?: string;
-	} = {},
-): IEither<IProgramExerciseProgress, string> {
-	switch (type) {
-		case IProgramExerciseProgressType.LP: {
-			const decrement = args[3] ? parsePct(args[3]) : w`0lb`;
-			return {
-				success: true,
-				data: {
-					type,
-					state: {
-						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
-						successes: args[1] ? parseInt(args[1], 10) : 1,
-						successCounter: args[2] ? parseInt(args[2], 10) : 0,
-						decrement: decrement ?? w`0lb`,
-						failures: args[4] ? parseInt(args[4], 10) : (decrement?.value ?? 0) > 0 ? 1 : 0,
-						failureCounter: args[5] ? parseInt(args[5], 10) : 0,
-					},
-					stateMetadata: {},
-					script: `for (var.i in completedReps) {
-  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-    weights[var.i] = completedWeights[var.i]
-  }
-}
-if (completedReps >= reps && completedRPE <= RPE) {
-  state.successCounter += 1
-  if (state.successCounter >= state.successes) {
-    for (var.i in completedReps) {
-      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
-      if (var.isInitial) {
-        weights[var.i] = completedWeights[var.i] + state.increment
-      } else {
-        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
-      }
-    }
-    state.successCounter = 0
-    state.failureCounter = 0
-  }
-}
-if (state.decrement > 0 && state.failures > 0) {
-  if (!(completedReps >= minReps && completedRPE <= RPE)) {
-    state.failureCounter += 1
-    if (state.failureCounter >= state.failures) {
-      weights -= state.decrement
-      state.failureCounter = 0
-      state.successCounter = 0
-    }
-  }
-}`,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.DP: {
-			return {
-				success: true,
-				data: {
-					type,
-					state: {
-						increment: (args[0] ? parsePct(args[0]) : w`0lb`) ?? w`0lb`,
-						minReps: args[1] ? parseInt(args[1], 10) : 0,
-						maxReps: args[2] ? parseInt(args[2], 10) : 0,
-					},
-					stateMetadata: {},
-					script: `for (var.i in completedReps) {
-  if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-    weights[var.i] = completedWeights[var.i]
-  }
-}
-if (completedReps >= reps && completedRPE <= RPE) {
-  if (completedReps >= state.maxReps) {
-    reps = state.minReps
-    for (var.i in completedReps) {
-      var.isInitial = weights[var.i] == 0 && completedWeights[var.i] != 0
-      if (var.isInitial) {
-        weights[var.i] = completedWeights[var.i] + state.increment
-      } else {
-        weights[var.i] += (completedWeights[var.i] - weights[var.i]) + state.increment
-      }
-    }
-  } else {
-    for (var.i in completedReps) {
-      reps[var.i] = completedReps[var.i] + 1 > state.maxReps ?
-        state.maxReps :
-        completedReps[var.i] + 1
-    }
-  }
-}`,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.SUM: {
-			return {
-				success: true,
-				data: {
-					type,
-					state: {
-						reps: args[0] ? parseInt(args[0], 10) : 0,
-						increment: (args[1] ? parsePct(args[1]) : w`0lb`) ?? w`0lb`,
-					},
-					stateMetadata: {},
-					script: `for (var.i in completedReps) {
-if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
-  weights[var.i] = completedWeights[var.i]
-}
-}
-if (sum(completedReps) >= state.reps) {
-for (var.i in completedReps) {
-  weights[var.i] = completedWeights[var.i] + state.increment
-}
-}`,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.CUSTOM: {
-			let errorMessage: string | undefined;
-			const { state, stateMetadata } = fnArgsToStateVars(args, message => {
-				errorMessage = message;
-			});
-			if (errorMessage) {
-				return {
-					success: false,
-					error: errorMessage,
-				};
-			}
-			return {
-				success: true,
-				data: {
-					type,
-					state,
-					stateMetadata,
-					script: opts.script,
-					reuse: opts.reuseFullname
-						? { fullName: opts.reuseFullname, source: "specific" }
-						: undefined,
-				},
-			};
-		}
-		case IProgramExerciseProgressType.NONE:
-		default: {
-			return {
-				success: true,
-				data: {
-					type: IProgramExerciseProgressType.NONE,
-					state: {},
-					stateMetadata: {},
-				},
-			};
-		}
-	}
 }

@@ -119,8 +119,8 @@ import {
 import { rpeMultiplier, STANDARD_RPE } from "@/rate-of-perceived-exertion.ts";
 import { asNumericAscending, by } from "@/utils/sorting.ts";
 import { generateRange, nestedFor } from "@/utils/iterables.ts";
-import { type IProgramExerciseProgress } from "@/progressions/types.ts";
-import { getProgress } from "@/progressions";
+import { getProgress } from "@/planner/progression-formulas";
+import type { IProgramExerciseProgress } from "@/planner/progression-formulas/types.ts";
 
 //#region Program
 

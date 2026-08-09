@@ -57,3 +57,8 @@ export function groupConsecutiveBy<T, K>(
 	}
 	return groups;
 }
+
+export function throwFirstIfExists(source: Iterable<unknown>): void {
+	const [first] = source;
+	if (first) throw first;
+}

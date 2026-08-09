@@ -1,6 +1,15 @@
-import { PlannerNodeName } from "@/planner/parsing/guards.ts";
-import type { ProgressionFormulaValidator } from "@/planner/progression-formulas/types.ts";
+import { PlannerNodeName, type PlanNodes } from "@/planner/parsing/guards.ts";
+import {
+	type IProgramExerciseProgress,
+	IProgramExerciseProgressType,
+	type ProgressionFormulaValidator,
+} from "@/planner/progression-formulas/types.ts";
 import { nodeError, SourcedSyntaxError } from "@/utils/lezer.ts";
+import type { IEither } from "@/utils/types.ts";
+import {
+	fnArgsToStateVars,
+	getNodeSourceEscapedWhiteSpace,
+} from "@/evaluators/plan-evaluator-minimal.ts";
 
 /**
  * @yields any problems found with use of the custom progression formula in code
@@ -23,7 +32,7 @@ export const validate: ProgressionFormulaValidator = function* (_, valueNode, va
 	}
 	if (script) {
 		const { line, from } = liftoscriptNode.getPointer();
-		yield* validateLiftoscript(script).map(
+		yield* Array.from(validateLiftoscript(script)).map(
 			err =>
 				new SourcedSyntaxError(
 					err.message,
@@ -35,3 +44,36 @@ export const validate: ProgressionFormulaValidator = function* (_, valueNode, va
 		);
 	}
 };
+
+export function evaluate(
+	node: PlanNodes.FunctionExpression,
+	args: string[],
+): IEither<IProgramExerciseProgress, SourcedSyntaxError> {
+	const reuseLiftoscriptNode = node
+		.getChild(PlannerNodeName.ReuseLiftoscript)
+		?.getChild(PlannerNodeName.ReuseSection)
+		?.getChild(PlannerNodeName.ExerciseName);
+	let errorMessage: SourcedSyntaxError | undefined;
+	const { state, stateMetadata } = fnArgsToStateVars(args, message => {
+		errorMessage = nodeError(node, message);
+	});
+	if (errorMessage) {
+		return {
+			success: false,
+			error: errorMessage,
+		};
+	}
+	const reuseFullname = reuseLiftoscriptNode
+		? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
+		: undefined;
+	return {
+		success: true,
+		data: {
+			type: IProgramExerciseProgressType.CUSTOM,
+			state,
+			stateMetadata,
+			script: node.getChild(PlannerNodeName.Liftoscript)?.source,
+			reuse: reuseFullname ? { fullName: reuseFullname, source: "specific" } : undefined,
+		},
+	};
+}
