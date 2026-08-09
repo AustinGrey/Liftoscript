@@ -1,6 +1,5 @@
 import { memoize } from "micro-memoize";
 import { z } from "zod";
-import type { SyntaxNode } from "@lezer/common";
 import {
 	definedOnly,
 	findIndexOfCurrentOrFirst,
@@ -120,7 +119,7 @@ import {
 import { rpeMultiplier, STANDARD_RPE } from "@/rate-of-perceived-exertion.ts";
 import { asNumericAscending, by } from "@/utils/sorting.ts";
 import { generateRange, nestedFor } from "@/utils/iterables.ts";
-import { IProgramExerciseProgressType } from "@/progressions/types.ts";
+import { type IProgramExerciseProgress } from "@/progressions/types.ts";
 import { getProgress } from "@/progressions";
 
 //#region Program
@@ -862,15 +861,6 @@ export interface IProgramExerciseDescriptions {
 		isCurrent: boolean;
 	}[];
 	reuse?: IPlannerProgramReuse;
-}
-
-export interface IProgramExerciseProgress {
-	type: IProgramExerciseProgressType;
-	state: IProgramState;
-	stateMetadata: IProgramStateMetadata;
-	script?: string;
-	reuse?: IPlannerProgramReuse;
-	liftoscriptNode?: SyntaxNode;
 }
 
 export enum IProgramExerciseUpdateType {

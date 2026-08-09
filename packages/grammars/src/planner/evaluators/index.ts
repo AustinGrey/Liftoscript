@@ -19,7 +19,6 @@ import {
 	type IPlannerProgramExercise,
 	type IPlannerProgramReuse,
 	type IProgramExerciseDescriptions,
-	type IProgramExerciseProgress,
 	type IProgramExerciseUpdate,
 	IProgramExerciseUpdateType,
 	type IWeightChange,
@@ -56,7 +55,10 @@ import type { IPlannerProgramExerciseWarmupSet } from "@/sets";
 import { nestedFor } from "@/utils/iterables.ts";
 
 import { validateScript } from "@/logic/evaluators";
-import { IProgramExerciseProgressType } from "@/progressions/types.ts";
+import {
+	type IProgramExerciseProgress,
+	IProgramExerciseProgressType,
+} from "@/progressions/types.ts";
 
 //#region Planner Evaluator
 type IByExercise<T> = Record<string, T>;
