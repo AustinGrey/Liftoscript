@@ -1186,25 +1186,19 @@ export function PlannerProgramExercise_getState(exercise: IPlannerProgramExercis
 export function PlannerProgramExercise_getOnlyChangedState(
 	exercise: IPlannerProgramExercise,
 ): IProgramState {
-	const originalState = exercise.progress?.reuse?.exercise
-		? exercise.progress.reuse.exercise.progress?.state || {}
+	const original = exercise.progress?.reuse?.exercise
+		? exercise.progress.reuse.exercise.progress
 		: exercise.reuse?.exercise
-			? exercise.reuse.exercise.progress?.state || {}
-			: {};
-	const originalStateMetadata = exercise.progress?.reuse?.exercise
-		? exercise.progress.reuse.exercise.progress?.stateMetadata || {}
-		: exercise.reuse?.exercise
-			? exercise.reuse.exercise.progress?.stateMetadata || {}
-			: {};
-	const state = exercise.progress?.state || {};
-	const stateMetadata = exercise.progress?.stateMetadata || {};
+			? exercise.reuse.exercise.progress
+			: undefined;
 	return pickBy(
-		state,
+		exercise.progress?.state ?? {},
 		(value, key) =>
-			originalState[key] == null ||
-			!eq(originalState[key], value) ||
-			originalStateMetadata[key]?.userPrompted !== stateMetadata[key]?.userPrompted,
-	) as IProgramState;
+			original?.state[key] == null ||
+			!eq(original?.state[key], value) ||
+			original.stateMetadata[key]?.userPrompted !==
+				exercise.progress?.stateMetadata?.[key]?.userPrompted,
+	);
 }
 
 export function PlannerProgramExercise_getStateMetadata(
