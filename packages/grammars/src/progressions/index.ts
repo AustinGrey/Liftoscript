@@ -9,11 +9,7 @@ import {
 	PlannerProgramExercise_getStateMetadata,
 } from "@/evaluators/plan-evaluator-minimal.ts";
 
-export function getProgress(
-	programExercise: IPlannerProgramExercise,
-	settings: ISettings,
-	hideScript?: boolean,
-): string {
+export function getProgress(programExercise: IPlannerProgramExercise, settings: ISettings): string {
 	const progress = programExercise.progress;
 	if (!progress) {
 		return "";
@@ -82,7 +78,7 @@ export function getProgress(
 				progressStr += ` { ...${progress.reuse.exercise?.fullName || progress.reuse.fullName} }`;
 			}
 		} else {
-			progressStr += hideScript ? ` {~ ... ~}` : ` ${progress.script}`;
+			progressStr += ` ${progress.script}`;
 		}
 	}
 	return progressStr;

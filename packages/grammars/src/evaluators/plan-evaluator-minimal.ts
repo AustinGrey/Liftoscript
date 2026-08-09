@@ -2445,7 +2445,7 @@ export function convertToPlanner(
 								(progress.reuse || progress.script)
 							) {
 								if (!evalExercise.reuse || dereuseDecisions.includes("progress")) {
-									const progressStr = getProgress(evalExercise, settings, false);
+									const progressStr = getProgress(evalExercise, settings);
 									if (progressStr) {
 										plannerExercise += SECTION_SEPARATOR + progressStr;
 									}
