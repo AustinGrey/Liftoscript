@@ -79,3 +79,14 @@ export function isEnumValue<T extends string | number | symbol>(
 ): value is T {
 	return Object.values(enumObject).includes(value as T);
 }
+
+/**
+ * An array that is not empty.
+ * Oddly enough, [T, ...T[]] is insufficient if you build the one or more array by appending
+ * a known element to a possibly empty array, so we have to explicitly state we are okay if the known element is
+ * either first or last
+ */
+export type OneOrMore<T> = [T, ...T[]] | [...T[], T];
+export function isOneOrMore<T>(arr: T[]): arr is OneOrMore<T> {
+	return arr.length > 0;
+}

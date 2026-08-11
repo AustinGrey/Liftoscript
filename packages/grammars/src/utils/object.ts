@@ -1,5 +1,5 @@
 import { isEqual } from "es-toolkit";
-import type { IEither } from "@/utils/types.ts";
+import { type IEither, isOneOrMore, type OneOrMore } from "@/utils/types.ts";
 
 /**
  * Gets the well-typed keys of an object.
@@ -42,6 +42,10 @@ export function isEqualAfterTransform<TObj, TTransformed>(
  * array of errors; all failures are flattened into one array on the result
  * so callers can surface complete feedback.
  *
+ * Each creator receives the object built so far (properties that succeeded
+ * earlier in enumeration order). Failed properties are omitted from that
+ * partial, so dependents should treat prior fields as optional.
+ *
  * @param creators An object mapping each property to a function that attempts to create its value
  * @returns The created object on success, or every property creation error that occurred
  *
@@ -49,7 +53,7 @@ export function isEqualAfterTransform<TObj, TTransformed>(
  * ```ts
  * const result = attemptCreateObject({
  *   weight: () => parseWeight(argWeight),
- *   attempts: () => parseAttempts(argAttempts),
+ *   attempts: (soFar) => parseAttempts(argAttempts, soFar.weight),
  * });
  * if (!result.success) {
  *   return { success: false, error: result.error };
@@ -57,13 +61,13 @@ export function isEqualAfterTransform<TObj, TTransformed>(
  * // result.data is { weight: ..., attempts: ... }
  * ```
  */
-export function attemptCreateObject<T extends object, E>(
-	creators: { [K in keyof T]: () => IEither<T[K], E | E[]> },
-): IEither<T, E[]> {
+export function attemptCreateObject<T extends object, E>(creators: {
+	[K in keyof T]: (soFar: Partial<T>) => IEither<T[K], E | E[]>;
+}): IEither<T, OneOrMore<E>> {
 	const data = {} as T;
 	const errors: E[] = [];
 	for (const key of ObjectUtils_keys(creators)) {
-		const created = creators[key]();
+		const created = creators[key](data);
 		if (!created.success) {
 			if (Array.isArray(created.error)) {
 				errors.push(...created.error);
@@ -74,8 +78,5 @@ export function attemptCreateObject<T extends object, E>(
 		}
 		data[key] = created.data;
 	}
-	if (errors.length > 0) {
-		return { success: false, error: errors };
-	}
-	return { success: true, data };
+	return isOneOrMore(errors) ? { success: false, error: errors } : { success: true, data };
 }

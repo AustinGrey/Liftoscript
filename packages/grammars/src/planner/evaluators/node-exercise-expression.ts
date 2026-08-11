@@ -8,13 +8,10 @@ import { Exercise_findByNameAndEquipment, type IAllCustomExercises } from "@/exe
 import { nodeError, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { equipmentName } from "@/equipment";
-import { type IEither } from "@/utils/types.ts";
+import { fail, type IEither, type OneOrMore } from "@/utils/types.ts";
 import { throwError } from "@/utils/errors";
 import { IProgramMode, type IScriptBindings } from "@/logic/evaluators/types.ts";
-import {
-	validate as validateLp,
-	evaluate as evaluateLp,
-} from "@/planner/progression-formulas/lp.ts";
+import { evaluate as evaluateLp } from "@/planner/progression-formulas/lp.ts";
 import {
 	validate as validateDp,
 	evaluate as evaluateDp,
@@ -421,11 +418,7 @@ function evaluateProgressImpl(
 	expr: PlanNodes.ExerciseProperty,
 	createEmptyScriptBindings: () => IScriptBindings,
 	createScriptFunctions: () => IScriptFunctions,
-): IEither<
-	IProgramExerciseProgress,
-	// @todo why string or SyntaxError? See if you can drop the string failure type!
-	string | SourcedSyntaxError
-> {
+): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
 	const literalNoneNode = queryPlanNodeChild(expr, { ofType: PlannerNodeName.None });
 	if (literalNoneNode)
 		return {
@@ -441,7 +434,7 @@ function evaluateProgressImpl(
 		ofType: PlannerNodeName.FunctionExpression,
 	});
 	if (!functionExpressionNode) {
-		return nodeFailure(nodeError(expr, `Missing value for the property 'progress'`));
+		return fail([nodeError(expr, `Missing value for the property 'progress'`)]);
 	}
 	const fnNameNode = getChild(functionExpressionNode, { ofType: PlannerNodeName.FunctionName });
 	const type = getNodeSourceEscapedWhiteSpace(fnNameNode);
@@ -466,7 +459,6 @@ function evaluateProgressImpl(
 
 	switch (type) {
 		case IProgramExerciseProgressType.LP: {
-			throwFirstIfExists(validateLp(args, functionExpressionNode, liftoscriptValidator));
 			return evaluateLp(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.DP: {
@@ -499,7 +491,7 @@ function evaluateProgress(
 	if (typeof result.error === "string") {
 		return nodeFailure(nodeError(expr, result.error));
 	}
-	return nodeFailure(result.error);
+	return nodeFailure(result.error[0]);
 }
 
 function evaluateProperty(
