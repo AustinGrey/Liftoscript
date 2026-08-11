@@ -36,6 +36,7 @@ export const TDynamicWeight = z.strictObject({
 	unit: z.literal("%"),
 });
 export type IDynamicWeight = z.infer<typeof TDynamicWeight>;
+export type IWeightLike = IWeight | IDynamicWeight;
 
 /**
  * @returns Model for specifying a percentage of the user's current one rep max

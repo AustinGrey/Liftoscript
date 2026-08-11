@@ -1,6 +1,23 @@
 import { z } from "zod";
 
 export type IEither<T, U> = { success: true; data: T } | { success: false; error: U };
+
+/**
+ * Creates a successful {@link IEither}.
+ * @param data The successful value
+ */
+export function succeed<T>(data: T): { success: true; data: T } {
+	return { success: true, data };
+}
+
+/**
+ * Creates a failed {@link IEither}.
+ * @param error The error value
+ */
+export function fail<U>(error: U): { success: false; error: U } {
+	return { success: false, error };
+}
+
 export type IArrayElement<ArrayType extends readonly unknown[]> = ArrayType[number];
 export type INonNullObject<T> = {
 	[K in keyof T as T[K] extends null ? never : K]: T[K];
