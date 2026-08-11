@@ -462,7 +462,6 @@ function evaluateProgressImpl(
 			return evaluateLp(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.DP: {
-			throwFirstIfExists(validateDp(args, functionExpressionNode, liftoscriptValidator));
 			return evaluateDp(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.SUM: {

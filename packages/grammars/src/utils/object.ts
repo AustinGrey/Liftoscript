@@ -47,6 +47,7 @@ export function isEqualAfterTransform<TObj, TTransformed>(
  * partial, so dependents should treat prior fields as optional.
  *
  * @param creators An object mapping each property to a function that attempts to create its value
+ * @param overallCheck Additional checks you can run which, if it produces errors, will fail the object creation still
  * @returns The created object on success, or every property creation error that occurred
  *
  * @example
@@ -61,9 +62,12 @@ export function isEqualAfterTransform<TObj, TTransformed>(
  * // result.data is { weight: ..., attempts: ... }
  * ```
  */
-export function attemptCreateObject<T extends object, E>(creators: {
-	[K in keyof T]: (soFar: Partial<T>) => IEither<T[K], E | E[]>;
-}): IEither<T, OneOrMore<E>> {
+export function attemptCreateObject<T extends object, E>(
+	creators: {
+		[K in keyof T]: (soFar: Partial<T>) => IEither<T[K], E | E[]>;
+	},
+	overallCheck?: () => E | E[] | undefined,
+): IEither<T, OneOrMore<E>> {
 	const data = {} as T;
 	const errors: E[] = [];
 	for (const key of ObjectUtils_keys(creators)) {
@@ -78,5 +82,14 @@ export function attemptCreateObject<T extends object, E>(creators: {
 		}
 		data[key] = created.data;
 	}
+	const finalErrorsRaw = overallCheck?.();
+	const finalErrors =
+		finalErrorsRaw === undefined
+			? []
+			: Array.isArray(finalErrorsRaw)
+				? finalErrorsRaw
+				: [finalErrorsRaw];
+	errors.push(...finalErrors);
+
 	return isOneOrMore(errors) ? { success: false, error: errors } : { success: true, data };
 }

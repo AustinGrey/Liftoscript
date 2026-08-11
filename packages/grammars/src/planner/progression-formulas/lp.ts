@@ -14,7 +14,7 @@ import { attemptCreateObject } from "@/utils/object.ts";
  * @param args The args passed to the function
  * @param valueNode The node where the formula use was defined
  */
-export function validate(
+function validate(
 	[
 		argWeight,
 		argAttempts,
@@ -47,54 +47,50 @@ export function validate(
 		},
 		SourcedSyntaxError
 	>({
-		weight: () => {
-			return argWeight &&
-				!argWeight.endsWith("lb") &&
-				!argWeight.endsWith("kg") &&
-				!argWeight.endsWith("%")
+		weight: () =>
+			argWeight &&
+			!argWeight.endsWith("lb") &&
+			!argWeight.endsWith("kg") &&
+			!argWeight.endsWith("%")
 				? fail(
 						nodeError(
 							valueNode,
 							`1st argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
 						),
 					)
-				: succeed(parsePct(argWeight) ?? w`0lb`);
-		},
-		attempts: () => {
-			return argAttempts != null && asBase10Int(argAttempts)
+				: succeed(parsePct(argWeight) ?? w`0lb`),
+		attempts: () =>
+			argAttempts != null && asBase10Int(argAttempts)
 				? fail(
 						nodeError(
 							valueNode,
 							`2nd argument of 'lp' should be a number of attempts - i.e. a number`,
 						),
 					)
-				: succeed(argAttempts ? parseInt(argAttempts, 10) : 1);
-		},
-		successfulAttemptsUpToDate: () => {
-			return argSuccessfulAttempts != null && asBase10Int(argSuccessfulAttempts)
+				: succeed(argAttempts ? parseInt(argAttempts, 10) : 1),
+		successfulAttemptsUpToDate: () =>
+			argSuccessfulAttempts != null && asBase10Int(argSuccessfulAttempts)
 				? fail(
 						nodeError(
 							valueNode,
 							`3rd argument of 'lp' should be a current number of successful attempts up to date - i.e. a number`,
 						),
 					)
-				: succeed(argSuccessfulAttempts ? parseInt(argSuccessfulAttempts, 10) : 0);
-		},
-		nextWeight: () => {
-			return argNextWeight != null &&
-				!argNextWeight.endsWith("lb") &&
-				!argNextWeight.endsWith("kg") &&
-				!argNextWeight.endsWith("%")
+				: succeed(argSuccessfulAttempts ? parseInt(argSuccessfulAttempts, 10) : 0),
+		nextWeight: () =>
+			argNextWeight != null &&
+			!argNextWeight.endsWith("lb") &&
+			!argNextWeight.endsWith("kg") &&
+			!argNextWeight.endsWith("%")
 				? fail(
 						nodeError(
 							valueNode,
 							`4th argument of 'lp' should be weight (ending with 'lb' or 'kg') or percentage (ending with '%'). For example '10lb' or '30%'.`,
 						),
 					)
-				: succeed(parsePct(argNextWeight) ?? w`0lb`);
-		},
-		failedAttempts: soFar => {
-			return argFailedAttempts != null && asBase10Int(argFailedAttempts)
+				: succeed(parsePct(argNextWeight) ?? w`0lb`),
+		failedAttempts: soFar =>
+			argFailedAttempts != null && asBase10Int(argFailedAttempts)
 				? fail(
 						nodeError(
 							valueNode,
@@ -107,26 +103,23 @@ export function validate(
 							: (soFar.nextWeight?.value ?? 0) > 0
 								? 1
 								: 0,
-					);
-		},
-		failedAttemptsUpToDate: () => {
-			return argFailedAttemptsUpToDate != null && asBase10Int(argFailedAttemptsUpToDate)
+					),
+		failedAttemptsUpToDate: () =>
+			argFailedAttemptsUpToDate != null && asBase10Int(argFailedAttemptsUpToDate)
 				? fail(
 						nodeError(
 							valueNode,
 							`6th argument of 'lp' should be a current number of failed attempts up to date - i.e. a number`,
 						),
 					)
-				: succeed(argFailedAttemptsUpToDate ? parseInt(argFailedAttemptsUpToDate, 10) : 0);
-		},
+				: succeed(argFailedAttemptsUpToDate ? parseInt(argFailedAttemptsUpToDate, 10) : 0),
 	});
-	if (argsRest.length > 0) {
-		return fail([
-			...(!result.success ? result.error : []),
-			nodeError(valueNode, `Linear Progression 'lp' only has 6 arguments max`),
-		]);
-	}
-	return result;
+	return argsRest.length > 0
+		? fail([
+				...(!result.success ? result.error : []),
+				nodeError(valueNode, `Linear Progression 'lp' only has 6 arguments max`),
+			])
+		: result;
 }
 
 // @todo make the validators return well typed arg objects so that you can well type the args here!
