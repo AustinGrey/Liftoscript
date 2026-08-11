@@ -6,7 +6,7 @@ import {
 } from "@/planner/progression-formulas/types.ts";
 import { type PlanNodes } from "@/planner/parsing/guards.ts";
 import { type IDynamicWeight, type IWeight, parsePct, w } from "@/quantities/weight.ts";
-import { fail, type IEither, type OneOrMore, succeed } from "@/utils/types.ts";
+import { fail, type IEither, ifSuccess, type OneOrMore, succeed } from "@/utils/types.ts";
 import { attemptCreateObject } from "@/utils/object.ts";
 
 /**
@@ -134,21 +134,16 @@ export function evaluate(
 	node: PlanNodes.FunctionExpression,
 	args: string[],
 ): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
-	const result = validate(args, node);
-	if (!result.success) {
-		return result;
-	}
-	const {
-		weight,
-		attempts,
-		successfulAttemptsUpToDate,
-		nextWeight,
-		failedAttempts,
-		failedAttemptsUpToDate,
-	} = result.data;
-	return {
-		success: true,
-		data: {
+	return ifSuccess(
+		validate(args, node),
+		({
+			weight,
+			attempts,
+			successfulAttemptsUpToDate,
+			nextWeight,
+			failedAttempts,
+			failedAttemptsUpToDate,
+		}) => ({
 			type: IProgramExerciseProgressType.LP,
 			state: {
 				increment: weight,
@@ -189,6 +184,6 @@ if (state.decrement > 0 && state.failures > 0) {
     }
   }
 }`,
-		},
-	};
+		}),
+	);
 }

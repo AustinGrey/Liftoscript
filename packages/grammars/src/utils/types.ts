@@ -18,6 +18,25 @@ export function fail<U>(error: U): { success: false; error: U } {
 	return { success: false, error };
 }
 
+function isEither<T, U>(obj: unknown | IEither<T, U>): obj is IEither<T, U> {
+	return (
+		typeof obj === "object" &&
+		obj != null &&
+		"success" in obj &&
+		((obj.success === true && "data" in obj) || (obj.success === false && "error" in obj))
+	);
+}
+
+export function ifSuccess<T, U, T2, U2>(
+	result: IEither<T, U>,
+	transform: (data: T) => T2 | IEither<T2, U2>,
+): IEither<T2, U | U2> {
+	if (!result.success) return result;
+	const transformed = transform(result.data);
+	if (isEither(transformed)) return transformed;
+	return succeed(transformed);
+}
+
 export type IArrayElement<ArrayType extends readonly unknown[]> = ArrayType[number];
 export type INonNullObject<T> = {
 	[K in keyof T as T[K] extends null ? never : K]: T[K];
