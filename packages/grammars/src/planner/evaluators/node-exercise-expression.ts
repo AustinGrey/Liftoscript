@@ -431,7 +431,9 @@ function evaluateProgressImpl(
 	}
 	const args = queryChildren(functionExpressionNode, {
 		ofType: PlannerNodeName.FunctionArgument,
-	}).map(argNode => getNodeSourceEscapedWhiteSpace(argNode));
+	})
+		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode))
+		.toArray();
 
 	switch (fnName) {
 		case IProgramExerciseProgressType.LP:

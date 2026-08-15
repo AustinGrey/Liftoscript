@@ -14,7 +14,7 @@ import { attemptCreateObject } from "@/utils/object.ts";
  * @param valueNode The node where the formula use was defined
  */
 function validate(
-	[argReps, argWeight, ...argsRest]: Iterable<string>,
+	[argReps, argWeight, ...argsRest]: string[],
 	valueNode: PlanNodes.FunctionExpression,
 ): IEither<
 	{
@@ -55,7 +55,7 @@ function validate(
 
 export function evaluate(
 	node: PlanNodes.FunctionExpression,
-	args: Iterable<string>,
+	args: string[],
 ): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
 	return ifSuccess(validate(args, node), state => ({
 		type: IProgramExerciseProgressType.SUM,
