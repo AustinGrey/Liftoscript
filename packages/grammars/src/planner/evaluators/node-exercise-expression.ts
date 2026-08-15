@@ -492,52 +492,6 @@ function evaluateProgress(
 	return nodeFailure(result.error[0]);
 }
 
-function evaluateProperty(
-	expr: PlanNodes.ExerciseProperty,
-	createEmptyScriptBindings: () => IScriptBindings,
-	createScriptFunctions: () => IScriptFunctions,
-): NodeResult<
-	| { type: "progress"; data: IProgramExerciseProgress }
-	| { type: "update"; data: IProgramExerciseUpdate }
-	| { type: "warmup"; data: IPlannerProgramExerciseWarmupSet[] }
-	| { type: "id"; data: number[] }
-	| { type: "used"; data: "" }
-> {
-	const nameNode = getChild(expr, { ofType: PlannerNodeName.ExercisePropertyName });
-	const name = asOneOf(
-		getNodeSourceEscapedWhiteSpace(nameNode),
-		// @todo this needs an enum?
-		"progress",
-		"update",
-		"warmup",
-		"id",
-		"used",
-	);
-	switch (name) {
-		case "progress": {
-			return ifSuccess(
-				evaluateProgress(expr, createEmptyScriptBindings, createScriptFunctions),
-				data => ({ type: "progress", data }),
-			);
-		}
-		case "update": {
-			return ifSuccess(evaluateUpdate(expr), data => ({ type: "update", data }));
-		}
-		case "warmup": {
-			return ifSuccess(evaluateWarmup(expr), data => ({ type: "warmup", data }));
-		}
-		case "id": {
-			return ifSuccess(evaluateId(expr), data => ({ type: "id", data }));
-		}
-		case "used":
-			return succeed({ type: "used", data: "" });
-		default:
-			// @todo Because of my type guarding, the actual name has been lost. Need to restore that.
-			name satisfies undefined;
-			return fail(nodeError(nameNode, `There's no such property exists - '${name}'`));
-	}
-}
-
 function evaluateSection(
 	expr: PlanNodes.ExerciseSection,
 	createEmptyScriptBindings: () => IScriptBindings,
@@ -555,45 +509,73 @@ function evaluateSection(
 	const reuseNode = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.ReuseSectionWithWeekDay,
 	});
-	if (reuseNode) {
-		return evaluateReuseNode(reuseNode);
-	}
+	if (reuseNode) return evaluateReuseNode(reuseNode);
+
 	const setsNode = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.ExerciseSets,
 	});
 	if (setsNode) {
-		const sets = [
-			...tryQueryPlanNodeChildren(setsNode, {
-				ofType: PlannerNodeName.ExerciseSet,
-			}),
-		];
+		const sets = setsNode
+			? [
+					...tryQueryPlanNodeChildren(setsNode, {
+						ofType: PlannerNodeName.ExerciseSet,
+					}),
+				]
+			: [];
 		if (sets.length > 0) {
-			const [successes, failures] = splitBy(
+			const [successes, [firstFailure]] = splitBy(
 				sets.map(set => evaluateSet(set)),
 				r => r.success,
 			);
-
-			if (failures.length > 0) {
-				return failures[0];
-			}
-
+			if (firstFailure) return firstFailure;
 			return nodeSuccess({
 				type: "sets",
 				data: successes.map(r => r.data),
-				isCurrent: setsNode.getChild(PlannerNodeName.CurrentVariation) != null,
+				isCurrent: setsNode?.getChild(PlannerNodeName.CurrentVariation) != null,
 			});
 		}
 	}
 	const superset = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.Superset,
 	});
-	if (superset) {
-		return evaluateSuperset(superset);
-	}
+	if (superset) return evaluateSuperset(superset);
+
 	const property = getPlanNodeChild(expr, {
 		ofType: PlannerNodeName.ExerciseProperty,
 	});
-	return evaluateProperty(property, createEmptyScriptBindings, createScriptFunctions);
+	const nameNode = getChild(property, { ofType: PlannerNodeName.ExercisePropertyName });
+	const name = asOneOf(
+		getNodeSourceEscapedWhiteSpace(nameNode),
+		// @todo this needs an enum?
+		"progress",
+		"update",
+		"warmup",
+		"id",
+		"used",
+	);
+	switch (name) {
+		case "progress": {
+			return ifSuccess(
+				evaluateProgress(property, createEmptyScriptBindings, createScriptFunctions),
+				data => ({ type: "progress", data }),
+			);
+		}
+		case "update": {
+			return ifSuccess(evaluateUpdate(property), data => ({ type: "update", data }));
+		}
+		case "warmup": {
+			return ifSuccess(evaluateWarmup(property), data => ({ type: "warmup", data }));
+		}
+		case "id": {
+			return ifSuccess(evaluateId(property), data => ({ type: "id", data }));
+		}
+		case "used":
+			return succeed({ type: "used", data: "" });
+		default:
+			// @todo Because of my type guarding, the actual name has been lost. Need to restore that.
+			name satisfies undefined;
+			return fail(nodeError(nameNode, `There's no such property exists - '${name}'`));
+	}
 }
 
 function evaluateWarmupSet(expr: PlanNodes.WarmupExerciseSet): IPlannerProgramExerciseWarmupSet {
