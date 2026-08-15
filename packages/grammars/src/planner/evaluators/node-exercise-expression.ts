@@ -12,18 +12,9 @@ import { fail, type IEither, type OneOrMore } from "@/utils/types.ts";
 import { throwError } from "@/utils/errors";
 import { IProgramMode, type IScriptBindings } from "@/logic/evaluators/types.ts";
 import { evaluate as evaluateLp } from "@/planner/progression-formulas/lp.ts";
-import {
-	validate as validateDp,
-	evaluate as evaluateDp,
-} from "@/planner/progression-formulas/dp.ts";
-import {
-	validate as validateSum,
-	evaluate as evaluateSum,
-} from "@/planner/progression-formulas/sum.ts";
-import {
-	validate as validateCustom,
-	evaluate as evaluateCustom,
-} from "@/planner/progression-formulas/custom.ts";
+import { evaluate as evaluateDp } from "@/planner/progression-formulas/dp.ts";
+import { evaluate as evaluateSum } from "@/planner/progression-formulas/sum.ts";
+import { evaluate as evaluateCustom } from "@/planner/progression-formulas/custom.ts";
 import { getChild, queryChildren, queryChild } from "@/utils/grammars.ts";
 import {
 	type IScriptFunctions,
@@ -71,7 +62,6 @@ import {
 	type IProgramExerciseProgress,
 	IProgramExerciseProgressType,
 } from "@/planner/progression-formulas/types.ts";
-import { throwFirstIfExists } from "@/utils/collection.ts";
 
 function assert(name: string): { success: false; error: SourcedSyntaxError } {
 	return nodeFailure(
@@ -465,12 +455,10 @@ function evaluateProgressImpl(
 			return evaluateDp(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.SUM: {
-			throwFirstIfExists(validateSum(args, functionExpressionNode, liftoscriptValidator));
 			return evaluateSum(functionExpressionNode, args);
 		}
 		case IProgramExerciseProgressType.CUSTOM: {
-			throwFirstIfExists(validateCustom(args, functionExpressionNode, liftoscriptValidator));
-			return evaluateCustom(functionExpressionNode, args);
+			return evaluateCustom(functionExpressionNode, args, liftoscriptValidator);
 		}
 		default: {
 			throw nodeError(fnNameNode, `There's no such progression exists - '${type}'`);

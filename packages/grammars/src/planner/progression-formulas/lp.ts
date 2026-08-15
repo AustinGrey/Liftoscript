@@ -25,29 +25,19 @@ function validate(
 		...argsRest
 	]: string[],
 	valueNode: PlanNodes.FunctionExpression,
-): IEither<
-	{
-		weight: IWeight | IDynamicWeight;
-		attempts: number;
-		successfulAttemptsUpToDate: number;
-		nextWeight: IWeight | IDynamicWeight;
-		failedAttempts: number;
-		failedAttemptsUpToDate: number;
-	},
-	OneOrMore<SourcedSyntaxError>
-> {
+) {
 	const result = attemptCreateObject<
 		{
-			weight: IWeight | IDynamicWeight;
-			attempts: number;
-			successfulAttemptsUpToDate: number;
-			nextWeight: IWeight | IDynamicWeight;
-			failedAttempts: number;
-			failedAttemptsUpToDate: number;
+			increment: IWeight | IDynamicWeight;
+			successes: number;
+			successCounter: number;
+			decrement: IWeight | IDynamicWeight;
+			failures: number;
+			failureCounter: number;
 		},
 		SourcedSyntaxError
 	>({
-		weight: () =>
+		increment: () =>
 			argWeight &&
 			!argWeight.endsWith("lb") &&
 			!argWeight.endsWith("kg") &&
@@ -59,7 +49,7 @@ function validate(
 						),
 					)
 				: succeed(parsePct(argWeight) ?? w`0lb`),
-		attempts: () =>
+		successes: () =>
 			argAttempts != null && asBase10Int(argAttempts)
 				? fail(
 						nodeError(
@@ -68,7 +58,7 @@ function validate(
 						),
 					)
 				: succeed(argAttempts ? parseInt(argAttempts, 10) : 1),
-		successfulAttemptsUpToDate: () =>
+		successCounter: () =>
 			argSuccessfulAttempts != null && asBase10Int(argSuccessfulAttempts)
 				? fail(
 						nodeError(
@@ -77,7 +67,7 @@ function validate(
 						),
 					)
 				: succeed(argSuccessfulAttempts ? parseInt(argSuccessfulAttempts, 10) : 0),
-		nextWeight: () =>
+		decrement: () =>
 			argNextWeight != null &&
 			!argNextWeight.endsWith("lb") &&
 			!argNextWeight.endsWith("kg") &&
@@ -89,7 +79,7 @@ function validate(
 						),
 					)
 				: succeed(parsePct(argNextWeight) ?? w`0lb`),
-		failedAttempts: soFar =>
+		failures: soFar =>
 			argFailedAttempts != null && asBase10Int(argFailedAttempts)
 				? fail(
 						nodeError(
@@ -100,11 +90,11 @@ function validate(
 				: succeed(
 						argFailedAttempts
 							? parseInt(argFailedAttempts, 10)
-							: (soFar.nextWeight?.value ?? 0) > 0
+							: (soFar.decrement?.value ?? 0) > 0
 								? 1
 								: 0,
 					),
-		failedAttemptsUpToDate: () =>
+		failureCounter: () =>
 			argFailedAttemptsUpToDate != null && asBase10Int(argFailedAttemptsUpToDate)
 				? fail(
 						nodeError(
@@ -118,7 +108,7 @@ function validate(
 		? fail([
 				...(!result.success ? result.error : []),
 				nodeError(valueNode, `Linear Progression 'lp' only has 6 arguments max`),
-			])
+			] as OneOrMore<SourcedSyntaxError>)
 		: result;
 }
 
@@ -127,27 +117,11 @@ export function evaluate(
 	node: PlanNodes.FunctionExpression,
 	args: string[],
 ): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
-	return ifSuccess(
-		validate(args, node),
-		({
-			weight,
-			attempts,
-			successfulAttemptsUpToDate,
-			nextWeight,
-			failedAttempts,
-			failedAttemptsUpToDate,
-		}) => ({
-			type: IProgramExerciseProgressType.LP,
-			state: {
-				increment: weight,
-				successes: attempts,
-				successCounter: successfulAttemptsUpToDate,
-				decrement: nextWeight,
-				failures: failedAttempts,
-				failureCounter: failedAttemptsUpToDate,
-			},
-			stateMetadata: {},
-			script: `for (var.i in completedReps) {
+	return ifSuccess(validate(args, node), state => ({
+		type: IProgramExerciseProgressType.LP,
+		state,
+		stateMetadata: {},
+		script: `for (var.i in completedReps) {
   if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
     weights[var.i] = completedWeights[var.i]
   }
@@ -177,6 +151,5 @@ if (state.decrement > 0 && state.failures > 0) {
     }
   }
 }`,
-		}),
-	);
+	}));
 }

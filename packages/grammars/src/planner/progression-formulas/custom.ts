@@ -2,78 +2,107 @@ import { PlannerNodeName, type PlanNodes } from "@/planner/parsing/guards.ts";
 import {
 	type IProgramExerciseProgress,
 	IProgramExerciseProgressType,
-	type ProgressionFormulaValidator,
 } from "@/planner/progression-formulas/types.ts";
 import { nodeError, SourcedSyntaxError } from "@/utils/lezer.ts";
-import type { IEither } from "@/utils/types.ts";
+import {
+	fail,
+	type IEither,
+	ifSuccess,
+	isOneOrMore,
+	type OneOrMore,
+	succeed,
+} from "@/utils/types.ts";
 import {
 	fnArgsToStateVars,
 	getNodeSourceEscapedWhiteSpace,
+	type IPlannerProgramReuse,
 } from "@/evaluators/plan-evaluator-minimal.ts";
+import type { IProgramState } from "@/common-types.ts";
+import type { IProgramStateMetadata } from "@/program";
 
 /**
- * @yields any problems found with use of the custom progression formula in code
- * @param _ The args passed to the function
+ * @param args The args passed to the function
  * @param valueNode The node where the formula use was defined
  * @param validateLiftoscript The method used to validate embedded liftoscript
  */
-export const validate: ProgressionFormulaValidator = function* (_, valueNode, validateLiftoscript) {
+function validate(
+	args: string[],
+	valueNode: PlanNodes.FunctionExpression,
+	validateLiftoscript: (script: string) => Iterable<SourcedSyntaxError>,
+): IEither<
+	{
+		state: IProgramState;
+		stateMetadata: IProgramStateMetadata;
+		script: string | undefined;
+		reuse: IPlannerProgramReuse | undefined;
+	},
+	OneOrMore<SourcedSyntaxError>
+> {
 	const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
 	const script = liftoscriptNode?.source;
-	const body = valueNode
+	const reuseLiftoscriptNode = valueNode
 		.getChild(PlannerNodeName.ReuseLiftoscript)
 		?.getChild(PlannerNodeName.ReuseSection)
-		?.getChild(PlannerNodeName.ExerciseName)?.source;
-	if (!script && !body) {
-		yield nodeError(
-			valueNode,
-			`'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
+		?.getChild(PlannerNodeName.ExerciseName);
+	const reuseFullName = reuseLiftoscriptNode
+		? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
+		: undefined;
+
+	const errors: SourcedSyntaxError[] = [];
+	let argsError: SourcedSyntaxError | undefined;
+	const { state, stateMetadata } = fnArgsToStateVars(args, message => {
+		argsError = nodeError(valueNode, message);
+	});
+	if (argsError) {
+		errors.push(argsError);
+	}
+	if (!script && !reuseFullName) {
+		errors.push(
+			nodeError(
+				valueNode,
+				`'custom' progression requires either to specify Liftoscript block or specify which one to reuse`,
+			),
 		);
 	}
-	if (script) {
+	if (script && liftoscriptNode) {
 		const { line, from } = liftoscriptNode.getPointer();
-		yield* Array.from(validateLiftoscript(script)).map(
-			err =>
-				new SourcedSyntaxError(
-					err.message,
-					line + err.line,
-					err.offset,
-					from + err.from,
-					from + err.to,
-				),
+		errors.push(
+			...Array.from(validateLiftoscript(script)).map(
+				err =>
+					new SourcedSyntaxError(
+						err.message,
+						line + err.line,
+						err.offset,
+						from + err.from,
+						from + err.to,
+					),
+			),
 		);
 	}
-};
+
+	return isOneOrMore(errors)
+		? fail(errors)
+		: succeed({
+				state,
+				stateMetadata,
+				script,
+				reuse: reuseFullName ? { fullName: reuseFullName, source: "specific" } : undefined,
+			});
+}
 
 export function evaluate(
 	node: PlanNodes.FunctionExpression,
 	args: string[],
-): IEither<IProgramExerciseProgress, SourcedSyntaxError> {
-	const reuseLiftoscriptNode = node
-		.getChild(PlannerNodeName.ReuseLiftoscript)
-		?.getChild(PlannerNodeName.ReuseSection)
-		?.getChild(PlannerNodeName.ExerciseName);
-	let errorMessage: SourcedSyntaxError | undefined;
-	const { state, stateMetadata } = fnArgsToStateVars(args, message => {
-		errorMessage = nodeError(node, message);
-	});
-	if (errorMessage) {
-		return {
-			success: false,
-			error: errorMessage,
-		};
-	}
-	const reuseFullname = reuseLiftoscriptNode
-		? getNodeSourceEscapedWhiteSpace(reuseLiftoscriptNode)
-		: undefined;
-	return {
-		success: true,
-		data: {
+	validateLiftoscript: (script: string) => Iterable<SourcedSyntaxError>,
+): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
+	return ifSuccess(
+		validate(args, node, validateLiftoscript),
+		({ state, stateMetadata, script, reuse }) => ({
 			type: IProgramExerciseProgressType.CUSTOM,
 			state,
 			stateMetadata,
-			script: node.getChild(PlannerNodeName.Liftoscript)?.source,
-			reuse: reuseFullname ? { fullName: reuseFullname, source: "specific" } : undefined,
-		},
-	};
+			script,
+			reuse,
+		}),
+	);
 }

@@ -14,13 +14,13 @@ import { attemptCreateObject } from "@/utils/object.ts";
  * @param args The args passed to the function
  * @param valueNode The node where the formula use was defined
  */
-export function validate(
+function validate(
 	[argWeight, argMinReps, argMaxReps, ...argsRest]: string[],
 	valueNode: PlanNodes.FunctionExpression,
 ) {
 	return attemptCreateObject(
 		{
-			weight: () =>
+			increment: () =>
 				!argWeight.endsWith("lb") && !argWeight.endsWith("kg") && !argWeight.endsWith("%")
 					? fail(
 							nodeError(
@@ -60,13 +60,9 @@ export function evaluate(
 	node: PlanNodes.FunctionExpression,
 	args: string[],
 ): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
-	return ifSuccess(validate(args, node), ({ weight, minReps, maxReps }) => ({
+	return ifSuccess(validate(args, node), state => ({
 		type: IProgramExerciseProgressType.DP,
-		state: {
-			increment: weight,
-			minReps,
-			maxReps,
-		},
+		state,
 		stateMetadata: {},
 		script: `for (var.i in completedReps) {
   if (weights[var.i] == 0 && completedWeights[var.i] != 0) {
