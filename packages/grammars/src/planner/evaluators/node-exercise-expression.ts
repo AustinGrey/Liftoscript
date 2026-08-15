@@ -486,10 +486,7 @@ function evaluateProgress(
 	if (result.success) {
 		return result;
 	}
-	if (typeof result.error === "string") {
-		return nodeFailure(nodeError(expr, result.error));
-	}
-	return nodeFailure(result.error[0]);
+	return fail(result.error[0]);
 }
 
 function evaluateSection(
