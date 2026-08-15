@@ -8,7 +8,7 @@ import { Exercise_findByNameAndEquipment, type IAllCustomExercises } from "@/exe
 import { nodeError, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { equipmentName } from "@/equipment";
-import { fail, type IEither, type OneOrMore } from "@/utils/types.ts";
+import { fail, type IEither, type OneOrMore, succeed } from "@/utils/types.ts";
 import { throwError } from "@/utils/errors";
 import { IProgramMode, type IScriptBindings } from "@/logic/evaluators/types.ts";
 import { evaluate as evaluateLp } from "@/planner/progression-formulas/lp.ts";
@@ -410,15 +410,13 @@ function evaluateProgressImpl(
 	createScriptFunctions: () => IScriptFunctions,
 ): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
 	const literalNoneNode = queryPlanNodeChild(expr, { ofType: PlannerNodeName.None });
-	if (literalNoneNode)
-		return {
-			success: true,
-			data: {
-				type: IProgramExerciseProgressType.NONE,
-				state: {},
-				stateMetadata: {},
-			},
-		};
+	if (literalNoneNode) {
+		return succeed({
+			type: IProgramExerciseProgressType.NONE,
+			state: {},
+			stateMetadata: {},
+		});
+	}
 
 	const functionExpressionNode = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.FunctionExpression,
@@ -427,43 +425,32 @@ function evaluateProgressImpl(
 		return fail([nodeError(expr, `Missing value for the property 'progress'`)]);
 	}
 	const fnNameNode = getChild(functionExpressionNode, { ofType: PlannerNodeName.FunctionName });
-	const type = getNodeSourceEscapedWhiteSpace(fnNameNode);
+	const fnName = getNodeSourceEscapedWhiteSpace(fnNameNode);
 	const args = queryChildren(functionExpressionNode, {
 		ofType: PlannerNodeName.FunctionArgument,
 	})
 		.map(argNode => getNodeSourceEscapedWhiteSpace(argNode))
 		.toArray();
 
-	const liftoscriptValidator = (script: string) =>
-		validateScript(
-			script,
-			fnArgsToStateVars(
-				args.filter(a => a !== undefined),
-				message => throwError(nodeError(expr, message)),
-			).state,
-			// @todo the only use case for these very drilled closures is to perform validation. Maybe the whole validator should be the closure, not these creation methods.
-			createEmptyScriptBindings(),
-			createScriptFunctions(),
-			IProgramMode.PLANNER,
+	if (fnName === IProgramExerciseProgressType.LP) return evaluateLp(functionExpressionNode, args);
+	if (fnName === IProgramExerciseProgressType.DP) return evaluateDp(functionExpressionNode, args);
+	if (fnName === IProgramExerciseProgressType.SUM) return evaluateSum(functionExpressionNode, args);
+	if (fnName === IProgramExerciseProgressType.CUSTOM)
+		return evaluateCustom(functionExpressionNode, args, (script: string) =>
+			validateScript(
+				script,
+				fnArgsToStateVars(
+					args.filter(a => a !== undefined),
+					message => throwError(nodeError(expr, message)),
+				).state,
+				// @todo the only use case for these very drilled closures is to perform validation. Maybe the whole validator should be the closure, not these creation methods.
+				createEmptyScriptBindings(),
+				createScriptFunctions(),
+				IProgramMode.PLANNER,
+			),
 		);
 
-	switch (type) {
-		case IProgramExerciseProgressType.LP: {
-			return evaluateLp(functionExpressionNode, args);
-		}
-		case IProgramExerciseProgressType.DP: {
-			return evaluateDp(functionExpressionNode, args);
-		}
-		case IProgramExerciseProgressType.SUM: {
-			return evaluateSum(functionExpressionNode, args);
-		}
-		case IProgramExerciseProgressType.CUSTOM: {
-			return evaluateCustom(functionExpressionNode, args, liftoscriptValidator);
-		}
-		default: {
-			throw nodeError(fnNameNode, `There's no such progression exists - '${type}'`);
-		}
-	}
+	throw nodeError(fnNameNode, `There's no such progression exists - '${fnName}'`);
 }
 
 function evaluateProgress(
