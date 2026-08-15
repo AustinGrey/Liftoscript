@@ -179,5 +179,6 @@ export type IProgramState = z.infer<typeof TProgramState>;
  * When a function is dealing with a node, it should return this kind of result instead of throwing due to syntax errors.
  */
 export type NodeResult<T> = IEither<T, SourcedSyntaxError>;
+// @todo are these even necessary? Why not just use succeed and fail directly? No real new type safety gains
 export const nodeSuccess = <T>(data: T): Success<T> => succeed(data);
 export const nodeFailure = (error: SourcedSyntaxError): Failure<SourcedSyntaxError> => fail(error);

@@ -8,7 +8,14 @@ import { Exercise_findByNameAndEquipment, type IAllCustomExercises } from "@/exe
 import { nodeError, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { equipmentName } from "@/equipment";
-import { fail, type IEither, isEnumValue, type OneOrMore, succeed } from "@/utils/types.ts";
+import {
+	fail,
+	type IEither,
+	ifSuccess,
+	isEnumValue,
+	type OneOrMore,
+	succeed,
+} from "@/utils/types.ts";
 import { throwError } from "@/utils/errors";
 import { IProgramMode, type IScriptBindings } from "@/logic/evaluators/types.ts";
 import { evaluate as evaluateLp } from "@/planner/progression-formulas/lp.ts";
@@ -501,45 +508,24 @@ function evaluateProperty(
 	const name = getNodeSourceEscapedWhiteSpace(nameNode);
 	switch (name) {
 		case "progress": {
-			const result = evaluateProgress(expr, createEmptyScriptBindings, createScriptFunctions);
-			return !result.success
-				? nodeFailure(result.error)
-				: nodeSuccess({
-						type: "progress",
-						data: result.data,
-					});
+			return ifSuccess(
+				evaluateProgress(expr, createEmptyScriptBindings, createScriptFunctions),
+				data => ({ type: "progress", data }),
+			);
 		}
 		case "update": {
-			const result = evaluateUpdate(expr);
-			return !result.success
-				? nodeFailure(result.error)
-				: nodeSuccess({
-						type: "update",
-						data: result.data,
-					});
+			return ifSuccess(evaluateUpdate(expr), data => ({ type: "update", data }));
 		}
 		case "warmup": {
-			const result = evaluateWarmup(expr);
-			return !result.success
-				? nodeFailure(result.error)
-				: nodeSuccess({
-						type: "warmup",
-						data: result.data,
-					});
+			return ifSuccess(evaluateWarmup(expr), data => ({ type: "warmup", data }));
 		}
 		case "id": {
-			const result = evaluateId(expr);
-			return !result.success
-				? nodeFailure(result.error)
-				: nodeSuccess({
-						type: "id",
-						data: result.data,
-					});
+			return ifSuccess(evaluateId(expr), data => ({ type: "id", data }));
 		}
 		case "used":
-			return nodeSuccess({ type: "used", data: "" });
+			return succeed({ type: "used", data: "" });
 		default:
-			return nodeFailure(nodeError(nameNode, `There's no such property exists - '${name}'`));
+			return fail(nodeError(nameNode, `There's no such property exists - '${name}'`));
 	}
 }
 
