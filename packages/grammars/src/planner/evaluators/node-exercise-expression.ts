@@ -9,10 +9,12 @@ import { nodeError, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/l
 import { generateUid } from "@/utils/uid.ts";
 import { equipmentName } from "@/equipment";
 import {
+	asOneOf,
 	fail,
 	type IEither,
 	ifSuccess,
 	isEnumValue,
+	isOneOf,
 	type OneOrMore,
 	succeed,
 } from "@/utils/types.ts";
@@ -501,11 +503,15 @@ function evaluateProperty(
 	| { type: "id"; data: number[] }
 	| { type: "used"; data: "" }
 > {
-	const nameNode = expr.getChild(PlannerNodeName.ExercisePropertyName);
-	if (nameNode == null) {
-		return assert(PlannerNodeName.ExercisePropertyName);
-	}
-	const name = getNodeSourceEscapedWhiteSpace(nameNode);
+	const nameNode = getChild(expr, { ofType: PlannerNodeName.ExercisePropertyName });
+	const name = asOneOf(
+		getNodeSourceEscapedWhiteSpace(nameNode),
+		"progress",
+		"update",
+		"warmup",
+		"id",
+		"used",
+	);
 	switch (name) {
 		case "progress": {
 			return ifSuccess(
@@ -525,6 +531,7 @@ function evaluateProperty(
 		case "used":
 			return succeed({ type: "used", data: "" });
 		default:
+			name satisfies undefined;
 			return fail(nodeError(nameNode, `There's no such property exists - '${name}'`));
 	}
 }

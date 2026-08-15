@@ -75,6 +75,13 @@ export function isOneOf<TTarget, const TGuard extends TTarget>(
 	return includes(options, text);
 }
 
+export function asOneOf<TTarget, const TGuard extends TTarget>(
+	text: TTarget,
+	...options: TGuard[]
+): TGuard | undefined {
+	return includes(options, text) ? text : undefined;
+}
+
 /**
  * Swaps keys for values in a record
  */
