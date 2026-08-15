@@ -1,23 +1,12 @@
 import { z } from "zod";
 
-export type IEither<T, U> = { success: true; data: T } | { success: false; error: U };
+export type Success<T> = { success: true; data: T };
+export const succeed = <T>(data: T): Success<T> => ({ success: true, data });
 
-/**
- * Creates a successful {@link IEither}.
- * @param data The successful value
- */
-export function succeed<T>(data: T): { success: true; data: T } {
-	return { success: true, data };
-}
+export type Failure<T> = { success: false; error: T };
+export const fail = <T>(error: T): Failure<T> => ({ success: false, error });
 
-/**
- * Creates a failed {@link IEither}.
- * @param error The error value
- */
-export function fail<U>(error: U): { success: false; error: U } {
-	return { success: false, error };
-}
-
+export type IEither<T, U> = Success<T> | Failure<U>;
 function isEither<T, U>(obj: unknown | IEither<T, U>): obj is IEither<T, U> {
 	return (
 		typeof obj === "object" &&
