@@ -1,4 +1,5 @@
 import {
+	getPlanNodeChild,
 	PlannerNodeName,
 	type PlanNodes,
 	queryPlanNodeChild,
@@ -14,7 +15,6 @@ import {
 	type IEither,
 	ifSuccess,
 	isEnumValue,
-	isOneOf,
 	type OneOrMore,
 	succeed,
 } from "@/utils/types.ts";
@@ -506,6 +506,7 @@ function evaluateProperty(
 	const nameNode = getChild(expr, { ofType: PlannerNodeName.ExercisePropertyName });
 	const name = asOneOf(
 		getNodeSourceEscapedWhiteSpace(nameNode),
+		// @todo this needs an enum?
 		"progress",
 		"update",
 		"warmup",
@@ -531,6 +532,7 @@ function evaluateProperty(
 		case "used":
 			return succeed({ type: "used", data: "" });
 		default:
+			// @todo Because of my type guarding, the actual name has been lost. Need to restore that.
 			name satisfies undefined;
 			return fail(nodeError(nameNode, `There's no such property exists - '${name}'`));
 	}
@@ -553,13 +555,13 @@ function evaluateSection(
 	const reuseNode = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.ReuseSectionWithWeekDay,
 	});
-	if (reuseNode != null) {
+	if (reuseNode) {
 		return evaluateReuseNode(reuseNode);
 	}
 	const setsNode = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.ExerciseSets,
 	});
-	if (setsNode != null) {
+	if (setsNode) {
 		const sets = [
 			...tryQueryPlanNodeChildren(setsNode, {
 				ofType: PlannerNodeName.ExerciseSet,
@@ -585,15 +587,12 @@ function evaluateSection(
 	const superset = queryPlanNodeChild(expr, {
 		ofType: PlannerNodeName.Superset,
 	});
-	if (superset != null) {
+	if (superset) {
 		return evaluateSuperset(superset);
 	}
-	const property = queryPlanNodeChild(expr, {
+	const property = getPlanNodeChild(expr, {
 		ofType: PlannerNodeName.ExerciseProperty,
 	});
-	if (property == null) {
-		return assert(PlannerNodeName.ExerciseProperty);
-	}
 	return evaluateProperty(property, createEmptyScriptBindings, createScriptFunctions);
 }
 

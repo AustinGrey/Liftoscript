@@ -1,6 +1,11 @@
 import * as planTerms from "./workout-plan.terms.ts";
 import { type ISyntaxPointer, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
-import { type QueryOptions, type TQueryResult, tryQueryChildren } from "@/utils/grammars.ts";
+import {
+	queryChildren,
+	type QueryOptions,
+	type TQueryResult,
+	tryQueryChildren,
+} from "@/utils/grammars.ts";
 import { parseBound as originalParseBound } from "@/utils/lezer.ts";
 import { parser as plannerExerciseParser } from "@/planner/parsing/workout-plan.ts";
 
@@ -197,6 +202,19 @@ export function queryPlanNodeChild<TTypes extends NodeNames_Plan>(
 		(r): r is TypedPlanNode<TTypes> => !(r instanceof SourcedSyntaxError),
 	);
 	return result;
+}
+
+/**
+ * Gets child, or throws if there are no (matching) children
+ * @param node The node to get the first matching child of
+ * @param options Additional options to pass along to queryChildren
+ */
+export function getPlanNodeChild<TTypes extends NodeNames_Plan>(
+	node: TypedPlanNode<NodeNames_Plan>,
+	options?: QueryOptions<TTypes>,
+): TypedPlanNode<TTypes> {
+	const [result] = queryChildren(node, { ...options, atLeast: 1 });
+	return result as TypedPlanNode<TTypes>;
 }
 
 /**
