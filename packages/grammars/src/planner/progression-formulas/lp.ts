@@ -23,7 +23,7 @@ function validate(
 		argFailedAttempts,
 		argFailedAttemptsUpToDate,
 		...argsRest
-	]: string[],
+	]: Iterable<string>,
 	valueNode: PlanNodes.FunctionExpression,
 ) {
 	const result = attemptCreateObject<
@@ -115,7 +115,7 @@ function validate(
 // @todo make the validators return well typed arg objects so that you can well type the args here!
 export function evaluate(
 	node: PlanNodes.FunctionExpression,
-	args: string[],
+	args: Iterable<string>,
 ): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
 	return ifSuccess(validate(args, node), state => ({
 		type: IProgramExerciseProgressType.LP,

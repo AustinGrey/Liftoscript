@@ -927,7 +927,7 @@ export enum IPlannerExerciseEvaluatorMode {
 }
 
 export function fnArgsToStateVars(
-	fnArgs: string[],
+	fnArgs: Iterable<string>,
 	onError?: (message: string) => void,
 ): {
 	state: IProgramState;

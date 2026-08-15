@@ -26,7 +26,7 @@ import type { IProgramStateMetadata } from "@/program";
  * @param validateLiftoscript The method used to validate embedded liftoscript
  */
 function validate(
-	args: string[],
+	args: Iterable<string>,
 	valueNode: PlanNodes.FunctionExpression,
 	validateLiftoscript: (script: string) => Iterable<SourcedSyntaxError>,
 ): IEither<
@@ -92,7 +92,7 @@ function validate(
 
 export function evaluate(
 	node: PlanNodes.FunctionExpression,
-	args: string[],
+	args: Iterable<string>,
 	validateLiftoscript: (script: string) => Iterable<SourcedSyntaxError>,
 ): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
 	return ifSuccess(

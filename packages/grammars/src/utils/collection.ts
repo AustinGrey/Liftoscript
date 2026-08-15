@@ -58,7 +58,12 @@ export function groupConsecutiveBy<T, K>(
 	return groups;
 }
 
-export function throwFirstIfExists(source: Iterable<unknown>): void {
-	const [first] = source;
-	if (first) throw first;
+/**
+ * A type-guarding version of includes. Array.includes only allows passing in a value if U extends T, but in practice
+ * it's safe to pass in any value and the result if true is the intersection of the two types
+ * @param haystack The array to check
+ * @param needle The element to look for
+ */
+export function includes<T, U>(haystack: T[], needle: U): needle is T & U {
+	return haystack.includes(needle as unknown as T);
 }

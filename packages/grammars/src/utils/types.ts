@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { includes } from "@/utils/collection.ts";
 
 export type Success<T> = { success: true; data: T };
 export const succeed = <T>(data: T): Success<T> => ({ success: true, data });
@@ -71,7 +72,7 @@ export function isOneOf<TTarget, const TGuard extends TTarget>(
 	text: TTarget,
 	...options: TGuard[]
 ): text is TGuard {
-	return options.includes(text as TGuard);
+	return includes(options, text);
 }
 
 /**
@@ -85,7 +86,7 @@ export function isEnumValue<T extends string | number | symbol>(
 	enumObject: Record<string, T>,
 	value: unknown,
 ): value is T {
-	return Object.values(enumObject).includes(value as T);
+	return includes(Object.values(enumObject), value);
 }
 
 /**
