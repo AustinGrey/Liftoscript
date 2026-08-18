@@ -9,7 +9,7 @@ import { Exercise_findByNameAndEquipment, type IAllCustomExercises } from "@/exe
 import { nodeError, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { equipmentName } from "@/equipment";
-import { asOneOf, fail, ifSuccess, isEnumValue, succeed } from "@/utils/types.ts";
+import { asOneOf, fail, type Failure, ifSuccess, isEnumValue, succeed } from "@/utils/types.ts";
 import { throwError } from "@/utils/errors";
 import { IProgramMode, type IScriptBindings } from "@/logic/evaluators/types.ts";
 import { evaluate as evaluateLp } from "@/planner/progression-formulas/lp.ts";
@@ -64,9 +64,8 @@ import {
 	IProgramExerciseProgressType,
 } from "@/planner/progression-formulas/types.ts";
 
-function assert(name: string): { success: false; error: SourcedSyntaxError } {
-	return nodeFailure(
-		// @todo should this somehow call nodeError instead?
+function assert(name: string): Failure<SourcedSyntaxError> {
+	return fail(
 		new SourcedSyntaxError(
 			`Missing required nodes for ${name}, this should never happen`,
 			0,

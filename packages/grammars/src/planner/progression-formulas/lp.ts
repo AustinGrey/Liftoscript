@@ -6,8 +6,9 @@ import {
 } from "@/planner/progression-formulas/types.ts";
 import { type PlanNodes } from "@/planner/parsing/guards.ts";
 import { type IDynamicWeight, type IWeight, parsePct, w } from "@/quantities/weight.ts";
-import { asArray, fail, type IEither, ifSuccess, type OneOrMore, succeed } from "@/utils/types.ts";
+import { asArray, fail, ifSuccess, type OneOrMore, succeed } from "@/utils/types.ts";
 import { attemptCreateObject } from "@/utils/object.ts";
+import type { NodeResult } from "@/common-types.ts";
 
 /**
  * @yields any problems found with use of the linear progression formula in code
@@ -116,7 +117,7 @@ function validate(
 export function evaluate(
 	node: PlanNodes.FunctionExpression,
 	args: string[],
-): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
+): NodeResult<IProgramExerciseProgress> {
 	return ifSuccess(validate(args, node), state => ({
 		type: IProgramExerciseProgressType.LP,
 		state,
