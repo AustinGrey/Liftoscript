@@ -9,15 +9,7 @@ import { Exercise_findByNameAndEquipment, type IAllCustomExercises } from "@/exe
 import { nodeError, SourcedSyntaxError, type SourcedSyntaxNode } from "@/utils/lezer.ts";
 import { generateUid } from "@/utils/uid.ts";
 import { equipmentName } from "@/equipment";
-import {
-	asOneOf,
-	fail,
-	type IEither,
-	ifSuccess,
-	isEnumValue,
-	type OneOrMore,
-	succeed,
-} from "@/utils/types.ts";
+import { asOneOf, fail, ifSuccess, isEnumValue, succeed } from "@/utils/types.ts";
 import { throwError } from "@/utils/errors";
 import { IProgramMode, type IScriptBindings } from "@/logic/evaluators/types.ts";
 import { evaluate as evaluateLp } from "@/planner/progression-formulas/lp.ts";
@@ -417,7 +409,7 @@ function evaluateProgressImpl(
 	expr: PlanNodes.ExerciseProperty,
 	createEmptyScriptBindings: () => IScriptBindings,
 	createScriptFunctions: () => IScriptFunctions,
-): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
+): NodeResult<IProgramExerciseProgress> {
 	const literalNoneNode = queryPlanNodeChild(expr, { ofType: PlannerNodeName.None });
 	if (literalNoneNode) {
 		return succeed({
@@ -482,11 +474,7 @@ function evaluateProgress(
 	createEmptyScriptBindings: () => IScriptBindings,
 	createScriptFunctions: () => IScriptFunctions,
 ): NodeResult<IProgramExerciseProgress> {
-	const result = evaluateProgressImpl(expr, createEmptyScriptBindings, createScriptFunctions);
-	if (result.success) {
-		return result;
-	}
-	return fail(result.error[0]);
+	return evaluateProgressImpl(expr, createEmptyScriptBindings, createScriptFunctions);
 }
 
 function evaluateSection(

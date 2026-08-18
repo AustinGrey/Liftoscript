@@ -14,7 +14,14 @@ import type { EvaluateTools } from "@/logic/evaluators/types.ts";
 import { z } from "zod";
 import { TMuscle, TScreenMuscle } from "@/human-body";
 import { type IExerciseType } from "@/exercises";
-import { fail, type Failure, type IEither, succeed, type Success } from "@/utils/types.ts";
+import {
+	fail,
+	type Failure,
+	type IEither,
+	type OneOrMore,
+	succeed,
+	type Success,
+} from "@/utils/types.ts";
 import type { SourcedSyntaxError } from "@/utils/lezer.ts";
 import { zIndexFrom0 } from "@/utils/indexes.ts";
 
@@ -178,7 +185,7 @@ export type IProgramState = z.infer<typeof TProgramState>;
 /**
  * When a function is dealing with a node, it should return this kind of result instead of throwing due to syntax errors.
  */
-export type NodeResult<T> = IEither<T, SourcedSyntaxError>;
+export type NodeResult<T> = IEither<T, OneOrMore<SourcedSyntaxError>>;
 // @todo are these even necessary? Why not just use succeed and fail directly? No real new type safety gains
 export const nodeSuccess = <T>(data: T): Success<T> => succeed(data);
 export const nodeFailure = (error: SourcedSyntaxError): Failure<SourcedSyntaxError> => fail(error);

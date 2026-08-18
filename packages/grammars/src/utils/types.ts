@@ -102,7 +102,23 @@ export function isEnumValue<T extends string | number | symbol>(
  * a known element to a possibly empty array, so we have to explicitly state we are okay if the known element is
  * either first or last
  */
-export type OneOrMore<T> = [T, ...T[]] | [...T[], T];
-export function isOneOrMore<T>(arr: T[]): arr is OneOrMore<T> {
-	return arr.length > 0;
+export type OneOrMore<T> = T | OneOrMoreArray<T>;
+export type OneOrMoreArray<T> = [T, ...T[]] | [...T[], T];
+export function isOneOrMore<T>(obj: T | T[]): obj is OneOrMore<T> {
+	return Array.isArray(obj) ? obj.length > 0 : true;
+}
+
+/**
+ * Ensures a value is an array. If it's a single item, it gets put into an array, and the types preserve the knowledge that
+ * an array created this way has at least one item.
+ * @param obj The obj to ensure is an array
+ */
+export function asArray<T>(
+	obj: T,
+):
+	| Extract<T, any[]>
+	| (Exclude<T, any[]> extends never ? never : OneOrMoreArray<Exclude<T, any[]>>) {
+	return (Array.isArray(obj) ? obj : [obj]) as
+		| Extract<T, any[]>
+		| (Exclude<T, any[]> extends never ? never : OneOrMoreArray<Exclude<T, any[]>>);
 }

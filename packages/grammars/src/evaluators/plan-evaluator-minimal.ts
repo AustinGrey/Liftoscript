@@ -8,7 +8,7 @@ import {
 } from "../utils/collection";
 import { generateUid } from "@/utils/uid.ts";
 import { MathUtils_applyOp, MathUtils_roundFloat, MathUtils_roundTo0005, n } from "@/utils/math";
-import { type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
+import { asArray, type IEither, is, isNumber, type OpenRecord } from "@/utils/types";
 import { ObjectUtils_keys } from "@/utils/object";
 import type { IAssignmentOp, ILiftoscriptEvaluatorUpdate, Quantity } from "@/logic/types";
 import {
@@ -32,6 +32,7 @@ import {
 	type IProgramState,
 	type IScriptFnContext,
 	type ISet,
+	type NodeResult,
 	TProgramState,
 	TSet,
 } from "@/common-types.ts";
@@ -471,7 +472,7 @@ function Program_forceEvaluate(program: IProgram, settings: ISettings): IEvaluat
 						by(exercise => exercise.order, asNumericAscending),
 					);
 					if (!evaluatedDay.success) {
-						errors.push({ error: evaluatedDay.error, dayData });
+						errors.push(...asArray(evaluatedDay.error).map(error => ({ error, dayData })));
 					}
 					return {
 						name: day.name,
@@ -907,7 +908,7 @@ export type IPlannerTopLineItem =
 			value: string;
 	  };
 
-export type IPlannerEvalResult = IEither<IPlannerProgramExercise[], SourcedSyntaxError>;
+export type IPlannerEvalResult = NodeResult<IPlannerProgramExercise[]>;
 
 export interface IPlannerExerciseEvaluatorWeek {
 	name: string;

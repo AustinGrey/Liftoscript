@@ -14,6 +14,7 @@ import { build, type IWeight } from "@/quantities/weight.ts";
 import type { IStats } from "@/fitness-stats";
 import { type ISettings, Settings_build } from "@/user-settings";
 import type { IExerciseTypeKey } from "@/exercises";
+import { asArray } from "@/utils/types.ts";
 
 type PlannerTestCase = {
 	plan: string;
@@ -2094,7 +2095,12 @@ Bench Press[1-5] / ...tmp: Squat / progress: custom() { ...tmp: Squat }
 		expect.soft(newResult.success, "New system should fail").toBe(false);
 		if (!newResult.success) {
 			expect
-				.soft(newResult.error.message, "New system error message")
+				.soft(
+					asArray(newResult.error)
+						.map(err => err.message)
+						.join(", "),
+					"New system error message",
+				)
 				.toEqual("Squat: No such exercise tmp: Squat at week: 3 (4:13)");
 		}
 	});

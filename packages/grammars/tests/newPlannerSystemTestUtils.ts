@@ -24,7 +24,7 @@ import {
 } from "@/planner/evaluators";
 import { asProgramScript } from "@/planner/display.ts";
 import { type IExerciseType } from "@/exercises";
-import type { IEither } from "@/utils/types.ts";
+import { asArray, type IEither } from "@/utils/types.ts";
 import { PlannerNodeName } from "@/planner/parsing/guards.ts";
 import { definedOnly, findIndexOfCurrentOrFirst } from "@/utils/collection.ts";
 import { generateUid } from "@/utils/uid.ts";
@@ -203,17 +203,17 @@ function PlannerProgram_replaceAndValidateExercise(
 		dayData,
 	);
 	const { evaluatedWeeks } = PlannerEvaluator_evaluate(newPlanner, settings);
-	let error: SourcedSyntaxError | undefined;
+	let errors: SourcedSyntaxError[] = [];
 	for (const week of evaluatedWeeks) {
 		for (const day of week) {
 			if (!day.success) {
-				error = day.error;
+				errors.push(...asArray(day.error));
 				break;
 			}
 		}
 	}
-	if (error) {
-		return { success: false, error: error.message };
+	if (errors.length > 0) {
+		return { success: false, error: errors.map(err => err.message).join(", ") };
 	} else {
 		return { success: true, data: { ...program, planner: newPlanner } };
 	}
