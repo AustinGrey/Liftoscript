@@ -1,14 +1,5 @@
 import { isEqual } from "es-toolkit";
-import {
-	asArray,
-	fail,
-	type IEither,
-	isOneOrMore,
-	type Oneⵜ,
-	pushZeroⵜ,
-	succeed,
-	type Zeroⵜ,
-} from "@/utils/types.ts";
+import { fail, type IEither, isOneOrMore, type Oneⵜ, pushZeroⵜ, succeed } from "@/utils/types.ts";
 
 /**
  * Gets the well-typed keys of an object.
@@ -79,13 +70,13 @@ export function attemptCreateObject<T extends object, E>(
 ): IEither<T, Oneⵜ<E>> {
 	const data = {} as T;
 	const errors: E[] = [];
-	for (const key of ObjectUtils_keys(creators)) {
-		const created = creators[key](data);
+	for (const [propertyName, creator] of ObjectUtils_entries(creators)) {
+		const created = creator(data);
 		if (!created.success) {
 			pushZeroⵜ(errors, created.error);
 			continue;
 		}
-		data[key] = created.data;
+		data[propertyName] = created.data;
 	}
 	pushZeroⵜ(errors, overallCheck?.());
 
