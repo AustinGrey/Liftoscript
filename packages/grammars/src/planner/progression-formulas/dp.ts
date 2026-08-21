@@ -5,7 +5,7 @@ import {
 } from "@/planner/progression-formulas/types.ts";
 import { nodeError, SourcedSyntaxError } from "@/utils/lezer.ts";
 import type { PlanNodes } from "@/planner/parsing/guards.ts";
-import { fail, type IEither, ifSuccess, type OneOrMore, succeed } from "@/utils/types.ts";
+import { fail, type IEither, ifSuccess, type Oneⵜ, succeed } from "@/utils/types.ts";
 import { parsePct, w } from "@/quantities/weight.ts";
 import { attemptCreateObject } from "@/utils/object.ts";
 
@@ -59,7 +59,7 @@ function validate(
 export function evaluate(
 	node: PlanNodes.FunctionExpression,
 	args: string[],
-): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
+): IEither<IProgramExerciseProgress, Oneⵜ<SourcedSyntaxError>> {
 	return ifSuccess(validate(args, node), state => ({
 		type: IProgramExerciseProgressType.DP,
 		state,

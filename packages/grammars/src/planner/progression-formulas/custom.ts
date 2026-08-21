@@ -4,14 +4,7 @@ import {
 	IProgramExerciseProgressType,
 } from "@/planner/progression-formulas/types.ts";
 import { nodeError, SourcedSyntaxError } from "@/utils/lezer.ts";
-import {
-	fail,
-	type IEither,
-	ifSuccess,
-	isOneOrMore,
-	type OneOrMore,
-	succeed,
-} from "@/utils/types.ts";
+import { fail, type IEither, ifSuccess, isOneOrMore, type Oneⵜ, succeed } from "@/utils/types.ts";
 import {
 	fnArgsToStateVars,
 	getNodeSourceEscapedWhiteSpace,
@@ -36,7 +29,7 @@ function validate(
 		script: string | undefined;
 		reuse: IPlannerProgramReuse | undefined;
 	},
-	OneOrMore<SourcedSyntaxError>
+	Oneⵜ<SourcedSyntaxError>
 > {
 	const liftoscriptNode = valueNode.getChild(PlannerNodeName.Liftoscript);
 	const script = liftoscriptNode?.source;
@@ -94,7 +87,7 @@ export function evaluate(
 	node: PlanNodes.FunctionExpression,
 	args: string[],
 	validateLiftoscript: (script: string) => Iterable<SourcedSyntaxError>,
-): IEither<IProgramExerciseProgress, OneOrMore<SourcedSyntaxError>> {
+): IEither<IProgramExerciseProgress, Oneⵜ<SourcedSyntaxError>> {
 	return ifSuccess(
 		validate(args, node, validateLiftoscript),
 		({ state, stateMetadata, script, reuse }) => ({

@@ -1,5 +1,14 @@
 import { isEqual } from "es-toolkit";
-import { type IEither, isOneOrMore, type OneOrMore } from "@/utils/types.ts";
+import {
+	asArray,
+	fail,
+	type IEither,
+	isOneOrMore,
+	type Oneⵜ,
+	pushZeroⵜ,
+	succeed,
+	type Zeroⵜ,
+} from "@/utils/types.ts";
 
 /**
  * Gets the well-typed keys of an object.
@@ -64,32 +73,21 @@ export function isEqualAfterTransform<TObj, TTransformed>(
  */
 export function attemptCreateObject<T extends object, E>(
 	creators: {
-		[K in keyof T]: (soFar: Partial<T>) => IEither<T[K], E | E[]>;
+		[K in keyof T]: (soFar: Partial<T>) => IEither<T[K], Oneⵜ<E>>;
 	},
-	overallCheck?: () => E | E[] | undefined,
-): IEither<T, OneOrMore<E>> {
+	overallCheck?: () => Oneⵜ<E> | undefined,
+): IEither<T, Oneⵜ<E>> {
 	const data = {} as T;
 	const errors: E[] = [];
 	for (const key of ObjectUtils_keys(creators)) {
 		const created = creators[key](data);
 		if (!created.success) {
-			if (Array.isArray(created.error)) {
-				errors.push(...created.error);
-			} else {
-				errors.push(created.error);
-			}
+			pushZeroⵜ(errors, created.error);
 			continue;
 		}
 		data[key] = created.data;
 	}
-	const finalErrorsRaw = overallCheck?.();
-	const finalErrors =
-		finalErrorsRaw === undefined
-			? []
-			: Array.isArray(finalErrorsRaw)
-				? finalErrorsRaw
-				: [finalErrorsRaw];
-	errors.push(...finalErrors);
+	pushZeroⵜ(errors, overallCheck?.());
 
-	return isOneOrMore(errors) ? { success: false, error: errors } : { success: true, data };
+	return isOneOrMore(errors) ? fail(errors) : succeed(data);
 }
