@@ -36,6 +36,7 @@ import { isLogicNodeOfType } from "@/logic/parsing/guards.ts";
 import { asNumericDescending, by } from "@/utils/sorting.ts";
 import { nestedFor } from "@/utils/iterables.ts";
 import { as1 } from "@/utils/indexes.ts";
+import { wherePropertyIsDefined } from "@/utils/filtering.ts";
 
 export interface ICompletedEntries {
 	completedReps: number[][];
@@ -71,11 +72,8 @@ function ProgramExercise_weightChanges(
 			}),
 		},
 		exercise => exercise.evaluatedSetVariations,
-		variation => variation.sets,
+		variation => variation.sets.filter(wherePropertyIsDefined("weight")),
 	])) {
-		if (!set.weight) {
-			continue;
-		}
 		const key = print(set.weight);
 		results[key] = {
 			originalWeight: set.weight,
